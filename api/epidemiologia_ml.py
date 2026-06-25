@@ -83,6 +83,9 @@ DOENCAS_REGISTRADAS = [
     ("tabnet_colera", "colera_notificacoes_sinan", "Colera"),
     ("tabnet_raiva", "raiva_notificacoes_sinan", "Raiva Humana"),
     ("tabnet_peste", "peste_notificacoes_sinan", "Peste"),
+    # HIV/Aids: TabNet separado (www2.aids.gov.br), granularidade anual —
+    # ver api/pipeline_oficial.py FONTES_TABNET_AIDS_CONFIG.
+    ("tabnet_aids", "aids_notificacoes_sinan", "Aids"),
 ]
 
 _MODELO_CACHE = {}  # indicador -> {"bundle": ..., "mtime": ...}

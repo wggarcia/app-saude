@@ -253,6 +253,30 @@ OPENDATASUS_DATASUS_MANIFEST = [
     ]
 ] + [
     {
+        "id": "tabnet_aids",
+        "nome": "SINAN/SIM/Siscel-Siclom / Casos de Aids (TabNet)",
+        "fonte": "Ministerio da Saude / Departamento de HIV, Aids, Tuberculose, Hepatites Virais e IST (Dathi)",
+        "finalidade": "Notificacoes de Aids por UF e ano de diagnostico para vigilancia epidemiologica.",
+        "indicadores": ["casos de aids confirmados por UF", "serie historica anual desde 1980"],
+        "periodicidade_recomendada": "anual (esta fonte nao tem granularidade mensal)",
+        "estrategia": (
+            "worker preenche o mesmo formulario publico do TabNet do HIV/Aids "
+            "(www2.aids.gov.br, separado do tabnet.datasus.gov.br principal) — "
+            "Linha=UF de Residencia, Coluna=Ano de Diagnostico — e le a tabela de "
+            "agregados ja calculada pelo proprio TabNet; nunca baixa microdado individual"
+        ),
+        "risco_operacional": "medio",
+        "motivo_cuidado": (
+            "host diferente do TabNet principal; tabela identifica UF por nome completo "
+            "(nao codigo), exige normalizacao de acento e entidade HTML; granularidade "
+            "anual, nao mensal — usa o mesmo formato de periodo 'AAAA-M01' como bucket"
+        ),
+        "fonte_exata_inicial": "http://www2.aids.gov.br/cgi/tabcgi.exe?tabnet/br.def",
+        "recurso_inicial": "http://www2.aids.gov.br/cgi/tabcgi.exe?tabnet/br.def",
+        "status": "download_habilitado",
+    },
+] + [
+    {
         "id": "vacinacao",
         "nome": "Vacinacao / Campanhas",
         "fonte": "OpenDataSUS / Ministerio da Saude",

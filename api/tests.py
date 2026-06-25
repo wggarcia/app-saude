@@ -5562,6 +5562,51 @@ class PipelineOficialTabnetTests(TestCase):
         # com 6 anos disponiveis (01..06) e anos_recentes=3, deve pegar 04,05,06 — nao 01,02,03
         self.assertEqual(anos_gravados, {"2004-M01", "2004-M02", "2005-M01", "2005-M02", "2006-M01", "2006-M02"})
 
+    def test_tabnet_ano_de_sufixo_usa_janela_de_seculo(self):
+        """Bug real ao ligar Aids (www2.aids.gov.br, arquivos desde 1980):
+        sufixo de 2 digitos nao e sempre 20xx — "aids_99.dbf" e 1999, nao
+        2099. A janela usa o ano atual como corte: sufixo <= ano atual (2
+        digitos) vira 20xx, senao 19xx."""
+        from api.pipeline_oficial import _tabnet_ano_de_sufixo
+
+        self.assertEqual(_tabnet_ano_de_sufixo("25"), 2025)
+        self.assertEqual(_tabnet_ano_de_sufixo("99"), 1999)
+        self.assertEqual(_tabnet_ano_de_sufixo("80"), 1980)
+        self.assertEqual(_tabnet_ano_de_sufixo("00"), 2000)
+
+    def test_parse_tabnet_tabela_anual_por_nome_uf_nao_confunde_prefixos_ambiguos(self):
+        """Bug real: "Paraiba" e "Parana" comecam com o mesmo prefixo de
+        "Para" — usar startswith() fazia as 3 colapsarem na sigla PA. O
+        parser agora exige nome completo exato (nao prefixo)."""
+        from api.pipeline_oficial import _parse_tabnet_tabela_anual_por_nome_uf
+
+        texto = (
+            "<PRE>\nUF Resid&ecirc;ncia          2025   Total\n\n"
+            "Par&aacute;                  1.741   1.741\n"
+            "Para&iacute;ba                 373     373\n"
+            "Paran&aacute;                1.300   1.300\n"
+            "TOTAL                25.571  25.571\n</PRE>"
+        )
+        resultado = _parse_tabnet_tabela_anual_por_nome_uf(texto)
+        por_uf = {uf: valor for uf, ano, valor in resultado}
+
+        self.assertEqual(por_uf["PA"], 1741)
+        self.assertEqual(por_uf["PB"], 373)
+        self.assertEqual(por_uf["PR"], 1300)
+
+    def test_parse_tabnet_tabela_anual_trata_traco_como_zero(self):
+        from api.pipeline_oficial import _parse_tabnet_tabela_anual_por_nome_uf
+
+        texto = (
+            "<PRE>\nUF Resid&ecirc;ncia          2024   2025   Total\n\n"
+            "Acre                        -     83        83\n</PRE>"
+        )
+        resultado = _parse_tabnet_tabela_anual_por_nome_uf(texto)
+        valores_por_ano = {ano: valor for uf, ano, valor in resultado}
+
+        self.assertEqual(valores_por_ano[2024], 0)
+        self.assertEqual(valores_por_ano[2025], 83)
+
 
 class EpidemiologiaMLTests(TestCase):
     """ML treinado em dado oficial (DATASUS/SINAN) — api/epidemiologia_ml.py.

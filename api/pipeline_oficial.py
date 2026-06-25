@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import re
+import unicodedata
 import zipfile
 from collections import defaultdict
 from io import BytesIO, StringIO, TextIOWrapper
@@ -268,6 +269,19 @@ FONTES_TABNET_CONFIG = {
     },
 }
 
+# HIV/Aids fica fora de FONTES_TABNET_CONFIG de proposito: vive num TabNet
+# separado (www2.aids.gov.br, nao tabnet.datasus.gov.br) e a tabela so tem
+# coluna de Ano (nao mes) com UF identificada por nome completo — por isso
+# usa _processar_tabnet_aids em vez de _processar_tabnet_doenca.
+FONTES_TABNET_AIDS_CONFIG = {
+    "tabnet_aids": {
+        "def_path": "tabnet/br.def",
+        "base_url": "http://www2.aids.gov.br/cgi/tabcgi.exe",
+        "indicador": "aids_notificacoes_sinan",
+        "fonte_nome": "SINAN/SIM/Siscel-Siclom / Casos de Aids (TabNet)",
+    },
+}
+
 TABNET_BASE_URL = "http://tabnet.datasus.gov.br/cgi/tabcgi.exe"
 
 # Preferencia de campo de "Coluna" (granularidade temporal) e "Linha" (UF) —
@@ -301,12 +315,15 @@ def _tabnet_escolher(opcoes, padroes):
     return None
 
 
-def _tabnet_form_defaults(def_path):
+def _tabnet_form_defaults(def_path, *, base_url=None):
     """GET na pagina do formulario; retorna (defaults, opcoes) — defaults e
     {nome_campo: primeira_opcao}, opcoes e {nome_campo: [todas_as_opcoes]}
-    so para os campos que importam (Linha/Coluna/Arquivos)."""
+    so para os campos que importam (Linha/Coluna/Arquivos).
+
+    base_url existe porque o HIV/Aids vive num TabNet separado
+    (www2.aids.gov.br), nao no tabnet.datasus.gov.br principal."""
     response = requests.get(
-        f"{TABNET_BASE_URL}?{def_path}", timeout=40, headers={"User-Agent": "Mozilla/5.0"}
+        f"{base_url or TABNET_BASE_URL}?{def_path}", timeout=40, headers={"User-Agent": "Mozilla/5.0"}
     )
     response.raise_for_status()
     html = response.content.decode("iso-8859-1", errors="ignore")
@@ -328,7 +345,7 @@ def _tabnet_form_defaults(def_path):
     return defaults, opcoes_relevantes
 
 
-def _tabnet_post_tabela(def_path, defaults, *, linha, coluna, arquivo):
+def _tabnet_post_tabela(def_path, defaults, *, linha, coluna, arquivo, base_url=None):
     overrides = {"Linha": linha, "Coluna": coluna, "Arquivos": arquivo, "formato": "pre"}
     partes = []
     for nome, valor in defaults.items():
@@ -344,7 +361,7 @@ def _tabnet_post_tabela(def_path, defaults, *, linha, coluna, arquivo):
 
     corpo = "&".join(f"{_quote_latin1(k)}={_quote_latin1(v)}" for k, v in partes)
     response = requests.post(
-        f"{TABNET_BASE_URL}?{def_path}",
+        f"{base_url or TABNET_BASE_URL}?{def_path}",
         data=corpo.encode("ascii"),
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
@@ -354,6 +371,17 @@ def _tabnet_post_tabela(def_path, defaults, *, linha, coluna, arquivo):
     )
     response.raise_for_status()
     return response.content.decode("iso-8859-1", errors="ignore")
+
+
+def _tabnet_ano_de_sufixo(sufixo_2_digitos):
+    """Converte o sufixo de 2 digitos do nome do arquivo (ex.: "aids_99.dbf"
+    -> "99") no ano de 4 digitos certo. A maioria dos .def do SINAN comeca em
+    ~2007 (sempre 20xx), mas o cubo de Aids tem arquivos voltando a 1980 —
+    assumir sempre 2000+sufixo faz "99" virar 2099 em vez de 1999. Usa janela
+    relativa ao ano atual: sufixo <= ano atual (2 digitos) e 20xx, senao 19xx."""
+    n = int(sufixo_2_digitos)
+    ano_atual_2d = timezone.now().year % 100
+    return 2000 + n if n <= ano_atual_2d else 1900 + n
 
 
 _TABNET_MESES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
@@ -413,6 +441,176 @@ def _parse_tabnet_tabela_mensal(texto):
     return resultados
 
 
+_UF_NOME_PARA_SIGLA = {
+    "rondonia": "RO", "acre": "AC", "amazonas": "AM", "roraima": "RR",
+    "para": "PA", "amapa": "AP", "tocantins": "TO", "maranhao": "MA",
+    "piaui": "PI", "ceara": "CE", "rio grande do norte": "RN",
+    "paraiba": "PB", "pernambuco": "PE", "alagoas": "AL", "sergipe": "SE",
+    "bahia": "BA", "minas gerais": "MG", "espirito santo": "ES",
+    "rio de janeiro": "RJ", "sao paulo": "SP", "parana": "PR",
+    "santa catarina": "SC", "rio grande do sul": "RS",
+    "mato grosso do sul": "MS", "mato grosso": "MT", "goias": "GO",
+    "distrito federal": "DF",
+}
+
+
+def _parse_tabnet_tabela_anual_por_nome_uf(texto):
+    """Variante de _parse_tabnet_tabela_mensal para o TabNet do HIV/Aids
+    (www2.aids.gov.br), que tem 2 diferencas de formato em relacao ao
+    tabnet.datasus.gov.br principal: (1) coluna e ano (4 digitos), nao mes;
+    (2) a linha identifica o estado pelo NOME completo (com entidade HTML,
+    ex.: "Rond&ocirc;nia"), nao por um codigo IBGE de 2 digitos."""
+    import html as _html_mod
+
+    pre_match = re.search(r"<PRE>(.*?)</PRE>", texto, re.S | re.I)
+    if not pre_match:
+        return []
+
+    linhas = [_html_mod.unescape(linha) for linha in pre_match.group(1).splitlines()]
+
+    anos_da_tabela = []
+    for linha_txt in linhas:
+        encontrados = re.findall(r"\b(19|20)\d{2}\b", linha_txt)
+        if encontrados:
+            anos_da_tabela = re.findall(r"\b((?:19|20)\d{2})\b", linha_txt)
+            break
+    if not anos_da_tabela:
+        return []
+
+    resultados = []
+    for linha_txt in linhas:
+        # so a parte alfabetica antes da 1a coluna de numeros e o nome do
+        # estado — comparar por igualdade exata (nao por prefixo) evita
+        # "Paraiba"/"Parana" caindo erroneamente em "Para" (todos comecam
+        # com o mesmo prefixo "para").
+        nome_match = re.match(r"\s*([A-Za-zÀ-ÿ/ ]+?)\s+(?=-|\d)", linha_txt)
+        if not nome_match:
+            continue
+        nome_norm = "".join(
+            c for c in unicodedata.normalize("NFD", nome_match.group(1).strip().lower())
+            if unicodedata.category(c) != "Mn"
+        )
+        sigla = _UF_NOME_PARA_SIGLA.get(nome_norm)
+        if not sigla:
+            continue
+        numeros = re.findall(r"-|[\d.]+", linha_txt)
+        if len(numeros) < len(anos_da_tabela):
+            continue
+        valores = numeros[: len(anos_da_tabela)]
+        for ano_str, valor_str in zip(anos_da_tabela, valores):
+            if valor_str == "-":
+                resultados.append((sigla, int(ano_str), 0))
+                continue
+            try:
+                valor = int(valor_str.replace(".", ""))
+            except ValueError:
+                continue
+            resultados.append((sigla, int(ano_str), valor))
+
+    return resultados
+
+
+def _processar_tabnet_aids(execucao, fonte_id, config, *, anos_recentes=3):
+    """HIV/Aids vive num TabNet separado (www2.aids.gov.br), sem campo de
+    mes (so Ano_Diagnostico/Ano_Notificacao) e com UF identificada por nome
+    completo, nao codigo — por isso usa um parser e orquestracao proprios em
+    vez de _processar_tabnet_doenca. Mesma garantia: so le o agregado pronto
+    que o TabNet ja calcula, nunca baixa microdado individual."""
+    def_path = config["def_path"]
+    base_url = config["base_url"]
+
+    try:
+        defaults, opcoes = _tabnet_form_defaults(def_path, base_url=base_url)
+    except requests.RequestException as exc:
+        execucao.status = FonteOficialExecucao.STATUS_FALHOU
+        execucao.mensagem = f"Falha ao acessar o formulario TabNet: {exc}"
+        execucao.finalizado_em = timezone.now()
+        execucao.save(update_fields=["status", "mensagem", "finalizado_em"])
+        return execucao
+
+    linha = _tabnet_escolher(opcoes.get("Linha", []), _TABNET_LINHA_PADROES)
+    coluna = _tabnet_escolher(opcoes.get("Coluna", []), [r"^ano.*diagn", r"^ano.*notific"])
+    arquivos_disponiveis = opcoes.get("Arquivos", [])
+
+    if not linha or not coluna or not arquivos_disponiveis:
+        execucao.status = FonteOficialExecucao.STATUS_FALHOU
+        execucao.mensagem = (
+            "Nao foi possivel localizar os campos de UF/ano ou os anos disponiveis "
+            "no formulario TabNet do HIV/Aids."
+        )
+        execucao.finalizado_em = timezone.now()
+        execucao.save(update_fields=["status", "mensagem", "finalizado_em"])
+        return execucao
+
+    arquivos_com_ano = []
+    for arquivo in arquivos_disponiveis:
+        ano_match = re.search(r"(\d{2})\.dbf$", arquivo, re.I)
+        if ano_match:
+            arquivos_com_ano.append((_tabnet_ano_de_sufixo(ano_match.group(1)), arquivo))
+    arquivos_com_ano.sort(key=lambda t: t[0], reverse=True)
+
+    agregados = 0
+    registros = 0
+    anos_processados = []
+
+    for ano_arquivo, arquivo in arquivos_com_ano[:anos_recentes]:
+        try:
+            texto = _tabnet_post_tabela(
+                def_path, defaults, linha=linha, coluna=coluna, arquivo=arquivo, base_url=base_url
+            )
+        except requests.RequestException:
+            continue
+
+        linhas_tabela = _parse_tabnet_tabela_anual_por_nome_uf(texto)
+        if not linhas_tabela:
+            continue
+
+        anos_processados.append(ano_arquivo)
+        for uf, ano, valor in linhas_tabela:
+            registros += 1
+            FonteOficialAgregado.objects.update_or_create(
+                fonte_id=fonte_id,
+                indicador=config["indicador"],
+                codigo_ibge=None,
+                estado=uf,
+                cidade=None,
+                periodo=f"{ano}-M01",
+                defaults={
+                    "valor": valor,
+                    "unidade": "notificacoes",
+                    "fonte_nome": config["fonte_nome"],
+                    "versao_fonte": arquivo,
+                    "metadados": {
+                        "tipo": "tabnet_formulario_publico",
+                        "def_path": def_path,
+                        "base_url": base_url,
+                        "linha": linha,
+                        "coluna": coluna,
+                        "granularidade": "anual_bucket_em_periodo_mensal",
+                    },
+                },
+            )
+            agregados += 1
+
+    if not anos_processados:
+        execucao.status = FonteOficialExecucao.STATUS_FALHOU
+        execucao.mensagem = "Nenhum dos anos recentes do TabNet do HIV/Aids retornou dados parseaveis."
+    else:
+        execucao.status = FonteOficialExecucao.STATUS_CONCLUIDA
+        execucao.mensagem = (
+            f"Coleta TabNet ({config['fonte_nome']}) processada com sucesso para os anos "
+            f"{', '.join(str(a) for a in sorted(anos_processados))}. "
+            "Gravados somente agregados anuais por UF, sem armazenar microdados brutos."
+        )
+    execucao.registros_lidos = registros
+    execucao.agregados_gerados = agregados
+    execucao.finalizado_em = timezone.now()
+    execucao.save(
+        update_fields=["status", "mensagem", "registros_lidos", "agregados_gerados", "finalizado_em"]
+    )
+    return execucao
+
+
 def _processar_tabnet_doenca(execucao, fonte_id, config, *, anos_recentes=3):
     """Coleta agregados mensais por UF de um cubo TabNet (formulario publico,
     sem login). Le N anos mais recentes disponiveis no proprio formulario —
@@ -454,7 +652,7 @@ def _processar_tabnet_doenca(execucao, fonte_id, config, *, anos_recentes=3):
     for arquivo in arquivos_disponiveis:
         ano_match = re.search(r"(\d{2})\.dbf$", arquivo, re.I)
         if ano_match:
-            arquivos_com_ano.append((2000 + int(ano_match.group(1)), arquivo))
+            arquivos_com_ano.append((_tabnet_ano_de_sufixo(ano_match.group(1)), arquivo))
     arquivos_com_ano.sort(key=lambda t: t[0], reverse=True)
 
     for ano, arquivo in arquivos_com_ano[:anos_recentes]:
@@ -1040,6 +1238,13 @@ def preparar_execucao_fonte_oficial(
     tabnet_config = FONTES_TABNET_CONFIG.get(fonte_id)
     if tabnet_config:
         return _processar_tabnet_doenca(execucao, fonte_id, tabnet_config)
+
+    tabnet_aids_config = FONTES_TABNET_AIDS_CONFIG.get(fonte_id)
+    if tabnet_aids_config:
+        # anos_recentes maior aqui: granularidade e anual (1 ponto/ano por
+        # estado), entao 3 anos nao passa da janela movel de 4 — precisa de
+        # historico mais longo pra ter amostra de treino (o cubo tem ate 1980).
+        return _processar_tabnet_aids(execucao, fonte_id, tabnet_aids_config, anos_recentes=15)
 
     config = FONTES_CSV_CONFIG.get(fonte_id)
     if config:
