@@ -17,6 +17,7 @@ from .access_control import (
 )
 from .models import IAAutorizacaoClinica
 from .views_dashboard import _empresa_autenticada, contexto_navegacao_setorial
+from .views_hospital_ia_autorizacao_ml import inferir_autorizacao_clinica
 
 
 def _empresa(request):
@@ -46,12 +47,10 @@ def _ia_dict(ia):
     }
 
 
-def _analisar_solicitacao(tipo_solicitacao: str, procedimento: str, cid10: str, urgente: bool):
+def _analisar_solicitacao_fallback(tipo_solicitacao: str, procedimento: str, cid10: str, urgente: bool):
     """
-    Motor de análise por regras:
-    - Urgente → aprovação automática (atendimento de urgência não espera análise).
-    - Procedimento com termos experimentais/estéticos/não padronizados → negada.
-    - Demais → revisão humana (auditoria médica).
+    Motor de regras — usado apenas como rede de seguranca se o ensemble de ML
+    real (views_hospital_ia_autorizacao_ml.inferir_autorizacao_clinica) falhar.
     """
     proc = (procedimento or "").strip().lower()
     cid = (cid10 or "").strip().upper()
@@ -59,7 +58,7 @@ def _analisar_solicitacao(tipo_solicitacao: str, procedimento: str, cid10: str, 
     if urgente:
         return "aprovada", 0.97, (
             "Solicitação classificada como urgente — aprovação automática para "
-            "garantir atendimento imediato, sujeita a auditoria retroativa."
+            "garantir atendimento imediato, sujeita a auditoria retroativa. [motor de regras — fallback]"
         )
 
     KEYWORDS_NEGADA = [
@@ -71,19 +70,40 @@ def _analisar_solicitacao(tipo_solicitacao: str, procedimento: str, cid10: str, 
         if kw in proc:
             return "negada", 0.85, (
                 f"Procedimento identificado como não coberto/experimental "
-                f"(termo detectado: '{kw}'). Requer análise de cobertura."
+                f"(termo detectado: '{kw}'). Requer análise de cobertura. [motor de regras — fallback]"
             )
 
     if tipo_solicitacao == "exame_alta_complexidade" and cid.startswith("Z"):
         return "aprovada", 0.9, (
             f"Exame de alta complexidade com indicação preventiva/controle "
-            f"(CID-10 {cid}). Aprovação automática conforme protocolo."
+            f"(CID-10 {cid}). Aprovação automática conforme protocolo. [motor de regras — fallback]"
         )
 
     return "revisao", 0.6, (
         "Solicitação não enquadrada nas regras automáticas. "
-        "Encaminhada para revisão da auditoria médica hospitalar."
+        "Encaminhada para revisão da auditoria médica hospitalar. [motor de regras — fallback]"
     )
+
+
+def _analisar_solicitacao(tipo_solicitacao: str, procedimento: str, cid10: str, urgente: bool, paciente_nome: str = "", empresa_id=None):
+    """
+    Analisa a solicitacao com o ensemble de ML real (RandomForest+GradientBoosting,
+    views_hospital_ia_autorizacao_ml.py), treinado no historico real de decisoes
+    desta unidade (com bootstrap sintetico ate acumular 30 decisoes reais). Cai
+    no motor de regras simples apenas se a inferencia de ML falhar.
+    """
+    try:
+        resultado = inferir_autorizacao_clinica({
+            "cid10": cid10,
+            "procedimento": procedimento,
+            "tipo_solicitacao": tipo_solicitacao,
+            "urgente": urgente,
+            "paciente_nome": paciente_nome,
+            "empresa_id": empresa_id,
+        })
+        return resultado["decisao"], resultado["score_confianca"], resultado["justificativa_ia"]
+    except Exception:
+        return _analisar_solicitacao_fallback(tipo_solicitacao, procedimento, cid10, urgente)
 
 
 # ── Page ───────────────────────────────────────────────────────────────────────
@@ -147,7 +167,9 @@ def api_hospital_ia_analisar(request):
     cid10 = (data.get("cid10") or "").strip()
     urgente = bool(data.get("urgente", False))
 
-    decisao, score, justificativa = _analisar_solicitacao(tipo_solicitacao, procedimento, cid10, urgente)
+    decisao, score, justificativa = _analisar_solicitacao(
+        tipo_solicitacao, procedimento, cid10, urgente, paciente_nome=paciente_nome, empresa_id=empresa.pk
+    )
 
     ia = IAAutorizacaoClinica.objects.create(
         empresa=empresa,

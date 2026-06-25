@@ -5544,3 +5544,74 @@ class EpidemiologiaMLTests(TestCase):
 
         for estado in payload["layers"]["estados"]:
             self.assertIn("calculo_ml_oficial", estado)
+
+
+class AutorizacaoMLConsolidacaoTests(TestCase):
+    """Fase 2: Plano de Saude e Hospital passam a usar o ensemble real de ML
+    (em vez do motor de regras fixas) para autorizar guias/solicitacoes."""
+
+    def setUp(self):
+        import tempfile
+        from api import views_ia_autorizacao_ml as plano_ml
+        from api import views_hospital_ia_autorizacao_ml as hosp_ml
+
+        self._tmpdir_plano = tempfile.TemporaryDirectory()
+        self._tmpdir_hosp = tempfile.TemporaryDirectory()
+        self._patches = [
+            patch.object(plano_ml, "MODEL_PATH", Path(self._tmpdir_plano.name) / "model.joblib"),
+            patch.object(plano_ml, "ENCODER_PATH", Path(self._tmpdir_plano.name) / "encoder.joblib"),
+            patch.object(plano_ml, "META_PATH", Path(self._tmpdir_plano.name) / "meta.json"),
+            patch.object(hosp_ml, "MODEL_PATH", Path(self._tmpdir_hosp.name) / "model.joblib"),
+            patch.object(hosp_ml, "ENCODER_PATH", Path(self._tmpdir_hosp.name) / "encoder.joblib"),
+            patch.object(hosp_ml, "META_PATH", Path(self._tmpdir_hosp.name) / "meta.json"),
+        ]
+        for p in self._patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self._patches:
+            p.stop()
+        self._tmpdir_plano.cleanup()
+        self._tmpdir_hosp.cleanup()
+
+    def test_plano_saude_analisar_guia_usa_ensemble_real(self):
+        from api.views_plano_ia import _analisar_guia
+
+        decisao, score, justificativa = _analisar_guia(
+            "tratamento estético rejuvenescimento", "Z71", codigo_tuss="40814440", beneficiario="", empresa_id=None
+        )
+
+        self.assertEqual(decisao, "negada")
+        self.assertGreater(score, 0)
+        self.assertNotIn("fallback", justificativa)
+
+    def test_plano_saude_cai_no_fallback_se_ml_falhar(self):
+        from api import views_plano_ia
+
+        with patch.object(views_plano_ia, "inferir_autorizacao", side_effect=RuntimeError("boom")):
+            decisao, score, justificativa = views_plano_ia._analisar_guia("consulta de rotina", "Z00")
+
+        self.assertEqual(decisao, "aprovada")
+        self.assertIn("fallback", justificativa)
+
+    def test_hospital_analisar_solicitacao_usa_ensemble_real(self):
+        from api.views_hospital_ia_autorizacao import _analisar_solicitacao
+
+        decisao, score, justificativa = _analisar_solicitacao(
+            "internacao", "atendimento de urgencia", "R69", True, paciente_nome="Paciente Teste", empresa_id=None
+        )
+
+        self.assertEqual(decisao, "aprovada")
+        self.assertGreater(score, 0)
+        self.assertNotIn("fallback", justificativa)
+
+    def test_hospital_cai_no_fallback_se_ml_falhar(self):
+        from api import views_hospital_ia_autorizacao as hosp_views
+
+        with patch.object(hosp_views, "inferir_autorizacao_clinica", side_effect=RuntimeError("boom")):
+            decisao, score, justificativa = hosp_views._analisar_solicitacao(
+                "procedimento", "tratamento estetico", "Z71", False
+            )
+
+        self.assertEqual(decisao, "negada")
+        self.assertIn("fallback", justificativa)

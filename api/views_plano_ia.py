@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo
 from .models import IAAutorizacaoGuia
 from .views_dashboard import _empresa_autenticada
+from .views_ia_autorizacao_ml import inferir_autorizacao
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -47,12 +48,11 @@ def _ia_dict(ia):
     }
 
 
-def _analisar_guia(procedimento: str, cid10: str):
+def _analisar_guia_fallback(procedimento: str, cid10: str):
     """
-    Motor de análise simples baseado em regras:
-    - CID10 iniciando com 'Z' (preventivo) → aprovada, confiança 0.95
-    - Procedimento com palavras experimentais/estéticas → negada, 0.85
-    - Demais → revisão humana, 0.60
+    Motor de regras — usado apenas como rede de seguranca se o ensemble de ML
+    real (views_ia_autorizacao_ml.inferir_autorizacao) falhar por algum motivo
+    (ex.: dependencia indisponivel, modelo corrompido).
     """
     cid = (cid10 or "").strip().upper()
     proc = (procedimento or "").strip().lower()
@@ -67,20 +67,40 @@ def _analisar_guia(procedimento: str, cid10: str):
     if cid.startswith("Z"):
         return "aprovada", 0.95, (
             f"Procedimento preventivo/controle (CID-10 {cid}). "
-            "Aprovação automática conforme protocolo preventivo."
+            "Aprovação automática conforme protocolo preventivo. [motor de regras — fallback]"
         )
 
     for kw in KEYWORDS_NEGADA:
         if kw in proc:
             return "negada", 0.85, (
                 f"Procedimento identificado como não coberto pelo plano "
-                f"(termo detectado: '{kw}'). Requer análise de cobertura contratual."
+                f"(termo detectado: '{kw}'). Requer análise de cobertura contratual. [motor de regras — fallback]"
             )
 
     return "revisao", 0.60, (
         "Procedimento não enquadrado nas regras automáticas. "
-        "Encaminhado para revisão pela equipe de auditoria médica."
+        "Encaminhado para revisão pela equipe de auditoria médica. [motor de regras — fallback]"
     )
+
+
+def _analisar_guia(procedimento: str, cid10: str, codigo_tuss: str = "", beneficiario: str = "", empresa_id=None):
+    """
+    Analisa a guia com o ensemble de ML real (RandomForest+GradientBoosting,
+    views_ia_autorizacao_ml.py), treinado no historico real de decisoes desta
+    empresa (com bootstrap sintetico ate acumular 30 decisoes reais). Cai no
+    motor de regras simples apenas se a inferencia de ML falhar.
+    """
+    try:
+        resultado = inferir_autorizacao({
+            "cid10": cid10,
+            "codigo_tuss": codigo_tuss,
+            "procedimento": procedimento,
+            "beneficiario": beneficiario,
+            "empresa_id": empresa_id,
+        })
+        return resultado["decisao"], resultado["score_confianca"], resultado["justificativa_ia"]
+    except Exception:
+        return _analisar_guia_fallback(procedimento, cid10)
 
 
 # ── page ─────────────────────────────────────────────────────────────────────
@@ -153,7 +173,9 @@ def api_ia_analisar(request):
     cid10 = (data.get("cid10") or "").strip()
     codigo_tuss = (data.get("codigo_tuss") or "").strip()
 
-    decisao, score, justificativa = _analisar_guia(procedimento, cid10)
+    decisao, score, justificativa = _analisar_guia(
+        procedimento, cid10, codigo_tuss=codigo_tuss, beneficiario=beneficiario, empresa_id=empresa.pk
+    )
 
     ia = IAAutorizacaoGuia.objects.create(
         empresa=empresa,
