@@ -10186,3 +10186,60 @@ class SolicitacaoExameLab(models.Model):
 
     def __str__(self):
         return f"{self.protocolo} — {self.paciente_nome} ({self.exame.nome})"
+
+
+class NoticiaEpidemiologica(models.Model):
+    """Notícia coletada automaticamente de GDELT, RSS ou fontes oficiais — para vigilância epidemiológica."""
+
+    NIVEL = [
+        ("informativo", "Informativo"),
+        ("alerta",      "Alerta"),
+        ("critico",     "Crítico"),
+    ]
+    STATUS = [
+        ("novo",      "Novo"),
+        ("lido",      "Lido"),
+        ("arquivado", "Arquivado"),
+    ]
+
+    empresa             = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                            related_name="noticias_epidemiologicas")
+    titulo              = models.CharField(max_length=500)
+    fonte               = models.CharField(max_length=60)
+    url                 = models.URLField(max_length=900)
+    resumo              = models.TextField(blank=True, default="")
+    doencas_detectadas  = models.JSONField(default=list)
+    nivel_alerta        = models.CharField(max_length=20, choices=NIVEL, default="informativo")
+    status              = models.CharField(max_length=20, choices=STATUS, default="novo")
+    publicado_em        = models.DateTimeField(null=True, blank=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    # ── Análise gerada pelo Agente IA (claude-haiku-4-5) ──────────────────────
+    ia_analisado        = models.BooleanField(default=False)
+    ia_score_risco      = models.FloatField(null=True, blank=True)    # 0.0 – 10.0
+    ia_cid10            = models.CharField(max_length=10, blank=True, default="")
+    ia_regiao_uf        = models.CharField(max_length=2,  blank=True, default="")
+    ia_municipio        = models.CharField(max_length=120, blank=True, default="")
+    ia_casos_estimados  = models.IntegerField(null=True, blank=True)
+    ia_tendencia        = models.CharField(max_length=20, blank=True, default="")  # crescendo | estavel | diminuindo
+    ia_confianca        = models.FloatField(null=True, blank=True)    # 0.0 – 1.0
+    ia_justificativa    = models.TextField(blank=True, default="")
+    ia_acoes            = models.JSONField(default=list)              # lista de ações recomendadas
+    ia_modelo_usado     = models.CharField(max_length=40, blank=True, default="")
+    alerta_disparado    = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name        = "Notícia Epidemiológica"
+        verbose_name_plural = "Notícias Epidemiológicas"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "nivel_alerta"]),
+            models.Index(fields=["empresa", "ia_analisado"]),
+            models.Index(fields=["empresa", "ia_score_risco"]),
+            models.Index(fields=["criado_em"]),
+        ]
+        unique_together = [("empresa", "url")]
+
+    def __str__(self):
+        return f"[{self.nivel_alerta.upper()}] {self.titulo[:80]}"

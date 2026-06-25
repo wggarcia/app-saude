@@ -891,6 +891,10 @@ from api.views_governo_endemias import (
     api_endemias_visitas,
     api_endemias_indicadores,
 )
+from api.views_noticias import (
+    api_noticias_epidemiologicas,
+    api_noticia_status,
+)
 from api.views_governo_vigilancia_sanitaria import (
     api_vigsan_estabelecimentos,
     api_vigsan_alvaras,
@@ -2522,6 +2526,8 @@ urlpatterns = [
     path('api/governo/acs/',                                    api_acs_lista),
     path('api/governo/endemias/visitas/',                       api_endemias_visitas),
     path('api/governo/endemias/indicadores/',                   api_endemias_indicadores),
+    path('api/governo/noticias-epidemiologicas/',               api_noticias_epidemiologicas),
+    path('api/governo/noticias-epidemiologicas/<int:noticia_id>/status/', api_noticia_status),
     path('api/governo/vigilancia-sanitaria/estabelecimentos/',  api_vigsan_estabelecimentos),
     path('api/governo/vigilancia-sanitaria/estabelecimentos/<int:estab_id>/alvaras/',   api_vigsan_alvaras),
     path('api/governo/vigilancia-sanitaria/estabelecimentos/<int:estab_id>/inspecoes/', api_vigsan_inspecoes),
