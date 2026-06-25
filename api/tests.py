@@ -5517,6 +5517,51 @@ class PipelineOficialTabnetTests(TestCase):
             _tabnet_escolher(opcoes_coluna_hantavirose, _TABNET_COLUNA_PADROES), "Mês_1º_Sintoma(s)"
         )
 
+    def test_processar_tabnet_doenca_pega_anos_mais_recentes_mesmo_fora_de_ordem(self):
+        """Bug real ao ligar Malaria (sinanwin/malabr.def): esse .def lista os
+        arquivos do mais ANTIGO para o mais novo (oposto do sinannet usado
+        pelas outras doencas) — pegar so arquivos_disponiveis[:3] devolvia
+        2004-2006 em vez dos anos mais recentes disponiveis. O processamento
+        agora ordena por ano antes de cortar."""
+        from api.models import FonteOficialAgregado, FonteOficialExecucao
+        from api.pipeline_oficial import _processar_tabnet_doenca
+
+        arquivos_fora_de_ordem = [
+            "doencabr01.dbf", "doencabr02.dbf", "doencabr03.dbf",
+            "doencabr04.dbf", "doencabr05.dbf", "doencabr06.dbf",
+        ]
+        tabela_pre = (
+            "<PRE>\nUF de notificação             Jan        Fev     Total\n\n"
+            "33 Rio de Janeiro                1          2         3\n</PRE>"
+        )
+
+        def fake_form_defaults(def_path):
+            return (
+                {"Linha": "", "Coluna": "", "Arquivos": "", "formato": ""},
+                {
+                    "Linha": ["UF_de_notificação"],
+                    "Coluna": ["Mês_Notificação"],
+                    "Arquivos": arquivos_fora_de_ordem,
+                },
+            )
+
+        with patch("api.pipeline_oficial._tabnet_form_defaults", side_effect=fake_form_defaults), \
+             patch("api.pipeline_oficial._tabnet_post_tabela", return_value=tabela_pre):
+            execucao = FonteOficialExecucao.objects.create(
+                fonte_id="tabnet_teste_ordem", fonte_nome="Teste"
+            )
+            _processar_tabnet_doenca(
+                execucao, "tabnet_teste_ordem",
+                {"def_path": "x/y.def", "indicador": "teste_ordem", "fonte_nome": "Teste"},
+            )
+
+        anos_gravados = set(
+            FonteOficialAgregado.objects.filter(fonte_id="tabnet_teste_ordem")
+            .values_list("periodo", flat=True)
+        )
+        # com 6 anos disponiveis (01..06) e anos_recentes=3, deve pegar 04,05,06 — nao 01,02,03
+        self.assertEqual(anos_gravados, {"2004-M01", "2004-M02", "2005-M01", "2005-M02", "2006-M01", "2006-M02"})
+
 
 class EpidemiologiaMLTests(TestCase):
     """ML treinado em dado oficial (DATASUS/SINAN) — api/epidemiologia_ml.py.

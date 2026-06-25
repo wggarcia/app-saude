@@ -234,6 +234,22 @@ OPENDATASUS_DATASUS_MANIFEST = [
         ("esquistossomose", "Esquistossomose", "sinannet/cnv/esquistobr.def"),
         ("difteria", "Difteria", "sinannet/cnv/difteribr.def"),
         ("febre_maculosa", "Febre Maculosa", "sinannet/cnv/febremaculosabr.def"),
+        ("hanseniase", "Hanseniase", "sinannet/cnv/hanswbr.def"),
+        ("sifilis_gestante", "Sifilis em Gestante", "sinannet/cnv/sifilisgestantebr.def"),
+        ("sifilis_congenita", "Sifilis Congenita", "sinannet/cnv/sifilisbr.def"),
+        ("sifilis_adquirida", "Sifilis Adquirida", "sinannet/cnv/sifilisadquiridabr.def"),
+        ("sarampo_rubeola", "Sarampo e Rubeola", "sinannet/cnv/exantbr.def"),
+        # Malaria fica de fora de proposito: o cubo Brasil aberto
+        # (sinanwin/cnv/malabr.def) so tem dado de 2001-2006, descontinuado —
+        # a vigilancia real migrou para o SIVEP-Malaria (login obrigatorio).
+        ("febre_tifoide", "Febre Tifoide", "sinannet/cnv/febretifoidebr.def"),
+        ("leishmaniose_visceral", "Leishmaniose Visceral", "sinannet/cnv/leishvbr.def"),
+        ("leishmaniose_tegumentar", "Leishmaniose Tegumentar Americana", "sinannet/cnv/ltabr.def"),
+        ("paralisia_flacida_aguda", "Paralisia Flacida Aguda", "sinannet/cnv/pfabr.def"),
+        ("varicela", "Varicela", "sinannet/cnv/varicelabr.def"),
+        ("colera", "Colera", "sinannet/cnv/colerabr.def"),
+        ("raiva", "Raiva Humana", "sinannet/cnv/raivabr.def"),
+        ("peste", "Peste", "sinannet/cnv/pestebr.def"),
     ]
 ] + [
     {

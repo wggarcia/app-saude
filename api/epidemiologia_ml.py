@@ -68,6 +68,21 @@ DOENCAS_REGISTRADAS = [
     ("tabnet_esquistossomose", "esquistossomose_notificacoes_sinan", "Esquistossomose"),
     ("tabnet_difteria", "difteria_notificacoes_sinan", "Difteria"),
     ("tabnet_febre_maculosa", "febre_maculosa_notificacoes_sinan", "Febre Maculosa"),
+    ("tabnet_hanseniase", "hanseniase_notificacoes_sinan", "Hanseniase"),
+    ("tabnet_sifilis_gestante", "sifilis_gestante_notificacoes_sinan", "Sifilis em Gestante"),
+    ("tabnet_sifilis_congenita", "sifilis_congenita_notificacoes_sinan", "Sifilis Congenita"),
+    ("tabnet_sifilis_adquirida", "sifilis_adquirida_notificacoes_sinan", "Sifilis Adquirida"),
+    ("tabnet_sarampo_rubeola", "sarampo_rubeola_notificacoes_sinan", "Sarampo e Rubeola"),
+    # Malaria fica de fora: unico cubo aberto (sinanwin/malabr.def) so tem
+    # ate 2006, vigilancia real migrou para SIVEP-Malaria (exige login).
+    ("tabnet_febre_tifoide", "febre_tifoide_notificacoes_sinan", "Febre Tifoide"),
+    ("tabnet_leishmaniose_visceral", "leishmaniose_visceral_notificacoes_sinan", "Leishmaniose Visceral"),
+    ("tabnet_leishmaniose_tegumentar", "leishmaniose_tegumentar_notificacoes_sinan", "Leishmaniose Tegumentar"),
+    ("tabnet_paralisia_flacida_aguda", "paralisia_flacida_aguda_notificacoes_sinan", "Paralisia Flacida Aguda"),
+    ("tabnet_varicela", "varicela_notificacoes_sinan", "Varicela"),
+    ("tabnet_colera", "colera_notificacoes_sinan", "Colera"),
+    ("tabnet_raiva", "raiva_notificacoes_sinan", "Raiva Humana"),
+    ("tabnet_peste", "peste_notificacoes_sinan", "Peste"),
 ]
 
 _MODELO_CACHE = {}  # indicador -> {"bundle": ..., "mtime": ...}

@@ -195,6 +195,77 @@ FONTES_TABNET_CONFIG = {
         "indicador": "febre_maculosa_notificacoes_sinan",
         "fonte_nome": "SINAN / Febre Maculosa (TabNet)",
     },
+    "tabnet_hanseniase": {
+        "def_path": "sinannet/cnv/hanswbr.def",
+        "indicador": "hanseniase_notificacoes_sinan",
+        "fonte_nome": "SINAN / Hanseniase (TabNet)",
+    },
+    "tabnet_sifilis_gestante": {
+        "def_path": "sinannet/cnv/sifilisgestantebr.def",
+        "indicador": "sifilis_gestante_notificacoes_sinan",
+        "fonte_nome": "SINAN / Sifilis em Gestante (TabNet)",
+    },
+    "tabnet_sifilis_congenita": {
+        "def_path": "sinannet/cnv/sifilisbr.def",
+        "indicador": "sifilis_congenita_notificacoes_sinan",
+        "fonte_nome": "SINAN / Sifilis Congenita (TabNet)",
+    },
+    "tabnet_sifilis_adquirida": {
+        "def_path": "sinannet/cnv/sifilisadquiridabr.def",
+        "indicador": "sifilis_adquirida_notificacoes_sinan",
+        "fonte_nome": "SINAN / Sifilis Adquirida (TabNet)",
+    },
+    "tabnet_sarampo_rubeola": {
+        "def_path": "sinannet/cnv/exantbr.def",
+        "indicador": "sarampo_rubeola_notificacoes_sinan",
+        "fonte_nome": "SINAN / Sarampo e Rubeola (TabNet)",
+    },
+    # Malaria NAO esta aqui de proposito: o unico cubo Brasil aberto
+    # (sinanwin/cnv/malabr.def) so tem arquivos de 2001 a 2006 — a vigilancia
+    # real de malaria migrou para o SIVEP-Malaria
+    # (portalweb04.saude.gov.br/sivep_malaria), que exige login e nao tem
+    # endpoint publico raspavel. Preferimos nao ter Malaria a apresentar
+    # "risco atual" calculado com dado de quase 20 anos atras.
+    "tabnet_febre_tifoide": {
+        "def_path": "sinannet/cnv/febretifoidebr.def",
+        "indicador": "febre_tifoide_notificacoes_sinan",
+        "fonte_nome": "SINAN / Febre Tifoide (TabNet)",
+    },
+    "tabnet_leishmaniose_visceral": {
+        "def_path": "sinannet/cnv/leishvbr.def",
+        "indicador": "leishmaniose_visceral_notificacoes_sinan",
+        "fonte_nome": "SINAN / Leishmaniose Visceral (TabNet)",
+    },
+    "tabnet_leishmaniose_tegumentar": {
+        "def_path": "sinannet/cnv/ltabr.def",
+        "indicador": "leishmaniose_tegumentar_notificacoes_sinan",
+        "fonte_nome": "SINAN / Leishmaniose Tegumentar Americana (TabNet)",
+    },
+    "tabnet_paralisia_flacida_aguda": {
+        "def_path": "sinannet/cnv/pfabr.def",
+        "indicador": "paralisia_flacida_aguda_notificacoes_sinan",
+        "fonte_nome": "SINAN / Paralisia Flacida Aguda (TabNet)",
+    },
+    "tabnet_varicela": {
+        "def_path": "sinannet/cnv/varicelabr.def",
+        "indicador": "varicela_notificacoes_sinan",
+        "fonte_nome": "SINAN / Varicela (TabNet)",
+    },
+    "tabnet_colera": {
+        "def_path": "sinannet/cnv/colerabr.def",
+        "indicador": "colera_notificacoes_sinan",
+        "fonte_nome": "SINAN / Colera (TabNet)",
+    },
+    "tabnet_raiva": {
+        "def_path": "sinannet/cnv/raivabr.def",
+        "indicador": "raiva_notificacoes_sinan",
+        "fonte_nome": "SINAN / Raiva Humana (TabNet)",
+    },
+    "tabnet_peste": {
+        "def_path": "sinannet/cnv/pestebr.def",
+        "indicador": "peste_notificacoes_sinan",
+        "fonte_nome": "SINAN / Peste (TabNet)",
+    },
 }
 
 TABNET_BASE_URL = "http://tabnet.datasus.gov.br/cgi/tabcgi.exe"
@@ -375,12 +446,18 @@ def _processar_tabnet_doenca(execucao, fonte_id, config, *, anos_recentes=3):
     registros = 0
     anos_processados = []
 
-    for arquivo in arquivos_disponiveis[:anos_recentes]:
+    # O formulario nem sempre lista os arquivos em ordem decrescente de ano
+    # (sinannet costuma listar do mais recente, mas sinanwin/malabr.def lista
+    # do mais antigo) — por isso extraimos o ano de cada arquivo e ordenamos
+    # antes de pegar os N mais recentes, em vez de confiar na ordem do form.
+    arquivos_com_ano = []
+    for arquivo in arquivos_disponiveis:
         ano_match = re.search(r"(\d{2})\.dbf$", arquivo, re.I)
-        if not ano_match:
-            continue
-        ano = 2000 + int(ano_match.group(1))
+        if ano_match:
+            arquivos_com_ano.append((2000 + int(ano_match.group(1)), arquivo))
+    arquivos_com_ano.sort(key=lambda t: t[0], reverse=True)
 
+    for ano, arquivo in arquivos_com_ano[:anos_recentes]:
         try:
             texto = _tabnet_post_tabela(def_path, defaults, linha=linha, coluna=coluna, arquivo=arquivo)
         except requests.RequestException:
