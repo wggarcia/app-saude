@@ -164,6 +164,23 @@ OPENDATASUS_DATASUS_MANIFEST = [
         "status": "download_habilitado",
     },
     {
+        "id": "sinan_chikungunya",
+        "nome": "SINAN / Febre de Chikungunya",
+        "fonte": "DATASUS / Ministerio da Saude",
+        "finalidade": "Notificacoes de Chikungunya por territorio para vigilancia de arboviroses.",
+        "indicadores": [
+            "casos notificados de chikungunya por territorio",
+            "serie historica por semana epidemiologica",
+        ],
+        "periodicidade_recomendada": "conforme publicacao oficial",
+        "estrategia": "worker baixa o .csv.zip oficial (com teto de tamanho), descompacta em streaming e agrega notificacoes por municipio/semana epidemiologica sem armazenar microdados",
+        "risco_operacional": "medio_alto",
+        "motivo_cuidado": "arquivo compactado de grande volume; processado em job controlado, nao no carregamento do painel",
+        "fonte_exata_inicial": "https://dadosabertos.saude.gov.br/dataset/arboviroses-febre-de-chikungunya",
+        "recurso_inicial": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Chikungunya/csv/CHIKBR25.csv.zip",
+        "status": "download_habilitado",
+    },
+    {
         "id": "vacinacao",
         "nome": "Vacinacao / Campanhas",
         "fonte": "OpenDataSUS / Ministerio da Saude",

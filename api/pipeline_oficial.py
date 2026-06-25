@@ -95,6 +95,22 @@ FONTES_ZIP_CONFIG = {
         "valor_col": None,  # cada linha = 1 notificacao
         "max_download_bytes": 250_000_000,  # teto de seguranca para o zip
     },
+    "sinan_chikungunya": {
+        "url": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Chikungunya/csv/CHIKBR25.csv.zip",
+        "delimiter": ",",
+        "encoding": "latin-1",
+        "indicador": "chikungunya_notificacoes_sinan",
+        "unidade": "notificacoes",
+        "fonte_nome": "SINAN / Chikungunya",
+        "versao_fonte": "CHIKBR25",
+        "ibge_cols": ["ID_MUNICIP", "ID_MN_RESI"],
+        "municipio_cols": [],
+        "uf_cols": [],
+        "uf_from_ibge": True,
+        "periodo_sem_col": "SEM_NOT",
+        "valor_col": None,
+        "max_download_bytes": 250_000_000,
+    },
 }
 
 

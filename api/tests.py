@@ -5430,20 +5430,20 @@ class EpidemiologiaMLTests(TestCase):
 
         self._tmpdir = tempfile.TemporaryDirectory()
         self._patches = [
+            patch.object(epi_ml, "MODELS_DIR", Path(self._tmpdir.name)),
             patch.object(epi_ml, "MODEL_PATH", Path(self._tmpdir.name) / "model.joblib"),
             patch.object(epi_ml, "META_PATH", Path(self._tmpdir.name) / "meta.json"),
         ]
         for p in self._patches:
             p.start()
-        epi_ml._MODELO_CACHE["bundle"] = None
-        epi_ml._MODELO_CACHE["mtime"] = None
+        epi_ml._MODELO_CACHE.clear()
 
     def tearDown(self):
         for p in self._patches:
             p.stop()
         self._tmpdir.cleanup()
 
-    def _criar_serie_oficial(self, estado, n_semanas=25, base=100, amplitude=40, picos=None):
+    def _criar_serie_oficial(self, estado, n_semanas=25, base=100, amplitude=40, picos=None, fonte_id=None, indicador=None):
         """Cria uma serie semanal real-like em FonteOficialAgregado para teste."""
         import math
         picos = picos or set()
@@ -5452,8 +5452,8 @@ class EpidemiologiaMLTests(TestCase):
             if semana in picos:
                 valor *= 4
             FonteOficialAgregado.objects.create(
-                fonte_id=self.FONTE,
-                indicador=self.INDICADOR,
+                fonte_id=fonte_id or self.FONTE,
+                indicador=indicador or self.INDICADOR,
                 estado=estado,
                 periodo=f"2025-S{semana:02d}",
                 valor=max(valor, 0),
@@ -5544,6 +5544,45 @@ class EpidemiologiaMLTests(TestCase):
 
         for estado in payload["layers"]["estados"]:
             self.assertIn("calculo_ml_oficial", estado)
+
+    def test_treinar_todas_doencas_registradas(self):
+        from api.epidemiologia_ml import treinar_todas_doencas_registradas
+
+        self._criar_serie_oficial("RJ", n_semanas=25, picos={10, 20})
+        self._criar_serie_oficial("SP", n_semanas=25, picos={8, 18})
+        self._criar_serie_oficial(
+            "RJ", n_semanas=25, picos={5, 15},
+            fonte_id="sinan_chikungunya", indicador="chikungunya_notificacoes_sinan",
+        )
+        self._criar_serie_oficial(
+            "SP", n_semanas=25, picos={6, 16},
+            fonte_id="sinan_chikungunya", indicador="chikungunya_notificacoes_sinan",
+        )
+
+        resultados = treinar_todas_doencas_registradas()
+
+        self.assertEqual(set(resultados.keys()), {"Dengue", "Chikungunya"})
+        self.assertTrue(resultados["Dengue"]["treinado"])
+        self.assertTrue(resultados["Chikungunya"]["treinado"])
+
+    def test_build_disease_probabilities_blend_por_doenca(self):
+        from api.epidemiologia import _build_disease_probabilities
+
+        sem_oficial = _build_disease_probabilities({"febre": 10, "dor_corpo": 8}, 20)
+        dengue_sem = next(d for d in sem_oficial if d["name"] == "Dengue")
+        self.assertFalse(dengue_sem["calculo_ml_oficial"])
+
+        com_oficial = _build_disease_probabilities(
+            {"febre": 10, "dor_corpo": 8}, 20,
+            risco_oficial_doenca_map={"Dengue": {"RJ": 1.0}},
+            estado_uf="RJ",
+        )
+        dengue_com = next(d for d in com_oficial if d["name"] == "Dengue")
+        chikungunya_com = next(d for d in com_oficial if d["name"] == "Chikungunya")
+
+        self.assertTrue(dengue_com["calculo_ml_oficial"])
+        self.assertFalse(chikungunya_com["calculo_ml_oficial"])
+        self.assertGreater(dengue_com["probability"], dengue_sem["probability"])
 
 
 class AutorizacaoMLConsolidacaoTests(TestCase):

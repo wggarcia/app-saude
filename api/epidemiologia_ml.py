@@ -10,6 +10,10 @@ hardcoded para o Brasil inteiro.
 Mesmo padrao de bootstrap/persistencia de views_ia_autorizacao_ml.py: cai no
 calculo heuristico quando nao ha amostras oficiais suficientes para a
 fonte/indicador/estado (ex.: estado sem dado oficial importado ainda).
+
+Suporta multiplas doencas (uma fonte/indicador por doenca, ver
+DOENCAS_REGISTRADAS) — cada uma treina e persiste seu proprio modelo,
+nomeado pelo indicador, para nao misturar series de doencas diferentes.
 """
 from __future__ import annotations
 
@@ -28,15 +32,41 @@ from .models import FonteOficialAgregado
 MODELS_DIR = Path(getattr(settings, "BASE_DIR", "/tmp")) / "ml_models" / "epidemiologia"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-MODEL_PATH = MODELS_DIR / "risco_oficial_model.joblib"
-META_PATH = MODELS_DIR / "risco_oficial_meta.json"
-
 MIN_AMOSTRAS_TREINO = 40  # minimo de observacoes (estado x semana) reais para treinar
 JANELA_MEDIA_MOVEL = 4
 
 FEATURE_NAMES = ["valor_atual", "media_movel", "desvio_movel", "razao_media", "semana_do_ano", "estado_idx"]
 
-_MODELO_CACHE = {"bundle": None, "mtime": None}
+# Doencas com fonte oficial real verificada e wireada em pipeline_oficial.py.
+# Cada entrada e (fonte_id, indicador, nome_da_doenca_em_DISEASE_WEIGHTS).
+# Doencas que nao tem dataset oficial confirmado (ex.: Resfriado Viral,
+# Bronquite, Gastroenterite Viral, Virose — nao sao de notificacao
+# compulsoria no Brasil) ficam de fora de proposito: nao ha fonte real para
+# treinar, e nao vamos simular uma.
+DOENCAS_REGISTRADAS = [
+    ("sinan_agravos", "dengue_notificacoes_sinan", "Dengue"),
+    ("sinan_chikungunya", "chikungunya_notificacoes_sinan", "Chikungunya"),
+]
+
+_MODELO_CACHE = {}  # indicador -> {"bundle": ..., "mtime": ...}
+
+
+def _slug(indicador: str) -> str:
+    return re.sub(r"[^a-z0-9_]+", "_", (indicador or "").lower()).strip("_") or "default"
+
+
+def _model_path(indicador: str) -> Path:
+    return MODELS_DIR / f"risco_oficial_{_slug(indicador)}_model.joblib"
+
+
+def _meta_path(indicador: str) -> Path:
+    return MODELS_DIR / f"risco_oficial_{_slug(indicador)}_meta.json"
+
+
+# Compatibilidade com versao anterior (1 doenca so) e com os testes existentes,
+# que continuam podendo sobrescrever esses dois caminhos via patch.object.
+MODEL_PATH = _model_path("dengue_notificacoes_sinan")
+META_PATH = _meta_path("dengue_notificacoes_sinan")
 
 
 def _parse_periodo(periodo: str):
@@ -105,6 +135,9 @@ def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificac
     except Exception:
         pass
 
+    model_path = MODEL_PATH if indicador == "dengue_notificacoes_sinan" else _model_path(indicador)
+    meta_path = META_PATH if indicador == "dengue_notificacoes_sinan" else _meta_path(indicador)
+
     if len(X) < MIN_AMOSTRAS_TREINO or len(set(y.tolist())) < 2:
         return {
             "treinado": False,
@@ -126,7 +159,7 @@ def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificac
     cv_folds = min(5, len(X) // 20 + 2)
     cv_scores = cross_val_score(ensemble, X, y, cv=cv_folds, scoring="f1_weighted")
 
-    joblib.dump({"model": ensemble, "estados": estados, "fonte_id": fonte_id, "indicador": indicador}, MODEL_PATH)
+    joblib.dump({"model": ensemble, "estados": estados, "fonte_id": fonte_id, "indicador": indicador}, model_path)
 
     meta = {
         "treinado": True,
@@ -139,23 +172,34 @@ def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificac
         "cv_f1_std": float(cv_scores.std()),
         "dataset_real_oficial": True,
     }
-    with open(META_PATH, "w") as f:
+    with open(meta_path, "w") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
     return meta
 
 
-def _carregar_modelo():
-    if not MODEL_PATH.exists():
+def treinar_todas_doencas_registradas():
+    """Treina (ou recusa, de forma transparente) o modelo de cada doenca em
+    DOENCAS_REGISTRADAS. Retorna {nome_doenca: meta}."""
+    resultados = {}
+    for fonte_id, indicador, nome_doenca in DOENCAS_REGISTRADAS:
+        resultados[nome_doenca] = treinar_modelo_oficial(fonte_id=fonte_id, indicador=indicador)
+    return resultados
+
+
+def _carregar_modelo(indicador="dengue_notificacoes_sinan"):
+    model_path = MODEL_PATH if indicador == "dengue_notificacoes_sinan" else _model_path(indicador)
+    if not model_path.exists():
         return None
-    mtime = MODEL_PATH.stat().st_mtime
-    if _MODELO_CACHE["bundle"] is not None and _MODELO_CACHE["mtime"] == mtime:
-        return _MODELO_CACHE["bundle"]
+    mtime = model_path.stat().st_mtime
+    cache_key = str(model_path)
+    cached = _MODELO_CACHE.get(cache_key)
+    if cached is not None and cached["mtime"] == mtime:
+        return cached["bundle"]
     try:
-        bundle = joblib.load(MODEL_PATH)
+        bundle = joblib.load(model_path)
     except Exception:
         return None
-    _MODELO_CACHE["bundle"] = bundle
-    _MODELO_CACHE["mtime"] = mtime
+    _MODELO_CACHE[cache_key] = {"bundle": bundle, "mtime": mtime}
     return bundle
 
 
@@ -165,7 +209,7 @@ def mapa_risco_oficial_por_estado(fonte_id="sinan_agravos", indicador="dengue_no
     recente de cada estado coberto pelo modelo treinado. Dict vazio quando
     nao ha modelo treinado (chamador deve usar so a heuristica nesse caso).
     """
-    bundle = _carregar_modelo()
+    bundle = _carregar_modelo(indicador)
     if bundle is None or bundle.get("fonte_id") != fonte_id or bundle.get("indicador") != indicador:
         return {}
 
@@ -193,10 +237,26 @@ def mapa_risco_oficial_por_estado(fonte_id="sinan_agravos", indicador="dengue_no
     return resultado
 
 
+def mapa_risco_oficial_por_doenca():
+    """
+    Retorna {nome_doenca: {estado: probabilidade_ml}} para todas as doencas em
+    DOENCAS_REGISTRADAS que tem modelo treinado. Doencas sem modelo treinado
+    (poucas amostras oficiais ainda) simplesmente nao aparecem no dict — o
+    chamador deve usar a heuristica de sintomas para essas.
+    """
+    resultado = {}
+    for fonte_id, indicador, nome_doenca in DOENCAS_REGISTRADAS:
+        mapa = mapa_risco_oficial_por_estado(fonte_id=fonte_id, indicador=indicador)
+        if mapa:
+            resultado[nome_doenca] = mapa
+    return resultado
+
+
 def modelo_info(fonte_id="sinan_agravos", indicador="dengue_notificacoes_sinan"):
-    if not META_PATH.exists():
+    meta_path = META_PATH if indicador == "dengue_notificacoes_sinan" else _meta_path(indicador)
+    if not meta_path.exists():
         return {"modelo_treinado": False}
-    with open(META_PATH) as f:
+    with open(meta_path) as f:
         meta = json.load(f)
     if meta.get("fonte_id") != fonte_id or meta.get("indicador") != indicador:
         return {"modelo_treinado": False, "meta_desatualizada_para_outra_fonte": True}

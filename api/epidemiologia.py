@@ -14,7 +14,7 @@ from django.utils import timezone
 from .models import Empresa, RegistroSintoma
 from .services.public_integrity import q_registro_sintoma_sintetico
 from .utils_cidades import carregar_base
-from .epidemiologia_ml import mapa_risco_oficial_por_estado
+from .epidemiologia_ml import mapa_risco_oficial_por_estado, mapa_risco_oficial_por_doenca
 
 
 SYMPTOM_LABELS = {
@@ -285,6 +285,16 @@ def _risco_oficial_map_seguro():
     Nunca derruba o panorama: cai em dict vazio (heuristica pura) em qualquer erro."""
     try:
         return mapa_risco_oficial_por_estado()
+    except Exception:
+        return {}
+
+
+def _risco_oficial_doenca_map_seguro():
+    """Mapa {doenca: {estado: probabilidade_ml}} para todas as doencas com
+    modelo treinado (ver epidemiologia_ml.DOENCAS_REGISTRADAS). Nunca derruba
+    o panorama: cai em dict vazio em qualquer erro."""
+    try:
+        return mapa_risco_oficial_por_doenca()
     except Exception:
         return {}
 
@@ -613,12 +623,13 @@ def _normalize_probabilities(raw_scores):
     return normalized
 
 
-def _build_disease_probabilities(symptom_counts, total_cases):
+def _build_disease_probabilities(symptom_counts, total_cases, risco_oficial_doenca_map=None, estado_uf=None):
     rates = {
         name: (count / total_cases) if total_cases else 0.0
         for name, count in symptom_counts.items()
     }
     raw_scores = {}
+    calculo_ml_oficial_doencas = []
 
     for disease, weights in DISEASE_WEIGHTS.items():
         score = 0.08
@@ -633,12 +644,25 @@ def _build_disease_probabilities(symptom_counts, total_cases):
                 # a doenca aparece de fato no conjunto observado.
                 score += rate * weight
 
-        raw_scores[disease] = max(score, 0.01)
+        score = max(score, 0.01)
+
+        # Calibra com ML real treinado em notificacao oficial (DATASUS/SINAN)
+        # quando essa doenca e esse estado tem modelo treinado disponivel —
+        # ver api/epidemiologia_ml.py DOENCAS_REGISTRADAS. Mesmo fator
+        # 0.85x-1.25x do blend de risk_score: ajusta sem dominar o sinal de
+        # sintomas autorrelatados.
+        oficial_probability = (risco_oficial_doenca_map or {}).get(disease, {}).get(estado_uf) if estado_uf else None
+        if oficial_probability is not None:
+            score *= 0.85 + (0.40 * max(min(oficial_probability, 1.0), 0.0))
+            calculo_ml_oficial_doencas.append(disease)
+
+        raw_scores[disease] = score
 
     probabilities = _normalize_probabilities(raw_scores)
 
     for item in probabilities:
         item["estimated_cases"] = int(round(total_cases * item["probability"] / 100))
+        item["calculo_ml_oficial"] = item["name"] in calculo_ml_oficial_doencas
 
     return probabilities
 
@@ -744,8 +768,9 @@ def _build_layer_queryset(group_fields):
     return sorted(visible_rows, key=lambda item: item["active_cases"], reverse=True)
 
 
-def _serialize_layer(level, group_fields, risco_oficial_map=None):
+def _serialize_layer(level, group_fields, risco_oficial_map=None, risco_oficial_doenca_map=None):
     risco_oficial_map = risco_oficial_map or {}
+    risco_oficial_doenca_map = risco_oficial_doenca_map or {}
     rows = _build_layer_queryset(group_fields)
     max_total = max((float(row.get("active_cases") or 0) for row in rows), default=1)
     max_recent = max((row["recent_24h"] for row in rows), default=1)
@@ -761,7 +786,11 @@ def _serialize_layer(level, group_fields, risco_oficial_map=None):
         }
         symptom_breakdown = _serialize_symptoms(symptom_counts, raw_total_cases)
         dominant_symptom = symptom_breakdown[0]["label"] if symptom_breakdown else "Sem dados"
-        disease_probabilities = _build_disease_probabilities(symptom_counts, raw_total_cases)
+        disease_probabilities = _build_disease_probabilities(
+            symptom_counts, raw_total_cases,
+            risco_oficial_doenca_map=risco_oficial_doenca_map,
+            estado_uf=_estado_para_uf(normalized_state),
+        )
         for disease in disease_probabilities:
             disease["active_estimated_cases"] = _active_case_value(total_cases * disease["probability"] / 100)
         activity_percent = _activity_percent(total_cases, int(row["recent_24h"] or 0))
@@ -840,8 +869,9 @@ def _serialize_layer(level, group_fields, risco_oficial_map=None):
     return areas
 
 
-def _build_state_layer(municipios, risco_oficial_map=None):
+def _build_state_layer(municipios, risco_oficial_map=None, risco_oficial_doenca_map=None):
     risco_oficial_map = risco_oficial_map or {}
+    risco_oficial_doenca_map = risco_oficial_doenca_map or {}
     grouped = defaultdict(lambda: {
         "estado": None,
         "total_cases": 0,
@@ -883,7 +913,11 @@ def _build_state_layer(municipios, risco_oficial_map=None):
         temporal_retention_percent = _safe_pct(total_cases, raw_total_cases)
         symptom_breakdown = _serialize_symptoms(row["symptom_counts"], raw_total_cases)
         dominant_symptom = symptom_breakdown[0]["label"] if symptom_breakdown else "Sem dados"
-        probable_diseases = _build_disease_probabilities(row["symptom_counts"], raw_total_cases)
+        probable_diseases = _build_disease_probabilities(
+            row["symptom_counts"], raw_total_cases,
+            risco_oficial_doenca_map=risco_oficial_doenca_map,
+            estado_uf=_estado_para_uf(row["estado"]),
+        )
         for disease in probable_diseases:
             disease["active_estimated_cases"] = _active_case_value(total_cases * disease["probability"] / 100)
         activity_percent = _activity_percent(total_cases, row["recent_24h"])
@@ -1174,9 +1208,18 @@ def build_panorama_payload():
         return _PANORAMA_CACHE["payload"]
 
     risco_oficial_map = _risco_oficial_map_seguro()
-    bairros = _serialize_layer("bairro", ("estado", "cidade", "bairro"), risco_oficial_map=risco_oficial_map)
-    municipios = _serialize_layer("municipio", ("estado", "cidade"), risco_oficial_map=risco_oficial_map)
-    estados = _build_state_layer(municipios, risco_oficial_map=risco_oficial_map)
+    risco_oficial_doenca_map = _risco_oficial_doenca_map_seguro()
+    bairros = _serialize_layer(
+        "bairro", ("estado", "cidade", "bairro"),
+        risco_oficial_map=risco_oficial_map, risco_oficial_doenca_map=risco_oficial_doenca_map,
+    )
+    municipios = _serialize_layer(
+        "municipio", ("estado", "cidade"),
+        risco_oficial_map=risco_oficial_map, risco_oficial_doenca_map=risco_oficial_doenca_map,
+    )
+    estados = _build_state_layer(
+        municipios, risco_oficial_map=risco_oficial_map, risco_oficial_doenca_map=risco_oficial_doenca_map,
+    )
     layers = {
         "bairros": bairros,
         "municipios": municipios,
