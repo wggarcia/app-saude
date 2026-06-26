@@ -267,6 +267,34 @@ services:
       - key: PUBLIC_BASE_URL
         value: https://app-saude-p9n8.onrender.com
 
+  # ── Vigilância epidemiológica internacional — 10:00 BRT (13:00 UTC) ─────────
+  # Coleta de fontes internacionais: WHO DON, Fiocruz, ECDC, GDELT-inglês.
+  # O cron BR (soluscrt-monitor-noticias no painel Render) cobre GDELT-BR + OPAS + SVS + CDC-EID.
+  - type: cron
+    name: monitor-epidemiologico-intl
+    env: python
+    plan: starter
+    buildCommand: "./build_cron.sh"
+    schedule: "0 13 * * *"
+    startCommand: "python3 manage.py monitorar_noticias --fontes gdelt-intl,who,fiocruz,ecdc && python3 manage.py analisar_noticias_ia && python3 manage.py gerar_alertas_noticias"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: soluscrt-saude-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
   # ── Redis — cache compartilhado entre workers (rate limiting, sessões) ──────
   - type: redis
     name: soluscrt-redis

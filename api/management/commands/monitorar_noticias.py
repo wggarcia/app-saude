@@ -46,27 +46,45 @@ PALAVRAS_ALERTA = [
     "rise in cases", "spike", "surge",
 ]
 
-# ── Fontes RSS gratuitas ────────────────────────────────────────────────────────
+# ── URLs das fontes ────────────────────────────────────────────────────────────
 
-RSS_SOURCES = [
-    ("OPAS",    "https://www.paho.org/pt/rss.xml"),
-    ("SVS",     "https://www.gov.br/saude/pt-br/assuntos/noticias/RSS"),
-    # ProMED encerrou RSS público em 2025; substituído por CDC EID Expedited
-    ("CDC-EID", "https://wwwnc.cdc.gov/eid/rss/expedited.xml"),
-]
-
-# ── GDELT ────────────────────────────────────────────────────────────────────────
-# API pública gratuita — sem autenticação necessária.
-GDELT_URL = (
+GDELT_URL_BR = (
     "https://api.gdeltproject.org/api/v2/doc/doc"
     "?query=epidemia+dengue+zika+gripe+surto+leptospirose+febre"
     "&mode=artlist&maxrecords=25&format=json"
     "&sourcelang=por&sourcecountry=BR"
 )
 
+GDELT_URL_INTL = (
+    "https://api.gdeltproject.org/api/v2/doc/doc"
+    "?query=epidemic+outbreak+disease+dengue+zika+fever+malaria+mpox"
+    "&mode=artlist&maxrecords=25&format=json"
+    "&sourcelang=eng"
+)
+
+# ── Catálogo de fontes disponíveis ─────────────────────────────────────────────
+# Cada entrada: tipo ("gdelt" ou "rss") + configuração
+
+FONTES_CATALOGO = {
+    "gdelt-br":    ("gdelt", GDELT_URL_BR),
+    "gdelt-intl":  ("gdelt", GDELT_URL_INTL),
+    "opas":        ("rss",   ("OPAS",    "https://www.paho.org/pt/rss.xml")),
+    "svs":         ("rss",   ("SVS",     "https://www.gov.br/saude/pt-br/assuntos/noticias/RSS")),
+    # ProMED encerrou RSS público em 2025; substituído por CDC EID Expedited
+    "cdc-eid":     ("rss",   ("CDC-EID", "https://wwwnc.cdc.gov/eid/rss/expedited.xml")),
+    "who":         ("rss",   ("WHO",     "https://www.who.int/feeds/entity/csr/don/en/rss.xml")),
+    "fiocruz":     ("rss",   ("Fiocruz", "https://agencia.fiocruz.br/rss.xml")),
+    "ecdc":        ("rss",   ("ECDC",    "https://www.ecdc.europa.eu/en/rss.xml")),
+}
+
+FONTES_PADRAO = "gdelt-br,opas,svs,cdc-eid"
+
 
 class Command(BaseCommand):
-    help = "Coleta notícias epidemiológicas de GDELT e RSS — armazena em NoticiaEpidemiologica."
+    help = (
+        "Coleta notícias epidemiológicas de GDELT e RSS — armazena em NoticiaEpidemiologica. "
+        f"Fontes padrão: {FONTES_PADRAO}."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -79,10 +97,20 @@ class Command(BaseCommand):
             action="store_true",
             help="Exibe as notícias encontradas sem salvar no banco.",
         )
+        parser.add_argument(
+            "--fontes",
+            default=FONTES_PADRAO,
+            help=(
+                f"Fontes separadas por vírgula. Padrão: {FONTES_PADRAO}. "
+                f"Disponíveis: {', '.join(FONTES_CATALOGO)}."
+            ),
+        )
 
     def handle(self, *args, **options):
         empresa_id = options.get("empresa_id")
         dry_run    = options["dry_run"]
+        fontes_raw = options.get("fontes") or FONTES_PADRAO
+        fontes     = [f.strip() for f in fontes_raw.split(",") if f.strip()]
 
         empresas = (
             Empresa.objects.filter(pk=empresa_id, ativo=True)
@@ -94,14 +122,23 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Nenhuma empresa ativa encontrada."))
             return
 
+        self.stdout.write(f"Fontes ativas: {', '.join(fontes)}")
+
         artigos = []
-        artigos.extend(self._fetch_gdelt())
-        for nome, url in RSS_SOURCES:
-            artigos.extend(self._fetch_rss(nome, url))
+        for fonte_key in fontes:
+            config = FONTES_CATALOGO.get(fonte_key)
+            if not config:
+                self.stderr.write(f"Fonte desconhecida: '{fonte_key}' — ignorada.")
+                continue
+            tipo, params = config
+            if tipo == "gdelt":
+                artigos.extend(self._fetch_gdelt(params))
+            else:
+                nome, url = params
+                artigos.extend(self._fetch_rss(nome, url))
 
         self.stdout.write(f"Total bruto: {len(artigos)} artigos coletados.")
 
-        # Filtra só artigos com pelo menos uma doença detectada
         artigos_relevantes = [a for a in artigos if a["doencas_detectadas"]]
         self.stdout.write(f"Relevantes (com doença identificada): {len(artigos_relevantes)}")
 
@@ -138,11 +175,11 @@ class Command(BaseCommand):
 
     # ── Coleta GDELT ──────────────────────────────────────────────────────────
 
-    def _fetch_gdelt(self):
+    def _fetch_gdelt(self, url):
         results = []
         for attempt in range(2):
             try:
-                resp = requests.get(GDELT_URL, timeout=15)
+                resp = requests.get(url, timeout=15)
                 if resp.status_code == 429:
                     if attempt == 0:
                         time.sleep(5)
@@ -152,21 +189,21 @@ class Command(BaseCommand):
                 resp.raise_for_status()
                 data = resp.json()
                 for item in data.get("articles", []):
-                    titulo  = item.get("title", "").strip()
-                    url     = item.get("url", "").strip()
-                    resumo  = item.get("seendate", "")[:20]
-                    pub_str = item.get("seendate", "")
+                    titulo       = item.get("title", "").strip()
+                    url_artigo   = item.get("url", "").strip()
+                    resumo       = item.get("seendate", "")[:20]
+                    pub_str      = item.get("seendate", "")
                     publicado_em = _parse_gdelt_date(pub_str)
 
                     texto   = (titulo + " " + resumo).lower()
                     doencas = _detectar_doencas(texto)
                     nivel   = _nivel_alerta(texto)
 
-                    if titulo and url:
+                    if titulo and url_artigo:
                         results.append({
                             "fonte": "GDELT",
                             "titulo": titulo,
-                            "url": url,
+                            "url": url_artigo,
                             "resumo": resumo,
                             "doencas_detectadas": doencas,
                             "nivel_alerta": nivel,
@@ -193,10 +230,10 @@ class Command(BaseCommand):
                 items = root.findall(".//atom:entry", ns)
 
             for item in items[:30]:
-                titulo  = _tag(item, ["title",   "atom:title"],   ns)
-                url     = _tag(item, ["link",    "atom:link"],    ns)
-                resumo  = _tag(item, ["description", "summary", "atom:summary"], ns)
-                pub_str = _tag(item, ["pubDate", "published", "atom:published"], ns)
+                titulo  = _tag(item, ["title",       "atom:title"],   ns)
+                url     = _tag(item, ["link",         "atom:link"],    ns)
+                resumo  = _tag(item, ["description",  "summary",  "atom:summary"], ns)
+                pub_str = _tag(item, ["pubDate",      "published", "atom:published"], ns)
 
                 if not titulo or not url:
                     continue
