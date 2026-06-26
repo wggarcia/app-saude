@@ -70,7 +70,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
       <div class="side-card">
         <h2>Ecossistema operacional</h2>
         <div id="enterpriseEcosystem" class="ecosystem">
-          <p>Aguardando Command Center Enterprise.</p>
+          <p>Aguardando Central Corporativa.</p>
         </div>
       </div>
       <div class="side-card">
@@ -261,7 +261,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
     const target = document.getElementById("enterpriseEcosystem");
     if (!target) return;
     if (!data || !data.maturidade_operacional) {
-      target.innerHTML = "<p>Command Center Enterprise ainda sem leitura para este ambiente.</p>";
+      target.innerHTML = "<p>Central Corporativa ainda sem leitura para este ambiente.</p>";
       return;
     }
     const maturity = data.maturidade_operacional || {};

@@ -499,7 +499,7 @@ function setHeroBadges(data){
 async function carregarDashboard(){
   try {
     const response = await fetch("/api/sst/dashboard");
-    if (!response.ok) throw new Error("Falha ao carregar dashboard");
+    if (!response.ok) throw new Error("Falha ao carregar o painel");
     const data = await response.json();
 
     document.getElementById("k-func").textContent = data.funcionarios_ativos ?? 0;

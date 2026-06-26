@@ -809,8 +809,8 @@
           <button class="btn" id="toggleRightDock">Inteligencia</button>
           <button class="btn" id="toggleBottomSheet">Situacao</button>
           <button class="btn" id="gotoCommandAI">Sala de Decisão IA</button>
-          <button class="btn" id="exportJsonBtn">Briefing JSON</button>
-          <button class="btn" id="exportCsvBtn">Briefing CSV</button>
+          <button class="btn" id="exportJsonBtn">Exportar JSON</button>
+          <button class="btn" id="exportCsvBtn">Exportar CSV</button>
           <button class="btn primary" id="refreshBtn">Atualizar</button>
           <button class="btn warn" id="logoutBtn">Sair</button>
         </div>
@@ -824,7 +824,7 @@
     </div>
 
     <a href="/governo/gestao/" class="quick-link quick-link-right">🏛️ Gestão Governamental</a>
-    <a href="/governo/gestao/" class="quick-link quick-link-center">Command Center</a>
+    <a href="/governo/gestao/" class="quick-link quick-link-center">Central de Controle</a>
     <a href="/sala-decisao-ia/" class="quick-link quick-link-left">Sala de Decisão IA</a>
     <button class="floating-button toggle-left shifted" id="leftHandle">›</button>
     <button class="floating-button toggle-right shifted" id="rightHandle">‹</button>
@@ -871,8 +871,8 @@
         </section>
 
         <section class="section">
-          <h2>Briefing Governamental</h2>
-          <div class="stack" id="governmentBriefing">Carregando briefing...</div>
+          <h2>Resumo Governamental</h2>
+          <div class="stack" id="governmentBriefing">Carregando resumo...</div>
         </section>
 
         <section class="section">
@@ -1332,7 +1332,7 @@
             <strong>Uso no painel</strong>
             <ul>
               <li>${escapeHtml(payload.finalidade || payload.uso_no_saas || payload.entrega || payload.resumo || "Contexto oficial para validação de sinais colaborativos.")}</li>
-              <li>${escapeHtml(payload.estrategia || payload.regra_operacional || "Agregados expostos no dashboard com rastreabilidade de fonte e data.")}</li>
+              <li>${escapeHtml(payload.estrategia || payload.regra_operacional || "Agregados expostos no painel com rastreabilidade de fonte e data.")}</li>
             </ul>
           </div>
           <div class="official-detail-box">
