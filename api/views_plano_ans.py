@@ -7,6 +7,7 @@ import json
 import re
 from datetime import date
 
+from django.core.cache import cache
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -278,6 +279,15 @@ def api_sib_transmitir(request, sib_id):
     empresa, err = _ps_auth(request)
     if err:
         return err
+
+    # Rate limiting: max 1 transmissão SIB por registro por hora (evita DoS no SIPWeb ANS)
+    rl_key = f"sib_transmit:{sib_id}"
+    if cache.get(rl_key):
+        return JsonResponse(
+            {"erro": "Este registro SIB já foi transmitido recentemente. Aguarde 1 hora antes de retransmitir."},
+            status=429,
+        )
+    cache.set(rl_key, True, timeout=3600)
 
     try:
         s = SIBRegistro.objects.get(id=sib_id, empresa=empresa)

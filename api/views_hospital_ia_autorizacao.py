@@ -11,6 +11,8 @@ from django.shortcuts import render
 from django.db.models import Avg
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
+from django.core.cache import cache
+
 from .access_control import (
     api_requer_feature, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
@@ -144,6 +146,8 @@ def api_hospital_ia_autorizacoes(request):
 
 # ── API: analisar nova solicitação ─────────────────────────────────────────────
 
+_ML_RATE_LIMIT = 30  # max inferências por empresa por hora
+
 @csrf_exempt
 @api_requer_feature("hospital.ia_autorizacao")
 def api_hospital_ia_analisar(request):
@@ -152,6 +156,13 @@ def api_hospital_ia_analisar(request):
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     if request.method != "POST":
         return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+    # Rate limiting: max 30 inferências ML por empresa por hora
+    rl_key = f"ml_rl_hosp:{empresa.id}"
+    count = cache.get(rl_key, 0)
+    if count >= _ML_RATE_LIMIT:
+        return JsonResponse({"erro": "Limite de análises excedido (30/hora). Tente mais tarde."}, status=429)
+    cache.set(rl_key, count + 1, timeout=3600)
 
     try:
         data = json.loads(request.body)

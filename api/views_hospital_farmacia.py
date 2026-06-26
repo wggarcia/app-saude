@@ -5,7 +5,8 @@ Hospital — Farmácia Hospitalar
 import json
 from decimal import Decimal, InvalidOperation
 
-from django.db.models import Count, Q
+from django.db import transaction
+from django.db.models import Count, Q, F
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -110,7 +111,10 @@ def api_farmacia_hosp_novo_item(request):
         return empresa
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
     except ValueError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
@@ -167,7 +171,10 @@ def api_farmacia_hosp_atualizar_estoque(request, item_id):
         return JsonResponse({"erro": "Item não encontrado"}, status=404)
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
     except ValueError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
@@ -183,14 +190,15 @@ def api_farmacia_hosp_atualizar_estoque(request, item_id):
     if quantidade <= 0:
         return JsonResponse({"erro": "quantidade deve ser positiva"}, status=400)
 
-    if tipo == "entrada":
-        item.estoque_atual += quantidade
-    else:
-        if item.estoque_atual < quantidade:
-            return JsonResponse({"erro": "Estoque insuficiente para saída"}, status=400)
-        item.estoque_atual -= quantidade
-
-    item.save()
+    with transaction.atomic():
+        item = FarmaciaHospitalarItem.objects.select_for_update().get(pk=item_id, empresa=empresa)
+        if tipo == "entrada":
+            item.estoque_atual += quantidade
+        else:
+            if item.estoque_atual < quantidade:
+                return JsonResponse({"erro": "Estoque insuficiente para saída"}, status=400)
+            item.estoque_atual -= quantidade
+        item.save()
     return JsonResponse({"ok": True, "item": _item_to_dict(item)})
 
 

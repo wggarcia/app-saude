@@ -41,7 +41,13 @@ def api_fornecedores_farmacia(request):
              "contato": f.contato, "ativo": f.ativo}
             for f in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     f = FornecedorFarmacia.objects.create(
         empresa=e,
         nome=data.get("nome", ""),
@@ -68,7 +74,13 @@ def api_fornecedor_farmacia_detalhe(request, fornecedor_id):
     if request.method == "DELETE":
         f.delete()
         return JsonResponse({"ok": True})
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     for campo in ["nome", "cnpj", "contato", "email", "telefone", "ativo"]:
         if campo in data:
             setattr(f, campo, data[campo])
@@ -102,7 +114,13 @@ def api_itens_farmacia(request):
              "unidade_fisica_nome": i.unidade_fisica.nome if i.unidade_fisica else ""}
             for i in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     forn = None
     if data.get("fornecedor_id"):
         try:
@@ -144,7 +162,13 @@ def api_item_farmacia_detalhe(request, item_id):
     if request.method == "DELETE":
         item.delete()
         return JsonResponse({"ok": True})
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     for campo in ["nome", "codigo", "categoria", "descricao", "unidade_medida", "estoque_minimo", "ativo"]:
         if campo in data:
             setattr(item, campo, data[campo])
@@ -175,7 +199,13 @@ def api_movimentos_estoque(request):
              "data_movimento": m.data_movimento.isoformat()}
             for m in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     try:
         item = ItemFarmacia.objects.get(pk=data["item_id"], empresa=e)
     except (KeyError, ItemFarmacia.DoesNotExist):
@@ -219,7 +249,13 @@ def api_dispensacoes_farmacia(request):
              "dispensado_em": d.dispensado_em.isoformat()}
             for d in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     try:
         item = ItemFarmacia.objects.get(pk=data["item_id"], empresa=e)
     except (KeyError, ItemFarmacia.DoesNotExist):
@@ -270,7 +306,13 @@ def api_pedidos_compra_farmacia(request):
              ]}
             for p in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     forn = None
     if data.get("fornecedor_id"):
         try:
@@ -305,7 +347,13 @@ def api_pedido_compra_status(request, pedido_id):
         p = PedidoCompraFarmacia.objects.get(pk=pedido_id, empresa=e)
     except PedidoCompraFarmacia.DoesNotExist:
         return JsonResponse({"erro": "Não encontrado"}, status=404)
-    data = json.loads(request.body or "{}")
+    try:
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     p.status = data.get("status", p.status)
     p.save()
     if p.status == "recebido":

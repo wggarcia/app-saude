@@ -40,7 +40,10 @@ def api_programas_gov(request):
              "criado_em": p.criado_em.isoformat()}
             for p in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     p = ProgramaSaudeGov.objects.create(
         empresa=e,
         nome=data.get("nome", ""),
@@ -68,7 +71,10 @@ def api_programa_gov_detalhe(request, programa_id):
     if request.method == "DELETE":
         p.delete()
         return JsonResponse({"ok": True})
-    data = json.loads(request.body or "{}")
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     nullable = {"orcamento_previsto", "data_inicio", "data_fim_prevista"}
     for campo in ["nome", "descricao", "status", "populacao_alvo", "responsavel",
                   "orcamento_previsto", "orcamento_executado", "data_inicio", "data_fim_prevista"]:
@@ -99,7 +105,10 @@ def api_indicadores_gov(request):
              "atingiu_meta": (i.valor_atual is not None and i.meta is not None and i.valor_atual >= i.meta)}
             for i in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     prog = None
     if data.get("programa_id"):
         try:
@@ -132,7 +141,10 @@ def api_indicador_gov_detalhe(request, indicador_id):
     if request.method == "DELETE":
         i.delete()
         return JsonResponse({"ok": True})
-    data = json.loads(request.body or "{}")
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     nullable = {"meta", "valor_atual"}
     for campo in ["nome", "descricao", "tipo", "meta", "valor_atual", "unidade", "periodo_referencia"]:
         if campo in data:
@@ -159,7 +171,10 @@ def api_orcamentos_gov(request):
              "observacoes": o.observacoes}
             for o in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     o, created = OrcamentoSaudeGov.objects.get_or_create(
         empresa=e, ano=int(data.get("ano", timezone.now().year)),
         defaults={
@@ -199,7 +214,10 @@ def api_planos_acao_gov(request):
              "criado_em": p.criado_em.isoformat()}
             for p in qs
         ]})
-    data = json.loads(request.body or "{}")
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     prog = None
     if data.get("programa_id"):
         try:
@@ -230,7 +248,10 @@ def api_plano_acao_gov_detalhe(request, plano_id):
     if request.method == "DELETE":
         p.delete()
         return JsonResponse({"ok": True})
-    data = json.loads(request.body or "{}")
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     for campo in ["titulo", "descricao", "responsavel", "prioridade", "status", "prazo", "progresso"]:
         if campo in data:
             setattr(p, campo, data[campo] or None if campo == "prazo" else data[campo])

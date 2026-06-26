@@ -80,21 +80,44 @@ def api_rede_farmacia_estoque(request):
     rede = unidade.rede
     unidades_rede = rede.unidades.filter(ativa=True).select_related("empresa")
 
+    # Pré-carrega IDs das empresas para evitar N+1 queries
+    empresa_ids = [u.empresa_id for u in unidades_rede]
+    em_30 = date.today() + timedelta(days=30)
+
+    from django.db.models import Count, Q
+    meds_por_empresa = {
+        row["empresa_id"]: row
+        for row in MedicamentoFarmacia.objects
+            .filter(empresa_id__in=empresa_ids, ativo=True)
+            .values("empresa_id")
+            .annotate(
+                criticos=Count("id", filter=Q(status_estoque="critico")),
+                baixos=Count("id", filter=Q(status_estoque="baixo")),
+            )
+    }
+    lotes_vencendo = {
+        row["empresa_id"]: row["n"]
+        for row in LoteMedicamento.objects
+            .filter(empresa_id__in=empresa_ids,
+                    data_validade__lte=em_30, data_validade__gte=date.today(),
+                    quantidade_atual__gt=0)
+            .values("empresa_id").annotate(n=Count("id"))
+    }
+    lotes_vencidos = {
+        row["empresa_id"]: row["n"]
+        for row in LoteMedicamento.objects
+            .filter(empresa_id__in=empresa_ids,
+                    data_validade__lt=date.today(), quantidade_atual__gt=0)
+            .values("empresa_id").annotate(n=Count("id"))
+    }
+
     resultado = []
     for u in unidades_rede:
-        meds = MedicamentoFarmacia.objects.filter(empresa=u.empresa, ativo=True)
-        criticos = sum(1 for m in meds if m.status_estoque == "critico")
-        baixos = sum(1 for m in meds if m.status_estoque == "baixo")
-
-        # Lotes vencendo em 30 dias
-        em_30 = date.today() + timedelta(days=30)
-        vencendo = LoteMedicamento.objects.filter(
-            empresa=u.empresa, data_validade__lte=em_30,
-            data_validade__gte=date.today(), quantidade_atual__gt=0
-        ).count()
-        vencidos = LoteMedicamento.objects.filter(
-            empresa=u.empresa, data_validade__lt=date.today(), quantidade_atual__gt=0
-        ).count()
+        _m = meds_por_empresa.get(u.empresa_id, {})
+        criticos = _m.get("criticos", 0)
+        baixos = _m.get("baixos", 0)
+        vencendo = lotes_vencendo.get(u.empresa_id, 0)
+        vencidos = lotes_vencidos.get(u.empresa_id, 0)
 
         resultado.append({
             "unidade_id": u.id,
@@ -206,7 +229,10 @@ def api_rede_farmacia_transferencias(request):
 
     # POST — nova solicitação de transferência
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
     except ValueError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
@@ -275,7 +301,10 @@ def api_rede_farmacia_transferencia_acao(request, transf_id):
         return JsonResponse({"erro": "Sem permissão"}, status=403)
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
     except ValueError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 

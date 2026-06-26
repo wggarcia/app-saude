@@ -275,11 +275,18 @@ def _gerar_dataset_sintetico():
 
 # ─── Inferência ───────────────────────────────────────────────────────────────
 
+_MODELO_CACHE: dict = {}  # cache em memória por processo
+
 def _carregar_modelo():
-    """Carrega modelo treinado ou treina se não existir."""
+    """Carrega modelo treinado (com cache em memória para evitar joblib.load por request)."""
     if not MODEL_PATH.exists() or not ENCODER_PATH.exists():
         treinar_modelo()
-    return joblib.load(MODEL_PATH), joblib.load(ENCODER_PATH)
+    mtime = MODEL_PATH.stat().st_mtime
+    if _MODELO_CACHE.get("mtime") != mtime:
+        _MODELO_CACHE["model"] = joblib.load(MODEL_PATH)
+        _MODELO_CACHE["le"] = joblib.load(ENCODER_PATH)
+        _MODELO_CACHE["mtime"] = mtime
+    return _MODELO_CACHE["model"], _MODELO_CACHE["le"]
 
 
 def inferir_autorizacao(dados: dict) -> dict:

@@ -15,18 +15,30 @@ def api_noticias_epidemiologicas(request):
     if empresa is None:
         return JsonResponse({"erro": "Empresa não associada ao usuário."}, status=403)
 
-    nivel    = request.GET.get("nivel")       # informativo | alerta | critico
-    status   = request.GET.get("status")      # novo | lido | arquivado
-    doenca   = request.GET.get("doenca")      # nome da doença, ex: dengue
-    limite   = min(int(request.GET.get("limite", 50)), 200)
+    _NIVEIS_VALIDOS  = {"informativo", "alerta", "critico"}
+    _STATUS_VALIDOS  = {"novo", "lido", "arquivado"}
+
+    nivel   = request.GET.get("nivel", "").strip().lower()
+    status  = request.GET.get("status", "").strip().lower()
+    doenca  = request.GET.get("doenca", "").strip()
+    try:
+        limite = min(max(int(request.GET.get("limite", 50)), 1), 200)
+    except (ValueError, TypeError):
+        limite = 50
 
     qs = NoticiaEpidemiologica.objects.filter(empresa=empresa)
     if nivel:
+        if nivel not in _NIVEIS_VALIDOS:
+            return JsonResponse({"erro": f"nivel deve ser um de: {', '.join(sorted(_NIVEIS_VALIDOS))}"}, status=400)
         qs = qs.filter(nivel_alerta=nivel)
     if status:
+        if status not in _STATUS_VALIDOS:
+            return JsonResponse({"erro": f"status deve ser um de: {', '.join(sorted(_STATUS_VALIDOS))}"}, status=400)
         qs = qs.filter(status=status)
     if doenca:
-        qs = qs.filter(doencas_detectadas__contains=doenca)
+        # Filtra doença pelo nome exato dentro do JSONField (lista de strings)
+        # Usa icontains seguro para busca por substring no array JSON serializado
+        qs = qs.filter(doencas_detectadas__icontains=doenca[:100])
 
     noticias = list(
         qs.values(

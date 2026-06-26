@@ -118,8 +118,19 @@ def api_cirurgia_lista(request):
     if q:
         qs = qs.filter(Q(paciente_nome__icontains=q) | Q(tipo_cirurgia__icontains=q) | Q(cirurgiao__icontains=q))
 
-    qs = qs.order_by("-data_hora")[:100]
-    return JsonResponse({"cirurgias": [_cir_to_dict(c) for c in qs]})
+    try:
+        limit = min(max(int(request.GET.get("limit", 50)), 1), 500)
+        offset = max(int(request.GET.get("offset", 0)), 0)
+    except (ValueError, TypeError):
+        limit, offset = 50, 0
+
+    total = qs.count()
+    qs = qs.order_by("-data_hora")[offset: offset + limit]
+    return JsonResponse({
+        "cirurgias": [_cir_to_dict(c) for c in qs],
+        "total": total, "limit": limit, "offset": offset,
+        "has_more": (offset + limit) < total,
+    })
 
 
 # ─── API: Nova cirurgia ───────────────────────────────────────────────────────
@@ -133,7 +144,10 @@ def api_cirurgia_nova(request):
         return empresa
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
     except ValueError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
@@ -208,7 +222,10 @@ def api_cirurgia_atualizar(request, cir_id):
         return JsonResponse({"erro": "Cirurgia não encontrada"}, status=404)
 
     try:
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
     except ValueError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 

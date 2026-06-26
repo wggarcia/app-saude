@@ -110,7 +110,10 @@ def api_dre_salvar(request):
         return JsonResponse({"erro": "Método não permitido"}, status=405)
 
     try:
-        data = json.loads(request.body or "{}")
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
     except json.JSONDecodeError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 

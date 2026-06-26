@@ -29,10 +29,22 @@ logger = logging.getLogger(__name__)
 
 
 def _hosp(request):
+    """Valida sessão hospital + permissão de módulo RNDS para o usuário."""
     emp = empresa_autenticada_from_request(request)
     if emp and get_setor(emp) == "hospital":
         return emp
     return None
+
+
+def _hosp_gerencia(request):
+    """Acesso restrito a operações sensíveis RNDS: exige setor hospital + perfil gerência."""
+    from .access_control import principal_pode_operacao_setorial
+    emp = empresa_autenticada_from_request(request)
+    if not emp or get_setor(emp) != "hospital":
+        return None
+    if not principal_pode_operacao_setorial(request, "rnds_gerencia"):
+        return None
+    return emp
 
 
 @ensure_csrf_cookie
@@ -552,13 +564,18 @@ def _transmitir_rnds(bundle_fhir, cred, empresa):
         pem_cert = cert.public_bytes(Encoding.PEM)
         pem_key  = priv_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
 
-        # Escreve PEM temporários
+        # Escreve PEM temporários com permissões restritas (0o600 — apenas processo atual)
+        import os as _os
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as fc:
-            fc.write(pem_cert)
             cert_path = fc.name
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as fk:
-            fk.write(pem_key)
             key_path = fk.name
+        _os.chmod(cert_path, 0o600)
+        _os.chmod(key_path, 0o600)
+        with open(cert_path, "wb") as fc:
+            fc.write(pem_cert)
+        with open(key_path, "wb") as fk:
+            fk.write(pem_key)
 
         try:
             response = req.post(

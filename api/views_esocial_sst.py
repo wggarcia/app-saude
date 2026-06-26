@@ -11,8 +11,10 @@ Compartilhamento de ASO:
   Clínica médica gera link/token → empresa contratante acessa PDF/dados via portal público.
 """
 import json
+import re
 import secrets
 import hashlib
+from xml.sax.saxutils import escape as _xml_escape
 from datetime import date, timedelta
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
@@ -107,14 +109,14 @@ def _gerar_xml_s2210(cat, cfg):
         SubElement(c, "hrAcid").text = cat.hora_acidente.strftime("%H:%M")
     SubElement(c, "tpCat").text = getattr(cat, "tp_cat", "1") or "1"
     SubElement(c, "indCatObito").text = "S" if cat.gravidade == "fatal" else "N"
-    SubElement(c, "dscLesao").text = (cat.parte_corpo or "Não informado")[:200]
-    SubElement(c, "dscCat").text = (cat.descricao or "")[:999]
+    SubElement(c, "dscLesao").text = _xml_escape((cat.parte_corpo or "Não informado")[:200])
+    SubElement(c, "dscCat").text = _xml_escape((cat.descricao or "")[:999])
     SubElement(c, "houveAfast").text = "S" if cat.houve_afastamento else "N"
 
     # localAcidente
     loc = SubElement(c, "localAcidente")
     SubElement(loc, "tpLocal").text = "1"
-    SubElement(loc, "dscLocal").text = (cat.local_acidente or "Não informado")[:255]
+    SubElement(loc, "dscLocal").text = _xml_escape((cat.local_acidente or "Não informado")[:255])
     ilt = SubElement(loc, "ideLocalTrab")
     SubElement(ilt, "tpInsc").text = "1"
     SubElement(ilt, "nrInsc").text = cnpj or "00000000000000"
@@ -284,14 +286,14 @@ def _gerar_xml_s2240(empresa, cfg, periodo=None, posto=None):
 
     set_el = SubElement(amb, "setor")
     setor_nome = (posto.setor or cfg.cnae_principal or "Atividades gerais") if posto else (cfg.cnae_principal if cfg else "Atividades gerais")
-    SubElement(set_el, "dscSetor").text = setor_nome[:999]
+    SubElement(set_el, "dscSetor").text = _xml_escape(setor_nome[:999])
 
     if posto:
         # Responsável técnico
         resp = SubElement(amb, "responsavel")
-        SubElement(resp, "nmResp").text = (posto.responsavel_tecnico or (cfg.nome_medico_coordenador if cfg else "Responsável SST"))[:70]
+        SubElement(resp, "nmResp").text = _xml_escape((posto.responsavel_tecnico or (cfg.nome_medico_coordenador if cfg else "Responsável SST"))[:70])
         SubElement(resp, "cpfResp").text = "00000000000"  # CPF do responsável — campo a ser adicionado futuramente
-        SubElement(resp, "ideOC").text = posto.responsavel_registro or "000000"
+        SubElement(resp, "ideOC").text = _xml_escape(posto.responsavel_registro or "000000")
 
         # Trabalhadores expostos
         vinculos_ativos = FuncionarioPostoTrabalho.objects.filter(
@@ -312,10 +314,10 @@ def _gerar_xml_s2240(empresa, cfg, periodo=None, posto=None):
                 ag_el = SubElement(trab, "agentesNocivos")
                 SubElement(ag_el, "codAgente").text = ag.cod_agente
                 dsc = ag.dsc_agente or ag.get_cod_agente_display()
-                SubElement(ag_el, "dscAgente").text = dsc[:300]
+                SubElement(ag_el, "dscAgente").text = _xml_escape(dsc[:300])
 
                 if ag.tec_medicao:
-                    SubElement(ag_el, "tecMedicao").text = ag.tec_medicao[:200]
+                    SubElement(ag_el, "tecMedicao").text = _xml_escape(ag.tec_medicao[:200])
                 if ag.intensidade:
                     SubElement(ag_el, "intConc").text = ag.intensidade[:20]
                 if ag.limite_tolerancia:
@@ -358,22 +360,16 @@ def api_esocial_eventos(request):
             qs = qs.filter(status=status)
         qs = qs.order_by("-criado_em", "-id")
         total = qs.count()
-        limit_raw = str(request.GET.get("limit", "")).strip().lower()
-        all_raw = str(request.GET.get("all", "")).strip().lower()
-        if all_raw in {"1", "true", "yes", "sim"} or limit_raw in {"all", "max", "0", "-1"}:
-            eventos = list(qs)
-            meta = {"total": total, "limit": total, "offset": 0, "all": True}
-        else:
-            try:
-                limit = min(max(int(request.GET.get("limit", 1000)), 1), 10000)
-            except (ValueError, TypeError):
-                limit = 1000
-            try:
-                offset = max(int(request.GET.get("offset", 0)), 0)
-            except (ValueError, TypeError):
-                offset = 0
-            eventos = list(qs[offset: offset + limit])
-            meta = {"total": total, "limit": limit, "offset": offset}
+        try:
+            limit = min(max(int(request.GET.get("limit", 50)), 1), 500)
+        except (ValueError, TypeError):
+            limit = 50
+        try:
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            offset = 0
+        eventos = list(qs[offset: offset + limit])
+        meta = {"total": total, "limit": limit, "offset": offset, "has_more": (offset + limit) < total}
         return JsonResponse({"eventos": [_evt_dict(ev) for ev in eventos], **meta})
 
     data = json.loads(request.body or "{}")
