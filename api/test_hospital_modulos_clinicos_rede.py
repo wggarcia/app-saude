@@ -99,7 +99,7 @@ class HemoterapiaTests(TestCase):
             "/api/hospital/hemoterapia/bolsas/",
             data={
                 "codigo_bolsa": "BS-0001",
-                "tipo": "concentrado_hemacias",
+                "tipo": "ch",
                 "tipo_abo": "O",
                 "fator_rh": "+",
                 "volume_ml": 280,
