@@ -267,38 +267,16 @@ services:
       - key: PUBLIC_BASE_URL
         value: https://app-saude-p9n8.onrender.com
 
-  # ── Vigilância epidemiológica — coleta notícias 06:00 BRT (09:00 UTC) ───────
+  # ── Vigilância epidemiológica — pipeline completa 06:00 BRT (09:00 UTC) ─────
+  # Espelha o cron manual "soluscrt-monitor-noticias" já existente no Render.
+  # Após sync deste yaml, remova o cron manual pelo painel para evitar duplicata.
   - type: cron
-    name: monitorar-noticias
+    name: monitor-epidemiologico
     env: python
     plan: starter
     buildCommand: "./build_cron.sh"
     schedule: "0 9 * * *"
-    startCommand: "python3 manage.py monitorar_noticias"
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
-      - key: DJANGO_ENV
-        value: production
-      - key: DJANGO_DEBUG
-        value: "false"
-      - key: DJANGO_SECRET_KEY
-        sync: false
-      - key: JWT_SECRET_KEY
-        sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: soluscrt-saude-db
-          property: connectionString
-
-  # ── Vigilância epidemiológica — análise IA 06:15 BRT (09:15 UTC) ────────────
-  - type: cron
-    name: analisar-noticias-ia
-    env: python
-    plan: starter
-    buildCommand: "./build_cron.sh"
-    schedule: "15 9 * * *"
-    startCommand: "python3 manage.py analisar_noticias_ia"
+    startCommand: "python3 manage.py monitorar_noticias && python3 manage.py analisar_noticias_ia && python3 manage.py gerar_alertas_noticias"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -316,30 +294,6 @@ services:
           property: connectionString
       - key: ANTHROPIC_API_KEY
         sync: false
-
-  # ── Vigilância epidemiológica — consolidar alertas 06:30 BRT (09:30 UTC) ────
-  - type: cron
-    name: gerar-alertas-noticias
-    env: python
-    plan: starter
-    buildCommand: "./build_cron.sh"
-    schedule: "30 9 * * *"
-    startCommand: "python3 manage.py gerar_alertas_noticias"
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
-      - key: DJANGO_ENV
-        value: production
-      - key: DJANGO_DEBUG
-        value: "false"
-      - key: DJANGO_SECRET_KEY
-        sync: false
-      - key: JWT_SECRET_KEY
-        sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: soluscrt-saude-db
-          property: connectionString
 
   # ── Redis — cache compartilhado entre workers (rate limiting, sessões) ──────
   - type: redis
