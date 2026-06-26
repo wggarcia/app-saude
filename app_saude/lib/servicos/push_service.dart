@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -33,6 +34,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 class PushService {
   static bool _initialized = false;
+  static final List<StreamSubscription> _subscriptions = [];
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   static String? _lastRegisteredRegionKey;
@@ -60,11 +62,13 @@ class PushService {
       );
 
       await _registerToken();
-      FirebaseMessaging.instance.onTokenRefresh.listen((_) async {
-        await _registerToken(force: true);
-      });
-      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-      FirebaseMessaging.onMessageOpenedApp.listen(_captureRemoteMessage);
+      _subscriptions.addAll([
+        FirebaseMessaging.instance.onTokenRefresh.listen((_) async {
+          await _registerToken(force: true);
+        }),
+        FirebaseMessaging.onMessage.listen(_handleForegroundMessage),
+        FirebaseMessaging.onMessageOpenedApp.listen(_captureRemoteMessage),
+      ]);
       final initialMessage =
           await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
@@ -74,6 +78,15 @@ class PushService {
     } catch (_) {
       // Push permanece opcional ate que Firebase/APNs estejam configurados.
     }
+  }
+
+  /// Cancela todos os listeners Firebase — chamar no dispose() da raiz do app.
+  static Future<void> dispose() async {
+    for (final sub in _subscriptions) {
+      await sub.cancel();
+    }
+    _subscriptions.clear();
+    _initialized = false;
   }
 
   static Future<void> _setupLocalNotifications() async {

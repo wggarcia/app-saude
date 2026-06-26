@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:local_auth/local_auth.dart';
 
 import '../../servicos/funcionario_sst_service.dart';
 
@@ -84,8 +85,30 @@ class _TelaMeusEpisState extends State<TelaMeusEpis>
     return _EpiStatus('Válido', _teal, Icons.check_circle_outline);
   }
 
-  // ── Confirma entrega com câmera ────────────────────────────────────────
+  // ── Confirma entrega com câmera (com biometric auth — LGPD) ──────────────
   Future<void> _confirmarEntrega(Map<String, dynamic> entrega) async {
+    // Autenticação biométrica obrigatória antes de acessar câmera (LGPD + segurança)
+    final auth = LocalAuthentication();
+    try {
+      final canCheck = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+      if (canCheck) {
+        final authenticated = await auth.authenticate(
+          localizedReason: 'Confirme sua identidade para registrar a entrega de EPI',
+          options: const AuthenticationOptions(biometricOnly: false),
+        );
+        if (!authenticated) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Autenticação necessária para confirmar entrega de EPI.'),
+              backgroundColor: Colors.red,
+            ));
+          }
+          return;
+        }
+      }
+    } catch (_) {
+      // Se biometria não disponível, prossegue (ex: emulador sem biometria)
+    }
     final picker = ImagePicker();
     final XFile? foto = await showDialog<XFile?>(
       context: context,

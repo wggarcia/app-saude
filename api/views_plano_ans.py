@@ -91,7 +91,17 @@ def api_diops_lista(request):
         status_filter = request.GET.get("status")
         if status_filter:
             qs = qs.filter(status=status_filter)
-        return JsonResponse({"declaracoes": [_diops_dict(d) for d in qs]})
+        try:
+            limit = min(max(int(request.GET.get("limit", 50)), 1), 200)
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            limit, offset = 50, 0
+        total = qs.count()
+        return JsonResponse({
+            "declaracoes": [_diops_dict(d) for d in qs.order_by("-trimestre")[offset: offset + limit]],
+            "total": total, "limit": limit, "offset": offset,
+            "has_more": (offset + limit) < total,
+        })
 
     if request.method == "POST":
         try:
@@ -103,6 +113,18 @@ def api_diops_lista(request):
             return JsonResponse({"erro": "trimestre obrigatório (AAAAQ)"}, status=400)
         if not re.fullmatch(r"\d{4}[1-4]", trimestre):
             return JsonResponse({"erro": "trimestre deve estar no formato AAAAQ, ex: 20242"}, status=400)
+
+        # Validação ANS IN 77/2022
+        from .models import DIOPSDeclaracao as _DIOPS
+        _TIPOS_VALIDOS = {c[0] for c in _DIOPS.TIPO_OPERADORA_CHOICES} if hasattr(_DIOPS, "TIPO_OPERADORA_CHOICES") else set()
+        _MODAL_VALIDOS = {c[0] for c in _DIOPS.MODALIDADE_CHOICES} if hasattr(_DIOPS, "MODALIDADE_CHOICES") else set()
+        tipo_op = data.get("tipo_operadora", "1")
+        modal_ass = data.get("modalidade_assistencial", "02")
+        if _TIPOS_VALIDOS and tipo_op not in _TIPOS_VALIDOS:
+            return JsonResponse({"erro": f"tipo_operadora inválido. Valores aceitos: {sorted(_TIPOS_VALIDOS)}"}, status=400)
+        if _MODAL_VALIDOS and modal_ass not in _MODAL_VALIDOS:
+            return JsonResponse({"erro": f"modalidade_assistencial inválida. Valores aceitos: {sorted(_MODAL_VALIDOS)}"}, status=400)
+
         d = DIOPSDeclaracao.objects.create(
             empresa=empresa,
             trimestre=trimestre,
@@ -112,6 +134,8 @@ def api_diops_lista(request):
             despesa_administrativa=float(data.get("despesa_administrativa") or 0),
             resultado_periodo=float(data.get("resultado_periodo") or 0),
             vidas_ativas=int(data.get("vidas_ativas") or 0),
+            tipo_operadora=tipo_op,
+            modalidade_assistencial=modal_ass,
             status=data.get("status", "em_elaboracao"),
         )
         return JsonResponse({"declaracao": _diops_dict(d)}, status=201)
@@ -195,7 +219,17 @@ def api_sib_lista(request):
 
     if request.method == "GET":
         qs = SIBRegistro.objects.filter(empresa=empresa)
-        return JsonResponse({"registros": [_sib_dict(s) for s in qs]})
+        try:
+            limit = min(max(int(request.GET.get("limit", 50)), 1), 200)
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            limit, offset = 50, 0
+        total = qs.count()
+        return JsonResponse({
+            "registros": [_sib_dict(s) for s in qs.order_by("-competencia")[offset: offset + limit]],
+            "total": total, "limit": limit, "offset": offset,
+            "has_more": (offset + limit) < total,
+        })
 
     if request.method == "POST":
         try:

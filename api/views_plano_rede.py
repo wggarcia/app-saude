@@ -91,7 +91,18 @@ def api_plano_rede_lista(request):
     if busca:
         qs = qs.filter(nome__icontains=busca)
 
-    return JsonResponse({"rede": [_rede_dict(r) for r in qs]})
+    try:
+        limit = min(max(int(request.GET.get("limit", 50)), 1), 500)
+        offset = max(int(request.GET.get("offset", 0)), 0)
+    except (ValueError, TypeError):
+        limit, offset = 50, 0
+
+    total = qs.count()
+    return JsonResponse({
+        "rede": [_rede_dict(r) for r in qs.order_by("nome")[offset: offset + limit]],
+        "total": total, "limit": limit, "offset": offset,
+        "has_more": (offset + limit) < total,
+    })
 
 
 @csrf_exempt

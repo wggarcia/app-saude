@@ -1,11 +1,13 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import 'fcm_service.dart';
 
+/// Armazena dados de sessão em flutter_secure_storage (AES-256 no Android keystore /
+/// iOS Keychain) — LGPD: token, email, nome e cargo nunca ficam em SharedPreferences.
 class FuncionarioAuthService {
   static const _tokenKey   = 'funcionario_token';
   static const _emailKey   = 'funcionario_email';
@@ -14,7 +16,12 @@ class FuncionarioAuthService {
   static const _empresaKey = 'funcionario_empresa';
   static const _funcIdKey  = 'funcionario_id';
 
-  /// Login com email + senha (novo)
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
+  );
+
+  /// Login com email + senha
   static Future<Map<String, dynamic>> login(
     String email,
     String senha,
@@ -30,7 +37,6 @@ class FuncionarioAuthService {
     }
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     await _salvarSessao(data);
-    // Registra FCM token após login bem-sucedido
     FcmService.registrarTokenNoBackend().ignore();
     return data;
   }
@@ -70,7 +76,6 @@ class FuncionarioAuthService {
       throw Exception(body['erro'] ?? 'Falha no registro (${response.statusCode}).');
     }
     await _salvarSessao(body);
-    // Registra FCM token após registro bem-sucedido
     FcmService.registrarTokenNoBackend().ignore();
     return body;
   }
@@ -78,43 +83,40 @@ class FuncionarioAuthService {
   static Future<void> _salvarSessao(Map<String, dynamic> data) async {
     final token = data['token']?.toString();
     if (token == null || token.isEmpty) throw Exception('Token ausente.');
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
-    await prefs.setString(_emailKey, data['email']?.toString() ?? '');
-    await prefs.setString(_nomeKey, data['nome']?.toString() ?? '');
-    await prefs.setString(_cargoKey, data['cargo']?.toString() ?? '');
-    await prefs.setString(_empresaKey, data['empresa_nome']?.toString() ?? '');
+    await _storage.write(key: _tokenKey,   value: token);
+    await _storage.write(key: _emailKey,   value: data['email']?.toString() ?? '');
+    await _storage.write(key: _nomeKey,    value: data['nome']?.toString() ?? '');
+    await _storage.write(key: _cargoKey,   value: data['cargo']?.toString() ?? '');
+    await _storage.write(key: _empresaKey, value: data['empresa_nome']?.toString() ?? '');
     final fid = data['funcionario_id'];
-    if (fid != null) await prefs.setInt(_funcIdKey, fid as int);
+    if (fid != null) await _storage.write(key: _funcIdKey, value: fid.toString());
   }
 
-  static Future<String?> token() async =>
-      (await SharedPreferences.getInstance()).getString(_tokenKey);
+  static Future<String?> token() async => _storage.read(key: _tokenKey);
 
-  /// Retorna o ID numérico do funcionário autenticado (salvo no login).
-  static Future<int?> funcId() async =>
-      (await SharedPreferences.getInstance()).getInt(_funcIdKey);
+  static Future<int?> funcId() async {
+    final v = await _storage.read(key: _funcIdKey);
+    return v != null ? int.tryParse(v) : null;
+  }
 
-  static Future<String?> emailSalvo() async =>
-      (await SharedPreferences.getInstance()).getString(_emailKey);
+  static Future<String?> emailSalvo() async => _storage.read(key: _emailKey);
 
   static Future<Map<String, String>> dadosSalvos() async {
-    final prefs = await SharedPreferences.getInstance();
+    final vals = await Future.wait([
+      _storage.read(key: _nomeKey),
+      _storage.read(key: _cargoKey),
+      _storage.read(key: _empresaKey),
+      _storage.read(key: _emailKey),
+    ]);
     return {
-      'nome': prefs.getString(_nomeKey) ?? '',
-      'cargo': prefs.getString(_cargoKey) ?? '',
-      'empresa': prefs.getString(_empresaKey) ?? '',
-      'email': prefs.getString(_emailKey) ?? '',
+      'nome':    vals[0] ?? '',
+      'cargo':   vals[1] ?? '',
+      'empresa': vals[2] ?? '',
+      'email':   vals[3] ?? '',
     };
   }
 
   static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_emailKey);
-    await prefs.remove(_nomeKey);
-    await prefs.remove(_cargoKey);
-    await prefs.remove(_empresaKey);
-    await prefs.remove(_funcIdKey);
+    await _storage.deleteAll();
   }
 }

@@ -292,14 +292,30 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
 
     if nome == "buscar_funcionario":
         nome_busca = inputs.get("nome", "").strip()
-        funcs = FuncionarioSST.objects.filter(
+        funcs = list(FuncionarioSST.objects.filter(
             empresa=empresa, nome__icontains=nome_busca, ativo=True
-        ).prefetch_related("asos", "afastamentos", "treinamentos_nr")[:5]
+        )[:5])
+        func_ids = [f.id for f in funcs]
+        # Carrega relacionamentos em bulk (evita N+1: 1 query por relacionamento, não por funcionário)
+        from django.db.models import Prefetch
+        asos_qs = ASOOcupacional.objects.filter(funcionario_id__in=func_ids).order_by("-data_emissao")
+        afastamentos_qs = AfastamentoSST.objects.filter(funcionario_id__in=func_ids, status=AfastamentoSST.STATUS_ATIVO)
+        from collections import defaultdict
+        asos_map = defaultdict(list)
+        for a in asos_qs:
+            asos_map[a.funcionario_id].append(a)
+        afastamentos_map = {a.funcionario_id: a for a in afastamentos_qs}
+        from django.db.models import Count, Q
+        treinos_vencidos = dict(
+            TreinamentoNR.objects.filter(funcionario_id__in=func_ids, data_validade__lt=hoje)
+            .values("funcionario_id").annotate(n=Count("id"))
+            .values_list("funcionario_id", "n")
+        )
         resultado = []
         for f in funcs:
-            aso_recente = f.asos.order_by("-data_emissao").first()
-            afastamento_ativo = f.afastamentos.filter(status=AfastamentoSST.STATUS_ATIVO).first()
-            treinamentos_vencidos_count = f.treinamentos_nr.filter(data_validade__lt=hoje).count()
+            aso_recente = asos_map[f.id][0] if asos_map[f.id] else None
+            afastamento_ativo = afastamentos_map.get(f.id)
+            treinamentos_vencidos_count = treinos_vencidos.get(f.id, 0)
             resultado.append({
                 "nome": f.nome,
                 "cargo": f.cargo,
