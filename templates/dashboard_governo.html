@@ -335,6 +335,7 @@
       border-radius: 999px;
       font-size: 0.72rem;
       font-weight: 800;
+      white-space: nowrap;
     }
 
     .critico { background: var(--danger); color: #fff; }
@@ -808,7 +809,6 @@
           <button class="btn" id="toggleLeftDock">Filtros</button>
           <button class="btn" id="toggleRightDock">Inteligencia</button>
           <button class="btn" id="toggleBottomSheet">Situacao</button>
-          <button class="btn" id="gotoCommandAI">Sala de Decisão IA</button>
           <button class="btn" id="exportJsonBtn">Exportar JSON</button>
           <button class="btn" id="exportCsvBtn">Exportar CSV</button>
           <button class="btn primary" id="refreshBtn">Atualizar</button>
@@ -824,7 +824,6 @@
     </div>
 
     <a href="/governo/gestao/" class="quick-link quick-link-right">🏛️ Gestão Governamental</a>
-    <a href="/governo/gestao/" class="quick-link quick-link-center">Central de Controle</a>
     <a href="/sala-decisao-ia/" class="quick-link quick-link-left">Sala de Decisão IA</a>
     <button class="floating-button toggle-left shifted" id="leftHandle">›</button>
     <button class="floating-button toggle-right shifted" id="rightHandle">‹</button>
@@ -1968,10 +1967,6 @@
     });
 
     document.getElementById("refreshBtn").addEventListener("click", loadPanorama);
-    document.getElementById("gotoCommandAI").addEventListener("click", async () => {
-      await syncScopedAuth();
-      window.location.href = "/sala-decisao-ia/";
-    });
     document.getElementById("publishGovAlertBtn").addEventListener("click", publishGovernmentAlert);
     document.getElementById("exportJsonBtn").addEventListener("click", () => {
       window.location.href = "/api/epidemiologia/briefing?format=json";
