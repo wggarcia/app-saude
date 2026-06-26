@@ -317,3 +317,110 @@ def modelo_info(fonte_id="sinan_agravos", indicador="dengue_notificacoes_sinan")
         return {"modelo_treinado": False, "meta_desatualizada_para_outra_fonte": True}
     meta["modelo_treinado"] = True
     return meta
+
+
+# ── Projeção forward 7 / 14 / 30 dias ────────────────────────────────────────
+
+# Horizonte em dias → número de semanas a simular
+_HORIZONTE_PARA_SEMANAS = {7: 1, 14: 2, 30: 4}
+
+
+def _nivel_risco(prob: float) -> str:
+    if prob >= 0.75:
+        return "critico"
+    if prob >= 0.50:
+        return "alto"
+    if prob >= 0.30:
+        return "medio"
+    return "baixo"
+
+
+def projecao_surto(doenca: str, uf: str | None = None, horizonte: int = 30) -> list | dict:
+    """
+    Projeta risco de surto para os próximos `horizonte` dias usando o RF+GB treinado.
+
+    Estratégia de extrapolação:
+    - Slope linear sobre as últimas 8 semanas oficiais disponíveis.
+    - Para cada semana futura: valor = último + slope × w (clampado em 0).
+    - Features avançam (semana_do_ano +w mod 52) e estatísticas de janela são
+      recalculadas sobre a série projetada acumulada.
+
+    Retorna lista de dicts por UF, ou dict com chave "erro" se indisponível.
+    """
+    entrada = next(
+        ((fid, ind) for fid, ind, nome in DOENCAS_REGISTRADAS
+         if nome.lower() == doenca.lower()),
+        None,
+    )
+    if entrada is None:
+        disponiveis = [nome for _, _, nome in DOENCAS_REGISTRADAS]
+        return {"erro": f"Doença '{doenca}' não encontrada.", "disponiveis": disponiveis}
+
+    fonte_id, indicador = entrada
+    bundle = _carregar_modelo(indicador)
+    if bundle is None:
+        return {"erro": f"Modelo não treinado para {doenca}. Execute treinar_modelo_oficial()."}
+
+    model = bundle["model"]
+    estados_treino: list = bundle["estados"]
+    por_estado = _coletar_series(fonte_id, indicador)
+
+    estados_alvo = [uf.upper()] if uf else estados_treino
+    semanas_frente = _HORIZONTE_PARA_SEMANAS.get(horizonte, 4)
+
+    resultado = []
+    for estado in estados_alvo:
+        if estado not in por_estado or estado not in estados_treino:
+            continue
+        serie = por_estado[estado]
+        if len(serie) < JANELA_MEDIA_MOVEL + 2:
+            continue
+
+        valores = [v for _, _, v in serie]
+        ultimo_ano, ultima_semana, ultimo_valor = serie[-1]
+        estado_idx = estados_treino.index(estado)
+
+        # Tendência linear sobre até 8 semanas recentes
+        n_trend = min(8, len(valores))
+        trend_vals = np.array(valores[-n_trend:], dtype=float)
+        slope = float(np.polyfit(np.arange(n_trend), trend_vals, 1)[0]) if n_trend >= 2 else 0.0
+
+        hist_proj = list(valores)
+        projecoes = []
+
+        for w in range(1, semanas_frente + 1):
+            valor_proj = max(0.0, ultimo_valor + slope * w)
+            semana_proj = ((ultima_semana - 1 + w) % 52) + 1
+
+            hist_proj.append(valor_proj)
+            media, desvio = _janela_stats(hist_proj, len(hist_proj) - 1)
+            razao = valor_proj / media if media else 1.0
+
+            X = np.array([[valor_proj, media, desvio, razao, semana_proj, estado_idx]], dtype=float)
+            try:
+                proba = model.predict_proba(X)[0]
+                classes = list(model.classes_)
+                prob_surto = float(proba[classes.index(1)]) if 1 in classes else 0.0
+            except Exception:
+                prob_surto = 0.0
+
+            projecoes.append({
+                "semanas_frente": w,
+                "dias": w * 7,
+                "semana_epidemiologica": semana_proj,
+                "probabilidade_surto": round(prob_surto, 4),
+                "nivel": _nivel_risco(prob_surto),
+            })
+
+        resultado.append({
+            "uf": estado,
+            "doenca": doenca,
+            "ultimo_dado_ano": ultimo_ano,
+            "ultimo_dado_semana": ultima_semana,
+            "ultimo_valor_oficial": round(ultimo_valor, 1),
+            "tendencia_semanal": round(slope, 2),
+            "horizonte_dias": horizonte,
+            "projecoes": projecoes,
+        })
+
+    return resultado

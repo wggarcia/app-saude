@@ -1,3 +1,4 @@
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -50,7 +51,8 @@ PALAVRAS_ALERTA = [
 RSS_SOURCES = [
     ("OPAS",    "https://www.paho.org/pt/rss.xml"),
     ("SVS",     "https://www.gov.br/saude/pt-br/assuntos/noticias/RSS"),
-    ("ProMED",  "https://promedmail.org/promed-posts/?format=feed&type=rss"),
+    # ProMED encerrou RSS público em 2025; substituído por CDC EID Expedited
+    ("CDC-EID", "https://wwwnc.cdc.gov/eid/rss/expedited.xml"),
 ]
 
 # ── GDELT ────────────────────────────────────────────────────────────────────────
@@ -138,33 +140,42 @@ class Command(BaseCommand):
 
     def _fetch_gdelt(self):
         results = []
-        try:
-            resp = requests.get(GDELT_URL, timeout=15)
-            resp.raise_for_status()
-            data = resp.json()
-            for item in data.get("articles", []):
-                titulo  = item.get("title", "").strip()
-                url     = item.get("url", "").strip()
-                resumo  = item.get("seendate", "")[:20]
-                pub_str = item.get("seendate", "")
-                publicado_em = _parse_gdelt_date(pub_str)
+        for attempt in range(2):
+            try:
+                resp = requests.get(GDELT_URL, timeout=15)
+                if resp.status_code == 429:
+                    if attempt == 0:
+                        time.sleep(5)
+                        continue
+                    self.stderr.write("GDELT indisponível (rate limit) — pulando.")
+                    break
+                resp.raise_for_status()
+                data = resp.json()
+                for item in data.get("articles", []):
+                    titulo  = item.get("title", "").strip()
+                    url     = item.get("url", "").strip()
+                    resumo  = item.get("seendate", "")[:20]
+                    pub_str = item.get("seendate", "")
+                    publicado_em = _parse_gdelt_date(pub_str)
 
-                texto   = (titulo + " " + resumo).lower()
-                doencas = _detectar_doencas(texto)
-                nivel   = _nivel_alerta(texto)
+                    texto   = (titulo + " " + resumo).lower()
+                    doencas = _detectar_doencas(texto)
+                    nivel   = _nivel_alerta(texto)
 
-                if titulo and url:
-                    results.append({
-                        "fonte": "GDELT",
-                        "titulo": titulo,
-                        "url": url,
-                        "resumo": resumo,
-                        "doencas_detectadas": doencas,
-                        "nivel_alerta": nivel,
-                        "publicado_em": publicado_em,
-                    })
-        except Exception as exc:
-            self.stderr.write(f"GDELT erro: {exc}")
+                    if titulo and url:
+                        results.append({
+                            "fonte": "GDELT",
+                            "titulo": titulo,
+                            "url": url,
+                            "resumo": resumo,
+                            "doencas_detectadas": doencas,
+                            "nivel_alerta": nivel,
+                            "publicado_em": publicado_em,
+                        })
+                break  # sucesso
+            except Exception as exc:
+                self.stderr.write(f"GDELT erro: {exc}")
+                break
         return results
 
     # ── Coleta RSS ────────────────────────────────────────────────────────────
