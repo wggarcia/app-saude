@@ -19,6 +19,7 @@ from datetime import date, timedelta
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
 
+from django.core.cache import cache
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
@@ -682,6 +683,17 @@ def api_aso_revogar_compartilhamento(request, token):
 
 def portal_aso_publico(request, token):
     """Página pública para a empresa contratante visualizar o ASO."""
+    # Rate limiting: max 5 acessos por IP por minuto (LGPD — impede scraping de dados de saúde)
+    ip = (
+        request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+        or request.META.get("REMOTE_ADDR", "unknown")
+    )
+    rl_key = f"portal_aso_rl:{ip}"
+    ip_count = cache.get(rl_key, 0)
+    if ip_count >= 5:
+        return render(request, "sst_aso_portal.html", {"erro": "Muitas tentativas. Aguarde 1 minuto."})
+    cache.set(rl_key, ip_count + 1, timeout=60)
+
     try:
         comp = ASOCompartilhamento.objects.select_related(
             "aso__funcionario", "empresa_origem"
@@ -694,6 +706,17 @@ def portal_aso_publico(request, token):
 
     if comp.acessos >= comp.max_acessos:
         return render(request, "sst_aso_portal.html", {"erro": "Limite de acessos atingido."})
+
+    # Audit log de acesso a dados de saúde (LGPD Art. 46 — rastreabilidade)
+    import logging as _logging
+    _audit = _logging.getLogger("sst.aso.portal.audit")
+    _audit.info(
+        "portal_aso_acesso token=%s ip=%s empresa_origem=%s funcionario_id=%s",
+        token[:8] + "***",
+        ip,
+        comp.empresa_origem_id,
+        comp.aso.funcionario_id,
+    )
 
     comp.acessos += 1
     comp.save(update_fields=["acessos"])

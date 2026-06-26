@@ -76,6 +76,8 @@ from .models import (
     RiscoOcupacional,
     SolicitacaoExame,
     TreinamentoNR,
+    ASOCompartilhamento,
+    NoticiaEpidemiologica,
 )
 from . import epidemiologia
 from .epidemiologia import DISEASE_WEIGHTS
@@ -5874,3 +5876,694 @@ class AutorizacaoMLConsolidacaoTests(TestCase):
 
         self.assertEqual(decisao, "negada")
         self.assertIn("fallback", justificativa)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Governo — Notícias Epidemiológicas (TEST-001)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class NoticiaEpidemiologicaAPITests(TestCase):
+    """Cobertura de api_noticias_epidemiologicas e api_noticia_status."""
+
+    def setUp(self):
+        self.client = Client()
+        self.governo = Empresa.objects.create(
+            nome="Governo Noticias Teste",
+            email="gov-noticias@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        login = self.client.post(
+            "/api/login-governo",
+            data=json.dumps({"email": "gov-noticias@teste.com", "senha": "123456", "device_id": "gov-noticias-device"}),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        # Notícias de referência
+        self.n_info = NoticiaEpidemiologica.objects.create(
+            empresa=self.governo,
+            titulo="Monitoramento sazonal de dengue no Nordeste",
+            fonte="SVS",
+            url="https://svs.gov.br/dengue-nordeste",
+            resumo="Acompanhamento rotineiro.",
+            doencas_detectadas=["dengue"],
+            nivel_alerta="informativo",
+            status="novo",
+        )
+        self.n_alerta = NoticiaEpidemiologica.objects.create(
+            empresa=self.governo,
+            titulo="Aumento de casos de leptospirose após chuvas",
+            fonte="OPAS",
+            url="https://opas.gov.br/leptospirose-chuvas",
+            resumo="Aumento confirmado.",
+            doencas_detectadas=["leptospirose"],
+            nivel_alerta="alerta",
+            status="lido",
+        )
+        self.n_critico = NoticiaEpidemiologica.objects.create(
+            empresa=self.governo,
+            titulo="Surto de influenza declarado no Sul",
+            fonte="CDC-EID",
+            url="https://cdc.gov/influenza-sul",
+            resumo="Emergência sanitária.",
+            doencas_detectadas=["influenza"],
+            nivel_alerta="critico",
+            status="novo",
+        )
+
+    def test_lista_retorna_resumo_e_noticias(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertIn("resumo", body)
+        self.assertIn("noticias", body)
+        self.assertEqual(body["resumo"]["total"], 3)
+        self.assertEqual(body["resumo"]["novos"], 2)
+        self.assertEqual(body["resumo"]["alertas"], 1)
+        self.assertEqual(body["resumo"]["criticos"], 1)
+        self.assertEqual(len(body["noticias"]), 3)
+
+    def test_filtra_por_nivel_alerta(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?nivel=alerta")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(len(body["noticias"]), 1)
+        self.assertEqual(body["noticias"][0]["nivel_alerta"], "alerta")
+
+    def test_filtra_por_nivel_critico(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?nivel=critico")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()["noticias"]), 1)
+
+    def test_filtra_por_status_lido(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?status=lido")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(len(body["noticias"]), 1)
+        self.assertEqual(body["noticias"][0]["status"], "lido")
+
+    def test_nivel_invalido_retorna_400(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?nivel=urgente")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("nivel deve ser um de", resp.json()["erro"])
+
+    def test_status_invalido_retorna_400(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?status=pendente")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("status deve ser um de", resp.json()["erro"])
+
+    def test_filtra_por_doenca(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?doenca=dengue")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(len(body["noticias"]), 1)
+        self.assertEqual(body["noticias"][0]["fonte"], "SVS")
+
+    def test_limite_maximo_aplicado(self):
+        for i in range(5):
+            NoticiaEpidemiologica.objects.create(
+                empresa=self.governo,
+                titulo=f"Extra {i}",
+                fonte="SVS",
+                url=f"https://extra.gov.br/{i}",
+                doencas_detectadas=["dengue"],
+            )
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?limite=2")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()["noticias"]), 2)
+
+    def test_limite_invalido_usa_default_50(self):
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/?limite=abc")
+        self.assertEqual(resp.status_code, 200)
+        # Apenas 3 noticias no banco, limite padrão 50 — retorna todos os 3
+        self.assertEqual(len(resp.json()["noticias"]), 3)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = Client().get("/api/governo/noticias-epidemiologicas/")
+        self.assertEqual(resp.status_code, 401)
+
+    def test_noticias_isoladas_por_empresa(self):
+        outra = Empresa.objects.create(
+            nome="Outro Governo",
+            email="outro-gov@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        NoticiaEpidemiologica.objects.create(
+            empresa=outra,
+            titulo="Notícia privada de outra empresa",
+            fonte="SVS",
+            url="https://outra.gov.br/privada",
+            doencas_detectadas=["zika"],
+        )
+        resp = self.client.get("/api/governo/noticias-epidemiologicas/")
+        titulos = [n["titulo"] for n in resp.json()["noticias"]]
+        self.assertNotIn("Notícia privada de outra empresa", titulos)
+        self.assertEqual(len(titulos), 3)
+
+    def test_update_status_para_lido(self):
+        url = f"/api/governo/noticias-epidemiologicas/{self.n_info.pk}/status/"
+        resp = self.client.post(
+            url,
+            data=json.dumps({"status": "lido"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "lido")
+        self.n_info.refresh_from_db()
+        self.assertEqual(self.n_info.status, "lido")
+
+    def test_update_status_para_arquivado(self):
+        url = f"/api/governo/noticias-epidemiologicas/{self.n_alerta.pk}/status/"
+        resp = self.client.post(
+            url,
+            data=json.dumps({"status": "arquivado"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "arquivado")
+
+    def test_update_status_invalido_retorna_400(self):
+        url = f"/api/governo/noticias-epidemiologicas/{self.n_info.pk}/status/"
+        resp = self.client.post(
+            url,
+            data=json.dumps({"status": "pendente"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Status inválido", resp.json()["erro"])
+
+    def test_update_status_noticia_inexistente_retorna_404(self):
+        url = "/api/governo/noticias-epidemiologicas/99999/status/"
+        resp = self.client.post(
+            url,
+            data=json.dumps({"status": "lido"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 404)
+
+    def test_update_status_noticia_outra_empresa_retorna_404(self):
+        outra = Empresa.objects.create(
+            nome="Intruso Gov",
+            email="intruso-gov@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        noticia_outra = NoticiaEpidemiologica.objects.create(
+            empresa=outra,
+            titulo="Notícia do intruso",
+            fonte="SVS",
+            url="https://intruso.gov.br/noticia",
+            doencas_detectadas=["dengue"],
+        )
+        url = f"/api/governo/noticias-epidemiologicas/{noticia_outra.pk}/status/"
+        resp = self.client.post(
+            url,
+            data=json.dumps({"status": "lido"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 404)
+
+
+class MonitorarNoticiasCommandTests(TransactionTestCase):
+    """Cobertura do management command monitorar_noticias."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Governo Monitor",
+            email="gov-monitor@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+    def _rss_xml(self, titulo="Surto de dengue no Nordeste", url="https://svs.gov.br/rss/dengue-1"):
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>{titulo}</title>
+      <link>{url}</link>
+      <description>Aumento de casos confirmados. surto dengue.</description>
+      <pubDate>Fri, 20 Jun 2026 12:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>""".encode()
+
+    def test_sem_empresas_ativas_exibe_aviso(self):
+        self.empresa.ativo = False
+        self.empresa.save()
+        out = StringIO()
+        with patch("requests.get") as mock_get:
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = {"articles": []}
+            mock_get.return_value.content = b"<rss><channel></channel></rss>"
+            mock_get.return_value.raise_for_status = lambda: None
+            call_command("monitorar_noticias", stdout=out)
+        self.assertIn("Nenhuma empresa ativa", out.getvalue())
+
+    def test_rss_bem_sucedido_salva_noticias_com_doenca(self):
+        out = StringIO()
+        rss_bytes = self._rss_xml()
+        gdelt_resp = type("R", (), {
+            "status_code": 200,
+            "json": lambda s=None: {"articles": []},
+            "raise_for_status": lambda s=None: None,
+        })()
+        rss_resp = type("R", (), {
+            "status_code": 200,
+            "content": rss_bytes,
+            "raise_for_status": lambda s=None: None,
+        })()
+
+        def fake_get(url, **kwargs):
+            if "gdeltproject" in url:
+                return gdelt_resp
+            return rss_resp
+
+        with patch("requests.get", side_effect=fake_get):
+            call_command("monitorar_noticias", stdout=out)
+
+        count = NoticiaEpidemiologica.objects.filter(empresa=self.empresa).count()
+        self.assertGreater(count, 0)
+        noticia = NoticiaEpidemiologica.objects.filter(empresa=self.empresa).first()
+        self.assertIn("dengue", noticia.doencas_detectadas)
+
+    def test_gdelt_429_escreve_erro_e_continua(self):
+        err = StringIO()
+        rss_resp = type("R", (), {
+            "status_code": 200,
+            "content": self._rss_xml(),
+            "raise_for_status": lambda s=None: None,
+        })()
+        gdelt_resp_429 = type("R", (), {"status_code": 429})()
+
+        call_count = {"n": 0}
+
+        def fake_get(url, **kwargs):
+            if "gdeltproject" in url:
+                call_count["n"] += 1
+                return gdelt_resp_429
+            return rss_resp
+
+        with patch("requests.get", side_effect=fake_get), patch("time.sleep"):
+            call_command("monitorar_noticias", stderr=err)
+
+        self.assertIn("GDELT indisponível", err.getvalue())
+        self.assertGreaterEqual(call_count["n"], 2)
+
+    def test_dry_run_nao_salva_no_banco(self):
+        out = StringIO()
+        rss_bytes = self._rss_xml()
+        rss_resp = type("R", (), {
+            "status_code": 200,
+            "content": rss_bytes,
+            "raise_for_status": lambda s=None: None,
+        })()
+        gdelt_resp = type("R", (), {
+            "status_code": 200,
+            "json": lambda s=None: {"articles": []},
+            "raise_for_status": lambda s=None: None,
+        })()
+
+        def fake_get(url, **kwargs):
+            if "gdeltproject" in url:
+                return gdelt_resp
+            return rss_resp
+
+        with patch("requests.get", side_effect=fake_get):
+            call_command("monitorar_noticias", "--dry-run", stdout=out)
+
+        self.assertEqual(NoticiaEpidemiologica.objects.count(), 0)
+
+    def test_url_duplicada_nao_e_salva_novamente(self):
+        out = StringIO()
+        rss_bytes = self._rss_xml()
+        rss_resp = type("R", (), {
+            "status_code": 200,
+            "content": rss_bytes,
+            "raise_for_status": lambda s=None: None,
+        })()
+        gdelt_resp = type("R", (), {
+            "status_code": 200,
+            "json": lambda s=None: {"articles": []},
+            "raise_for_status": lambda s=None: None,
+        })()
+
+        def fake_get(url, **kwargs):
+            if "gdeltproject" in url:
+                return gdelt_resp
+            return rss_resp
+
+        with patch("requests.get", side_effect=fake_get):
+            call_command("monitorar_noticias", stdout=out)
+            first_count = NoticiaEpidemiologica.objects.count()
+            call_command("monitorar_noticias", stdout=out)
+            second_count = NoticiaEpidemiologica.objects.count()
+
+        self.assertEqual(first_count, second_count)
+
+    def test_empresa_especifica_limita_escopo(self):
+        outra = Empresa.objects.create(
+            nome="Outro Municipio",
+            email="outro-municipio@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        rss_bytes = self._rss_xml()
+        rss_resp = type("R", (), {
+            "status_code": 200,
+            "content": rss_bytes,
+            "raise_for_status": lambda s=None: None,
+        })()
+        gdelt_resp = type("R", (), {
+            "status_code": 200,
+            "json": lambda s=None: {"articles": []},
+            "raise_for_status": lambda s=None: None,
+        })()
+
+        def fake_get(url, **kwargs):
+            if "gdeltproject" in url:
+                return gdelt_resp
+            return rss_resp
+
+        out = StringIO()
+        with patch("requests.get", side_effect=fake_get):
+            call_command("monitorar_noticias", f"--empresa-id={self.empresa.pk}", stdout=out)
+
+        self.assertGreater(NoticiaEpidemiologica.objects.filter(empresa=self.empresa).count(), 0)
+        self.assertEqual(NoticiaEpidemiologica.objects.filter(empresa=outra).count(), 0)
+
+
+class AnalisarNoticiasIACommandTests(TestCase):
+    """Cobertura do management command analisar_noticias_ia."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Governo IA Teste",
+            email="gov-ia@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.noticia = NoticiaEpidemiologica.objects.create(
+            empresa=self.empresa,
+            titulo="Surto de dengue confirmado em Recife",
+            fonte="SVS",
+            url="https://svs.gov.br/dengue-recife",
+            resumo="Aumento de 200% nos casos esta semana.",
+            doencas_detectadas=["dengue"],
+            nivel_alerta="alerta",
+            ia_analisado=False,
+        )
+
+    def _fake_anthropic_module(self, client_instance):
+        """Injeta módulo 'anthropic' falso em sys.modules."""
+        import sys
+        fake_mod = type(sys)("anthropic")
+        fake_mod.Anthropic = lambda api_key: client_instance
+        return fake_mod
+
+    def _haiku_response(self, payload: dict):
+        raw_json = json.dumps(payload)
+        content_block = type("Block", (), {"text": raw_json})()
+        return type("Resp", (), {"content": [content_block]})()
+
+    def _mock_client(self, resp):
+        class FakeMsgs:
+            def create(self, **kw):
+                return resp
+        class FakeClient:
+            messages = FakeMsgs()
+        return FakeClient()
+
+    def test_sem_api_key_exibe_aviso_e_nao_processa(self):
+        out = StringIO()
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": ""}, clear=False):
+            call_command("analisar_noticias_ia", stdout=out)
+        self.assertIn("ANTHROPIC_API_KEY", out.getvalue())
+        self.noticia.refresh_from_db()
+        self.assertFalse(self.noticia.ia_analisado)
+
+    def test_analise_bem_sucedida_atualiza_campos(self):
+        import sys
+        payload = {
+            "doenca_confirmada": "dengue",
+            "cid10": "A90",
+            "regiao_uf": "PE",
+            "municipio": "Recife",
+            "casos_estimados": 1500,
+            "tendencia": "crescendo",
+            "score_risco": 7.5,
+            "confianca": 0.9,
+            "nivel_alerta": "alerta",
+            "justificativa": "Aumento acentuado de casos.",
+            "acoes_recomendadas": ["Intensificar borrifação", "Alertar UBSs"],
+        }
+        client = self._mock_client(self._haiku_response(payload))
+        fake_mod = self._fake_anthropic_module(client)
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}, clear=False):
+            with patch.dict(sys.modules, {"anthropic": fake_mod}):
+                out = StringIO()
+                call_command("analisar_noticias_ia", stdout=out)
+
+        self.noticia.refresh_from_db()
+        self.assertTrue(self.noticia.ia_analisado)
+        self.assertEqual(self.noticia.ia_cid10, "A90")
+        self.assertEqual(self.noticia.ia_regiao_uf, "PE")
+        self.assertEqual(self.noticia.ia_casos_estimados, 1500)
+        self.assertAlmostEqual(self.noticia.ia_score_risco, 7.5)
+        self.assertEqual(self.noticia.ia_tendencia, "crescendo")
+        self.assertIn("dengue", self.noticia.doencas_detectadas)
+
+    def test_json_invalido_da_ia_nao_marca_como_analisado(self):
+        import sys
+        bad_block = type("Block", (), {"text": "isso não é json {{{{"})()
+        bad_resp = type("Resp", (), {"content": [bad_block]})()
+        client = self._mock_client(bad_resp)
+        fake_mod = self._fake_anthropic_module(client)
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}, clear=False):
+            with patch.dict(sys.modules, {"anthropic": fake_mod}):
+                err = StringIO()
+                call_command("analisar_noticias_ia", stderr=err)
+
+        self.noticia.refresh_from_db()
+        self.assertFalse(self.noticia.ia_analisado)
+        self.assertIn("JSON inválido", err.getvalue())
+
+    def test_api_exception_nao_quebra_command(self):
+        import sys
+
+        class FakeMsgs:
+            def create(self, **kw):
+                raise Exception("timeout")
+
+        class FakeClient:
+            messages = FakeMsgs()
+
+        fake_mod = self._fake_anthropic_module(FakeClient())
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}, clear=False):
+            with patch.dict(sys.modules, {"anthropic": fake_mod}):
+                err = StringIO()
+                call_command("analisar_noticias_ia", stderr=err)
+
+        self.noticia.refresh_from_db()
+        self.assertFalse(self.noticia.ia_analisado)
+        self.assertIn("Erro API", err.getvalue())
+
+    def test_re_analisar_processa_noticias_ja_analisadas(self):
+        import sys
+        self.noticia.ia_analisado = True
+        self.noticia.save()
+
+        payload = {
+            "doenca_confirmada": "dengue",
+            "cid10": "A90",
+            "regiao_uf": "PE",
+            "municipio": "Recife",
+            "casos_estimados": 100,
+            "tendencia": "estavel",
+            "score_risco": 4.0,
+            "confianca": 0.8,
+            "nivel_alerta": "alerta",
+            "justificativa": "Re-análise.",
+            "acoes_recomendadas": [],
+        }
+        client = self._mock_client(self._haiku_response(payload))
+        fake_mod = self._fake_anthropic_module(client)
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}, clear=False):
+            with patch.dict(sys.modules, {"anthropic": fake_mod}):
+                out = StringIO()
+                call_command("analisar_noticias_ia", "--re-analisar", stdout=out)
+
+        self.assertIn("1 notícias", out.getvalue())
+
+    def test_nenhuma_pendente_exibe_mensagem(self):
+        import sys
+        self.noticia.ia_analisado = True
+        self.noticia.save()
+
+        fake_mod = self._fake_anthropic_module(None)
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}, clear=False):
+            with patch.dict(sys.modules, {"anthropic": fake_mod}):
+                out = StringIO()
+                call_command("analisar_noticias_ia", stdout=out)
+
+        self.assertIn("pendente", out.getvalue())
+
+    def test_nivel_alerta_mapeado_por_score_quando_invalido(self):
+        """score_risco ≥ 9 → critico mesmo se nivel_alerta da IA for inválido."""
+        import sys
+        payload = {
+            "doenca_confirmada": "influenza",
+            "cid10": "J10",
+            "regiao_uf": "RS",
+            "municipio": None,
+            "casos_estimados": None,
+            "tendencia": "crescendo",
+            "score_risco": 9.5,
+            "confianca": 0.95,
+            "nivel_alerta": "INVALIDO",
+            "justificativa": "Pandemia em andamento.",
+            "acoes_recomendadas": ["Isolar"],
+        }
+        client = self._mock_client(self._haiku_response(payload))
+        fake_mod = self._fake_anthropic_module(client)
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}, clear=False):
+            with patch.dict(sys.modules, {"anthropic": fake_mod}):
+                call_command("analisar_noticias_ia")
+
+        self.noticia.refresh_from_db()
+        self.assertEqual(self.noticia.nivel_alerta, "critico")
+
+
+class PortalASOLGPDTests(TestCase):
+    """Cobertura do portal_aso_publico — rate limiting e auditoria LGPD."""
+
+    def setUp(self):
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+
+        self.empresa = Empresa.objects.create(
+            nome="Clinica ASO LGPD",
+            email="clinica-aso@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            pacote_codigo="sst_enterprise_10",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Funcionário Portal",
+            cpf="123.456.789-00",
+            cargo="Operador",
+            setor="Produção",
+            data_admissao=timezone.now().date(),
+            ativo=True,
+        )
+        self.aso = ASOOcupacional.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            tipo="admissional",
+            data_emissao=timezone.now().date(),
+            resultado="apto",
+            medico_responsavel="Dr. Teste",
+        )
+
+    def _criar_compartilhamento(self, token="tok-teste-valido", ativo=True, expirado=False):
+        from django.utils import timezone as tz
+        expira = tz.now() - timezone.timedelta(hours=1) if expirado else tz.now() + timezone.timedelta(hours=24)
+        return ASOCompartilhamento.objects.create(
+            aso=self.aso,
+            empresa_origem=self.empresa,
+            token=token,
+            max_acessos=20,
+            acessos=0,
+            expira_em=expira,
+            ativo=ativo,
+        )
+
+    def test_token_invalido_renderiza_erro(self):
+        resp = Client().get("/sst/aso/portal/token-inexistente/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "inválido")
+
+    def test_token_expirado_renderiza_erro(self):
+        self._criar_compartilhamento(token="tok-expirado", expirado=True)
+        resp = Client().get("/sst/aso/portal/tok-expirado/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "expirou")
+
+    def test_rate_limit_bloqueia_apos_5_tentativas(self):
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+        client = Client()
+        for _ in range(5):
+            client.get(
+                "/sst/aso/portal/token-inexistente/",
+                REMOTE_ADDR="1.2.3.4",
+            )
+        # 6ª tentativa do mesmo IP deve ser bloqueada
+        resp = client.get(
+            "/sst/aso/portal/token-inexistente/",
+            REMOTE_ADDR="1.2.3.4",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Muitas tentativas")
+
+    def test_ips_diferentes_nao_se_interferem(self):
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+        for _ in range(5):
+            Client().get("/sst/aso/portal/token-inexistente/", REMOTE_ADDR="10.0.0.1")
+        # IP diferente ainda pode acessar
+        resp = Client().get("/sst/aso/portal/token-inexistente/", REMOTE_ADDR="10.0.0.2")
+        self.assertNotContains(resp, "Muitas tentativas")
+
+    def test_acesso_valido_incrementa_contador(self):
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+        comp = self._criar_compartilhamento(token="tok-valido-contador")
+        Client().get("/sst/aso/portal/tok-valido-contador/", REMOTE_ADDR="2.2.2.2")
+        comp.refresh_from_db()
+        self.assertEqual(comp.acessos, 1)
+
+    def test_limite_de_acessos_atingido_renderiza_erro(self):
+        comp = self._criar_compartilhamento(token="tok-limite")
+        comp.acessos = comp.max_acessos
+        comp.save()
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+        resp = Client().get("/sst/aso/portal/tok-limite/", REMOTE_ADDR="3.3.3.3")
+        self.assertContains(resp, "Limite de acessos")
