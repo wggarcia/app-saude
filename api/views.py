@@ -2138,6 +2138,12 @@ def registrar_sintoma(request):
         sudorese=bool(dados.get("sudorese", False)),
         intensidade_febre=dados.get("intensidade_febre", ""),
         intensidade_articular=dados.get("intensidade_articular", ""),
+        # Sintomas Phase 2 (doenças tropicais negligenciadas)
+        hemoptise=bool(dados.get("hemoptise", False)),
+        exantema_vesicular=bool(dados.get("exantema_vesicular", False)),
+        perda_peso=bool(dados.get("perda_peso", False)),
+        ulcera_cutanea=bool(dados.get("ulcera_cutanea", False)),
+        mancha_anestesia=bool(dados.get("mancha_anestesia", False)),
         # Anamnese epidemiológica
         dias_sintomas=dados.get("dias_sintomas"),
         inicio_abrupto=dados.get("inicio_abrupto"),
@@ -2147,6 +2153,8 @@ def registrar_sintoma(request):
         contato_caso_confirmado=dados.get("contato_caso_confirmado"),
         vacinado_febre_amarela=dados.get("vacinado_febre_amarela"),
         tem_comorbidade=dados.get("tem_comorbidade"),
+        exposicao_carrapato=dados.get("exposicao_carrapato"),
+        exposicao_triatomideo=dados.get("exposicao_triatomideo"),
         latitude=latitude,
         longitude=longitude,
         pais=geo.get("pais"),
@@ -2161,7 +2169,6 @@ def registrar_sintoma(request):
         device_id=device_id,
         confianca=confianca,
         suspeito=confianca < 0.75,
-        fonte_referencia="simulacao_publica" if simulacao_autorizada else "",
     )
 
     return JsonResponse({
@@ -2302,6 +2309,12 @@ def registrar_sintoma_publico(request):
         sudorese=bool(dados.get("sudorese", False)),
         intensidade_febre=dados.get("intensidade_febre", ""),
         intensidade_articular=dados.get("intensidade_articular", ""),
+        # Sintomas Phase 2 (doenças tropicais negligenciadas)
+        hemoptise=bool(dados.get("hemoptise", False)),
+        exantema_vesicular=bool(dados.get("exantema_vesicular", False)),
+        perda_peso=bool(dados.get("perda_peso", False)),
+        ulcera_cutanea=bool(dados.get("ulcera_cutanea", False)),
+        mancha_anestesia=bool(dados.get("mancha_anestesia", False)),
         # Anamnese epidemiológica
         dias_sintomas=dados.get("dias_sintomas"),
         inicio_abrupto=dados.get("inicio_abrupto"),
@@ -2311,6 +2324,8 @@ def registrar_sintoma_publico(request):
         contato_caso_confirmado=dados.get("contato_caso_confirmado"),
         vacinado_febre_amarela=dados.get("vacinado_febre_amarela"),
         tem_comorbidade=dados.get("tem_comorbidade"),
+        exposicao_carrapato=dados.get("exposicao_carrapato"),
+        exposicao_triatomideo=dados.get("exposicao_triatomideo"),
         latitude=latitude,
         longitude=longitude,
         pais=geo.get("pais"),
