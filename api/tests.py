@@ -1580,8 +1580,8 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/dashboard-farmacia/"), "Command Center")
-        self.assertContains(self.client.get("/farmacia/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-farmacia/"), "Central de IA")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Central Corporativa")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Suite Enterprise")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Processo guiado")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Crescimento Enterprise")
@@ -1608,8 +1608,8 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/dashboard-hospital/"), "Command Center")
-        self.assertContains(self.client.get("/hospital/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-hospital/"), "Central de IA")
+        self.assertContains(self.client.get("/hospital/gestao/"), "Central Corporativa")
         self.assertContains(self.client.get("/hospital/gestao/"), "Suite Enterprise")
         self.assertContains(self.client.get("/hospital/gestao/"), "Processo guiado")
 
@@ -1635,10 +1635,10 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/dashboard-empresa/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-empresa/"), "Central Corporativa")
         self.assertContains(self.client.get("/dashboard-empresa/"), "Suite Enterprise")
         self.assertContains(self.client.get("/dashboard-empresa/"), "Processo guiado")
-        self.assertContains(self.client.get("/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/gestao/"), "Central Corporativa")
 
     def test_governo_mostra_command_center_enterprise_e_metricas_reais(self):
         governo = Empresa.objects.create(
@@ -1679,9 +1679,9 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/dashboard-governo/"), "Command Center")
+        self.assertContains(self.client.get("/dashboard-governo/"), "Gestão Governamental")
         self.assertContains(self.client.get("/dashboard-governo/"), "Sala de Decisão IA")
-        self.assertContains(self.client.get("/governo/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/governo/gestao/"), "Central Corporativa")
         self.assertContains(self.client.get("/governo/gestao/"), "Sala de Decisão IA")
         payload = self.client.get("/api/enterprise/command-center").json()
         self.assertEqual(payload["setor"], "governo")
@@ -1710,7 +1710,7 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/rede/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/rede/gestao/"), "Central Corporativa")
 
         # plano_saude_gestao_page agora requer setor plano_saude — testar com empresa correta
         operadora = Empresa.objects.create(
@@ -1731,7 +1731,7 @@ class AuthDeviceTests(TestCase):
             }),
             content_type="application/json",
         )
-        self.assertContains(self.client.get("/plano-saude/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/plano-saude/gestao/"), "Central Corporativa")
 
     def test_plano_saude_command_center_calcula_glosas_e_receita(self):
         empresa = Empresa.objects.create(
