@@ -7171,7 +7171,7 @@ class DIOPSDeclaracao(models.Model):
     ]
 
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="diops_declaracoes")
-    trimestre = models.CharField(max_length=6)  # AAAAT (T=1-4)
+    trimestre = models.CharField(max_length=20)  # AAAAT (T=1-4); max_length generoso para registros legados com formato inválido
     registro_ans = models.CharField(max_length=10, blank=True)
     receita_operacional = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     despesa_assistencial = models.DecimalField(max_digits=18, decimal_places=2, default=0)
