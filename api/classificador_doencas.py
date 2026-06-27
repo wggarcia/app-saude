@@ -1965,6 +1965,81 @@ def classificar(dados: dict[str, Any], setor: str = "governo", estado: str | Non
 # Uso: app mobile, tela de resultado para o usuário final
 # ──────────────────────────────────────────────────────────────────────────────
 
+_SINTOMA_LABEL: dict[str, str] = {
+    "febre":                "Febre",
+    "tosse":                "Tosse",
+    "dor_corpo":            "Dores no corpo",
+    "cansaco":              "Cansaço intenso",
+    "falta_ar":             "Falta de ar",
+    "dor_cabeca":           "Dor de cabeça",
+    "dor_articular":        "Dor nas articulações",
+    "exantema":             "Manchas ou vermelhidão na pele",
+    "conjuntivite":         "Olhos vermelhos",
+    "vomito_nausea":        "Náusea ou vômito",
+    "diarreia":             "Diarreia",
+    "dor_abdominal":        "Dor abdominal",
+    "rigidez_nuca":         "Rigidez de nuca",
+    "ictericia":            "Pele ou olhos amarelados",
+    "manchas_hemorragicas": "Manchas avermelhadas na pele",
+    "perda_olfato_paladar": "Perda de olfato ou paladar",
+    "dor_garganta":         "Dor de garganta",
+    "coriza":               "Coriza / nariz escorrendo",
+    "calafrios":            "Calafrios",
+    "sudorese":             "Suor intenso",
+    "hemoptise":            "Tosse com sangue",
+    "exantema_vesicular":   "Bolhas com líquido na pele",
+    "perda_peso":           "Perda de peso recente",
+    "ulcera_cutanea":       "Ferida na pele que não cicatriza",
+    "mancha_anestesia":     "Mancha insensível ao toque",
+}
+
+
+def _hipotese_texto(doenca: str, confianca: float, nominavel: bool) -> dict:
+    if not nominavel or confianca < 45:
+        return {
+            "texto": "Seus sintomas indicam um quadro que requer avaliação médica para identificação precisa.",
+            "doenca_nome": None,
+            "nivel": "baixo",
+        }
+    if confianca >= 65:
+        return {
+            "texto": f"Com base no que você nos relatou, {doenca} é a hipótese mais compatível com seu quadro.",
+            "doenca_nome": doenca,
+            "nivel": "alto",
+        }
+    return {
+        "texto": f"Seus sintomas têm mais de um padrão possível. {doenca} é o mais provável, mas não é possível determinar sem exame.",
+        "doenca_nome": doenca,
+        "nivel": "medio",
+    }
+
+
+def _mencionar_ao_medico(dados: dict) -> list[str]:
+    items = []
+    dias = dados.get("dias_sintomas")
+    if dias:
+        items.append(f"Sintomas há {dias} dia{'s' if int(dias) != 1 else ''}")
+    if dados.get("inicio_abrupto") is True:
+        items.append("Início abrupto dos sintomas")
+    if dados.get("viagem_area_endemica") is True:
+        items.append("Viagem recente para área de mata ou endêmica")
+    if dados.get("exposicao_agua_enchente") is True:
+        items.append("Contato com água de enchente ou esgoto")
+    if dados.get("contato_roedores") is True:
+        items.append("Contato com ratos ou animais silvestres")
+    if dados.get("contato_caso_confirmado") is True:
+        items.append("Contato próximo com caso confirmado de doença")
+    if dados.get("vacinado_febre_amarela") is False:
+        items.append("Não está vacinado para febre amarela")
+    if dados.get("tem_comorbidade") is True:
+        items.append("Tem condição de saúde pré-existente")
+    if dados.get("exposicao_carrapato") is True:
+        items.append("Contato recente com carrapatos")
+    if dados.get("exposicao_triatomideo") is True:
+        items.append("Contato com inseto barbeiro")
+    return items
+
+
 def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -> dict:
     """
     Versão cidadão do classificador — retorna síndrome clínica genérica
@@ -2048,12 +2123,36 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
             "cor": "vermelha",
         }
 
+    # Decide se a doença pode ser nomeada na hipótese ao cidadão.
+    # Falso quando: confiança baixa, inconclusivo, febre guard, leptospirose sem exposição.
+    _hipotese_nominavel = (
+        doenca in DOENCAS_NOMINAVEIS
+        and confianca >= 45
+        and doenca != "Inconclusivo"
+        and info_sindrome.get("sindrome") != "Sintomas em Acompanhamento"
+        and not (
+            doenca == "Leptospirose"
+            and dados.get("exposicao_agua_enchente") is False
+            and dados.get("contato_roedores") is False
+        )
+    )
+
     return {
         # O que o cidadão vê
         "sindrome": info_sindrome["sindrome"],
         "cor_alerta": info_sindrome["cor"],
         "conduta": info_sindrome["conduta"],
         "alerta_urgente": alerta_urgente,
+        # Hipótese probabilística — texto seguro para exibir ao cidadão
+        "hipotese": _hipotese_texto(doenca, confianca, _hipotese_nominavel),
+        # Espelho dos sintomas relatados (labels em português)
+        "sintomas_positivos": [
+            _SINTOMA_LABEL[k]
+            for k in _SINTOMA_LABEL
+            if dados.get(k) is True
+        ],
+        # Pontos de anamnese relevantes para levar ao médico
+        "mencionar_ao_medico": _mencionar_ao_medico(dados),
         # Metadados seguros para mostrar
         "sintomas_reportados": resultado["sintomas_count"],
         "acompanhamento_recomendado": confianca >= 45 and doenca not in DOENCAS_NOMINAVEIS,
@@ -2066,8 +2165,12 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
             "ranking_top3": resultado["ranking"][:3],
         },
         "safeguard": (
-            "Este resultado é apenas orientativo. "
-            "Não substitui avaliação médica presencial."
+            "Resultado gerado por modelo estatístico de apoio — não constitui diagnóstico "
+            "médico, prescrição, laudo ou parecer clínico. A hipótese é probabilística e "
+            "pode estar incorreta. Não substitui avaliação por profissional de saúde "
+            "habilitado. Em caso de sintomas graves ou agravamento, procure atendimento "
+            "imediatamente. SolusCRT Sistemas Integrados LTDA não assume responsabilidade "
+            "por decisões clínicas baseadas nesta triagem automática."
         ),
     }
 
