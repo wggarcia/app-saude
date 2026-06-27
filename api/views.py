@@ -2390,7 +2390,7 @@ def resumo_municipios(request):
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
-    dados = RegistroSintoma.objects.filter(empresa=empresa).values("cidade", "estado", "grupo").annotate(total=Count("id"))
+    dados = RegistroSintoma.objects.filter(empresa=empresa, suspeito=False).values("cidade", "estado", "grupo").annotate(total=Count("id"))
 
     resultado = []
 
@@ -2429,19 +2429,29 @@ def detectar_surtos(request):
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
-    dados = RegistroSintoma.objects.filter(empresa=empresa).values("cidade", "estado").annotate(
+    dados = RegistroSintoma.objects.filter(empresa=empresa, suspeito=False).values("cidade", "estado").annotate(
 
         total=Count("id"),
 
-        # 🧠 SINTOMAS
+        # Sintomas base
         febre=Count("id", filter=Q(febre=True)),
         tosse=Count("id", filter=Q(tosse=True)),
         falta_ar=Count("id", filter=Q(falta_ar=True)),
         dor_corpo=Count("id", filter=Q(dor_corpo=True)),
         cansaco=Count("id", filter=Q(cansaco=True)),
 
-        # 🦠 DOENÇAS
-        # 🦠 DOENÇAS (CERTO BASEADO NO SEU MODEL)
+        # Sintomas Phase 2 — doenças tropicais negligenciadas
+        hemoptise=Count("id", filter=Q(hemoptise=True)),
+        exantema_vesicular=Count("id", filter=Q(exantema_vesicular=True)),
+        perda_peso=Count("id", filter=Q(perda_peso=True)),
+        ulcera_cutanea=Count("id", filter=Q(ulcera_cutanea=True)),
+        mancha_anestesia=Count("id", filter=Q(mancha_anestesia=True)),
+
+        # Anamnese Phase 2 — exposições de risco
+        exposicao_carrapato=Count("id", filter=Q(exposicao_carrapato=True)),
+        exposicao_triatomideo=Count("id", filter=Q(exposicao_triatomideo=True)),
+
+        # Doenças — arboviroses e respiratórias
         dengue=Count("id", filter=Q(grupo__icontains="dengue")),
         covid=Count("id", filter=Q(grupo__icontains="covid")),
         influenza=Count("id", filter=Q(grupo__icontains="influenza")),
@@ -2449,6 +2459,15 @@ def detectar_surtos(request):
         chikungunya=Count("id", filter=Q(grupo__icontains="chikungunya")),
         srag=Count("id", filter=Q(grupo__icontains="srag")),
         gastro=Count("id", filter=Q(grupo__icontains="gastro")),
+
+        # Doenças — tropicais negligenciadas (Phase 2)
+        tuberculose=Count("id", filter=Q(grupo__icontains="tuberculo")),
+        hanseniase=Count("id", filter=Q(grupo__icontains="hansen")),
+        leishmaniose=Count("id", filter=Q(grupo__icontains="leishman")),
+        chagas=Count("id", filter=Q(grupo__icontains="chagas")),
+        febre_maculosa=Count("id", filter=Q(grupo__icontains="maculosa")),
+        varicela=Count("id", filter=Q(grupo__icontains="varicela")),
+        leptospirose=Count("id", filter=Q(grupo__icontains="leptospiro")),
     )
 
     resposta = []
@@ -2461,31 +2480,38 @@ def detectar_surtos(request):
 
         lat, lon = buscar_coordenada(cidade, estado)
 
-        # 🧠 IA
         previsao, crescimento = calcular_previsao(cidade, estado, total)
-
         nivel = calcular_risco(total, crescimento)
 
         resposta.append({
             "cidade": cidade,
             "estado": estado,
             "total": total,
-
             "crescimento": round(crescimento, 2),
             "previsao": previsao,
             "nivel": nivel,
-
             "latitude": lat,
             "longitude": lon,
 
-            # 🧠 sintomas
+            # Sintomas base
             "febre": d["febre"],
             "tosse": d["tosse"],
             "falta_ar": d["falta_ar"],
             "dor_corpo": d["dor_corpo"],
             "cansaco": d["cansaco"],
 
-            # 🦠 doenças
+            # Sintomas Phase 2
+            "hemoptise": d["hemoptise"],
+            "exantema_vesicular": d["exantema_vesicular"],
+            "perda_peso": d["perda_peso"],
+            "ulcera_cutanea": d["ulcera_cutanea"],
+            "mancha_anestesia": d["mancha_anestesia"],
+
+            # Exposições Phase 2
+            "exposicao_carrapato": d["exposicao_carrapato"],
+            "exposicao_triatomideo": d["exposicao_triatomideo"],
+
+            # Doenças — arboviroses e respiratórias
             "dengue": d["dengue"],
             "covid": d["covid"],
             "influenza": d["influenza"],
@@ -2493,6 +2519,15 @@ def detectar_surtos(request):
             "chikungunya": d["chikungunya"],
             "srag": d["srag"],
             "gastro": d["gastro"],
+
+            # Doenças — tropicais negligenciadas
+            "tuberculose": d["tuberculose"],
+            "hanseniase": d["hanseniase"],
+            "leishmaniose": d["leishmaniose"],
+            "chagas": d["chagas"],
+            "febre_maculosa": d["febre_maculosa"],
+            "varicela": d["varicela"],
+            "leptospirose": d["leptospirose"],
         })
 
     return JsonResponse(resposta, safe=False)
@@ -2511,11 +2546,11 @@ def prever_surtos(request):
     h48 = agora - timedelta(hours=48)
 
     ultimas_24h = RegistroSintoma.objects.filter(
-        empresa=empresa, data_registro__gte=h24
+        empresa=empresa, suspeito=False, data_registro__gte=h24
     ).values("cidade", "estado").annotate(total=Count("id"))
 
     ultimas_48h = RegistroSintoma.objects.filter(
-        empresa=empresa, data_registro__gte=h48, data_registro__lt=h24
+        empresa=empresa, suspeito=False, data_registro__gte=h48, data_registro__lt=h24
     ).values("cidade", "estado").annotate(total=Count("id"))
 
     mapa_48h = {(d["cidade"], d["estado"]): d["total"] for d in ultimas_48h}
@@ -2631,7 +2666,7 @@ def relatorio_municipios(request):
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
-    dados = RegistroSintoma.objects.filter(empresa=empresa).values(
+    dados = RegistroSintoma.objects.filter(empresa=empresa, suspeito=False).values(
         "cidade", "estado"
     ).annotate(total=Count("id"))
 
@@ -2667,7 +2702,7 @@ def resumo_doencas(request):
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
-    registros = RegistroSintoma.objects.filter(empresa=empresa)
+    registros = RegistroSintoma.objects.filter(empresa=empresa, suspeito=False)
 
     dados = analisar_doencas(registros)
 
@@ -2712,7 +2747,7 @@ def diagnostico_ia_avancado(request):
 
     dados = json.loads(request.body or "{}")
 
-    registros = RegistroSintoma.objects.filter(empresa=empresa)
+    registros = RegistroSintoma.objects.filter(empresa=empresa, suspeito=False)
 
     modelo = treinar_modelo(registros)
 
@@ -2766,7 +2801,7 @@ def resumo_estados(request):
     empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
-    dados = RegistroSintoma.objects.filter(empresa=empresa).values("estado").annotate(total=Count("id"))
+    dados = RegistroSintoma.objects.filter(empresa=empresa, suspeito=False).values("estado").annotate(total=Count("id"))
     return JsonResponse(list(dados), safe=False)
 
 def gerar_alerta(total, grupo):
@@ -2789,7 +2824,7 @@ def mapa_casos(request):
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
-    dados = RegistroSintoma.objects.filter(empresa=empresa)
+    dados = RegistroSintoma.objects.filter(empresa=empresa, suspeito=False)
 
     resultado = []
 
