@@ -5376,6 +5376,21 @@ class ConteudoSSTPublicado(models.Model):
         return f"{self.empresa.nome} — {self.get_tipo_display()}: {self.titulo}"
 
 
+class FuncionarioComunicadoLido(models.Model):
+    """Rastreia quais comunicados cada funcionário já leu."""
+    funcionario = models.ForeignKey(
+        "FuncionarioSST", on_delete=models.CASCADE, related_name="comunicados_lidos"
+    )
+    comunicado = models.ForeignKey(
+        ConteudoSSTPublicado, on_delete=models.CASCADE, related_name="leituras"
+    )
+    lido_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("funcionario", "comunicado")
+        indexes = [models.Index(fields=["funcionario", "comunicado"])]
+
+
 class RegistroConflitoCultural(models.Model):
     """Registro de conflito intercultural enviado pelo colaborador."""
     TIPO_COMUNICACAO = "comunicacao"

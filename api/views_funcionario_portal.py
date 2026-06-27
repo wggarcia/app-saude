@@ -595,13 +595,20 @@ def funcionario_comunicados(request):
     if not func:
         return JsonResponse({"erro": "não autenticado"}, status=401)
 
-    from .models import ConteudoSSTPublicado
+    from .models import ConteudoSSTPublicado, FuncionarioComunicadoLido
 
     comunicados = ConteudoSSTPublicado.objects.filter(
         empresa=func.empresa,
         tipo=ConteudoSSTPublicado.TIPO_COMUNICADO,
         ativo=True,
     ).order_by("-publicado_em")[:50]
+
+    lidos_ids = set(
+        FuncionarioComunicadoLido.objects.filter(
+            funcionario=func,
+            comunicado__in=comunicados,
+        ).values_list("comunicado_id", flat=True)
+    )
 
     return JsonResponse({
         "comunicados": [
@@ -613,9 +620,7 @@ def funcionario_comunicados(request):
                 "link": c.url_conteudo or "",
                 "remetente": c.publicado_por or "Empresa",
                 "criado_em": c.publicado_em.strftime("%Y-%m-%d %H:%M"),
-                # Comunicados da plataforma healthtech não têm campo lido por funcionário —
-                # retornamos False e deixamos o app marcar localmente
-                "lido": False,
+                "lido": c.id in lidos_ids,
             }
             for c in comunicados
         ]
@@ -624,10 +629,16 @@ def funcionario_comunicados(request):
 
 @csrf_exempt
 def funcionario_comunicado_lido(request, comunicado_id):
-    """POST /api/funcionario/comunicados/<id>/lido — marca como lido (sem-op, apenas confirma)."""
+    """POST /api/funcionario/comunicados/<id>/lido — persiste leitura por funcionário."""
     func = _autenticar_funcionario(request)
     if not func:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .models import ConteudoSSTPublicado, FuncionarioComunicadoLido
+    try:
+        comunicado = ConteudoSSTPublicado.objects.get(id=comunicado_id, empresa=func.empresa)
+        FuncionarioComunicadoLido.objects.get_or_create(funcionario=func, comunicado=comunicado)
+    except ConteudoSSTPublicado.DoesNotExist:
+        pass
     return JsonResponse({"ok": True})
 
 

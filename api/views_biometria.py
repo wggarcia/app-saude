@@ -146,13 +146,20 @@ def api_biometria_detalhe(request, funcionario_id):
 @api_requer_feature("sst.biometria")
 def api_biometria_confirmar_entrega(request, entrega_id):
     """POST — confirma entrega de EPI com biometria facial.
+    Aceita token de empresa (gestor) ou de funcionário (trabalhador).
     Recebe {foto_base64} e salva foto_entrega + marca biometria_confirmada=True.
     """
-    empresa = _empresa(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "Método não permitido"}, status=405)
+
+    # Dual auth: empresa (painel web) ou funcionário (app mobile)
+    empresa = _empresa(request)
+    func = None
+    if not empresa:
+        from .views_funcionario_portal import _autenticar_funcionario
+        func = _autenticar_funcionario(request)
+        if not func:
+            return JsonResponse({"erro": "Não autenticado"}, status=403)
 
     try:
         from .models import EntregaEPI, BiometriaFuncionario
@@ -165,19 +172,22 @@ def api_biometria_confirmar_entrega(request, entrega_id):
         if len(foto_base64) > 700_000:
             return JsonResponse({"erro": "Foto muito grande. Máximo 500KB."}, status=400)
 
-        entrega = EntregaEPI.objects.select_related("funcionario").get(
-            id=entrega_id, empresa=empresa
-        )
+        if empresa:
+            entrega = EntregaEPI.objects.select_related("funcionario").get(
+                id=entrega_id, empresa=empresa
+            )
+        else:
+            entrega = EntregaEPI.objects.select_related("funcionario").get(
+                id=entrega_id, funcionario=func
+            )
 
         if entrega.biometria_confirmada:
             return JsonResponse({"ok": True, "msg": "Entrega já confirmada anteriormente.", "ja_confirmada": True})
 
-        # Verifica se o funcionário tem biometria cadastrada
         tem_biometria = BiometriaFuncionario.objects.filter(
             funcionario=entrega.funcionario, ativo=True
         ).exists()
 
-        # Salva foto da entrega e confirma
         entrega.foto_entrega_base64 = foto_base64
         entrega.biometria_confirmada = True
         entrega.save(update_fields=["foto_entrega_base64", "biometria_confirmada"])
