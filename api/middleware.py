@@ -528,10 +528,24 @@ class SegmentoAccessMiddleware:
         return self.get_response(request)
 
 
+_PAGINAS_PUBLICAS_SEM_INTERCEPTOR = {
+    "/privacidade/",
+    "/termos/",
+    "/seguranca-lgpd/",
+    "/metodologia/",
+    "/suporte/",
+    "/sla/",
+    "/status/",
+}
+
+
 class FetchAuthInterceptorMiddleware:
     """
     Injeta um interceptor de fetch em respostas HTML para redirecionar ao login
     quando qualquer chamada de API retornar 401 (sessão/token expirado).
+
+    Páginas legais/públicas são excluídas para evitar que GTM ou outros scripts
+    disparem um fetch que retorne 401 e redirecionem para o login.
     """
 
     def __init__(self, get_response):
@@ -539,6 +553,8 @@ class FetchAuthInterceptorMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
+        if request.path in _PAGINAS_PUBLICAS_SEM_INTERCEPTOR:
+            return response
         ct = response.get("Content-Type", "")
         if "text/html" in ct and hasattr(response, "content") and b"</body>" in response.content:
             response.content = response.content.replace(b"</body>", _FETCH_INTERCEPTOR + b"</body>", 1)
