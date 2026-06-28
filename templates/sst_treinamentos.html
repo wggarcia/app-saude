@@ -510,8 +510,7 @@ function popularSelectsNR() {
 ═══════════════════════════════════════════ */
 function fmtData(s) {
   if (!s) return '—';
-  const [y, m, d] = s.split('-');
-  return `${d}/${m}/${y}`;
+  return s;
 }
 
 function diasBadge(dias) {

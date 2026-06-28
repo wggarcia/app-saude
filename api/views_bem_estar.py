@@ -120,6 +120,7 @@ def api_empresa_bem_estar_resumo(request):
     if total == 0:
         return JsonResponse({
             "total": 0,
+            "periodo_dias": dias,
             "medias": {},
             "humor_distribuicao": [],
             "pedidos_contato": [],
