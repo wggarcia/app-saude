@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Avaliação Psicossocial | SolusCRT</title>
+<style>
+:root{--bg:#07111a;--panel:#0d1c29;--panel2:#102435;--line:#21445b;--text:#edf7ff;--muted:#9db6c7;--accent:#a78bfa;--accent2:#7fe0c3;--danger:#ff8298;--ok:#00c896}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(180deg,#07111a,#050b12);color:var(--text);padding:20px 16px 48px}
+.wrap{max-width:680px;margin:0 auto}
+.brand{font-size:.78rem;font-weight:900;color:var(--accent2);letter-spacing:.04em;margin-bottom:20px;opacity:.8}
+.card{background:linear-gradient(180deg,rgba(13,28,41,.96),rgba(8,18,28,.96));border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.card-head{padding:22px 24px;border-bottom:1px solid var(--line)}
+.empresa-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:6px}
+.av-titulo{font-size:1.3rem;font-weight:800;line-height:1.2;margin-bottom:8px}
+.anonima-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.2);font-size:.72rem;font-weight:700;color:var(--ok)}
+.progress-wrap{padding:14px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.prog-bar-bg{flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden}
+.prog-bar{height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+.prog-label{font-size:.72rem;font-weight:700;color:var(--muted);flex-shrink:0}
+/* Question block */
+.q-block{padding:20px 24px;border-bottom:1px solid var(--line)}
+.q-block:last-of-type{border-bottom:none}
+.cat-eyebrow{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:4px}
+.q-texto{font-size:.92rem;font-weight:600;line-height:1.5;margin-bottom:14px}
+.likert{display:flex;gap:6px;flex-wrap:wrap}
+.likert-opt{flex:1;min-width:52px;cursor:pointer}
+.likert-opt input{display:none}
+.likert-opt .lbl{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);transition:all .15s;text-align:center}
+.likert-opt .lbl .num{font-size:1rem;font-weight:800;color:var(--muted)}
+.likert-opt .lbl .desc{font-size:.58rem;color:var(--muted);line-height:1.3}
+.likert-opt input:checked + .lbl{border-color:var(--accent);background:rgba(167,139,250,.12)}
+.likert-opt input:checked + .lbl .num{color:var(--accent)}
+.likert-opt input:checked + .lbl .desc{color:var(--accent)}
+.likert-opt:hover .lbl{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.06)}
+/* Navigation */
+.nav-area{padding:20px 24px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line)}
+.btn{border:none;border-radius:10px;padding:12px 20px;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;transition:opacity .2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.88}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.btn-secondary{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--line)}
+.btn-secondary:hover{border-color:var(--line)}
+/* States */
+.error-card{padding:36px 24px;text-align:center}
+.error-card .icon{font-size:2.5rem;margin-bottom:12px}
+.error-card h2{font-size:1.1rem;font-weight:800;margin-bottom:8px}
+.error-card p{font-size:.84rem;color:var(--muted);line-height:1.6}
+.success-card{padding:48px 24px;text-align:center}
+.success-icon{width:72px;height:72px;border-radius:50%;background:rgba(0,200,150,.15);border:2px solid rgba(0,200,150,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:2rem}
+.success-card h2{font-size:1.25rem;font-weight:800;margin-bottom:10px;color:var(--ok)}
+.success-card p{font-size:.88rem;color:var(--muted);line-height:1.65;max-width:400px;margin:0 auto}
+.notice{display:none;background:rgba(255,130,152,.07);border:1px solid rgba(255,130,152,.2);border-radius:10px;padding:10px 14px;font-size:.78rem;color:var(--danger);margin-top:12px}
+.notice.show{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">SolusCRT · SST</div>
+
+  {% if erro %}
+  <div class="card">
+    <div class="error-card">
+      <div class="icon">🔒</div>
+      <h2>Questionário indisponível</h2>
+      <p>{{ erro }}</p>
+    </div>
+  </div>
+
+  {% elif not av %}
+  <div class="card">
+    <div class="error-card">
+      <div class="icon">❓</div>
+      <h2>Link inválido</h2>
+      <p>Verifique o link recebido e tente novamente.</p>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Sucesso: exibido após envio -->
+  <div id="success" style="display:none">
+    <div class="card">
+      <div class="success-card">
+        <div class="success-icon">✓</div>
+        <h2>Respostas enviadas!</h2>
+        <p>Obrigado pela participação. Suas respostas foram registradas de forma anônima e ajudarão a melhorar o ambiente de trabalho.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulário -->
+  <div id="formArea">
+    <div class="card">
+      <div class="card-head">
+        <div class="empresa-label">{{ empresa_nome }}</div>
+        <div class="av-titulo">{{ av.titulo }}</div>
+        {% if av.setor_alvo %}<div style="font-size:.76rem;color:var(--muted);margin-bottom:10px">Setor: {{ av.setor_alvo }}</div>{% endif %}
+        {% if av.anonima %}
+        <div class="anonima-badge">🔒 Questionário anônimo — suas respostas não serão vinculadas ao seu nome</div>
+        {% endif %}
+      </div>
+
+      <div class="progress-wrap">
+        <div class="prog-bar-bg"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+        <span class="prog-label" id="progLabel">0 / {{ total_questoes }}</span>
+      </div>
+
+      <form id="qForm">
+        {% for cat_key, cat in categorias.items %}
+        <div class="cat-section" data-cat="{{ cat_key }}">
+          {% for q in cat.questoes %}
+          <div class="q-block" data-qid="{{ q.id }}">
+            <div class="cat-eyebrow">{{ cat.label }}</div>
+            <div class="q-texto">{{ q.texto }}</div>
+            <div class="likert" role="group" aria-label="Escala de concordância">
+              <label class="likert-opt"><input type="radio" name="q{{ q.id }}" value="1" required><span class="lbl"><span class="num">1</span><span class="desc">Discordo totalmente</span></span></label>
+              <label class="likert-opt"><input type="radio" name="q{{ q.id }}" value="2"><span class="lbl"><span class="num">2</span><span class="desc">Discordo</span></span></label>
+              <label class="likert-opt"><input type="radio" name="q{{ q.id }}" value="3"><span class="lbl"><span class="num">3</span><span class="desc">Neutro</span></span></label>
+              <label class="likert-opt"><input type="radio" name="q{{ q.id }}" value="4"><span class="lbl"><span class="num">4</span><span class="desc">Concordo</span></span></label>
+              <label class="likert-opt"><input type="radio" name="q{{ q.id }}" value="5"><span class="lbl"><span class="num">5</span><span class="desc">Concordo totalmente</span></span></label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+
+        {% if not categorias %}
+        <div style="padding:32px 24px;text-align:center;color:var(--muted);font-size:.85rem">
+          Este questionário ainda não tem questões configuradas.
+        </div>
+        {% endif %}
+
+        {% if categorias %}
+        <div class="nav-area" style="flex-direction:column;align-items:stretch">
+          <div id="notice" class="notice">Por favor, responda todas as questões antes de enviar.</div>
+          <button class="btn btn-primary" type="submit" id="btnEnviar">Enviar respostas</button>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if av and categorias %}
+<script>
+const TOTAL = {{ total_questoes }};
+const TOKEN = "{{ token }}";
+
+// Progresso
+function atualizarProgresso() {
+  const todos = document.querySelectorAll('#qForm input[type=radio]');
+  const nomes = new Set(Array.from(todos).map(r => r.name));
+  let respondidas = 0;
+  nomes.forEach(n => { if (document.querySelector(`input[name="${n}"]:checked`)) respondidas++; });
+  const pct = TOTAL > 0 ? Math.round(respondidas / TOTAL * 100) : 0;
+  document.getElementById("progBar").style.width = pct + "%";
+  document.getElementById("progLabel").textContent = `${respondidas} / ${TOTAL}`;
+}
+
+document.querySelectorAll('#qForm input[type=radio]').forEach(r => r.addEventListener('change', atualizarProgresso));
+
+// Envio
+document.getElementById("qForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const notice = document.getElementById("notice");
+  notice.classList.remove("show");
+
+  const todos = document.querySelectorAll('#qForm input[type=radio]');
+  const nomes = new Set(Array.from(todos).map(r => r.name));
+  const respostas = [];
+  let incompleto = false;
+
+  nomes.forEach(n => {
+    const sel = document.querySelector(`input[name="${n}"]:checked`);
+    if (!sel) { incompleto = true; return; }
+    respostas.push({ questao_id: parseInt(n.replace("q",""), 10), resposta_num: parseInt(sel.value, 10) });
+  });
+
+  if (incompleto) { notice.classList.add("show"); notice.scrollIntoView({ behavior:"smooth", block:"nearest" }); return; }
+
+  const btn = document.getElementById("btnEnviar");
+  btn.disabled = true; btn.textContent = "Enviando…";
+
+  try {
+    const r = await fetch(`/api/sst/psicossocial/responder/${TOKEN}/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ respostas }),
+    });
+    if (r.ok) {
+      document.getElementById("formArea").style.display = "none";
+      document.getElementById("success").style.display = "block";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      const d = await r.json().catch(() => ({}));
+      btn.disabled = false; btn.textContent = "Enviar respostas";
+      notice.textContent = d.erro || "Erro ao enviar. Tente novamente.";
+      notice.classList.add("show");
+    }
+  } catch {
+    btn.disabled = false; btn.textContent = "Enviar respostas";
+    notice.textContent = "Erro de conexão. Verifique sua internet e tente novamente.";
+    notice.classList.add("show");
+  }
+});
+</script>
+{% endif %}
+</body>
+</html>

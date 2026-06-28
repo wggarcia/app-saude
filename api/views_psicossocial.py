@@ -630,3 +630,43 @@ def sst_psicossocial_page(request):
     if not empresa:
         return redirect("/login-empresa/")
     return render(request, "sst_psicossocial.html", {"empresa_nome": empresa.nome})
+
+
+def sst_psicossocial_responder_page(request, token):
+    """Página pública (sem auth) para o colaborador responder o questionário psicossocial."""
+    from django.shortcuts import render
+    from .models import AvaliacaoPsicossocial
+
+    try:
+        av = AvaliacaoPsicossocial.objects.select_related("empresa").get(
+            link_token=token, status="ativa"
+        )
+    except AvaliacaoPsicossocial.DoesNotExist:
+        return render(request, "sst_psicossocial_responder.html", {
+            "erro": "Este questionário não está disponível ou o link é inválido.",
+            "av": None,
+        })
+
+    questoes = list(av.questoes.all().order_by("ordem"))
+
+    categorias_map = {}
+    for q in questoes:
+        cat = q.categoria
+        if cat not in categorias_map:
+            categorias_map[cat] = {
+                "label": CATEGORIA_LABELS.get(cat, cat),
+                "questoes": [],
+            }
+        categorias_map[cat]["questoes"].append({
+            "id": q.id,
+            "texto": q.texto,
+            "escala": q.escala,
+        })
+
+    return render(request, "sst_psicossocial_responder.html", {
+        "av": av,
+        "categorias": categorias_map,
+        "token": token,
+        "empresa_nome": av.empresa.nome,
+        "total_questoes": len(questoes),
+    })

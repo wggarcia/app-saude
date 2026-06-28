@@ -340,7 +340,7 @@ from api.views_psicossocial import (
     api_psicossocial_responder_publico,
     api_psicossocial_resultados, api_psicossocial_pdf,
     api_psicossocial_kpis,
-    sst_psicossocial_page,
+    sst_psicossocial_page, sst_psicossocial_responder_page,
 )
 from api.views_solicitacao_exame import (
     sst_solicitacoes_page,
@@ -2323,6 +2323,7 @@ urlpatterns = [
 
     # ── Psicossocial NR-01 ────────────────────────────────────────────────────
     path('sst/psicossocial/', sst_psicossocial_page),
+    path('sst/psicossocial/responder/<str:token>/', sst_psicossocial_responder_page),
     path('api/sst/psicossocial/kpis/', api_psicossocial_kpis),
     path('api/sst/psicossocial/', api_psicossocial_avaliacoes),
     path('api/sst/psicossocial/<int:av_id>/', api_psicossocial_detalhe),
