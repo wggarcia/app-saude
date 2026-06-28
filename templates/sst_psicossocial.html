@@ -432,7 +432,7 @@ async function criarAvaliacao() {
       toast("Avaliação criada! Adicione as questões e depois ative.");
       await loadAvaliacoes(); await loadKpis();
     } else { toast(d.erro || "Erro ao criar avaliação", false); }
-  } catch { toast("Erro de conexão", false); }
+  } catch(e) { toast("Erro: " + (e?.message || "conexão falhou"), false); }
 }
 
 // ── Questões ───────────────────────────────────────────────────
@@ -523,7 +523,7 @@ async function adicionarQuestao(avId) {
     const d = await r.json();
     if (d.ok) { document.getElementById(`qt-${avId}`).value = ""; toast("Questão adicionada"); await renderQuestoesPanel(avId); await carregarContagem({ id: avId, status: "rascunho" }); }
     else toast(d.erro || "Erro", false);
-  } catch { toast("Erro de conexão", false); }
+  } catch(e) { toast("Erro: " + (e?.message || "conexão falhou"), false); }
 }
 
 // ── Ativar ─────────────────────────────────────────────────────
@@ -544,7 +544,7 @@ async function ativarAvaliacao(avId) {
       abrirModalLinkUrl(link);
       await loadAvaliacoes(); await loadKpis();
     } else toast(d.erro || "Erro ao ativar", false);
-  } catch { toast("Erro de conexão", false); }
+  } catch(e) { toast("Erro: " + (e?.message || "conexão falhou"), false); }
 }
 
 // ── Link ───────────────────────────────────────────────────────
@@ -574,7 +574,7 @@ async function encerrarAvaliacao(avId) {
     const d = await r.json();
     if (d.ok) { toast("Avaliação encerrada."); await loadAvaliacoes(); await loadKpis(); }
     else toast(d.erro || "Erro ao encerrar", false);
-  } catch { toast("Erro de conexão", false); }
+  } catch(e) { toast("Erro: " + (e?.message || "conexão falhou"), false); }
 }
 
 // ── Excluir ────────────────────────────────────────────────────
@@ -586,7 +586,7 @@ async function excluirAvaliacao(avId) {
     });
     if (r.ok) { toast("Avaliação excluída."); await loadAvaliacoes(); await loadKpis(); }
     else { const d = await r.json(); toast(d.erro || "Erro ao excluir", false); }
-  } catch { toast("Erro de conexão", false); }
+  } catch(e) { toast("Erro: " + (e?.message || "conexão falhou"), false); }
 }
 
 // ── Resultados ─────────────────────────────────────────────────
