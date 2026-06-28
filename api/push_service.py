@@ -145,12 +145,13 @@ def _firebase_app():
     if firebase_admin._apps:
         return firebase_admin.get_app()
 
+    _opts = {"httpTimeout": 15}  # 15s cap — push nunca deve travar o request
     try:
         if raw_json:
             info = json.loads(raw_json)
-            return firebase_admin.initialize_app(credentials.Certificate(info))
+            return firebase_admin.initialize_app(credentials.Certificate(info), options=_opts)
         if path and os.path.exists(path):
-            return firebase_admin.initialize_app(credentials.Certificate(path))
+            return firebase_admin.initialize_app(credentials.Certificate(path), options=_opts)
     except Exception:
         return None
 
