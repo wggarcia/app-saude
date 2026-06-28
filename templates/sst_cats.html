@@ -358,7 +358,25 @@ async function solicitarAssinatura(tipo, id){
   });
   const d = await r.json().catch(()=>({}));
   if(!r.ok){alert(d.erro || 'Não foi possível criar a assinatura.');return;}
-  window.open(d.assinatura.link_assinatura, '_blank');
+  mostrarModalAssinatura(d.assinatura.link_assinatura);
+}
+
+function mostrarModalAssinatura(link){
+  const fullLink = link.startsWith('http') ? link : location.origin + link;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#1a2332;border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:28px 32px;max-width:480px;width:90%;color:#f0f4f8">
+      <div style="font-size:1.4rem;font-weight:600;margin-bottom:8px">✅ Notificação enviada</div>
+      <p style="color:#8fa3b4;margin-bottom:20px;line-height:1.6">O funcionário receberá uma notificação push no app para assinar. Se não tiver o app, envie o link abaixo.</p>
+      <div style="background:rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:.78rem;word-break:break-all;color:#52e4d5;margin-bottom:16px">${fullLink}</div>
+      <div style="display:flex;gap:10px">
+        <button id="btn-copiar-link" onclick="navigator.clipboard.writeText('${fullLink}').then(()=>{document.getElementById('btn-copiar-link').textContent='Copiado ✓'})" style="flex:1;padding:10px;background:rgba(82,228,213,.12);border:1px solid rgba(82,228,213,.3);border-radius:8px;color:#52e4d5;cursor:pointer;font-size:.9rem">📋 Copiar link</button>
+        <button onclick="this.closest('div[style*=position]').remove()" style="flex:1;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#f0f4f8;cursor:pointer;font-size:.9rem">Fechar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 }
 
 async function carregar(){
