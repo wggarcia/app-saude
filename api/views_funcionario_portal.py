@@ -326,7 +326,8 @@ def funcionario_notificacoes(request):
             funcionario=func,
             id__in=assinatura_ids,
         ).in_bulk()
-    base_url = request.build_absolute_uri("/")[:-1]
+    from django.conf import settings
+    base_url = settings.PUBLIC_BASE_URL
     for i in items:
         if i["tipo"] != NotificacaoFuncionario.TIPO_ASSINATURA_SST:
             continue
@@ -334,13 +335,17 @@ def funcionario_notificacoes(request):
         if not assinatura:
             continue
         pendente = assinatura.status == "pendente"
+        entrega_pdf = assinatura.finalidade_assinatura == "entrega_documento"
         i["acao_tipo"] = "assinatura_sst"
-        i["acao_label"] = "Assinar pelo app" if pendente else "Ver assinatura"
-        i["acao_url"] = (
-            f"{base_url}/assinatura/sst/{assinatura.token}/"
-            if pendente
-            else f"{base_url}/validar-assinatura/{assinatura.token}/"
-        )
+        if entrega_pdf:
+            i["acao_label"] = "Baixar PDF"
+            i["acao_url"] = f"{base_url}/api/public/sst/prontuario/{assinatura.token}/pdf/"
+        elif pendente:
+            i["acao_label"] = "Assinar pelo app"
+            i["acao_url"] = f"{base_url}/assinatura/sst/{assinatura.token}/"
+        else:
+            i["acao_label"] = "Ver assinatura"
+            i["acao_url"] = f"{base_url}/validar-assinatura/{assinatura.token}/"
         i["assinatura_status"] = assinatura.status
         i["assinatura_status_label"] = assinatura.get_status_display()
         i["assinatura_token"] = assinatura.token
