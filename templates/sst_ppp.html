@@ -123,6 +123,17 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .nocividade-alerta{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);font-size:.75rem;color:#fca5a5;margin-top:8px}
 .nocividade-ok{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18);font-size:.75rem;color:#86efac;margin-top:8px}
 .sem-agente{font-size:.8rem;color:var(--muted);font-style:italic;padding:8px 0}
+.agente-edit-btns{display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-self:flex-start;padding-top:2px}
+.agente-row{position:relative}
+.agente-nocivo-edicao{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.agente-nocivo-edicao-title{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.chip-tipo{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.chip-fisico{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.chip-quimico{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.chip-biologico{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.form-check{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.form-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);flex-shrink:0}
+.form-check label{font-size:.82rem;font-weight:600;color:var(--text);cursor:pointer}
 
 /* ── Detalhe PPP ── */
 .dp-panel{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:22px;display:none}
@@ -274,7 +285,13 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="dp-grid" id="dp-grid-dados"></div>
 
       <!-- Postos e agentes nocivos -->
-      <div class="dp-sec">Postos de Trabalho e Agentes Nocivos (S-2240)</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)">
+        <div class="dp-sec" style="margin:0;padding:0;border:none">Postos de Trabalho e Agentes Nocivos (S-2240)</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn-row" style="font-size:.65rem" onclick="recarregarDosPostos()" title="Recarregar agentes do cadastro S-2240 atual">↺ Sync S-2240</button>
+          <button class="btn-row primary" style="font-size:.65rem" onclick="abrirModalAddAgente()">＋ Adicionar agente</button>
+        </div>
+      </div>
       <div id="dp-postos"></div>
 
       <!-- Monitoração biológica -->
@@ -368,6 +385,117 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+     MODAL: EDITAR / ADICIONAR AGENTE NOCIVO
+     Conforme eSocial Tabela 24 e IN INSS 128/2022
+═══════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-agente">
+  <div class="modal" style="max-width:680px">
+    <button class="modal-close" onclick="fecharModalAgente()">✕</button>
+    <h2 id="modal-agente-titulo">Adicionar Agente Nocivo</h2>
+    <div class="modal-sub" id="modal-agente-sub">Preencha conforme o LTCAT/PGR. Código conforme <strong>eSocial Tabela 24</strong> (IN INSS 128/2022).</div>
+
+    <div class="form-row">
+      <label>Agente Nocivo — eSocial Tabela 24 *</label>
+      <select id="ag-codigo" onchange="onAgenteCodigoChange()">
+        <option value="">Selecione o agente…</option>
+        <optgroup label="🔊 Físicos">
+          <option value="01.01.001" data-tipo="fisico">01.01.001 — Ruído contínuo / intermitente</option>
+          <option value="01.01.002" data-tipo="fisico">01.01.002 — Ruído de impacto</option>
+          <option value="01.02.001" data-tipo="fisico">01.02.001 — Vibração em membros superiores</option>
+          <option value="01.02.002" data-tipo="fisico">01.02.002 — Vibração em corpo inteiro</option>
+          <option value="01.03.001" data-tipo="fisico">01.03.001 — Calor (IBUTG)</option>
+          <option value="01.04.001" data-tipo="fisico">01.04.001 — Radiação ionizante</option>
+          <option value="01.05.001" data-tipo="fisico">01.05.001 — Pressão hiperbárica</option>
+          <option value="01.06.001" data-tipo="fisico">01.06.001 — Frio</option>
+          <option value="01.07.001" data-tipo="fisico">01.07.001 — Umidade</option>
+        </optgroup>
+        <optgroup label="☣️ Químicos">
+          <option value="02.01.001" data-tipo="quimico">02.01.001 — Arsênio e compostos</option>
+          <option value="02.01.002" data-tipo="quimico">02.01.002 — Benzeno</option>
+          <option value="02.01.003" data-tipo="quimico">02.01.003 — Chumbo e compostos</option>
+          <option value="02.01.004" data-tipo="quimico">02.01.004 — Mercúrio e compostos</option>
+          <option value="02.01.005" data-tipo="quimico">02.01.005 — Sílica livre cristalizada</option>
+          <option value="02.01.006" data-tipo="quimico">02.01.006 — Asbestos / Amianto</option>
+          <option value="02.01.007" data-tipo="quimico">02.01.007 — Manganês e compostos</option>
+          <option value="02.01.008" data-tipo="quimico">02.01.008 — Cromo hexavalente</option>
+          <option value="02.01.009" data-tipo="quimico">02.01.009 — Poeiras minerais em geral</option>
+          <option value="02.01.010" data-tipo="quimico">02.01.010 — Poeiras orgânicas (madeira, couro, etc.)</option>
+          <option value="02.01.011" data-tipo="quimico">02.01.011 — Fumos metálicos</option>
+          <option value="02.01.012" data-tipo="quimico">02.01.012 — Névoas e neblinas</option>
+          <option value="02.01.013" data-tipo="quimico">02.01.013 — Gases e vapores químicos em geral</option>
+        </optgroup>
+        <optgroup label="🦠 Biológicos">
+          <option value="03.01.001" data-tipo="biologico">03.01.001 — Vírus — Hepatite B (HBV)</option>
+          <option value="03.01.002" data-tipo="biologico">03.01.002 — Vírus — HIV</option>
+          <option value="03.01.003" data-tipo="biologico">03.01.003 — Vírus — outros</option>
+          <option value="03.02.001" data-tipo="biologico">03.02.001 — Bactérias — tuberculose (Mycobacterium)</option>
+          <option value="03.02.002" data-tipo="biologico">03.02.002 — Bactérias — outras</option>
+          <option value="03.03.001" data-tipo="biologico">03.03.001 — Protozoários</option>
+          <option value="03.04.001" data-tipo="biologico">03.04.001 — Fungos</option>
+          <option value="03.05.001" data-tipo="biologico">03.05.001 — Parasitas / helmintos</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div id="ag-tipo-badge" style="margin-bottom:14px;display:none"></div>
+
+    <div class="form-row">
+      <label>Descrição Complementar do Agente</label>
+      <input type="text" id="ag-descricao" placeholder="Ex: Nível de pressão sonora contínuo equivalente Leq">
+    </div>
+
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Intensidade / Concentração Medida</label>
+        <input type="text" id="ag-intensidade" placeholder="Ex: 87 dB(A)">
+      </div>
+      <div class="form-row">
+        <label>Limite de Tolerância</label>
+        <input type="text" id="ag-limite" placeholder="Ex: 85 dB(A) — NR-15 Anexo I">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Técnica de Medição Utilizada</label>
+      <input type="text" id="ag-tecnica" placeholder="Ex: Dosimetria de ruído — ABNT NBR 10151 / NHO 01">
+    </div>
+
+    <div class="modal-section">EPC — Equipamento de Proteção Coletiva</div>
+    <div class="form-row">
+      <label>Descrição do EPC</label>
+      <input type="text" id="ag-epc-desc" placeholder="Ex: Enclausuramento acústico da fonte, cabine de controle insonorizada">
+    </div>
+    <div class="form-check" style="margin-bottom:14px">
+      <input type="checkbox" id="ag-epc-eficaz">
+      <label for="ag-epc-eficaz">EPC é eficaz — neutraliza completamente a nocividade (sem direito à aposentadoria especial por este agente)</label>
+    </div>
+
+    <div class="modal-section">EPI — Equipamento de Proteção Individual</div>
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Descrição do EPI</label>
+        <input type="text" id="ag-epi-desc" placeholder="Ex: Protetor auricular tipo concha">
+      </div>
+      <div class="form-row">
+        <label>Número CA (INMETRO)</label>
+        <input type="text" id="ag-epi-ca" placeholder="Ex: CA 12345">
+      </div>
+    </div>
+    <div class="form-check" style="margin-bottom:4px">
+      <input type="checkbox" id="ag-epi-eficaz">
+      <label for="ag-epi-eficaz">EPI é eficaz — uso correto e contínuo comprovado, neutraliza a nocividade (sem direito à aposentadoria especial por este agente)</label>
+    </div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:14px;padding:6px 10px;border-radius:6px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15)">
+      ⚠️ Atenção: a marcação de eficácia do EPI/EPC elimina a caracterização de exposição nociva para este agente. Só marque se houver laudo técnico que comprove a eficácia conforme NR-15 e Súmula 09 CRPS/MPS.
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModalAgente()">Cancelar</button>
+      <button class="btn-main" id="btn-salvar-agente" onclick="salvarAgente()">Salvar Agente</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
@@ -378,6 +506,8 @@ const API_FUNCS = '/api/sst/funcionarios?all=1';
 let _todos  = [];
 let _filtro = 'todos';
 let _dpId   = null;
+let _agentesAtivos = [];
+let _agentEditIdx  = null;
 
 // ── Utils ──────────────────────────────────────────────────────────────────
 function csrf(){ const m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
@@ -526,10 +656,8 @@ async function verDetalhe(id){
     // Postos / agentes nocivos
     const hist=p.historico_cargos||[];
     const agentes=p.agentes_nocivos||[];
-    const postos=agruparAgentesPorPosto(agentes,hist);
-    document.getElementById('dp-postos').innerHTML=postos.length
-      ? postos.map(posto=>renderPostoDetalhe(posto)).join('')
-      : '<div style="font-size:.82rem;color:var(--muted);padding:8px">Nenhum posto de trabalho registrado neste PPP.</div>';
+    _agentesAtivos=[...agentes];
+    document.getElementById('dp-postos').innerHTML=renderPostosComEdicao(_agentesAtivos);
 
     // Monitoração biológica
     const mb=p.monitoracao_biologica||[];
@@ -579,6 +707,217 @@ function agruparAgentesPorPosto(agentes,historico){
     p.periodo=h?`${h.data_inicio||'—'} → ${h.data_fim||'atual'}`:'';
     return p;
   });
+}
+
+// ── Render editável dos agentes no painel de detalhe ──────────────────────
+const ICO_TIPO={fisico:'🔊',quimico:'☣️',biologico:'🦠'};
+const TIPO_CHIP={
+  fisico:'<span class="chip-tipo chip-fisico">🔊 Físico</span>',
+  quimico:'<span class="chip-tipo chip-quimico">☣️ Químico</span>',
+  biologico:'<span class="chip-tipo chip-biologico">🦠 Biológico</span>',
+};
+
+function renderPostosComEdicao(agentes){
+  if(!agentes.length){
+    return `<div style="font-size:.82rem;color:var(--muted);padding:12px 0;line-height:1.6">
+      Nenhum agente nocivo registrado neste PPP.<br>
+      <span style="font-size:.78rem">Clique em <strong>＋ Adicionar agente</strong> para incluir manualmente, ou <strong>↺ Sync S-2240</strong> para importar dos postos cadastrados.</span>
+    </div>`;
+  }
+  // Agrupar por posto para exibição
+  const map={};
+  agentes.forEach((ag,idx)=>{
+    const key=ag.posto_nome||'Sem posto especificado';
+    if(!map[key]) map[key]={nome:key,setor:ag.posto_setor||'',items:[]};
+    map[key].items.push({ag,idx});
+  });
+  return Object.values(map).map(g=>{
+    const rows=g.items.map(({ag,idx})=>{
+      const temNocivo=!ag.epc_eficaz&&!ag.epi_eficaz;
+      return `<div class="agente-row" style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div class="agente-ico ${ag.tipo||'fisico'}" style="margin-top:2px">${ICO_TIPO[ag.tipo]||'⚠️'}</div>
+        <div class="agente-info" style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div class="agente-nome">${ag.descricao||ag.codigo_tabela||'—'}</div>
+            ${TIPO_CHIP[ag.tipo]||''}
+            ${temNocivo?'<span class="badge b-red" style="font-size:.58rem">⚠️ sem neutralização</span>':'<span class="badge b-verde" style="font-size:.58rem">✅ neutralizado</span>'}
+          </div>
+          <div class="agente-meta" style="margin-top:4px">
+            ${ag.codigo_tabela?`<strong>Código: ${ag.codigo_tabela}</strong>&nbsp;·&nbsp;`:''}
+            ${ag.intensidade_concentracao?`Intensidade: <strong>${ag.intensidade_concentracao}</strong>&nbsp;·&nbsp;`:''}
+            ${ag.limite_tolerancia?`Limite: <strong>${ag.limite_tolerancia}</strong>&nbsp;·&nbsp;`:''}
+            ${ag.tecnica_medicao?`Técnica: ${ag.tecnica_medicao}`:''}
+          </div>
+          <div class="agente-epi">
+            ${ag.epc_eficaz
+              ?`<span class="epi-tag epi-eficaz">✅ EPC eficaz${ag.epc_descricao?' — '+ag.epc_descricao:''}</span>`
+              :ag.epc_descricao?`<span class="epi-tag epi-ineficaz">⚠️ EPC ineficaz — ${ag.epc_descricao}</span>`:''}
+            ${ag.epi_eficaz
+              ?`<span class="epi-tag epi-eficaz">✅ EPI eficaz${ag.epi_ca?' — CA '+ag.epi_ca:''}${ag.epi_descricao?' — '+ag.epi_descricao:''}</span>`
+              :ag.epi_descricao||ag.epi_ca?`<span class="epi-tag epi-ineficaz">⚠️ EPI ineficaz${ag.epi_ca?' — CA '+ag.epi_ca:''}${ag.epi_descricao?' — '+ag.epi_descricao:''}</span>`:''}
+          </div>
+        </div>
+        <div class="agente-edit-btns">
+          <button class="btn-row primary" style="font-size:.65rem" onclick="abrirModalEditAgente(${idx})">✏️ Editar</button>
+          <button class="btn-row danger" style="font-size:.65rem" onclick="confirmarRemoverAgente(${idx})" title="Remover agente do PPP">🗑 Remover</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="posto-card">
+      <div class="posto-header">
+        <div>
+          <div class="posto-nome">🏭 ${g.nome}</div>
+          ${g.setor?`<div style="font-size:.7rem;color:var(--muted)">${g.setor}</div>`:''}
+        </div>
+        <div style="font-size:.68rem;color:var(--muted)">${g.items.length} agente(s)</div>
+      </div>
+      <div class="posto-body">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Modal Adicionar / Editar Agente Nocivo ─────────────────────────────────
+function abrirModalAddAgente(){
+  if(!_dpId){ toast('Abra um PPP primeiro.','err'); return; }
+  _agentEditIdx=null;
+  document.getElementById('modal-agente-titulo').textContent='Adicionar Agente Nocivo';
+  document.getElementById('modal-agente-sub').innerHTML='Preencha conforme o LTCAT/PGR. Código conforme <strong>eSocial Tabela 24</strong> (IN INSS 128/2022).';
+  document.getElementById('ag-codigo').value='';
+  document.getElementById('ag-tipo-badge').style.display='none';
+  document.getElementById('ag-descricao').value='';
+  document.getElementById('ag-intensidade').value='';
+  document.getElementById('ag-limite').value='';
+  document.getElementById('ag-tecnica').value='';
+  document.getElementById('ag-epc-desc').value='';
+  document.getElementById('ag-epc-eficaz').checked=false;
+  document.getElementById('ag-epi-desc').value='';
+  document.getElementById('ag-epi-ca').value='';
+  document.getElementById('ag-epi-eficaz').checked=false;
+  document.getElementById('btn-salvar-agente').textContent='Salvar Agente';
+  document.getElementById('modal-agente').classList.add('open');
+}
+
+function abrirModalEditAgente(idx){
+  if(idx<0||idx>=_agentesAtivos.length) return;
+  _agentEditIdx=idx;
+  const ag=_agentesAtivos[idx];
+  document.getElementById('modal-agente-titulo').textContent='Editar Agente Nocivo';
+  document.getElementById('modal-agente-sub').innerHTML=`Editando agente #${idx+1} — alterações são salvas imediatamente no PPP.`;
+  document.getElementById('ag-codigo').value=ag.codigo_tabela||'';
+  onAgenteCodigoChange();
+  document.getElementById('ag-descricao').value=ag.descricao_complementar||ag.descricao||'';
+  document.getElementById('ag-intensidade').value=ag.intensidade_concentracao||'';
+  document.getElementById('ag-limite').value=ag.limite_tolerancia||'';
+  document.getElementById('ag-tecnica').value=ag.tecnica_medicao||'';
+  document.getElementById('ag-epc-desc').value=ag.epc_descricao||'';
+  document.getElementById('ag-epc-eficaz').checked=ag.epc_eficaz||false;
+  document.getElementById('ag-epi-desc').value=ag.epi_descricao||'';
+  document.getElementById('ag-epi-ca').value=ag.epi_ca||'';
+  document.getElementById('ag-epi-eficaz').checked=ag.epi_eficaz||false;
+  document.getElementById('btn-salvar-agente').textContent='Salvar alterações';
+  document.getElementById('modal-agente').classList.add('open');
+}
+
+function fecharModalAgente(){
+  document.getElementById('modal-agente').classList.remove('open');
+}
+document.getElementById('modal-agente').addEventListener('click',e=>{ if(e.target===e.currentTarget) fecharModalAgente(); });
+
+function onAgenteCodigoChange(){
+  const sel=document.getElementById('ag-codigo');
+  const opt=sel.options[sel.selectedIndex];
+  const tipo=opt?opt.dataset.tipo:'';
+  const badge=document.getElementById('ag-tipo-badge');
+  if(tipo&&TIPO_CHIP[tipo]){
+    badge.innerHTML=TIPO_CHIP[tipo];
+    badge.style.display='block';
+  } else {
+    badge.style.display='none';
+  }
+}
+
+async function salvarAgente(){
+  const codigo=document.getElementById('ag-codigo').value;
+  if(!codigo){ toast('Selecione o agente nocivo da Tabela 24.','err'); return; }
+
+  const sel=document.getElementById('ag-codigo');
+  const opt=sel.options[sel.selectedIndex];
+  const tipo=opt?opt.dataset.tipo:'fisico';
+  const nomeTabela=opt?opt.textContent.replace(/^\S+ — /,''):'';
+
+  const agente={
+    codigo_tabela:            codigo,
+    descricao:                nomeTabela,
+    descricao_complementar:   document.getElementById('ag-descricao').value.trim(),
+    tipo:                     tipo,
+    tecnica_medicao:          document.getElementById('ag-tecnica').value.trim(),
+    intensidade_concentracao: document.getElementById('ag-intensidade').value.trim(),
+    limite_tolerancia:        document.getElementById('ag-limite').value.trim(),
+    epc_descricao:            document.getElementById('ag-epc-desc').value.trim(),
+    epc_eficaz:               document.getElementById('ag-epc-eficaz').checked,
+    epi_descricao:            document.getElementById('ag-epi-desc').value.trim(),
+    epi_ca:                   document.getElementById('ag-epi-ca').value.trim(),
+    epi_eficaz:               document.getElementById('ag-epi-eficaz').checked,
+    posto_nome:  _agentEditIdx!=null ? (_agentesAtivos[_agentEditIdx]?.posto_nome||'')  : '',
+    posto_setor: _agentEditIdx!=null ? (_agentesAtivos[_agentEditIdx]?.posto_setor||'') : '',
+  };
+
+  if(_agentEditIdx!=null){
+    _agentesAtivos[_agentEditIdx]=agente;
+  } else {
+    _agentesAtivos.push(agente);
+  }
+
+  fecharModalAgente();
+  document.getElementById('dp-postos').innerHTML=renderPostosComEdicao(_agentesAtivos);
+  await _patchAgentes();
+}
+
+async function confirmarRemoverAgente(idx){
+  const ag=_agentesAtivos[idx];
+  if(!ag) return;
+  const nome=ag.descricao||ag.codigo_tabela||'agente';
+  if(!confirm(`Remover "${nome}" do PPP?\n\nEsta ação salva imediatamente.`)) return;
+  _agentesAtivos.splice(idx,1);
+  document.getElementById('dp-postos').innerHTML=renderPostosComEdicao(_agentesAtivos);
+  await _patchAgentes();
+}
+
+async function _patchAgentes(){
+  if(!_dpId) return;
+  try {
+    const r=await fetch(API_PPP+_dpId+'/',{
+      method:'PATCH',credentials:'same-origin',
+      headers:hdr(),
+      body:JSON.stringify({agentes_nocivos:_agentesAtivos}),
+    });
+    if(!r.ok){ const d=await r.json().catch(()=>({})); throw new Error(d.erro||'Erro '+r.status); }
+    toast('Agentes salvos ✓');
+    await carregar();
+  } catch(e){ toast('Erro ao salvar: '+e.message,'err'); }
+}
+
+async function recarregarDosPostos(){
+  if(!_dpId) return;
+  const ppp=_todos.find(p=>p.id===_dpId);
+  if(!ppp){ toast('PPP não encontrado.','err'); return; }
+  const funcId=ppp.funcionario_id;
+  if(!funcId){ toast('Não foi possível identificar o funcionário.','err'); return; }
+  try {
+    toast('Buscando agentes dos postos S-2240…');
+    const d=await _get(`/api/sst/ppp/preview/${funcId}/`);
+    const novosAgentes=(d.postos||[]).flatMap(p=>
+      (p.agentes_nocivos||[]).map(ag=>({...ag,posto_nome:p.nome,posto_setor:p.setor||''}))
+    );
+    if(!novosAgentes.length){
+      toast('Nenhum agente nocivo encontrado nos postos vinculados.','err');
+      return;
+    }
+    if(!confirm(`Substituir os ${_agentesAtivos.length} agente(s) atuais pelos ${novosAgentes.length} agente(s) dos postos S-2240?\n\nEsta ação salva imediatamente.`)) return;
+    _agentesAtivos=[...novosAgentes];
+    document.getElementById('dp-postos').innerHTML=renderPostosComEdicao(_agentesAtivos);
+    await _patchAgentes();
+  } catch(e){ toast('Erro ao sincronizar: '+e.message,'err'); }
 }
 
 function renderPostoDetalhe(posto){
