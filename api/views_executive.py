@@ -59,15 +59,15 @@ def _sst_kpis(empresa, hoje):
         aso_alertas = 0
         afastados = 0
         for f in funcionarios.prefetch_related("asos", "afastamentos"):
-            aso = f.asos.filter(valido=True).order_by("-data_validade").first()
+            aso = f.asos.filter(resultado__in=["apto", "apto_restricao"]).order_by("-data_validade").first()
             if aso and aso.data_validade and aso.data_validade <= atencao:
                 aso_alertas += 1
-            if f.afastamentos.filter(data_retorno__isnull=True).exists():
+            if f.afastamentos.filter(data_retorno_real__isnull=True).exists():
                 afastados += 1
 
         exames_vencidos = ExameMedico.objects.filter(
             funcionario__empresa=empresa, funcionario__ativo=True,
-            data_vencimento__lt=hoje
+            data_validade__lt=hoje
         ).count()
 
         treinamentos_vencidos = TreinamentoNR.objects.filter(
