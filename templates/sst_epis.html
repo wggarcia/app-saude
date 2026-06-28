@@ -108,6 +108,16 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
+.epi-lista{max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:6px;background:rgba(0,0,0,.2)}
+.epi-item{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);font-size:.82rem;transition:background .1s}
+.epi-item:last-child{border-bottom:none}
+.epi-item:hover{background:rgba(0,201,167,.05)}
+.epi-item input[type=checkbox]{accent-color:var(--teal);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+.epi-item-tipo{color:var(--muted);font-size:.72rem;margin-left:auto;flex-shrink:0}
+.epi-selecionados{font-size:.72rem;color:var(--teal);margin-top:5px;font-weight:700}
+.epi-busca{width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:rgba(0,201,167,.03);color:var(--text);font-size:.8rem;outline:none;font-family:'Manrope',sans-serif;margin-top:6px;transition:border .15s}
+.epi-busca:focus{border-color:var(--teal)}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed}
 </style>
   {% include "partials/sst_unified_theme.html" %}
 </head>
@@ -249,8 +259,10 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
     <div class="mf"><label>Funcionário</label>
       <select id="ent-funcionario"><option value="">Selecione...</option></select>
     </div>
-    <div class="mf"><label>EPI</label>
-      <select id="ent-epi"><option value="">Selecione...</option></select>
+    <div class="mf"><label>EPIs <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem">(selecione um ou mais)</span></label>
+      <input class="epi-busca" id="ent-epi-busca" placeholder="Filtrar EPIs..." autocomplete="off" oninput="filtrarEPIs(this.value)">
+      <div class="epi-lista" id="ent-epi-lista"></div>
+      <div class="epi-selecionados" id="ent-epi-count">Nenhum EPI selecionado</div>
     </div>
     <div class="mf-row">
       <div class="mf"><label>Data de Entrega</label><input type="date" id="ent-data"></div>
@@ -586,22 +598,48 @@ function renderVencimentos() {
   }).join('');
 }
 
-// ── Popular select EPIs ────────────────────────────────────────
+// ── Popular lista de EPIs (checkboxes) ────────────────────────
 function popularSelectEPI() {
-  const sel = document.getElementById('ent-epi');
-  sel.innerHTML = '<option value="">Selecione o EPI...</option>';
+  const lista = document.getElementById('ent-epi-lista');
+  if (!lista) return;
+  lista.innerHTML = '';
+  if (!catalogo.length) {
+    lista.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:.8rem">Nenhum EPI no catálogo</div>';
+    return;
+  }
   catalogo.forEach(epi => {
-    const op = document.createElement('option');
-    op.value = epi.id;
-    op.textContent = `${epi.nome} (${tipoLabel[epi.tipo] || epi.tipo_label || '—'})`;
-    sel.appendChild(op);
+    const item = document.createElement('label');
+    item.className = 'epi-item';
+    item.innerHTML = `<input type="checkbox" class="ent-epi-check" value="${epi.id}"><span>${epi.nome}</span><span class="epi-item-tipo">${tipoLabel[epi.tipo] || epi.tipo_label || '—'}</span>`;
+    item.querySelector('input').addEventListener('change', atualizarContadorEPI);
+    lista.appendChild(item);
+  });
+  atualizarContadorEPI();
+}
+
+function atualizarContadorEPI() {
+  const count = document.querySelectorAll('#ent-epi-lista .ent-epi-check:checked').length;
+  const el = document.getElementById('ent-epi-count');
+  if (el) el.textContent = count === 0 ? 'Nenhum EPI selecionado' : `${count} EPI${count > 1 ? 's' : ''} selecionado${count > 1 ? 's' : ''}`;
+}
+
+function filtrarEPIs(q) {
+  const lower = q.toLowerCase();
+  document.querySelectorAll('#ent-epi-lista .epi-item').forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(lower) ? '' : 'none';
   });
 }
 
 // ── Modais ─────────────────────────────────────────────────────
 function abrirModalEntrega() {
   document.getElementById('ent-data').value = new Date().toISOString().split('T')[0];
+  const busca = document.getElementById('ent-epi-busca');
+  if (busca) busca.value = '';
+  document.querySelectorAll('#ent-epi-lista .ent-epi-check').forEach(c => c.checked = false);
+  document.querySelectorAll('#ent-epi-lista .epi-item').forEach(i => i.style.display = '');
+  atualizarContadorEPI();
   carregarFuncionarios();
+  popularSelectEPI();
   document.getElementById('modal-entrega').classList.add('open');
 }
 
@@ -709,27 +747,46 @@ async function criarEPI() {
 }
 
 async function criarEntrega() {
-  const body = {
-    funcionario_id: parseInt(document.getElementById('ent-funcionario').value, 10),
-    epi_id: parseInt(document.getElementById('ent-epi').value, 10),
-    data_entrega: document.getElementById('ent-data').value,
-    quantidade: parseInt(document.getElementById('ent-qtd').value) || 1,
-    observacoes: document.getElementById('ent-obs').value.trim()
-  };
-  if (!body.funcionario_id || !body.epi_id) { showToast('Selecione funcionário e EPI', true); return; }
-  try {
-    const r = await fetch('/api/sst/epis/entregas/', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) throw new Error('Erro ' + r.status);
-    fecharModal('modal-entrega');
-    showToast('Entrega registrada com sucesso');
-    await carregarEntregas();
-  } catch(e) {
-    showToast('Erro ao registrar: ' + e.message, true);
+  const funcionario_id = parseInt(document.getElementById('ent-funcionario').value, 10);
+  const data_entrega = document.getElementById('ent-data').value;
+  const quantidade = parseInt(document.getElementById('ent-qtd').value) || 1;
+  const observacoes = document.getElementById('ent-obs').value.trim();
+  const epiIds = Array.from(document.querySelectorAll('#ent-epi-lista .ent-epi-check:checked')).map(c => parseInt(c.value, 10));
+
+  if (!funcionario_id) { showToast('Selecione o funcionário', true); return; }
+  if (!epiIds.length) { showToast('Selecione ao menos um EPI', true); return; }
+  if (!data_entrega) { showToast('Informe a data de entrega', true); return; }
+
+  const btn = document.querySelector('#modal-entrega .btn-submit');
+  btn.disabled = true;
+  btn.textContent = `Registrando 0/${epiIds.length}…`;
+
+  let sucesso = 0, falha = 0;
+  for (const epi_id of epiIds) {
+    try {
+      const r = await fetch('/api/sst/epis/entregas/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+        body: JSON.stringify({ funcionario_id, epi_id, data_entrega, quantidade, observacoes })
+      });
+      if (!r.ok) throw new Error('Erro ' + r.status);
+      sucesso++;
+    } catch(e) {
+      falha++;
+    }
+    btn.textContent = `Registrando ${sucesso + falha}/${epiIds.length}…`;
   }
+
+  btn.disabled = false;
+  btn.textContent = 'Registrar Entrega';
+  fecharModal('modal-entrega');
+
+  if (falha === 0) {
+    showToast(sucesso === 1 ? 'Entrega registrada com sucesso' : `${sucesso} entregas registradas com sucesso`);
+  } else {
+    showToast(`${sucesso} registradas, ${falha} com erro`, true);
+  }
+  await carregarEntregas();
 }
 
 function abrirImportacaoEPI() {
