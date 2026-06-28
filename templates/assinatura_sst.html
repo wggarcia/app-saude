@@ -50,7 +50,12 @@
         <div class="info"><div class="label">Criado em</div><div class="value">{{ assinatura.criado_em|date:"d/m/Y H:i" }}</div></div>
         <div class="info"><div class="label">Assinado em</div><div class="value">{{ assinatura.assinado_em|date:"d/m/Y H:i"|default:"Pendente" }}</div></div>
       </div>
-      {% if assinatura.status == "assinado" %}
+      {% if meta.finalidade == "entrega_documento" %}
+        <div class="notice">Seu prontuário SST foi disponibilizado pela empresa. Clique no botão abaixo para baixar o PDF com seu histórico completo de ASOs, exames, afastamentos e EPIs.</div>
+        <div class="actions">
+          <a class="btn primary" href="/api/public/sst/prontuario/{{ assinatura.token }}/pdf/" target="_blank">📥 Baixar prontuário PDF</a>
+        </div>
+      {% elif assinatura.status == "assinado" %}
         <div class="notice">Documento assinado eletronicamente com trilha de auditoria. Este registro preserva hash, IP, navegador e data/hora da assinatura.</div>
         <div class="grid">
           <div class="info"><div class="label">Signatário</div><div class="value">{{ assinatura.signatario_nome }}</div></div>

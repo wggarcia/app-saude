@@ -1035,6 +1035,7 @@ from api.views_assinatura_sst import (
     pagina_validar_assinatura,
     api_public_validar_assinatura_sst,
     api_public_assinar_sst,
+    api_public_prontuario_pdf,
 )
 
 
@@ -2213,6 +2214,7 @@ urlpatterns = [
     path('api/public/sst/validar/<str:token>', api_public_validar_assinatura_sst),
     path('api/public/sst/assinar/<str:token>', api_public_assinar_sst),
     path('api/public/sst/assinaturas/<str:token>/assinar/', api_public_assinar_sst),
+    path('api/public/sst/prontuario/<str:token>/pdf/', api_public_prontuario_pdf),
 
     # ── Plano de Saúde ────────────────────────────────────────────────────────
     path('api/plano-saude/dashboard', api_ps_dashboard),

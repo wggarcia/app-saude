@@ -5172,6 +5172,7 @@ class AssinaturaDocumentoSST(models.Model):
         ("validacao_tecnica", "Validação técnica"),
         ("validacao_empresa", "Validação da empresa"),
         ("aceite_documento", "Aceite eletrônico do documento"),
+        ("entrega_documento", "Entrega de documento"),
     ]
 
     empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="assinaturas_sst")

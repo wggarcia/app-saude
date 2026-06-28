@@ -33,7 +33,14 @@ def notificar_assinatura_sst(assinatura):
         return None
 
     tipo_label = assinatura.get_tipo_documento_display()
-    if assinatura.finalidade_assinatura == "ciencia_trabalhador":
+    finalidade = assinatura.finalidade_assinatura or ""
+    if finalidade == "entrega_documento":
+        titulo = f"{tipo_label} disponível para download"
+        mensagem = (
+            f"A {assinatura.empresa.nome} disponibilizou seu {assinatura.titulo}. "
+            "Abra o link para baixar o PDF com seu histórico completo de SST."
+        )
+    elif finalidade == "ciencia_trabalhador":
         titulo = f"{tipo_label} aguardando sua ciência"
         mensagem = (
             f"A {assinatura.empresa.nome} enviou {assinatura.titulo} para sua ciência. "

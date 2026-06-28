@@ -47,14 +47,14 @@ ASSINATURA_SST_REGRAS = {
     },
     "prontuario": {
         "papel": "funcionario",
-        "finalidade": "ciencia_trabalhador",
-        "titulo_acao": "Ciência do trabalhador sobre prontuário SST",
-        "quem_assina": "Funcionário / trabalhador do prontuário",
+        "finalidade": "entrega_documento",
+        "titulo_acao": "Entrega de prontuário SST",
+        "quem_assina": "Funcionário / trabalhador",
         "orientacao": (
-            "Use este link para o trabalhador registrar ciência sobre o prontuário SST. "
-            "Dados médicos sigilosos devem seguir as regras de privacidade e acesso aplicáveis."
+            "O prontuário SST desta empresa foi disponibilizado para você. "
+            "Clique em Baixar PDF para acessar seu histórico de ASOs, exames, afastamentos e EPIs."
         ),
-        "aceite": "Declaro que li e recebi ciência do prontuário SST identificado nesta página.",
+        "aceite": "",
     },
     "documento_sst": {
         "papel": "responsavel_tecnico",
@@ -198,7 +198,8 @@ def _assinatura_meta(assinatura):
 
 
 def _assinatura_to_dict(assinatura, request=None):
-    base_url = request.build_absolute_uri("/")[:-1] if request else ""
+    from django.conf import settings
+    base_url = settings.PUBLIC_BASE_URL
     meta = _assinatura_meta(assinatura)
     return {
         "id": assinatura.id,
@@ -226,6 +227,37 @@ def _assinatura_to_dict(assinatura, request=None):
         "link_assinatura": f"{base_url}/assinatura/sst/{assinatura.token}/" if base_url else f"/assinatura/sst/{assinatura.token}/",
         "link_validacao": f"{base_url}/validar-assinatura/{assinatura.token}/" if base_url else f"/validar-assinatura/{assinatura.token}/",
     }
+
+
+def api_public_prontuario_pdf(request, token):
+    """GET /api/public/sst/prontuario/<token>/pdf/ — serve o PDF do prontuário via token público."""
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_prontuario
+    from .models import ASOOcupacional, ExameOcupacional, CATOcupacional, AfastamentoSST
+
+    assinatura = AssinaturaDocumentoSST.objects.filter(
+        token=token, tipo_documento="prontuario"
+    ).select_related("funcionario", "empresa").first()
+
+    if not assinatura:
+        return JsonResponse({"erro": "link não encontrado"}, status=404)
+    if assinatura.expiracao_em and assinatura.expiracao_em < timezone.now():
+        return JsonResponse({"erro": "link expirado"}, status=410)
+
+    func = assinatura.funcionario
+    empresa = assinatura.empresa
+    if not func:
+        return JsonResponse({"erro": "funcionário não encontrado"}, status=404)
+
+    asos         = ASOOcupacional.objects.filter(funcionario=func).order_by("-data_emissao")
+    exames       = ExameOcupacional.objects.filter(funcionario=func).order_by("-data_realizacao")
+    cats         = CATOcupacional.objects.filter(funcionario=func).order_by("-data_acidente")
+    afastamentos = AfastamentoSST.objects.filter(funcionario=func).order_by("-data_inicio")
+
+    pdf_bytes = gerar_pdf_prontuario(func, list(asos), list(exames), list(cats), list(afastamentos), empresa.nome)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="prontuario_{func.matricula or func.id}.pdf"'
+    return resp
 
 
 @csrf_exempt
