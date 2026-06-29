@@ -76,6 +76,20 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
 .cat-label{font-size:.62rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin-bottom:6px}
 .q-item{font-size:.8rem;color:var(--text);padding:7px 10px;background:rgba(255,255,255,.03);border-radius:7px;margin-bottom:4px;display:flex;gap:8px;align-items:flex-start;line-height:1.4}
 .q-num{color:var(--muted);font-size:.7rem;flex-shrink:0;margin-top:1px}
+.btn-del-q{flex-shrink:0;background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:2px 5px;border-radius:4px;line-height:1;margin-left:auto;opacity:.5;transition:all .15s}
+.btn-del-q:hover{color:var(--red);opacity:1;background:rgba(239,68,68,.08)}
+.banco-section{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.banco-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:rgba(167,139,250,.05);border-bottom:1px solid var(--border);font-size:.72rem;font-weight:800;color:var(--purple)}
+.banco-cat{border-bottom:1px solid var(--border)}
+.banco-cat:last-child{border-bottom:none}
+.banco-cat-header{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;cursor:pointer;font-size:.78rem;font-weight:700;color:var(--text);list-style:none;user-select:none;transition:background .15s}
+.banco-cat-header:hover{background:rgba(255,255,255,.03)}
+.banco-cat[open]>.banco-cat-header{color:var(--purple)}
+.banco-count{font-size:.65rem;font-weight:600;color:var(--muted);flex-shrink:0}
+.banco-cat-body{padding:10px 12px;border-top:1px solid var(--border);background:rgba(0,0,0,.1)}
+.banco-q{display:flex;align-items:flex-start;gap:8px;padding:5px 4px;border-radius:6px;cursor:pointer;font-size:.79rem;color:var(--text);line-height:1.4;transition:background .1s}
+.banco-q:hover{background:rgba(255,255,255,.04)}
+.banco-q input[type=checkbox]{flex-shrink:0;margin-top:2px;accent-color:var(--purple);width:14px;height:14px;cursor:pointer}
 .add-q-form{border-top:1px solid var(--border);padding-top:14px;margin-top:6px;display:grid;gap:8px}
 .add-q-form label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(232,244,241,.4)}
 .add-q-form input,.add-q-form select,.add-q-form textarea{padding:8px 10px;border-radius:7px;border:1px solid var(--border);background:rgba(0,201,167,.03);color:var(--text);font-size:.82rem;font-family:'Manrope',sans-serif;outline:none;transition:border .15s;width:100%}
@@ -215,7 +229,172 @@ const CAT_LABELS = {
   violencia: "Violência e Assédio",
 };
 
-// 21 questões padrão NR-01 (positivamente formuladas → 5 = ótimo)
+// Banco completo NR-01 — 21 questões por categoria (147 total)
+const BANCO_NR01 = {
+  carga_trabalho: [
+    "Consigo realizar minhas tarefas dentro do tempo disponível sem sobrecarga",
+    "O ritmo de trabalho exigido é sustentável ao longo do dia",
+    "Minhas responsabilidades condizem com o que foi combinado na função",
+    "Tenho pausas suficientes durante o expediente para descansar",
+    "Raramente preciso levar trabalho para fora do horário comercial",
+    "A quantidade de tarefas atribuídas a mim é razoável",
+    "Consigo manter um nível de concentração adequado durante o dia",
+    "Meu ritmo de trabalho me permite manter a qualidade do que faço",
+    "Quando tenho dificuldades com prazos, consigo comunicar isso sem constrangimento",
+    "As metas estabelecidas para meu cargo são alcançáveis",
+    "Raramente me sinto esgotado fisicamente ao final do dia de trabalho",
+    "O volume de trabalho nos momentos de pico é gerenciável",
+    "Tenho clareza sobre quais são minhas prioridades no trabalho",
+    "Recebo tempo suficiente para me adaptar a novas demandas",
+    "Consigo planejar meu dia de trabalho com antecedência",
+    "Não sou cobrado por resultados além da minha capacidade",
+    "Meu trabalho raramente causa tensão ou ansiedade relacionada a prazos",
+    "Tenho recursos suficientes (tempo, ferramentas, informações) para realizar meu trabalho",
+    "Não preciso realizar múltiplas tarefas ao mesmo tempo com frequência",
+    "O aumento de demanda costuma ser comunicado com antecedência",
+    "Me sinto em controle do andamento das minhas tarefas diárias",
+  ],
+  autonomia: [
+    "Tenho liberdade para organizar como realizo meu trabalho",
+    "Posso participar das decisões que afetam minhas atividades",
+    "Sou ouvido quando sugiro melhorias no meu setor",
+    "Posso tomar decisões no meu nível sem precisar de aprovação excessiva",
+    "Tenho flexibilidade para adaptar meu método de trabalho às situações",
+    "Minhas opiniões profissionais são levadas em consideração",
+    "Me sinto com autonomia para resolver problemas que surgem no trabalho",
+    "Tenho clareza sobre os limites da minha autonomia e responsabilidade",
+    "Posso organizar minha agenda de trabalho de forma razoavelmente livre",
+    "Não me sinto monitorado ou controlado de forma excessiva",
+    "Consigo priorizar minhas tarefas de acordo com meu julgamento profissional",
+    "Me sinto confortável para questionar decisões com as quais discordo",
+    "Tenho participação em discussões sobre mudanças que afetam minha área",
+    "Sinto que confiam em minha competência para realizar o trabalho",
+    "Posso pausar e retomar tarefas conforme necessário",
+    "Não preciso pedir autorização para pequenas decisões do dia a dia",
+    "Tenho espaço para experimentar novas abordagens no trabalho",
+    "Sinto que tenho voz ativa no ambiente de trabalho",
+    "As regras e processos da empresa fazem sentido e são razoáveis",
+    "Consigo adaptar meu trabalho quando há mudanças inesperadas",
+    "Me sinto responsável e dono das atividades que me são atribuídas",
+  ],
+  relacionamento: [
+    "Existe boa cooperação e apoio entre os colegas de trabalho",
+    "Minha liderança trata todos com respeito e equidade",
+    "Me sinto parte de uma equipe unida e colaborativa",
+    "Os conflitos no trabalho são tratados de forma construtiva",
+    "Posso contar com meus colegas quando preciso de ajuda",
+    "A comunicação entre os membros da minha equipe é eficiente",
+    "Me sinto respeitado por meus colegas e pela liderança",
+    "Há um ambiente de confiança e transparência no meu setor",
+    "Me sinto confortável para expressar minhas opiniões na equipe",
+    "A diversidade e as diferenças individuais são respeitadas na empresa",
+    "Raramente existem fofocas ou intrigas que prejudicam o ambiente",
+    "Quando há divergências, a equipe consegue resolver de forma madura",
+    "Recebo apoio da minha liderança quando enfrento dificuldades",
+    "Me sinto integrado e bem-vindo na equipe em que trabalho",
+    "A comunicação com outras áreas ou departamentos funciona bem",
+    "Me sinto confortável para dar e receber feedback entre colegas",
+    "Não existe favoritismo ou tratamento desigual na minha equipe",
+    "As reuniões de equipe são produtivas e respeitosas",
+    "Sinto que tenho parceiros de trabalho em quem confiar",
+    "O clima entre os membros da equipe é positivo e motivador",
+    "Me sinto à vontade para pedir ajuda quando tenho dúvidas",
+  ],
+  reconhecimento: [
+    "Meu esforço e resultados são valorizados pela empresa",
+    "Recebo retorno útil sobre meu desempenho",
+    "Sinto que meu crescimento profissional é reconhecido",
+    "Minha remuneração é adequada para o trabalho que realizo",
+    "Recebo elogios ou reconhecimento quando entrego bons resultados",
+    "Sinto que há oportunidades reais de crescimento na empresa",
+    "Minha liderança demonstra claramente quando estou indo bem",
+    "Me sinto valorizado como profissional pela empresa",
+    "Os critérios de promoção e reconhecimento são claros e justos",
+    "Sinto que meu trabalho faz diferença e é visto como importante",
+    "Recebo feedback construtivo e específico sobre meu desenvolvimento",
+    "A empresa investe no meu desenvolvimento profissional",
+    "Me sinto motivado pelas perspectivas de carreira que a empresa oferece",
+    "Os benefícios que recebo são adequados às minhas necessidades",
+    "Me sinto reconhecido não apenas por resultados, mas também pelo esforço",
+    "Há equidade no reconhecimento entre os membros da equipe",
+    "Me sinto estimulado a crescer e me desenvolver nesta empresa",
+    "A empresa comemora e valoriza conquistas da equipe",
+    "Sinto que meu histórico de contribuições é lembrado e valorizado",
+    "Me sinto orgulhoso de trabalhar nesta empresa",
+    "Recebo incentivos que me motivam a dar o meu melhor",
+  ],
+  seguranca: [
+    "Sinto segurança quanto à estabilidade do meu emprego",
+    "Posso relatar problemas sem medo de retaliação",
+    "A empresa age com justiça e transparência nas decisões",
+    "Me sinto seguro para cometer erros sem medo de punição desproporcional",
+    "As regras do meu trabalho são comunicadas de forma clara e previsível",
+    "Sinto que a empresa valoriza a permanência de seus colaboradores",
+    "Não temo ser demitido por discordar de decisões da liderança",
+    "Me sinto seguro para tirar licenças e férias sem prejudicar minha posição",
+    "As avaliações de desempenho são justas e baseadas em critérios claros",
+    "Sinto que meu contrato e direitos trabalhistas são respeitados",
+    "Me sinto protegido caso enfrente situações difíceis (doença, problemas pessoais)",
+    "A empresa age de forma ética e responsável em relação aos colaboradores",
+    "Não me sinto ameaçado quando expresso discordâncias com a liderança",
+    "Me sinto seguro para denunciar irregularidades sem sofrer consequências",
+    "As mudanças organizacionais são comunicadas com antecedência e clareza",
+    "Sinto que tenho estabilidade para planejar meu futuro profissional",
+    "Me sinto protegido por políticas claras de RH e segurança no trabalho",
+    "A empresa demonstra preocupação genuína com o bem-estar dos colaboradores",
+    "Não temo ser prejudicado por exercer meus direitos trabalhistas",
+    "Os processos disciplinares da empresa são justos e transparentes",
+    "Me sinto seguro ao fazer perguntas ou questionar processos internos",
+  ],
+  equilibrio: [
+    "Consigo equilibrar bem minha vida profissional e pessoal",
+    "Tenho energia suficiente para atividades fora do trabalho",
+    "Consigo me desligar do trabalho no tempo livre",
+    "Raramente recebo contatos de trabalho fora do horário comercial",
+    "Tenho tempo para cuidar da minha saúde física e mental",
+    "Consigo estar presente com família e amigos fora do trabalho",
+    "Minhas férias e folgas são respeitadas pela empresa",
+    "Não me sinto culpado quando desconecto do trabalho no fim do dia",
+    "O horário de trabalho é previsível e raramente ultrapassa o combinado",
+    "Tenho flexibilidade quando preciso resolver questões pessoais urgentes",
+    "Me sinto recuperado e disposto ao início de cada semana de trabalho",
+    "Consigo dormir bem sem preocupações relacionadas ao trabalho",
+    "A carga de trabalho atual me permite manter hábitos saudáveis",
+    "Me sinto capaz de renovar minhas energias nos períodos de descanso",
+    "Raramente levo preocupações do trabalho para casa",
+    "Sinto que a empresa respeita meu tempo pessoal fora do expediente",
+    "Consigo manter hobbies e interesses pessoais além do trabalho",
+    "Me sinto descansado ao retornar de férias ou folga",
+    "A empresa possui políticas que favorecem o equilíbrio trabalho-vida",
+    "Não sinto que minha vida pessoal é prejudicada pelo volume de trabalho",
+    "Me sinto bem fisicamente e emocionalmente ao final da semana de trabalho",
+  ],
+  violencia: [
+    "Nunca fui exposto a ofensas, humilhações ou assédio no trabalho",
+    "O ambiente de trabalho é livre de intimidações e violência",
+    "Me sinto seguro para denunciar casos de assédio ou violência",
+    "Nunca presenciei situações de bullying ou constrangimento no trabalho",
+    "A empresa possui canais claros para denúncia de assédio",
+    "A liderança age prontamente quando há relatos de comportamento inadequado",
+    "Me sinto respeitado em minha identidade, gênero, raça ou orientação",
+    "Nunca soube de casos de assédio sexual no ambiente de trabalho",
+    "Nunca sofri ameaças ou intimidações por parte de colegas ou líderes",
+    "Me sinto seguro para interagir com todos na empresa sem receio",
+    "As políticas anti-assédio da empresa são comunicadas claramente",
+    "Nunca ouvi piadas ou comentários ofensivos no ambiente de trabalho",
+    "Nunca me senti humilhado ou diminuído em público no trabalho",
+    "A empresa age com tolerância zero em relação a comportamentos abusivos",
+    "Nunca fui pressionado a fazer algo contra minha vontade no trabalho",
+    "Me sinto confortável para reportar desconfortos sem medo de represália",
+    "A empresa trata todos com dignidade, independente do cargo",
+    "Nunca testemunhei exclusão ou isolamento deliberado de colegas",
+    "Os processos de investigação de denúncias são justos e imparciais",
+    "Me sinto seguro para trabalhar sem ansiedade relacionada a conflitos",
+    "Sinto que a cultura da empresa rejeita ativamente o assédio e a violência",
+  ],
+};
+
+// Modelo padrão NR-01 — 3 questões por categoria (21 total) para adição rápida
 const NR01_TEMPLATE = [
   { categoria: "carga_trabalho", texto: "Consigo realizar minhas tarefas dentro do tempo disponível sem sobrecarga" },
   { categoria: "carga_trabalho", texto: "O ritmo de trabalho exigido é sustentável ao longo do dia" },
@@ -460,22 +639,58 @@ async function renderQuestoesPanel(avId) {
 
     const catHtml = Object.entries(grupos).map(([k, g]) => `
       <div class="cat-group">
-        <div class="cat-label">${g.label} (${g.items.length})</div>
-        ${g.items.map((q, i) => `<div class="q-item"><span class="q-num">${i+1}.</span><span>${q.texto}</span></div>`).join("")}
-      </div>`).join("") || `<p style="font-size:.8rem;color:var(--muted);margin-bottom:14px">Nenhuma questão adicionada ainda.</p>`;
+        <div class="cat-label">${g.label} <span style="font-weight:400;font-size:.72rem">(${g.items.length})</span></div>
+        ${g.items.map((q, i) => `
+          <div class="q-item">
+            <span class="q-num">${i+1}.</span>
+            <span style="flex:1">${q.texto}</span>
+            <button class="btn-del-q" onclick="removerQuestao(${avId},${q.id})" title="Remover questão">✕</button>
+          </div>`).join("")}
+      </div>`).join("") || `<p style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Nenhuma questão adicionada ainda.</p>`;
+
+    // Banco por categoria
+    const bancoHtml = Object.entries(BANCO_NR01).map(([cat, qs]) => `
+      <details class="banco-cat">
+        <summary class="banco-cat-header">
+          <span>${CAT_LABELS[cat]||cat}</span>
+          <span class="banco-count">${qs.length} questões disponíveis</span>
+        </summary>
+        <div class="banco-cat-body">
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button class="btn-ghost" style="font-size:.68rem;padding:3px 9px" onclick="selecionarTodasCat('${cat}',${avId},true)">☑ Todas</button>
+            <button class="btn-ghost" style="font-size:.68rem;padding:3px 9px" onclick="selecionarTodasCat('${cat}',${avId},false)">☐ Limpar</button>
+            <button class="btn-ghost" style="font-size:.68rem;padding:3px 9px;border-color:var(--teal);color:var(--teal)" onclick="adicionarSelecionadasCat('${cat}',${avId})">+ Adicionar selecionadas</button>
+          </div>
+          ${qs.map((txt, i) => `
+            <label class="banco-q">
+              <input type="checkbox" class="bq-chk" data-cat="${cat}" data-av="${avId}" data-txt="${txt.replace(/"/g,'&quot;')}">
+              <span>${i+1}. ${txt}</span>
+            </label>`).join("")}
+        </div>
+      </details>`).join("");
 
     panel.innerHTML = `
       <div class="questoes-header">
         <span style="font-size:.8rem;font-weight:700">${questoes.length} questão(ões) configuradas</span>
         <button class="btn-ghost" onclick="toggleQuestoes(${avId})">Fechar ↑</button>
       </div>
-      <button class="btn-nr01" id="btnNR01-${avId}" onclick="usarModeloNR01(${avId})">
-        ✦ Usar modelo NR-01 completo (21 questões padrão)
-      </button>
-      <div id="progNR01-${avId}" style="display:none;font-size:.76rem;color:var(--purple);margin-top:8px;margin-bottom:8px"></div>
-      <div style="margin:14px 0">${catHtml}</div>
-      <details style="margin-top:8px">
-        <summary style="font-size:.78rem;font-weight:700;cursor:pointer;color:var(--muted);padding:6px 0">+ Adicionar questão personalizada</summary>
+
+      <div style="margin-bottom:14px">${catHtml}</div>
+
+      <div class="banco-section">
+        <div class="banco-title">
+          📚 Banco de Questões NR-01
+          <span style="font-size:.7rem;font-weight:400;color:var(--muted)">147 questões validadas — selecione por categoria</span>
+          <button class="btn-nr01" id="btnNR01-${avId}" onclick="usarModeloNR01(${avId})" style="margin-left:auto;flex-shrink:0">
+            ✦ Modelo padrão (21 questões)
+          </button>
+        </div>
+        <div id="progNR01-${avId}" style="display:none;font-size:.76rem;color:var(--purple);margin:6px 0"></div>
+        ${bancoHtml}
+      </div>
+
+      <details style="margin-top:12px">
+        <summary style="font-size:.78rem;font-weight:700;cursor:pointer;color:var(--muted);padding:6px 0;list-style:none">▸ Escrever questão personalizada</summary>
         <div class="add-q-form" style="margin-top:10px">
           <div><label>Texto da questão</label><textarea id="qt-${avId}" rows="2" placeholder="Descreva a afirmação de forma positiva (5 = ótimo)"></textarea></div>
           <div><label>Categoria</label>
@@ -483,10 +698,10 @@ async function renderQuestoesPanel(avId) {
               ${Object.entries(CAT_LABELS).map(([k,v]) => `<option value="${k}">${v}</option>`).join("")}
             </select>
           </div>
-          <button class="btn-ghost" onclick="adicionarQuestao(${avId})" style="width:fit-content;border-color:var(--teal);color:var(--teal)">+ Adicionar</button>
+          <button class="btn-ghost" onclick="adicionarQuestao(${avId})" style="width:fit-content;border-color:var(--teal);color:var(--teal)">+ Adicionar questão</button>
         </div>
       </details>`;
-  } catch { panel.innerHTML = `<p style="padding:16px;color:var(--red);font-size:.8rem">⚠️ Erro ao carregar questões.</p>`; }
+  } catch(e) { panel.innerHTML = `<p style="padding:16px;color:var(--red);font-size:.8rem">⚠️ Erro ao carregar questões: ${e.message}</p>`; }
 }
 
 async function usarModeloNR01(avId) {
@@ -509,6 +724,44 @@ async function usarModeloNR01(avId) {
   toast(ok === NR01_TEMPLATE.length ? "21 questões NR-01 adicionadas!" : `${ok} questões adicionadas (${NR01_TEMPLATE.length - ok} falhas)`, ok > 0);
   await renderQuestoesPanel(avId);
   await carregarContagem({ id: avId, status: "rascunho" });
+}
+
+function selecionarTodasCat(cat, avId, val) {
+  document.querySelectorAll(`.bq-chk[data-cat="${cat}"][data-av="${avId}"]`).forEach(c => c.checked = val);
+}
+
+async function adicionarSelecionadasCat(cat, avId) {
+  const checks = [...document.querySelectorAll(`.bq-chk[data-cat="${cat}"][data-av="${avId}"]:checked`)];
+  if (!checks.length) { toast("Nenhuma questão selecionada.", false); return; }
+  let ok = 0;
+  for (const c of checks) {
+    try {
+      const r = await fetch(`/api/sst/psicossocial/${avId}/questoes/`, {
+        method: "POST", credentials: "include", headers: headers(),
+        body: JSON.stringify({ texto: c.dataset.txt, categoria: cat, escala: "likert5" }),
+      });
+      if (r.ok) { ok++; c.checked = false; }
+    } catch(e) {}
+  }
+  toast(ok > 0 ? `${ok} questão(ões) adicionadas!` : "Erro ao adicionar.", ok > 0);
+  await renderQuestoesPanel(avId);
+  await carregarContagem({ id: avId, status: "rascunho" });
+}
+
+async function removerQuestao(avId, qId) {
+  try {
+    const r = await fetch(`/api/sst/psicossocial/${avId}/questoes/${qId}/`, {
+      method: "DELETE", credentials: "include", headers: headers(),
+    });
+    if (r.ok) {
+      toast("Questão removida.");
+      await renderQuestoesPanel(avId);
+      await carregarContagem({ id: avId, status: "rascunho" });
+    } else {
+      const d = await r.json().catch(() => ({}));
+      toast(d.erro || "Erro ao remover.", false);
+    }
+  } catch(e) { toast("Erro: " + e.message, false); }
 }
 
 async function adicionarQuestao(avId) {

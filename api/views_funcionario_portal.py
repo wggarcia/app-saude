@@ -687,7 +687,7 @@ def funcionario_psicossocial_ativa(request):
                 "id": q.id,
                 "texto": q.texto,
                 "categoria": q.categoria,
-                "obrigatoria": q.obrigatoria,
+                "obrigatoria": getattr(q, "obrigatoria", True),
                 "ordem": q.ordem,
             }
             for q in questoes

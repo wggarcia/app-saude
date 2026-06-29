@@ -337,6 +337,7 @@ from api.views_biometria_facial import (
 from api.views_psicossocial import (
     api_psicossocial_avaliacoes, api_psicossocial_detalhe,
     api_psicossocial_ativar, api_psicossocial_questoes,
+    api_psicossocial_questao_detalhe,
     api_psicossocial_responder_publico,
     api_psicossocial_resultados, api_psicossocial_pdf,
     api_psicossocial_kpis,
@@ -2329,6 +2330,7 @@ urlpatterns = [
     path('api/sst/psicossocial/<int:av_id>/', api_psicossocial_detalhe),
     path('api/sst/psicossocial/<int:av_id>/ativar/', api_psicossocial_ativar),
     path('api/sst/psicossocial/<int:av_id>/questoes/', api_psicossocial_questoes),
+    path('api/sst/psicossocial/<int:av_id>/questoes/<int:q_id>/', api_psicossocial_questao_detalhe),
     path('api/sst/psicossocial/<int:av_id>/resultados/', api_psicossocial_resultados),
     path('api/sst/psicossocial/<int:av_id>/pdf/', api_psicossocial_pdf),
     path('api/sst/psicossocial/responder/<str:token>/', api_psicossocial_responder_publico),

@@ -376,6 +376,31 @@ def api_psicossocial_questoes(request, av_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.psicossocial")
+def api_psicossocial_questao_detalhe(request, av_id, q_id):
+    """DELETE /api/sst/psicossocial/<av_id>/questoes/<q_id>/"""
+    empresa = _empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=403)
+    if request.method != "DELETE":
+        return JsonResponse({"erro": "Use DELETE"}, status=405)
+    from .models import AvaliacaoPsicossocial, QuestaoAvaliacaoPsicossocial
+    try:
+        av = AvaliacaoPsicossocial.objects.get(id=av_id, empresa=empresa)
+        if av.status != "rascunho":
+            return JsonResponse({"erro": "Só é possível remover questões em rascunho"}, status=400)
+        q = QuestaoAvaliacaoPsicossocial.objects.get(id=q_id, avaliacao=av)
+        q.delete()
+        return JsonResponse({"ok": True})
+    except AvaliacaoPsicossocial.DoesNotExist:
+        return JsonResponse({"erro": "Avaliação não encontrada"}, status=404)
+    except QuestaoAvaliacaoPsicossocial.DoesNotExist:
+        return JsonResponse({"erro": "Questão não encontrada"}, status=404)
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
+
+@csrf_exempt
 def api_psicossocial_responder_publico(request, token):
     """POST público (sem auth) — registra respostas do colaborador."""
     if request.method != "POST":
