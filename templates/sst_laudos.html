@@ -143,29 +143,11 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .toast.warn{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3);color:#fbbf24}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 </style>
+{% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">SC</div>
-    <div>
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">{{ empresa_nome }}</div>
-    </div>
-  </div>
-  <nav class="tb-nav">
-    <a href="/dashboard-empresa/">Painel</a>
-    <a href="/sst/funcionarios/">Funcionários</a>
-    <a href="/sst/postos/">Postos S-2240</a>
-    <a href="/sst/ppp/">PPP</a>
-    <a href="/sst/laudos/" class="active">Laudos</a>
-  </nav>
-  <div class="tb-actions">
-    <button class="btn-main" onclick="abrirModal()">＋ Novo Laudo</button>
-    <a href="/logout-empresa/" class="btn-ghost">Sair</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
@@ -173,12 +155,15 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   <main class="main">
 
     <!-- Cabeçalho -->
-    <div>
-      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--teal);margin-bottom:4px">Documentação Legal · SST</div>
-      <h1 style="font-size:1.4rem;font-weight:900">Laudos Técnicos</h1>
-      <p style="font-size:.84rem;color:var(--muted);margin-top:5px;max-width:640px">
-        LTCAT · LIP · LTIP · PGR · PCMSO — controle de vigência, alertas de vencimento e assinatura do responsável técnico.
-      </p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--teal);margin-bottom:4px">Documentação Legal · SST</div>
+        <h1 style="font-size:1.4rem;font-weight:900">Laudos Técnicos</h1>
+        <p style="font-size:.84rem;color:var(--muted);margin-top:5px;max-width:640px">
+          LTCAT · LIP · LTIP · PGR · PCMSO — controle de vigência, alertas de vencimento e assinatura do responsável técnico.
+        </p>
+      </div>
+      <button class="btn-main" onclick="abrirModal()" style="flex-shrink:0;margin-top:4px">＋ Novo Laudo</button>
     </div>
 
     <!-- Alertas críticos -->
