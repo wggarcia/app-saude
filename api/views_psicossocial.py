@@ -195,6 +195,7 @@ def _calcular_score(av_id):
 
 # ── Views ─────────────────────────────────────────────────────────────────────
 
+@csrf_exempt
 @api_requer_feature("sst.psicossocial")
 def api_psicossocial_avaliacoes(request):
     """GET lista + POST cria avaliação."""
@@ -241,6 +242,7 @@ def api_psicossocial_avaliacoes(request):
     return JsonResponse({"erro": "Método não permitido"}, status=405)
 
 
+@csrf_exempt
 @api_requer_feature("sst.psicossocial")
 def api_psicossocial_detalhe(request, av_id):
     """GET + PATCH + DELETE de uma avaliação."""
@@ -288,6 +290,7 @@ def api_psicossocial_detalhe(request, av_id):
     return JsonResponse({"erro": "Método não permitido"}, status=405)
 
 
+@csrf_exempt
 @api_requer_feature("sst.psicossocial")
 def api_psicossocial_ativar(request, av_id):
     """POST — ativa avaliação e gera link_token."""
@@ -323,6 +326,7 @@ def api_psicossocial_ativar(request, av_id):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 @api_requer_feature("sst.psicossocial")
 def api_psicossocial_questoes(request, av_id):
     """GET lista questões + POST adiciona questão."""
@@ -424,6 +428,7 @@ def api_psicossocial_responder_publico(request, token):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 @api_requer_feature("sst.psicossocial")
 def api_psicossocial_resultados(request, av_id):
     """GET — resultados com médias por categoria e score geral."""
@@ -458,6 +463,7 @@ def api_psicossocial_resultados(request, av_id):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 @api_requer_feature("sst.psicossocial")
 def api_psicossocial_pdf(request, av_id):
     """GET — PDF relatório da avaliação psicossocial."""
@@ -585,6 +591,7 @@ def api_psicossocial_pdf(request, av_id):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 @api_requer_feature("sst.psicossocial")
 def api_psicossocial_kpis(request):
     """GET — KPIs de avaliações psicossociais da empresa."""
