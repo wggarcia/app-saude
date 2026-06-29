@@ -161,10 +161,16 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .topbar,.sidebar{display:none!important}
 .app{padding-top:0!important}
 .main{margin-left:0!important;padding:16px!important}
+#embed-close-btn{position:fixed;top:12px;right:14px;z-index:999;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#f9fafb;cursor:pointer;font-size:.8rem;padding:6px 12px;border-radius:8px;backdrop-filter:blur(4px)}
+#embed-close-btn:hover{background:rgba(255,255,255,.15)}
 {% endif %}
 </style>
 </head>
 <body>
+
+{% if request.GET.embed %}
+<button id="embed-close-btn" onclick="window.parent.fecharPPPDrawer()">✕ Fechar</button>
+{% endif %}
 
 <header class="topbar">
   <div class="tb-logo">
