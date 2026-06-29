@@ -115,29 +115,155 @@
   </div>
 </details>
 {% if p != '/sst/ppp/' %}
-<!-- Drawer PPP inline (não navega para outra tela) -->
-<div id="ppp-qd-overlay" onclick="fecharPPPDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:400"></div>
-<div id="ppp-qd-panel" style="position:fixed;top:0;right:0;height:100vh;width:min(900px,95vw);z-index:401;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.8,.3,1);box-shadow:-8px 0 32px rgba(0,0,0,.4)">
-  <iframe id="ppp-qd-iframe" src="" style="width:100%;height:100%;border:none;display:block" allowfullscreen></iframe>
+<!-- ── PPP Quick Drawer (nativo, sem iframe) ── -->
+<style>
+#ppp-qd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:400;display:none}
+#ppp-qd-panel{position:fixed;top:0;right:0;height:100vh;width:min(560px,96vw);background:var(--surface,#111827);border-left:1px solid var(--line2,#2d3748);z-index:401;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.8,.3,1);display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 40px rgba(0,0,0,.5)}
+#ppp-qd-hdr{padding:16px 18px;border-bottom:1px solid var(--line,#1f2937);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#ppp-qd-hdr h3{font-size:.88rem;font-weight:800;margin:0;color:var(--text,#f9fafb)}
+#ppp-qd-search{padding:10px 14px;border-bottom:1px solid var(--line,#1f2937);flex-shrink:0}
+#ppp-qd-search input{width:100%;box-sizing:border-box;background:var(--surface2,#1f2937);border:1px solid var(--line,#374151);border-radius:8px;padding:8px 12px;font-size:.8rem;color:var(--text,#f9fafb);outline:none}
+#ppp-qd-list{flex:1;overflow-y:auto}
+.ppp-row{padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--line,#1f2937);display:flex;align-items:center;gap:12px;transition:background .15s}
+.ppp-row:hover{background:var(--surface2,#1f2937)}
+.ppp-row-info{flex:1;min-width:0}
+.ppp-row-nome{font-size:.82rem;font-weight:700;color:var(--text,#f9fafb);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ppp-row-sub{font-size:.68rem;color:var(--muted,#6b7280);margin-top:2px}
+.ppp-badge{font-size:.6rem;font-weight:800;text-transform:uppercase;padding:3px 7px;border-radius:5px;flex-shrink:0}
+.ppp-badge-fin{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.ppp-badge-ras{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+#ppp-qd-empty{text-align:center;padding:48px 20px;color:var(--muted,#6b7280);font-size:.82rem;display:none}
+#ppp-qd-footer{padding:10px 16px;border-top:1px solid var(--line,#1f2937);text-align:center;flex-shrink:0}
+#ppp-qd-footer a{font-size:.74rem;color:var(--teal,#2dd4bf);text-decoration:none}
+/* detalhe */
+#ppp-qd-det{position:absolute;inset:0;background:var(--surface,#111827);z-index:2;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.22,.8,.3,1)}
+#ppp-qd-det.open{transform:translateX(0)}
+#ppp-qd-det-hdr{padding:14px 16px;border-bottom:1px solid var(--line,#1f2937);display:flex;align-items:center;gap:10px;flex-shrink:0}
+#ppp-qd-det-body{flex:1;overflow-y:auto;padding:16px}
+.ppp-d-field{background:var(--surface2,#1f2937);border-radius:8px;padding:10px 12px;border:1px solid var(--line,#374151)}
+.ppp-d-label{font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted,#6b7280);margin-bottom:3px}
+.ppp-d-val{font-size:.8rem;font-weight:600;color:var(--text,#f9fafb)}
+.ppp-d-sec{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,#6b7280);margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line,#374151)}
+.ppp-ag-chip{background:var(--surface2,#1f2937);border-radius:7px;padding:9px 12px;margin-bottom:6px;font-size:.77rem;border:1px solid var(--line,#374151)}
+</style>
+
+<div id="ppp-qd-overlay" onclick="fecharPPPDrawer()"></div>
+<div id="ppp-qd-panel">
+  <!-- Cabeçalho -->
+  <div id="ppp-qd-hdr">
+    <h3>🧾 PPP</h3>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span id="ppp-qd-spin" style="font-size:.7rem;color:var(--muted,#6b7280);display:none">carregando…</span>
+      <button onclick="fecharPPPDrawer()" style="background:none;border:1px solid var(--line,#374151);color:var(--text,#f9fafb);cursor:pointer;font-size:.85rem;padding:4px 9px;border-radius:7px;line-height:1">✕</button>
+    </div>
+  </div>
+  <!-- Busca -->
+  <div id="ppp-qd-search">
+    <input type="text" id="ppp-qd-busca" placeholder="Buscar funcionário, cargo…" oninput="pppQdFiltrar()">
+  </div>
+  <!-- Lista -->
+  <div id="ppp-qd-list"></div>
+  <div id="ppp-qd-empty">Nenhum PPP encontrado</div>
+  <!-- Rodapé -->
+  <div id="ppp-qd-footer"><a href="/sst/ppp/">Abrir página completa do PPP →</a></div>
+
+  <!-- Sub-painel detalhe -->
+  <div id="ppp-qd-det">
+    <div id="ppp-qd-det-hdr">
+      <button onclick="pppQdFecharDet()" style="background:none;border:none;color:var(--text,#f9fafb);cursor:pointer;font-size:.9rem;padding:4px 6px;flex-shrink:0">‹</button>
+      <div style="flex:1;min-width:0">
+        <div id="ppp-qd-det-nome" style="font-size:.85rem;font-weight:800;color:var(--text,#f9fafb);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="ppp-qd-det-sub" style="font-size:.67rem;color:var(--muted,#6b7280)"></div>
+      </div>
+      <a href="/sst/ppp/" id="ppp-qd-det-link" style="font-size:.7rem;color:var(--teal,#2dd4bf);text-decoration:none;flex-shrink:0;white-space:nowrap">Ver completo →</a>
+    </div>
+    <div id="ppp-qd-det-body"></div>
+  </div>
 </div>
+
 <script>
+var _pppQdItens=[];
+
 function abrirPPPDrawer(e){
   e.preventDefault();
-  var overlay=document.getElementById('ppp-qd-overlay');
-  var panel=document.getElementById('ppp-qd-panel');
-  var iframe=document.getElementById('ppp-qd-iframe');
-  if(!iframe.getAttribute('data-loaded')){
-    iframe.src='/sst/ppp/?embed=1';
-    iframe.setAttribute('data-loaded','1');
-  }
-  overlay.style.display='block';
-  setTimeout(function(){ panel.style.transform='translateX(0)'; },10);
+  document.getElementById('ppp-qd-overlay').style.display='block';
+  setTimeout(function(){document.getElementById('ppp-qd-panel').style.transform='translateX(0)';},10);
   document.body.style.overflow='hidden';
+  if(!_pppQdItens.length) _pppQdCarregar();
 }
 function fecharPPPDrawer(){
   document.getElementById('ppp-qd-overlay').style.display='none';
   document.getElementById('ppp-qd-panel').style.transform='translateX(100%)';
   document.body.style.overflow='';
+  pppQdFecharDet();
+}
+async function _pppQdCarregar(){
+  var spin=document.getElementById('ppp-qd-spin');
+  spin.style.display='inline';
+  try{
+    var r=await fetch('/api/sst/ppp/',{headers:{'X-Requested-With':'XMLHttpRequest'}});
+    var d=await r.json();
+    _pppQdItens=d.ppps||d.results||d||[];
+    pppQdFiltrar();
+  }catch(err){
+    document.getElementById('ppp-qd-list').innerHTML='';
+    document.getElementById('ppp-qd-empty').textContent='Erro ao carregar';
+    document.getElementById('ppp-qd-empty').style.display='block';
+  }
+  spin.style.display='none';
+}
+function pppQdFiltrar(){
+  var q=(document.getElementById('ppp-qd-busca').value||'').toLowerCase();
+  var lst=_pppQdItens.filter(function(p){
+    return !q||(p.funcionario_nome||'').toLowerCase().includes(q)||(p.cargo||'').toLowerCase().includes(q)||(p.setor||'').toLowerCase().includes(q);
+  });
+  var empty=document.getElementById('ppp-qd-empty');
+  var list=document.getElementById('ppp-qd-list');
+  if(!lst.length){empty.textContent='Nenhum PPP encontrado';empty.style.display='block';list.innerHTML='';return;}
+  empty.style.display='none';
+  list.innerHTML=lst.map(function(p){
+    var badge=p.status==='finalizado'
+      ?'<span class="ppp-badge ppp-badge-fin">Finalizado</span>'
+      :'<span class="ppp-badge ppp-badge-ras">Rascunho</span>';
+    return '<div class="ppp-row" onclick="pppQdAbrirDet('+p.id+')">'
+      +'<div class="ppp-row-info">'
+      +'<div class="ppp-row-nome">'+(p.funcionario_nome||'—')+'</div>'
+      +'<div class="ppp-row-sub">'+(p.cargo||'—')+(p.setor?' · '+p.setor:'')+'</div>'
+      +'</div>'+badge+'</div>';
+  }).join('');
+}
+async function pppQdAbrirDet(id){
+  var det=document.getElementById('ppp-qd-det');
+  det.classList.add('open');
+  var body=document.getElementById('ppp-qd-det-body');
+  body.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted,#6b7280);font-size:.82rem">Carregando…</div>';
+  try{
+    var r=await fetch('/api/sst/ppp/'+id+'/');
+    var p=await r.json();
+    document.getElementById('ppp-qd-det-nome').textContent=p.funcionario_nome||'—';
+    document.getElementById('ppp-qd-det-sub').textContent='PPP #'+p.id+' · '+(p.status||'—')+(p.data_geracao?' · '+p.data_geracao:'');
+    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:4px">';
+    [['CPF',p.funcionario_cpf],['NIT/PIS',p.funcionario_nit],['Cargo',p.cargo],['Setor',p.setor],['CBO',p.cbo],['Admissão',p.data_admissao]].forEach(function(c){
+      html+='<div class="ppp-d-field"><div class="ppp-d-label">'+c[0]+'</div><div class="ppp-d-val">'+(c[1]||'—')+'</div></div>';
+    });
+    html+='</div>';
+    var ag=p.agentes_nocivos||[];
+    html+='<div class="ppp-d-sec">Agentes Nocivos ('+ag.length+')</div>';
+    html+=ag.length?ag.map(function(a){
+      return '<div class="ppp-ag-chip"><strong>'+(a.codigo||'')+'</strong> — '+(a.nome||a.descricao||'—')+'</div>';
+    }).join(''):'<div style="font-size:.78rem;color:var(--muted,#6b7280);padding:6px 0">Nenhum agente cadastrado</div>';
+    html+='<div class="ppp-d-sec">Conclusão</div>';
+    var cor=p.tem_exposicao_nociva?'rgba(239,68,68,.07)':'rgba(34,197,94,.07)';
+    var bor=p.tem_exposicao_nociva?'rgba(239,68,68,.25)':'rgba(34,197,94,.25)';
+    html+='<div style="padding:12px 14px;border-radius:8px;font-size:.81rem;line-height:1.6;background:'+cor+';border:1px solid '+bor+'">'+(p.resultado_conclusao||'—')+'</div>';
+    html+='<div style="margin-top:20px;text-align:center"><a href="/sst/ppp/" style="font-size:.74rem;color:var(--teal,#2dd4bf);text-decoration:none">Editar agentes e detalhes completos →</a></div>';
+    body.innerHTML=html;
+  }catch(err){
+    body.innerHTML='<div style="text-align:center;padding:40px;color:#f87171;font-size:.82rem">Erro ao carregar</div>';
+  }
+}
+function pppQdFecharDet(){
+  document.getElementById('ppp-qd-det').classList.remove('open');
 }
 </script>
 {% endif %}
