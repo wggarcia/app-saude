@@ -158,29 +158,11 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .toast.err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#f87171}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 </style>
+{% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">SC</div>
-    <div>
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">{{ empresa_nome }}</div>
-    </div>
-  </div>
-  <nav class="tb-nav">
-    <a href="/dashboard-empresa/">Painel</a>
-    <a href="/sst/funcionarios/">Funcionários</a>
-    <a href="/sst/postos/">Postos S-2240</a>
-    <a href="/sst/esocial/">eSocial</a>
-    <a href="/sst/ppp/" class="active">PPP</a>
-  </nav>
-  <div class="tb-actions">
-    <button class="btn-main" onclick="abrirModalGerar()">＋ Gerar PPP</button>
-    <a href="/logout-empresa/" class="btn-ghost">Sair</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
@@ -188,14 +170,17 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   <main class="main">
 
     <!-- Cabeçalho -->
-    <div>
-      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--teal);margin-bottom:4px">Previdência Social · SST</div>
-      <h1 style="font-size:1.4rem;font-weight:900">PPP — Perfil Profissiográfico Previdenciário</h1>
-      <p style="font-size:.84rem;color:var(--muted);margin-top:5px;max-width:640px">
-        Gerado por <strong>posto de trabalho</strong> → agentes nocivos (físicos, químicos, biológicos) → exposição do trabalhador.
-        Conforme <strong>IN INSS 128/2022</strong> e eSocial S-2240.
-        Determina direito à <strong>aposentadoria especial</strong> (15/20/25 anos).
-      </p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--teal);margin-bottom:4px">Previdência Social · SST</div>
+        <h1 style="font-size:1.4rem;font-weight:900">PPP — Perfil Profissiográfico Previdenciário</h1>
+        <p style="font-size:.84rem;color:var(--muted);margin-top:5px;max-width:640px">
+          Gerado por <strong>posto de trabalho</strong> → agentes nocivos (físicos, químicos, biológicos) → exposição do trabalhador.
+          Conforme <strong>IN INSS 128/2022</strong> e eSocial S-2240.
+          Determina direito à <strong>aposentadoria especial</strong> (15/20/25 anos).
+        </p>
+      </div>
+      <button class="btn-main" onclick="abrirModalGerar()" style="flex-shrink:0;margin-top:4px">＋ Gerar PPP</button>
     </div>
 
     <!-- Alerta cobertura -->
