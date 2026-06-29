@@ -135,9 +135,11 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .form-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);flex-shrink:0}
 .form-check label{font-size:.82rem;font-weight:600;color:var(--text);cursor:pointer}
 
-/* ── Detalhe PPP ── */
-.dp-panel{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:22px;display:none}
-.dp-panel.open{display:block}
+/* ── Detalhe PPP — drawer lateral ── */
+.dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s}
+.dp-overlay.open{opacity:1;pointer-events:auto}
+.dp-panel{position:fixed;top:0;right:0;height:100vh;width:min(680px,96vw);background:var(--surface);border-left:1px solid var(--line2);padding:28px 26px;z-index:301;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.8,.3,1);overflow-y:auto;display:block}
+.dp-panel.open{transform:translateX(0)}
 .dp-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
 .dp-title{font-size:1rem;font-weight:800}
 .dp-sub{font-size:.75rem;color:var(--muted);margin-top:3px}
@@ -266,50 +268,51 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       </table>
     </div>
 
-    <!-- Painel de detalhe do PPP -->
-    <div class="dp-panel" id="dp-panel">
-      <div class="dp-header">
-        <div>
-          <div class="dp-title" id="dp-nome">—</div>
-          <div class="dp-sub" id="dp-sub">—</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
-          <button class="btn-row primary" id="dp-btn-fin" onclick="finalizarAtual()">✅ Finalizar</button>
-          <button class="btn-row" onclick="downloadPdfAtual()">📄 PDF</button>
-          <button class="btn-row" id="dp-btn-esocial" onclick="transmitirEsocialAtual()" style="border-color:rgba(59,130,246,.3);color:var(--blue)">📡 Transmitir S-2240</button>
-          <button class="btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="fecharDetalhe()">✕</button>
-        </div>
-      </div>
-
-      <!-- Dados básicos -->
-      <div class="dp-grid" id="dp-grid-dados"></div>
-
-      <!-- Postos e agentes nocivos -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)">
-        <div class="dp-sec" style="margin:0;padding:0;border:none">Postos de Trabalho e Agentes Nocivos (S-2240)</div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="btn-row" style="font-size:.65rem" onclick="recarregarDosPostos()" title="Recarregar agentes do cadastro S-2240 atual">↺ Sync S-2240</button>
-          <button class="btn-row primary" style="font-size:.65rem" onclick="abrirModalAddAgente()">＋ Adicionar agente</button>
-        </div>
-      </div>
-      <div id="dp-postos"></div>
-
-      <!-- Monitoração biológica -->
-      <div class="dp-sec">Monitoração Biológica (Exames Laboratoriais)</div>
-      <div id="dp-monit"></div>
-
-      <!-- Conclusão -->
-      <div class="dp-sec">Conclusão — Direito à Aposentadoria Especial</div>
-      <div class="conclusao-box" id="dp-conclusao"></div>
-
-      <!-- Status eSocial S-2240 -->
-      <div class="dp-sec">Transmissão eSocial — S-2240 (Condições Ambientais)</div>
-      <div id="dp-esocial-status">
-        <div style="font-size:.8rem;color:var(--muted)">Clique em <strong>📡 Transmitir S-2240</strong> para enviar os dados de exposição ao eSocial.</div>
-      </div>
-    </div>
-
   </main>
+</div>
+
+<!-- ── Overlay + Drawer lateral do PPP ── -->
+<div class="dp-overlay" id="dp-overlay" onclick="fecharDetalhe()"></div>
+<div class="dp-panel" id="dp-panel">
+  <div class="dp-header">
+    <div>
+      <div class="dp-title" id="dp-nome">—</div>
+      <div class="dp-sub" id="dp-sub">—</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
+      <button class="btn-row primary" id="dp-btn-fin" onclick="finalizarAtual()">✅ Finalizar</button>
+      <button class="btn-row" onclick="downloadPdfAtual()">📄 PDF</button>
+      <button class="btn-row" id="dp-btn-esocial" onclick="transmitirEsocialAtual()" style="border-color:rgba(59,130,246,.3);color:var(--blue)">📡 Transmitir S-2240</button>
+      <button class="btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="fecharDetalhe()">✕</button>
+    </div>
+  </div>
+
+  <!-- Dados básicos -->
+  <div class="dp-grid" id="dp-grid-dados"></div>
+
+  <!-- Postos e agentes nocivos -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)">
+    <div class="dp-sec" style="margin:0;padding:0;border:none">Postos de Trabalho e Agentes Nocivos (S-2240)</div>
+    <div style="display:flex;gap:6px;flex-shrink:0">
+      <button class="btn-row" style="font-size:.65rem" onclick="recarregarDosPostos()" title="Recarregar agentes do cadastro S-2240 atual">↺ Sync S-2240</button>
+      <button class="btn-row primary" style="font-size:.65rem" onclick="abrirModalAddAgente()">＋ Adicionar agente</button>
+    </div>
+  </div>
+  <div id="dp-postos"></div>
+
+  <!-- Monitoração biológica -->
+  <div class="dp-sec">Monitoração Biológica (Exames Laboratoriais)</div>
+  <div id="dp-monit"></div>
+
+  <!-- Conclusão -->
+  <div class="dp-sec">Conclusão — Direito à Aposentadoria Especial</div>
+  <div class="conclusao-box" id="dp-conclusao"></div>
+
+  <!-- Status eSocial S-2240 -->
+  <div class="dp-sec">Transmissão eSocial — S-2240 (Condições Ambientais)</div>
+  <div id="dp-esocial-status">
+    <div style="font-size:.8rem;color:var(--muted)">Clique em <strong>📡 Transmitir S-2240</strong> para enviar os dados de exposição ao eSocial.</div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════
@@ -680,9 +683,9 @@ async function verDetalhe(id){
     // Botão finalizar
     document.getElementById('dp-btn-fin').style.display=p.status==='finalizado'?'none':'';
 
-    const panel=document.getElementById('dp-panel');
-    panel.classList.add('open');
-    setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+    document.getElementById('dp-overlay').classList.add('open');
+    document.getElementById('dp-panel').classList.add('open');
+    document.body.style.overflow='hidden';
 
     // Carrega status eSocial em paralelo
     carregarStatusEsocial(id);
@@ -977,6 +980,8 @@ function renderPostoDetalhe(posto){
 
 function fecharDetalhe(){
   document.getElementById('dp-panel').classList.remove('open');
+  document.getElementById('dp-overlay').classList.remove('open');
+  document.body.style.overflow='';
   _dpId=null;
 }
 
