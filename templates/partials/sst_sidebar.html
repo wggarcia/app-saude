@@ -42,7 +42,11 @@
     {% endif %}
     {% if pf_ver_postos %}
     <a class="sb-link {% if p == '/sst/postos/' %}active{% endif %}" href="/sst/postos/" data-sst-severity="attention"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
-    <a class="sb-link {% if p == '/sst/ppp/' %}active{% endif %}" href="/sst/ppp/" data-sst-severity="attention"><span class="sb-icon">🧾</span><span>PPP</span><span class="sb-badge" data-sst-badge="ppp_pendentes"></span></a>
+    {% if p == '/sst/ppp/' %}
+    <a class="sb-link active" href="/sst/ppp/" data-sst-severity="attention"><span class="sb-icon">🧾</span><span>PPP</span><span class="sb-badge" data-sst-badge="ppp_pendentes"></span></a>
+    {% else %}
+    <a class="sb-link" href="/sst/ppp/" onclick="abrirPPPDrawer(event)" data-sst-severity="attention"><span class="sb-icon">🧾</span><span>PPP</span><span class="sb-badge" data-sst-badge="ppp_pendentes"></span></a>
+    {% endif %}
     {% endif %}
   </div>
 </details>
@@ -110,4 +114,31 @@
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
   </div>
 </details>
+{% if p != '/sst/ppp/' %}
+<!-- Drawer PPP inline (não navega para outra tela) -->
+<div id="ppp-qd-overlay" onclick="fecharPPPDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:400"></div>
+<div id="ppp-qd-panel" style="position:fixed;top:0;right:0;height:100vh;width:min(900px,95vw);z-index:401;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.8,.3,1);box-shadow:-8px 0 32px rgba(0,0,0,.4)">
+  <iframe id="ppp-qd-iframe" src="" style="width:100%;height:100%;border:none;display:block" allowfullscreen></iframe>
+</div>
+<script>
+function abrirPPPDrawer(e){
+  e.preventDefault();
+  var overlay=document.getElementById('ppp-qd-overlay');
+  var panel=document.getElementById('ppp-qd-panel');
+  var iframe=document.getElementById('ppp-qd-iframe');
+  if(!iframe.getAttribute('data-loaded')){
+    iframe.src='/sst/ppp/?embed=1';
+    iframe.setAttribute('data-loaded','1');
+  }
+  overlay.style.display='block';
+  setTimeout(function(){ panel.style.transform='translateX(0)'; },10);
+  document.body.style.overflow='hidden';
+}
+function fecharPPPDrawer(){
+  document.getElementById('ppp-qd-overlay').style.display='none';
+  document.getElementById('ppp-qd-panel').style.transform='translateX(100%)';
+  document.body.style.overflow='';
+}
+</script>
+{% endif %}
 {% endwith %}
