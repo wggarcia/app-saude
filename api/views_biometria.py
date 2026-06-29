@@ -254,6 +254,35 @@ def api_biometria_kpis(request):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@api_requer_feature("sst.biometria")
+def api_biometria_funcionarios(request):
+    """GET — lista todos os funcionários ativos com status de biometria."""
+    empresa = _empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=403)
+
+    from .models import FuncionarioSST, BiometriaFuncionario
+
+    funcionarios = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).order_by("nome")
+    ids_com_bio = set(
+        BiometriaFuncionario.objects.filter(
+            funcionario__empresa=empresa, ativo=True
+        ).values_list("funcionario_id", flat=True)
+    )
+
+    resultado = [
+        {
+            "id": f.id,
+            "nome": f.nome,
+            "cargo": f.cargo or "",
+            "setor": f.setor or "",
+            "biometria_cadastrada": f.id in ids_com_bio,
+        }
+        for f in funcionarios
+    ]
+    return JsonResponse({"funcionarios": resultado})
+
+
 @requer_feature_pacote("sst.biometria", "Biometria EPI")
 @requer_permissao_modulo("sst.gestao_conformidade")
 def sst_biometria_page(request):

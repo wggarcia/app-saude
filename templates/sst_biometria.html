@@ -104,7 +104,43 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       </div>
     </div>
 
+    <div class="panel">
+      <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between">
+        <h3>Funcionários — Cadastro de Foto de Referência</h3>
+        <input type="text" id="busca-func" placeholder="Buscar funcionário..." oninput="filtrarFuncionarios()" style="background:var(--surface2);border:1px solid var(--line2);border-radius:7px;padding:5px 10px;font-size:.75rem;color:var(--text);outline:none;width:200px">
+      </div>
+      <div class="panel-body" id="funcSection">
+        <div class="loading"><div class="spinner"></div> Carregando...</div>
+      </div>
+    </div>
+
   </main>
+</div>
+
+<!-- Modal cadastro biometria -->
+<div id="bio-overlay" onclick="fecharModalBio()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400"></div>
+<div id="bio-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:28px 26px;z-index:401;width:min(480px,94vw);box-shadow:0 24px 64px rgba(0,0,0,.5)">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:4px">Biometria EPI</div>
+      <div style="font-size:1rem;font-weight:800" id="bio-modal-nome">Cadastrar Foto de Referência</div>
+    </div>
+    <button onclick="fecharModalBio()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px">✕</button>
+  </div>
+  <div style="font-size:.8rem;color:var(--muted);margin-bottom:16px;line-height:1.5">Esta foto será usada como referência para confirmar entregas de EPI. Faça upload de uma foto nítida do rosto do funcionário.</div>
+  <div id="bio-preview-wrap" style="display:none;margin-bottom:14px;text-align:center">
+    <img id="bio-preview" style="max-width:100%;max-height:200px;border-radius:10px;border:1px solid var(--line2)">
+  </div>
+  <label style="display:block;border:2px dashed var(--line2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;font-size:.82rem;color:var(--muted);transition:border-color .2s" id="bio-drop-label">
+    <div style="font-size:1.5rem;margin-bottom:8px">📷</div>
+    Clique para selecionar a foto ou arraste aqui
+    <input type="file" id="bio-file" accept="image/*" style="display:none" onchange="onBioFile(event)">
+  </label>
+  <div style="display:flex;gap:10px;margin-top:18px">
+    <button onclick="fecharModalBio()" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--line2);background:none;color:var(--muted);font-size:.8rem;cursor:pointer">Cancelar</button>
+    <button id="bio-btn-salvar" onclick="salvarBiometria()" style="flex:2;padding:9px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.8rem;font-weight:800;cursor:pointer;opacity:.4" disabled>Salvar Foto</button>
+  </div>
+  <div id="bio-erro" style="display:none;margin-top:10px;font-size:.78rem;color:var(--red)"></div>
 </div>
 
 <script>
@@ -164,7 +200,120 @@ async function loadKpis() {
   }
 }
 
-(async () => { await loadKpis(); })();
+(async () => { await loadKpis(); await loadFuncionarios(); })();
+
+// ── Lista de funcionários ─────────────────────────────────────────────────────
+let _todosFunc = [];
+
+async function loadFuncionarios() {
+  try {
+    const r = await fetch("/api/sst/biometria/funcionarios/", { credentials: 'include', headers: headers() });
+    if (!r.ok) { document.getElementById("funcSection").innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:8px">Erro ao carregar funcionários.</div>'; return; }
+    const d = await r.json();
+    _todosFunc = d.funcionarios || [];
+    renderFuncionarios(_todosFunc);
+  } catch(e) {
+    document.getElementById("funcSection").innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:8px">Erro de conexão.</div>';
+  }
+}
+
+function filtrarFuncionarios() {
+  const q = document.getElementById("busca-func").value.toLowerCase();
+  renderFuncionarios(_todosFunc.filter(f => f.nome.toLowerCase().includes(q) || f.setor.toLowerCase().includes(q)));
+}
+
+function renderFuncionarios(lista) {
+  if (!lista.length) { document.getElementById("funcSection").innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:8px">Nenhum funcionário encontrado.</div>'; return; }
+  const rows = lista.map(f => `
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:10px 12px;font-size:.82rem;font-weight:600">${f.nome}</td>
+      <td style="padding:10px 12px;font-size:.78rem;color:var(--muted)">${f.cargo}</td>
+      <td style="padding:10px 12px;font-size:.78rem;color:var(--muted)">${f.setor}</td>
+      <td style="padding:10px 12px;text-align:center">
+        ${f.biometria_cadastrada
+          ? '<span style="font-size:.72rem;font-weight:700;color:var(--green);background:rgba(34,197,94,.1);padding:3px 9px;border-radius:20px">✓ Cadastrada</span>'
+          : '<span style="font-size:.72rem;font-weight:700;color:var(--amber);background:rgba(245,158,11,.1);padding:3px 9px;border-radius:20px">Pendente</span>'}
+      </td>
+      <td style="padding:10px 12px;text-align:right">
+        <button onclick="abrirModalBio(${f.id},'${f.nome.replace(/'/g,"\\\'")}')" style="padding:5px 13px;border-radius:7px;border:1px solid var(--line2);background:none;color:var(--teal);font-size:.73rem;font-weight:700;cursor:pointer;white-space:nowrap">
+          ${f.biometria_cadastrada ? '🔄 Atualizar' : '📷 Cadastrar'}
+        </button>
+      </td>
+    </tr>`).join('');
+  document.getElementById("funcSection").innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--line2)">
+          <th style="padding:8px 12px;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left">Nome</th>
+          <th style="padding:8px 12px;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left">Cargo</th>
+          <th style="padding:8px 12px;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left">Setor</th>
+          <th style="padding:8px 12px;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center">Biometria</th>
+          <th style="padding:8px 12px;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right">Ação</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── Modal cadastro ────────────────────────────────────────────────────────────
+let _bioFuncId = null;
+let _bioBase64 = null;
+
+function abrirModalBio(id, nome) {
+  _bioFuncId = id;
+  _bioBase64 = null;
+  document.getElementById("bio-modal-nome").textContent = nome;
+  document.getElementById("bio-preview-wrap").style.display = "none";
+  document.getElementById("bio-file").value = "";
+  document.getElementById("bio-btn-salvar").disabled = true;
+  document.getElementById("bio-btn-salvar").style.opacity = ".4";
+  document.getElementById("bio-erro").style.display = "none";
+  document.getElementById("bio-drop-label").style.borderColor = "var(--line2)";
+  document.getElementById("bio-overlay").style.display = "block";
+  document.getElementById("bio-modal").style.display = "block";
+}
+
+function fecharModalBio() {
+  document.getElementById("bio-overlay").style.display = "none";
+  document.getElementById("bio-modal").style.display = "none";
+}
+
+function onBioFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 600000) { document.getElementById("bio-erro").textContent = "Foto muito grande. Máximo 500KB."; document.getElementById("bio-erro").style.display = "block"; return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _bioBase64 = ev.target.result;
+    document.getElementById("bio-preview").src = _bioBase64;
+    document.getElementById("bio-preview-wrap").style.display = "block";
+    document.getElementById("bio-drop-label").style.borderColor = "var(--teal)";
+    document.getElementById("bio-btn-salvar").disabled = false;
+    document.getElementById("bio-btn-salvar").style.opacity = "1";
+    document.getElementById("bio-erro").style.display = "none";
+  };
+  reader.readAsDataURL(file);
+}
+
+async function salvarBiometria() {
+  if (!_bioBase64 || !_bioFuncId) return;
+  const btn = document.getElementById("bio-btn-salvar");
+  btn.textContent = "Salvando..."; btn.disabled = true;
+  try {
+    const r = await fetch("/api/sst/biometria/cadastrar/", {
+      method: "POST", credentials: "include", headers: headers(),
+      body: JSON.stringify({ funcionario_id: _bioFuncId, foto_base64: _bioBase64 })
+    });
+    const d = await r.json();
+    if (!r.ok) { document.getElementById("bio-erro").textContent = d.erro || "Erro ao salvar."; document.getElementById("bio-erro").style.display = "block"; btn.textContent = "Salvar Foto"; btn.disabled = false; return; }
+    fecharModalBio();
+    await loadKpis();
+    await loadFuncionarios();
+  } catch(e) {
+    document.getElementById("bio-erro").textContent = "Erro de conexão."; document.getElementById("bio-erro").style.display = "block";
+    btn.textContent = "Salvar Foto"; btn.disabled = false;
+  }
+}
 </script>
 </body>
 </html>

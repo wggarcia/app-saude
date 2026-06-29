@@ -325,6 +325,7 @@ from api.views_cipa import (
 from api.views_biometria import (
     api_biometria_cadastrar, api_biometria_detalhe,
     api_biometria_confirmar_entrega, api_biometria_kpis,
+    api_biometria_funcionarios,
     sst_biometria_page,
 )
 from api.views_biometria_facial import (
@@ -2312,6 +2313,7 @@ urlpatterns = [
     # ── Biometria Foto-confirmação (legado) ───────────────────────────────────
     path('sst/biometria/', sst_biometria_page),
     path('api/sst/biometria/kpis/', api_biometria_kpis),
+    path('api/sst/biometria/funcionarios/', api_biometria_funcionarios),
     path('api/sst/biometria/cadastrar/', api_biometria_cadastrar),
     path('api/sst/biometria/<int:funcionario_id>/', api_biometria_detalhe),
     path('api/sst/biometria/entregas/<int:entrega_id>/confirmar/', api_biometria_confirmar_entrega),
