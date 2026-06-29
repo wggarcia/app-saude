@@ -201,6 +201,7 @@ class EmpresaMiddleware:
             "/redefinir-senha/",
             "/api/funcionario/",   # portal do trabalhador — auth própria via Bearer
             "/api/funcionario",
+            "/api/sst/psicossocial/responder/",  # resposta pública do colaborador (token no URL)
             "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",

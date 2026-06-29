@@ -423,7 +423,7 @@ def api_psicossocial_responder_publico(request, token):
                 continue
             try:
                 questao = QuestaoAvaliacaoPsicossocial.objects.get(id=questao_id, avaliacao=av)
-                resposta_num = r.get("resposta_num")
+                resposta_num = r.get("resposta_num") or r.get("valor")
                 resposta_bool_raw = r.get("resposta_bool")
                 resposta_bool = None
                 if resposta_bool_raw is not None:
