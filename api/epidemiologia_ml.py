@@ -25,9 +25,13 @@ from pathlib import Path
 import joblib
 import numpy as np
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Sum
 
 from .models import FonteOficialAgregado
+
+_SERIES_CACHE_TTL = 3600       # 1 hora — série SINAN muda só em importações manuais
+_ML_DOENCA_CACHE_TTL = 21600   # 6 horas — predict_proba sobre dados semanais/mensais
 
 # settings.MEDIA_ROOT ja resolve pro disco persistente em produção (Render,
 # via MEDIA_ROOT_OVERRIDE) — usar o mesmo caminho evita que o modelo treinado
@@ -131,6 +135,14 @@ def _parse_periodo(periodo: str):
 
 
 def _coletar_series(fonte_id: str, indicador: str):
+    cache_key = f"epidemiologia:series:{fonte_id}:{indicador}"
+    try:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+
     qs = (
         FonteOficialAgregado.objects.filter(fonte_id=fonte_id, indicador=indicador)
         .exclude(estado__isnull=True)
@@ -146,6 +158,11 @@ def _coletar_series(fonte_id: str, indicador: str):
         por_estado.setdefault(row["estado"], []).append((ano, semana, float(row["total"] or 0)))
     for estado in por_estado:
         por_estado[estado].sort(key=lambda t: (t[0], t[1]))
+
+    try:
+        cache.set(cache_key, por_estado, _SERIES_CACHE_TTL)
+    except Exception:
+        pass
     return por_estado
 
 
@@ -299,11 +316,24 @@ def mapa_risco_oficial_por_doenca():
     (poucas amostras oficiais ainda) simplesmente nao aparecem no dict — o
     chamador deve usar a heuristica de sintomas para essas.
     """
+    cache_key = "epidemiologia:ml:risco_por_doenca"
+    try:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+
     resultado = {}
     for fonte_id, indicador, nome_doenca in DOENCAS_REGISTRADAS:
         mapa = mapa_risco_oficial_por_estado(fonte_id=fonte_id, indicador=indicador)
         if mapa:
             resultado[nome_doenca] = mapa
+
+    try:
+        cache.set(cache_key, resultado, _ML_DOENCA_CACHE_TTL)
+    except Exception:
+        pass
     return resultado
 
 

@@ -131,11 +131,11 @@ DISEASE_WEIGHTS = {
 }
 
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None, "version": None}
-# TTL maior que o intervalo de polling dos painéis (15s) para que os requests
-# concorrentes reaproveitem o payload já calculado em vez de refazer as 4
-# agregações pesadas a cada ciclo. O cache é invalidado em tempo real por
-# clear_panorama_cache() quando um novo registro chega.
-_CACHE_TTL_SECONDS = 45
+# TTL de 5 min: as queries de mapa custam 4-9 s sem cache. O cache é
+# invalidado imediatamente por clear_panorama_cache() quando chega um novo
+# registro, então dados nunca ficam velhos além do necessário.
+_CACHE_TTL_SECONDS = 300
+_PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False}
 _PANORAMA_CACHE_VERSION_KEY = "epidemiologia:panorama:version"
 PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
 
@@ -158,7 +158,10 @@ def clear_panorama_cache():
 
 
 def _public_population_empresa():
-    return Empresa.objects.filter(email=PUBLIC_APP_EMAIL).first()
+    if not _PUBLIC_EMPRESA_CACHE["loaded"]:
+        _PUBLIC_EMPRESA_CACHE["obj"] = Empresa.objects.filter(email=PUBLIC_APP_EMAIL).first()
+        _PUBLIC_EMPRESA_CACHE["loaded"] = True
+    return _PUBLIC_EMPRESA_CACHE["obj"]
 
 
 def _scope_public_population_queryset(queryset):
@@ -170,8 +173,6 @@ def _scope_public_population_queryset(queryset):
         _rls_set_empresa(empresa.id)
     except Exception:
         pass
-    if not RegistroSintoma.objects.filter(empresa=empresa).exists():
-        return queryset
     return queryset.filter(empresa=empresa)
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10

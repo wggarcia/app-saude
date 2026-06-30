@@ -145,6 +145,18 @@ class RegistroSintoma(models.Model):
             models.Index(fields=["empresa", "estado", "cidade"], name="regsintoma_emp_geo_idx"),
             # Recortes globais por janela temporal (linha do tempo / baseline).
             models.Index(fields=["data_registro"], name="regsintoma_data_idx"),
+            # Cobre o GROUP BY (empresa, data_registro, estado, cidade, bairro) da camada
+            # de bairros — elimina full table scan nos 30 dias da janela epidemiológica.
+            models.Index(
+                fields=["empresa", "data_registro", "estado", "cidade", "bairro"],
+                name="regsintoma_mapa_bairro_idx",
+            ),
+            # Cobre o GROUP BY da camada de municípios e a agregação diária de pesos
+            # temporais (TruncDate + GROUP BY empresa/estado/cidade/day).
+            models.Index(
+                fields=["empresa", "data_registro", "estado", "cidade"],
+                name="regsintoma_mapa_mun_idx",
+            ),
         ]
 
     def __str__(self):
