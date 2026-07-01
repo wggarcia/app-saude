@@ -2331,12 +2331,8 @@ class PublicApiTests(TestCase):
         self.assertTrue(aceite.metadados["termos"])
 
     def test_mapa_publico_entrega_doencas_provaveis_por_foco(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Teste",
-            email="populacao-mapa@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+        empresa = _empresa_app_publico()
         RegistroSintoma.objects.create(
             empresa=empresa,
             febre=True,
@@ -2350,6 +2346,7 @@ class PublicApiTests(TestCase):
             grupo="Arbovirose",
         )
 
+        epidemiologia.clear_panorama_cache()
         response = Client().get("/api/public/mapa?cidade=São Paulo&estado=SP")
         hotspot = response.json()["hotspots"][0]
 
@@ -2423,12 +2420,8 @@ class PublicApiTests(TestCase):
         self.assertEqual(bairros, {"Centro"})
 
     def test_radar_local_publico_expõe_casos_ativos_equalizados(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Radar",
-            email="populacao-radar@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+        empresa = _empresa_app_publico()
         RegistroSintoma.objects.create(
             empresa=empresa,
             dor_articular=True,
@@ -2440,6 +2433,7 @@ class PublicApiTests(TestCase):
             grupo="Arbovirose",
         )
 
+        epidemiologia.clear_panorama_cache()
         response = Client().get("/api/public/radar-local?cidade=Rio de Janeiro&estado=RJ")
         radar = response.json()["radar"]
 

@@ -22,6 +22,7 @@ class PublicIntegrityTests(TestCase):
 
     def setUp(self):
         self.client = Client()
+        epidemiologia.clear_panorama_cache()
         self.empresa_publica = _empresa_app_publico()
 
     def test_app_alertas_publicos_ignora_alerta_sintetico(self):
