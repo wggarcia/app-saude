@@ -144,7 +144,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="card-header">
       <span class="card-title" id="detTitulo">Editar Relatório</span>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ok btn-sm" id="btnEnviarDigisus" onclick="enviarDigisus()">Enviar ao DigiSUS</button>
+        <button class="btn btn-ok btn-sm" id="btnEnviarDigisus" onclick="enviarDigisus()" title="Registra localmente que este relatório foi enviado ao DigiSUS Gestor">Registrar Envio DigiSUS</button>
         <button class="btn btn-primary btn-sm" onclick="salvarConteudo()">Salvar</button>
         <button class="btn btn-ghost btn-sm" onclick="fecharDetalhe()">Fechar</button>
       </div>
@@ -295,12 +295,12 @@ async function salvarConteudo() {
 
 async function enviarDigisus() {
   const id = document.getElementById("detId").value;
-  if (!confirm("Marcar este relatório como enviado ao DigiSUS Gestor?")) return;
+  if (!confirm("Registrar que este relatório foi enviado ao DigiSUS Gestor?\n\nIsso marcará o status como 'Enviado' neste sistema. O envio eletrônico ao Ministério da Saúde deve ser feito diretamente no portal DigiSUS Gestor.")) return;
   await salvarConteudo();
   const d = await fetchJSON(`/api/governo/rag/${id}/atualizar/`, {
     method: "POST", body: JSON.stringify({ enviado_digisus: true })
   });
-  if (d.ok) { carregarTodos(); carregarKpis(); fecharDetalhe(); alert("Relatório marcado como enviado ao DigiSUS."); }
+  if (d.ok) { carregarTodos(); carregarKpis(); fecharDetalhe(); alert("Relatório registrado como enviado. Lembre-se de transmitir o arquivo no portal DigiSUS Gestor."); }
   else alert(d.erro || "Erro.");
 }
 
