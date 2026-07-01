@@ -350,14 +350,6 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # ── Email — aviso quando SMTP não está configurado em produção ───────────────
-import logging as _logging
-_email_log = _logging.getLogger("soluscrt.startup")
-if IS_PRODUCTION and not EMAIL_HOST_USER:
-    _email_log.warning(
-        "EMAIL_HOST_USER não configurado — emails transacionais (boas-vindas, "
-        "reset de senha, confirmação de pagamento) serão descartados. "
-        "Configure EMAIL_HOST_USER e EMAIL_HOST_PASSWORD no painel de hospedagem."
-    )
 
 # ── Sentry — monitoramento de erros em produção ──────────────────────────────
 _SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
