@@ -32,6 +32,7 @@ from .models import FonteOficialAgregado
 
 _SERIES_CACHE_TTL = 3600       # 1 hora — série SINAN muda só em importações manuais
 _ML_DOENCA_CACHE_TTL = 21600   # 6 horas — predict_proba sobre dados semanais/mensais
+_SERIES_CACHE: dict = {}       # (fonte_id, indicador) → por_estado; limpável em testes
 
 # settings.MEDIA_ROOT ja resolve pro disco persistente em produção (Render,
 # via MEDIA_ROOT_OVERRIDE) — usar o mesmo caminho evita que o modelo treinado
@@ -135,6 +136,9 @@ def _parse_periodo(periodo: str):
 
 
 def _coletar_series(fonte_id: str, indicador: str):
+    cache_key = (fonte_id, indicador)
+    if cache_key in _SERIES_CACHE:
+        return _SERIES_CACHE[cache_key]
     qs = (
         FonteOficialAgregado.objects.filter(fonte_id=fonte_id, indicador=indicador)
         .exclude(estado__isnull=True)
@@ -150,6 +154,7 @@ def _coletar_series(fonte_id: str, indicador: str):
         por_estado.setdefault(row["estado"], []).append((ano, semana, float(row["total"] or 0)))
     for estado in por_estado:
         por_estado[estado].sort(key=lambda t: (t[0], t[1]))
+    _SERIES_CACHE[cache_key] = por_estado
     return por_estado
 
 

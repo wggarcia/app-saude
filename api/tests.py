@@ -5631,6 +5631,7 @@ class EpidemiologiaMLTests(TestCase):
         for p in self._patches:
             p.start()
         epi_ml._MODELO_CACHE.clear()
+        epi_ml._SERIES_CACHE.clear()
 
     def tearDown(self):
         for p in self._patches:
