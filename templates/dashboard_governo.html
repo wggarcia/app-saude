@@ -1781,10 +1781,10 @@
     }
 
     function renderDetails(area) {
-      const symptoms = area.symptoms
+      const symptoms = (area.symptoms || [])
         .map((symptom) => `<li>${symptom.label}: ${symptom.count.toLocaleString("pt-BR")} (${symptom.percentage.toFixed(1)}%)</li>`)
         .join("");
-      const diseases = area.probable_diseases
+      const diseases = (area.probable_diseases || [])
         .map((disease) => `<li>${disease.name}: ${disease.probability.toFixed(1)}% | ativo ${Number(disease.active_probability || 0).toFixed(1)}%</li>`)
         .join("");
 

@@ -1257,7 +1257,7 @@
 
       areas.forEach((area) => {
         totals.total_cases += Math.round(rawFocusValue(area));
-        totals.growth_sum += area.growth_percent;
+        totals.growth_sum += (area.growth_percent ?? 0);
         totals.maxRisk = Math.max(totals.maxRisk, area.risk_score);
 
         area.symptoms.forEach((symptom) => {
@@ -1576,7 +1576,7 @@
 
       container.querySelectorAll(".list-item").forEach((item) => {
         item.addEventListener("click", () => {
-          const area = getFilteredAreas().find((entry) => entry.id === item.dataset.areaId);
+          const area = getFilteredAreas().find((entry) => String(entry.id) === item.dataset.areaId);
           if (area) selectArea(area);
         });
       });
@@ -1802,7 +1802,7 @@
         const pressaoEl = document.getElementById("farmPainelEstoque");
         if (pressaoEl) {
           const pct = (p.pressao_estoque_global || 0).toFixed(1);
-          const cor = pct >= 80 ? "var(--danger)" : pct >= 55 ? "var(--warn)" : "var(--ok)";
+          const cor = pct >= 80 ? "var(--critico)" : pct >= 55 ? "var(--alto)" : "var(--baixo)";
           pressaoEl.innerHTML = `
             <div style="font-size:1.6rem;font-weight:700;color:${cor}">${pct}%</div>
             <div style="margin:4px 0 8px;">${p.sinal_mercado || "—"}</div>
@@ -1822,10 +1822,10 @@
           if (!zonas.length) { zonasEl.textContent = "Sem zonas críticas identificadas."; }
           else {
             zonasEl.innerHTML = zonas.map(z => {
-              const cor = z.pressao >= 80 ? "var(--danger)" : z.pressao >= 55 ? "var(--warn)" : "var(--ok)";
+              const cor = z.pressao >= 80 ? "var(--critico)" : z.pressao >= 55 ? "var(--alto)" : "var(--baixo)";
               return `<div style="margin-bottom:8px;border-left:3px solid ${cor};padding-left:8px;">
                 <strong>${z.zona}</strong><br>
-                <span style="font-size:0.82rem;">Pressão: ${z.pressao.toFixed(1)}% · Janela: ${z.janela}</span><br>
+                <span style="font-size:0.82rem;">Pressão: ${(z.pressao ?? 0).toFixed(1)}% · Janela: ${z.janela}</span><br>
                 <span style="font-size:0.8rem;color:var(--muted);">${z.sinal}</span>
               </div>`;
             }).join("");
@@ -1875,11 +1875,11 @@
         ]);
         if (!painelRes.ok) return;
         const painel = (await painelRes.json()).painel || {};
-        const kpis = painelRes.ok ? await kpisRes.json() : {};
+        const kpis = kpisRes.ok ? await kpisRes.json() : {};
         const av = avancadosRes.ok ? await avancadosRes.json() : {};
 
         const pressao = painel.pressao_estoque_global || 0;
-        const nivelRisco = painel.nivel_risco || "baixo";
+        const nivelRisco = painel.risco || "baixo";
         const doencaDom = painel.doenca_dominante || "";
         const medsAlta = painel.medicamentos_alta || [];
         const abaixoMin = kpis.itens_abaixo_minimo || 0;

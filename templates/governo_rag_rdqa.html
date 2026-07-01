@@ -226,13 +226,12 @@ async function carregarTodos() {
 function renderTab(tipo) {
   const lista = relatoriosCache.filter(r => r.tipo === tipo);
   const ids = { pas: "tbodyPas", rdqa: "tbodyRdqa", rag: "tbodyRag" };
+  const colspans = { pas: 5, rdqa: 6, rag: 6 };
   const tbody = document.getElementById(ids[tipo]);
-  if (!lista.length) { tbody.innerHTML = `<tr><td colspan="6" class="empty">Nenhum relatório ${tipo.toUpperCase()} criado.</td></tr>`; return; }
+  if (!lista.length) { tbody.innerHTML = `<tr><td colspan="${colspans[tipo]}" class="empty">Nenhum relatório ${tipo.toUpperCase()} criado.</td></tr>`; return; }
   if (tipo === "pas" || tipo === "rag") {
-    const cols = tipo === "pas" ? 5 : 6;
     tbody.innerHTML = lista.map(r => `<tr>
       <td><strong>${r.exercicio}</strong></td>
-      ${tipo === "rag" ? `<td>${r.tipo_label}</td>` : ""}
       <td>${r.tipo_label}</td>
       <td>${r.enviado_digisus ? '<span class="badge badge-ok">Enviado</span>' : '<span class="badge badge-warn">Elaborando</span>'}</td>
       ${tipo === "rag" ? `<td>${r.enviado_em ? new Date(r.enviado_em).toLocaleDateString("pt-BR") : '—'}</td>` : ""}
@@ -256,7 +255,7 @@ function setTab(t) {
   tabAtual = t;
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-  event.target.classList.add("active");
+  document.querySelector(`.tab-btn[onclick*="'${t}'"]`)?.classList.add("active");
   document.getElementById("tab-" + t).classList.add("active");
 }
 
