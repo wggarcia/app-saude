@@ -135,14 +135,6 @@ def _parse_periodo(periodo: str):
 
 
 def _coletar_series(fonte_id: str, indicador: str):
-    cache_key = f"epidemiologia:series:{fonte_id}:{indicador}"
-    try:
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return cached
-    except Exception:
-        pass
-
     qs = (
         FonteOficialAgregado.objects.filter(fonte_id=fonte_id, indicador=indicador)
         .exclude(estado__isnull=True)
@@ -158,11 +150,6 @@ def _coletar_series(fonte_id: str, indicador: str):
         por_estado.setdefault(row["estado"], []).append((ano, semana, float(row["total"] or 0)))
     for estado in por_estado:
         por_estado[estado].sort(key=lambda t: (t[0], t[1]))
-
-    try:
-        cache.set(cache_key, por_estado, _SERIES_CACHE_TTL)
-    except Exception:
-        pass
     return por_estado
 
 

@@ -155,6 +155,8 @@ def clear_panorama_cache():
     _PANORAMA_CACHE["created_at"] = 0.0
     _PANORAMA_CACHE["payload"] = None
     _PANORAMA_CACHE["version"] = _current_panorama_cache_version()
+    _PUBLIC_EMPRESA_CACHE["obj"] = None
+    _PUBLIC_EMPRESA_CACHE["loaded"] = False
 
 
 def _public_population_empresa():
