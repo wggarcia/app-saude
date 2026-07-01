@@ -1620,7 +1620,7 @@
       const bounds = [];
       const isBairroView = levelFilter.value === "bairros";
 
-      if (modeFilter.value === "radar" || isBairroView) {
+      if (modeFilter.value !== "risco") {
         const heatPoints = areas
           .filter((area) => area.latitude && area.longitude)
           .map((area) => [area.latitude, area.longitude, intensity(area, maxCases)]);

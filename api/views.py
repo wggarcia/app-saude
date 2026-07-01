@@ -3935,9 +3935,14 @@ def casos_por_regiao(request):
 
 def mapa_risco(request):
 
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse([], safe=False)
+
     dados = (
         RegistroSintoma.objects
-        .values("bairro", "latitude", "longitude")
+        .filter(empresa=empresa, suspeito=False)
+        .values("bairro", "cidade", "estado", "latitude", "longitude")
         .annotate(total=Count("id"))
     )
 
@@ -3959,8 +3964,10 @@ def mapa_risco(request):
 
         resultado.append({
             "bairro": d["bairro"],
-            "lat": d["latitude"],
-            "lng": d["longitude"],
+            "cidade": d["cidade"],
+            "estado": d["estado"],
+            "latitude": d["latitude"],
+            "longitude": d["longitude"],
             "total": total,
             "risco": risco,
             "cor": cor
