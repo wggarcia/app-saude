@@ -1251,14 +1251,14 @@
 
       areas.forEach((area) => {
         totals.total_cases += Math.round(rawFocusValue(area));
-        totals.growth_sum += area.growth_percent;
+        totals.growth_sum += (area.growth_percent ?? 0);
         totals.maxRisk = Math.max(totals.maxRisk, area.risk_score);
 
-        area.symptoms.forEach((symptom) => {
+        (area.symptoms || []).forEach((symptom) => {
           totals.symptoms[symptom.label] = (totals.symptoms[symptom.label] || 0) + symptom.count;
         });
 
-        area.probable_diseases.forEach((disease) => {
+        (area.probable_diseases || []).forEach((disease) => {
           totals.diseases[disease.name] = (totals.diseases[disease.name] || 0) + disease.estimated_cases;
         });
       });
@@ -1429,11 +1429,11 @@
     }
 
     function areaPopup(area) {
-      const diseaseLines = area.probable_diseases
+      const diseaseLines = (area.probable_diseases || [])
         .slice(0, 4)
         .map((disease) => `<li>${disease.name}: ${disease.probability.toFixed(1)}%</li>`)
         .join("");
-      const symptomLines = area.symptoms
+      const symptomLines = (area.symptoms || [])
         .slice(0, 4)
         .map((symptom) => `<li>${symptom.label}: ${symptom.percentage.toFixed(1)}%</li>`)
         .join("");
@@ -1472,10 +1472,10 @@
     }
 
     function renderDetails(area) {
-      const symptoms = area.symptoms
+      const symptoms = (area.symptoms || [])
         .map((symptom) => `<li>${symptom.label}: ${symptom.count.toLocaleString("pt-BR")} registros (${symptom.percentage.toFixed(1)}%)</li>`)
         .join("");
-      const diseases = area.probable_diseases
+      const diseases = (area.probable_diseases || [])
         .map((disease) => `<li>${disease.name}: ${disease.probability.toFixed(1)}% | ativo ${Number(disease.active_probability || 0).toFixed(1)}% (${disease.estimated_cases.toLocaleString("pt-BR")} casos estimados)</li>`)
         .join("");
 
@@ -1570,7 +1570,7 @@
 
       container.querySelectorAll(".list-item").forEach((item) => {
         item.addEventListener("click", () => {
-          const area = getFilteredAreas().find((entry) => entry.id === item.dataset.areaId);
+          const area = getFilteredAreas().find((entry) => String(entry.id) === item.dataset.areaId);
           if (area) selectArea(area);
         });
       });
@@ -1796,7 +1796,7 @@
         const cargaEl = document.getElementById("hospCarga");
         if (cargaEl) {
           const carga = (p.carga_hospitalar_global || 0).toFixed(1);
-          const cor = carga >= 80 ? "var(--danger)" : carga >= 55 ? "var(--warn)" : "var(--ok)";
+          const cor = carga >= 80 ? "var(--critico)" : carga >= 55 ? "var(--alto)" : "var(--baixo)";
           cargaEl.innerHTML = `
             <div style="font-size:1.6rem;font-weight:700;color:${cor}">${carga}%</div>
             <div style="margin:4px 0 4px;">Ocupação estimada: <strong>${p.ocupacao_estimada_percent || 0}%</strong></div>
@@ -1809,7 +1809,7 @@
         const triagemEl = document.getElementById("hospTriagem");
         if (triagemEl) {
           const proto = p.protocolo_triagem || [];
-          const cores = { "Vermelho": "var(--danger)", "Laranja": "var(--warn)", "Amarelo": "var(--moderate)", "Verde": "var(--ok)" };
+          const cores = { "Vermelho": "var(--critico)", "Laranja": "var(--alto)", "Amarelo": "var(--moderado)", "Verde": "var(--baixo)" };
           if (!proto.length) { triagemEl.textContent = "Sem protocolo ativo."; }
           else {
             triagemEl.innerHTML = proto.map(item => {
@@ -1828,10 +1828,10 @@
           if (!zonas.length) { zonasEl.textContent = "Sem zonas críticas identificadas."; }
           else {
             zonasEl.innerHTML = zonas.map(z => {
-              const cor = z.carga >= 80 ? "var(--danger)" : z.carga >= 55 ? "var(--warn)" : "var(--ok)";
+              const cor = z.carga >= 80 ? "var(--critico)" : z.carga >= 55 ? "var(--alto)" : "var(--baixo)";
               return `<div style="margin-bottom:8px;border-left:3px solid ${cor};padding-left:8px;">
                 <strong>${z.zona}</strong><br>
-                <span style="font-size:0.82rem;">Carga: ${z.carga.toFixed(1)}% · ${z.prontidao ?? '—'}</span><br>
+                <span style="font-size:0.82rem;">Carga: ${(z.carga ?? 0).toFixed(1)}% · ${z.prontidao ?? '—'}</span><br>
                 <span style="font-size:0.8rem;color:var(--muted);">${z.triagem}</span>
               </div>`;
             }).join("");

@@ -934,10 +934,10 @@
       const totals = { total_cases: 0, growth_sum: 0, symptoms: {}, diseases: {}, maxRisk: 0 };
       areas.forEach((area) => {
         totals.total_cases += activeFocusValue(area);
-        totals.growth_sum += area.growth_percent;
+        totals.growth_sum += (area.growth_percent ?? 0);
         totals.maxRisk = Math.max(totals.maxRisk, area.risk_score);
-        area.symptoms.forEach((s) => { totals.symptoms[s.label] = (totals.symptoms[s.label] || 0) + s.count; });
-        area.probable_diseases.forEach((d) => { totals.diseases[d.name] = (totals.diseases[d.name] || 0) + d.estimated_cases; });
+        (area.symptoms || []).forEach((s) => { totals.symptoms[s.label] = (totals.symptoms[s.label] || 0) + s.count; });
+        (area.probable_diseases || []).forEach((d) => { totals.diseases[d.name] = (totals.diseases[d.name] || 0) + d.estimated_cases; });
       });
       return {
         totalCases: totals.total_cases,
@@ -972,9 +972,9 @@
     }
 
     function areaPopup(area) {
-      const diseaseLines = area.probable_diseases.slice(0, 4)
+      const diseaseLines = (area.probable_diseases || []).slice(0, 4)
         .map((d) => `<li>${d.name}: ${d.probability.toFixed(1)}%</li>`).join("");
-      const symptomLines = area.symptoms.slice(0, 4)
+      const symptomLines = (area.symptoms || []).slice(0, 4)
         .map((s) => `<li>${s.label}: ${s.percentage.toFixed(1)}%</li>`).join("");
       return `
         <strong>${area.label}</strong><br>
@@ -1005,9 +1005,9 @@
     }
 
     function renderDetails(area) {
-      const symptoms = area.symptoms.map((s) =>
+      const symptoms = (area.symptoms || []).map((s) =>
         `<li>${s.label}: ${s.count.toLocaleString("pt-BR")} (${s.percentage.toFixed(1)}%)</li>`).join("");
-      const diseases = area.probable_diseases.map((d) =>
+      const diseases = (area.probable_diseases || []).map((d) =>
         `<li>${d.name}: ${d.probability.toFixed(1)}% (${d.estimated_cases.toLocaleString("pt-BR")} casos est.)</li>`).join("");
       document.getElementById("detailsBody").innerHTML = `
         <div style="font-size:1rem;font-weight:800;">${area.label}</div>
