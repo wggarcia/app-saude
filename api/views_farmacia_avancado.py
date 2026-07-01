@@ -385,6 +385,7 @@ def _desc_dict(d):
 
 # ── KPIs Avançados e Relatórios ────────────────────────────────────────────────
 
+@require_http_methods(["GET"])
 def api_farmacia_kpis_avancados(request):
     e = _e(request)
     if not e:
@@ -437,6 +438,7 @@ def api_farmacia_kpis_avancados(request):
     })
 
 
+@require_http_methods(["GET"])
 def api_farmacia_relatorio_curva_abc(request):
     e = _e(request)
     if not e:
@@ -476,6 +478,7 @@ def api_farmacia_relatorio_curva_abc(request):
     })
 
 
+@require_http_methods(["GET"])
 def api_farmacia_relatorio_cmm(request):
     e = _e(request)
     if not e:
@@ -516,6 +519,7 @@ def api_farmacia_relatorio_cmm(request):
     return JsonResponse({"itens": resultado, "periodo": "últimos 3 meses"})
 
 
+@require_http_methods(["GET"])
 def api_farmacia_relatorio_giro(request):
     e = _e(request)
     if not e:
