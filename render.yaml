@@ -38,6 +38,12 @@ services:
         value: "true"
       - key: ALLOW_ENTERPRISE_DEMO_MUTATIONS
         value: "false"
+      # ── Cloudflare proxy — desativa redirect interno; CF cuida do HTTPS ──────
+      # Com Cloudflare na frente, X-Forwarded-Proto chega como "https, http"
+      # (double-proxy Cloudflare→Render→Django), quebrando o check exato do Django.
+      # Cloudflare enforça HTTPS na borda; Django não precisa redirecionar.
+      - key: SECURE_SSL_REDIRECT
+        value: "false"
       # ── Email transacional da plataforma SaaS ─────────────────────────────
       # Um único remetente (noreply@soluscrt.com.br) envia em nome de TODOS os
       # clientes. Os dados do cliente ficam no conteúdo do email.
