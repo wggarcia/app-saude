@@ -1219,8 +1219,8 @@
             <span class="badge critico">P${item.priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            Vigilância <strong>${item.surveillance_index.toFixed(1)}</strong> |
-            Pressão <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            Vigilância <strong>${(item.surveillance_index ?? 0).toFixed(1)}</strong> |
+            Pressão <strong>${(item.resource_pressure ?? 0).toFixed(1)}</strong><br>
             ${item.message}
           </div>
         </div>
@@ -1671,9 +1671,9 @@
           </div>
           <div class="mini" style="margin-top:8px;">
             ${focusSummary(area)} |
-            crescimento ${area.growth_percent.toFixed(1)}%<br>
-            Vigilância ${area.surveillance_index.toFixed(1)} |
-            Pressão ${area.resource_pressure.toFixed(1)}
+            crescimento ${(area.growth_percent ?? 0).toFixed(1)}%<br>
+            Vigilância ${(area.surveillance_index ?? 0).toFixed(1)} |
+            Pressão ${(area.resource_pressure ?? 0).toFixed(1)}
           </div>
         </div>
       `).join("");
@@ -1767,7 +1767,7 @@
         <strong>${area.label}</strong><br>
         Casos ativos: ${casos.toLocaleString("pt-BR")}<br>
         Registros 30d: ${(area.raw_total_cases ?? Math.round(rawFocusValue(area))).toLocaleString("pt-BR")}<br>
-        Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Crescimento: ${(area.growth_percent ?? 0).toFixed(1)}%<br>
         Risco: ${area.risk_level}<br>
         Foco predominante: ${area.dominant_symptom}<br>
         Doença provável: ${area.dominant_disease}<br>
@@ -1803,9 +1803,9 @@
               <li>Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}</li>
               <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
-              <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
-              <li>Atividade recente: ${area.activity_percent.toFixed(1)}%</li>
-              <li>Desaceleração: ${area.decay_percent.toFixed(1)}%</li>
+              <li>Crescimento: ${(area.growth_percent ?? 0).toFixed(1)}%</li>
+              <li>Atividade recente: ${(area.activity_percent ?? 0).toFixed(1)}%</li>
+              <li>Desaceleração: ${(area.decay_percent ?? 0).toFixed(1)}%</li>
               <li>Tendencia: ${area.trend_status}</li>
               <li>Risco: ${area.risk_level}</li>
               <li>Prioridade: P${area.response_priority}</li>
@@ -1814,8 +1814,8 @@
           <div class="detail-box">
             <strong>Resposta e prontidão</strong>
             <ul>
-              <li>Índice de vigilância: ${area.surveillance_index.toFixed(1)}</li>
-              <li>Pressão de recursos: ${area.resource_pressure.toFixed(1)}</li>
+              <li>Índice de vigilância: ${(area.surveillance_index ?? 0).toFixed(1)}</li>
+              <li>Pressão de recursos: ${(area.resource_pressure ?? 0).toFixed(1)}</li>
               <li>Fase operacional: ${area.alert_stage}</li>
               <li>${area.government_recommendation}</li>
             </ul>

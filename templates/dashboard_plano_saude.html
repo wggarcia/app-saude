@@ -979,7 +979,7 @@
         <strong>${area.label}</strong><br>
         Casos ativos: ${activeFocusValue(area).toLocaleString("pt-BR")}<br>
         Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}<br>
-        Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Crescimento: ${(area.growth_percent ?? 0).toFixed(1)}%<br>
         Risco: ${area.risk_level}<br><br>
         <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
         <strong>Doença provável:</strong> ${area.dominant_disease}<br>
@@ -1020,7 +1020,7 @@
             <ul style="margin:8px 0 0;padding-left:16px;color:var(--muted);font-size:0.8rem">
               <li>Casos ativos: ${activeFocusValue(area).toLocaleString("pt-BR")}</li>
               <li>Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}</li>
-              <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
+              <li>Crescimento: ${(area.growth_percent ?? 0).toFixed(1)}%</li>
               <li>Risco: ${area.risk_level}</li>
               <li>Fase: ${area.alert_stage}</li>
             </ul>
@@ -1030,8 +1030,8 @@
             <ul style="margin:8px 0 0;padding-left:16px;color:var(--muted);font-size:0.8rem">
               <li>Foco dominante: ${area.dominant_symptom}</li>
               <li>Doença provável: ${area.dominant_disease}</li>
-              <li>Vigilância: ${area.surveillance_index.toFixed(1)}</li>
-              <li>Pressão recursos: ${area.resource_pressure.toFixed(1)}</li>
+              <li>Vigilância: ${(area.surveillance_index ?? 0).toFixed(1)}</li>
+              <li>Pressão recursos: ${(area.resource_pressure ?? 0).toFixed(1)}</li>
             </ul>
           </div>
           <div style="border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
@@ -1057,7 +1057,7 @@
             <span class="risk-badge risk-${area.risk_level}" style="color:${riskTextColor(area.risk_level)}">${area.risk_level}</span>
           </div>
           <div class="mini">
-            ${activeFocusValue(area).toLocaleString("pt-BR")} casos | cresc. ${area.growth_percent.toFixed(1)}%<br>
+            ${activeFocusValue(area).toLocaleString("pt-BR")} casos | cresc. ${(area.growth_percent ?? 0).toFixed(1)}%<br>
             ${area.dominant_disease}
           </div>
         </div>

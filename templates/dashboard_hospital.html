@@ -1347,8 +1347,8 @@
             <span class="risk-badge risk-CRITICO">P${item.priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            Vigilância: <strong>${item.surveillance_index.toFixed(1)}</strong> |
-            Pressão: <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            Vigilância: <strong>${(item.surveillance_index ?? 0).toFixed(1)}</strong> |
+            Pressão: <strong>${(item.resource_pressure ?? 0).toFixed(1)}</strong><br>
             ${item.message}
           </div>
         </div>
@@ -1442,7 +1442,7 @@
         <strong>${area.label}</strong><br>
         Casos ativos: ${casos.toLocaleString("pt-BR")}<br>
         Registros 30d: ${(area.raw_total_cases ?? Math.round(rawFocusValue(area))).toLocaleString("pt-BR")}<br>
-        Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Crescimento: ${(area.growth_percent ?? 0).toFixed(1)}%<br>
         Risco: ${area.risk_level}<br><br>
         <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
         <strong>Doença provável:</strong> ${area.dominant_disease}<br>
@@ -1560,7 +1560,7 @@
             <span class="risk-badge risk-${area.risk_level}" style="color:${riskTextColor(area.risk_level)}">${area.risk_level}</span>
           </div>
           <div class="mini">
-            ${activeFocusValue(area).toLocaleString("pt-BR")} casos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")} | crescimento ${area.growth_percent.toFixed(1)}%<br>
+            ${activeFocusValue(area).toLocaleString("pt-BR")} casos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")} | crescimento ${(area.growth_percent ?? 0).toFixed(1)}%<br>
             Sintoma dominante: ${area.dominant_symptom}<br>
             Doença provável: ${area.dominant_disease}
           </div>

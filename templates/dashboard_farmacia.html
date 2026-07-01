@@ -1353,8 +1353,8 @@
             <span class="risk-badge risk-CRITICO">P${item.priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            Vigilancia: <strong>${item.surveillance_index.toFixed(1)}</strong> |
-            Pressao: <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            Vigilancia: <strong>${(item.surveillance_index ?? 0).toFixed(1)}</strong> |
+            Pressao: <strong>${(item.resource_pressure ?? 0).toFixed(1)}</strong><br>
             ${item.message}
           </div>
         </div>
@@ -1374,7 +1374,7 @@
         <div class="alert-card">
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
             <strong>${item.label}</strong>
-            <span class="risk-badge risk-ALTO">${item.stock_pressure.toFixed(1)}</span>
+            <span class="risk-badge risk-ALTO">${(item.stock_pressure ?? 0).toFixed(1)}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
             Janela recomendada: <strong>${item.restock_window}</strong><br>
@@ -1448,7 +1448,7 @@
         <strong>${area.label}</strong><br>
         Casos ativos: ${casos.toLocaleString("pt-BR")}<br>
         Registros 30d: ${(area.raw_total_cases ?? Math.round(rawFocusValue(area))).toLocaleString("pt-BR")}<br>
-        Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Crescimento: ${(area.growth_percent ?? 0).toFixed(1)}%<br>
         Risco: ${area.risk_level}<br><br>
         <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
         <strong>Doenca provavel:</strong> ${area.dominant_disease}<br>
@@ -1500,9 +1500,9 @@
               <li>Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}</li>
               <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
-              <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
-              <li>Atividade recente: ${area.activity_percent.toFixed(1)}%</li>
-              <li>Desaceleracao: ${area.decay_percent.toFixed(1)}%</li>
+              <li>Crescimento: ${(area.growth_percent ?? 0).toFixed(1)}%</li>
+              <li>Atividade recente: ${(area.activity_percent ?? 0).toFixed(1)}%</li>
+              <li>Desaceleracao: ${(area.decay_percent ?? 0).toFixed(1)}%</li>
               <li>Tendencia: ${area.trend_status}</li>
               <li>Nivel de risco: ${area.risk_level}</li>
               <li>Fase operacional: ${area.alert_stage}</li>
@@ -1524,8 +1524,8 @@
               <li>Doenca predominante: ${area.dominant_disease}</li>
               <li>Camada de leitura: ${area.level}</li>
               <li>Prioridade: ${area.risk_level}</li>
-              <li>Indice de vigilancia: ${area.surveillance_index.toFixed(1)}</li>
-              <li>Pressao de recursos: ${area.resource_pressure.toFixed(1)}</li>
+              <li>Indice de vigilancia: ${(area.surveillance_index ?? 0).toFixed(1)}</li>
+              <li>Pressao de recursos: ${(area.resource_pressure ?? 0).toFixed(1)}</li>
             </ul>
           </div>
           <div class="detail-box">
@@ -1538,7 +1538,7 @@
             <strong>${variantProfile.actionLabel}</strong>
             <ul>
               <li>${area[variantProfile.actionField]}</li>
-              <li>Pressao de estoque: ${area.stock_pressure.toFixed(1)}</li>
+              <li>Pressao de estoque: ${(area.stock_pressure ?? 0).toFixed(1)}</li>
               <li>Janela de reabastecimento: ${area.restock_window}</li>
               <li>Sinal comercial: ${area.market_signal}</li>
             </ul>
