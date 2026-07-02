@@ -1889,11 +1889,18 @@ def api_dono_excluir_cliente(request):
             "erro": "Confirmação inválida. Digite o email exato da conta para confirmar a exclusão."
         }, status=400)
 
-    # Registra auditoria ANTES de deletar (dados serão perdidos)
+    nome_backup = empresa.nome
+    email_backup = empresa.email
+
+    # RLS exige empresa_id não-nulo no INSERT de DonoAuditoriaAcao.
+    # Passamos empresa=empresa (não None) e o SET_NULL do FK preserva o log após o delete.
+    from api.middleware import _rls_set_empresa
+    _rls_set_empresa(empresa.id)
+
     _registrar_auditoria_dono(
         dono,
         "exclusao_conta",
-        empresa=None,  # empresa será deletada, não manter referência
+        empresa=empresa,
         detalhes=(
             f"Conta excluída: id={empresa.id} | nome={empresa.nome} | "
             f"email={empresa.email} | setor={empresa.pacote_codigo} | "
@@ -1901,10 +1908,8 @@ def api_dono_excluir_cliente(request):
         ),
     )
 
-    nome_backup = empresa.nome
-    email_backup = empresa.email
-
-    # Deleta em cascata (todos os dados relacionados)
+    # Deleta em cascata (todos os dados relacionados).
+    # DonoAuditoriaAcao.empresa vira NULL via SET_NULL — log de auditoria sobrevive.
     empresa.delete()
 
     return JsonResponse({
