@@ -8,7 +8,10 @@ Uso:
 Deleta objetos que fazem PROTECT sobre dados da empresa (cascata manual)
 antes de chamar empresa.delete(), contornando o ProtectedError do Django ORM.
 """
+import re
+
 from django.core.management.base import BaseCommand, CommandError
+from django.db import connection, IntegrityError
 from django.db.models import ProtectedError
 
 
@@ -56,21 +59,38 @@ class Command(BaseCommand):
         from api.middleware import _rls_set_empresa
         _rls_set_empresa(empresa.id)
 
-        # Tenta empresa.delete() até 5 vezes, removendo a cada rodada os objetos
-        # que fazem PROTECT sobre tabelas vinculadas à empresa.
-        for tentativa in range(1, 6):
+        # Tenta até 20 vezes. A cada falha:
+        # - ProtectedError (Django ORM): deleta os objetos bloqueadores via ORM
+        # - IntegrityError  (FK violation no BD): deleta a tabela bloqueadora via SQL direto
+        #   (acontece quando RLS impede o cascade do Django de enxergar os registros)
+        for tentativa in range(1, 21):
+            empresa = type(empresa).objects.filter(id=empresa.id).first()
+            if not empresa:
+                self.stdout.write(self.style.SUCCESS("\nConta excluída com sucesso."))
+                return
             try:
                 empresa.delete()
-                self.stdout.write(self.style.SUCCESS(f"\nConta '{empresa.nome}' ({empresa.email}) excluída com sucesso na tentativa {tentativa}."))
+                self.stdout.write(self.style.SUCCESS(f"\nConta '{empresa.nome}' ({empresa.email}) excluída na tentativa {tentativa}."))
                 return
             except ProtectedError as e:
                 bloqueadores = list(e.protected_objects)
-                self.stdout.write(f"  Tentativa {tentativa}: {len(bloqueadores)} objeto(s) bloqueando — removendo...")
+                self.stdout.write(f"  [{tentativa}] ProtectedError: {len(bloqueadores)} objeto(s) — removendo via ORM...")
                 for obj in bloqueadores:
                     try:
                         obj.delete()
-                        self.stdout.write(f"    Deletado: {obj.__class__.__name__}(id={obj.pk})")
+                        self.stdout.write(f"    ORM: {obj.__class__.__name__}(id={obj.pk})")
                     except Exception as ex:
-                        self.stdout.write(self.style.WARNING(f"    Falha ao deletar {obj.__class__.__name__}(id={obj.pk}): {ex}"))
+                        self.stdout.write(self.style.WARNING(f"    Falha ORM: {obj.__class__.__name__}(id={obj.pk}): {ex}"))
+            except IntegrityError as e:
+                cause = str(getattr(e, '__cause__', e) or e)
+                m = re.search(r'referenced from table "(\w+)"', cause)
+                if m:
+                    tbl = m.group(1)
+                    self.stdout.write(f"  [{tentativa}] IntegrityError (RLS bloqueou cascade) — deletando {tbl} via SQL...")
+                    with connection.cursor() as cur:
+                        cur.execute(f"DELETE FROM {tbl} WHERE empresa_id = %s", [empresa.id])
+                        self.stdout.write(f"    SQL: {cur.rowcount} linhas de {tbl} deletadas")
+                else:
+                    raise CommandError(f"IntegrityError sem tabela identificada: {cause}")
 
-        raise CommandError("Não foi possível excluir após 5 tentativas — verifique os dados vinculados manualmente.")
+        raise CommandError("Não foi possível excluir após 20 tentativas.")
