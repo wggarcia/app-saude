@@ -109,6 +109,21 @@ tr:hover td{background:rgba(0,194,255,.03)}
     </div>
   </div>
 
+  <!-- Card: Credenciais ANS SIPWeb -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🔐 Credenciais ANS SIPWeb</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Necessárias para transmissão automática de DIOPS e SIB ao portal ANS</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="ansCredBadge"></span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalAns()">⚙️ Configurar</button>
+      </div>
+    </div>
+    <div id="ansCredInfo" style="padding:14px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
+  </div>
+
   <div class="kpi-row">
     <div class="kpi warn"><div class="kpi-val" id="kpiDiopsPend">—</div><div class="kpi-lbl">DIOPS Pendentes</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiDiopsEnv">—</div><div class="kpi-lbl">DIOPS Enviados</div></div>
@@ -488,7 +503,101 @@ window.addEventListener('DOMContentLoaded', () => {
   carregarKPIs();
   carregarDiops();
   carregarSib();
+  carregarCredAns();
 });
+
+// ── Credenciais ANS ───────────────────────────────────────────
+async function carregarCredAns() {
+  try {
+    const r = await fetch('/api/integracoes/credenciais/', { credentials:'include' });
+    const d = await r.json();
+    const s = d.ans_diops || {};
+    document.getElementById('ansCredBadge').innerHTML = s.configurado
+      ? '<span class="badge badge-ok">✓ Configurada</span>'
+      : '<span class="badge badge-warn">⚠️ Não configurada</span>';
+    document.getElementById('ansCredInfo').innerHTML = s.configurado
+      ? `Usuário: <strong>${s.usuario || '—'}</strong> &nbsp;·&nbsp; Registro ANS: <strong>${s.registro || '—'}</strong> &nbsp;·&nbsp; Ambiente: <strong>${s.ambiente || '—'}</strong>`
+      : 'Configure as credenciais ANS SIPWeb para habilitar a transmissão automática de DIOPS e SIB.';
+  } catch(e) {}
+}
+function abrirModalAns() {
+  document.getElementById('modalAnsCred').classList.add('open');
+}
+function fecharModalAns() {
+  document.getElementById('modalAnsCred').classList.remove('open');
+  document.getElementById('ansMsgTeste').textContent = '';
+}
+async function salvarAnsCred() {
+  const usuario   = document.getElementById('ansUsuario').value.trim();
+  const senha     = document.getElementById('ansSenha').value;
+  const registro  = document.getElementById('ansRegistro').value.trim();
+  const ambiente  = document.getElementById('ansAmbiente').value;
+  if (!usuario || !registro) return alert('Usuário e Registro ANS são obrigatórios');
+  const body = { usuario, registro_ans: registro, ambiente, ativo: true };
+  if (senha) body.senha = senha;
+  try {
+    const r = await fetch('/api/integracoes/credenciais/ans/', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    alert(d.mensagem || d.erro || 'Erro');
+    if (d.ok) { fecharModalAns(); carregarCredAns(); }
+  } catch(e) { alert('Erro de conexão'); }
+}
+async function testarAnsCred() {
+  const msg = document.getElementById('ansMsgTeste');
+  msg.textContent = 'Testando…';
+  try {
+    const r = await fetch('/api/integracoes/credenciais/ans/testar/', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    msg.style.color = d.ok ? '#00e5b0' : '#ff4d6d';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color='#ff4d6d'; msg.textContent='Erro de conexão'; }
+}
 </script>
+
+<!-- Modal: Configurar Credenciais ANS -->
+<div class="modal-bg" id="modalAnsCred">
+  <div class="modal">
+    <h3>🔐 Credenciais ANS SIPWeb</h3>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      Acesse o portal ANS SIPWeb (<strong>ans.gov.br/sistemas</strong>) para obter as credenciais da operadora.
+    </div>
+    <div id="ansMsgTeste" style="font-size:12px;margin-bottom:12px;min-height:16px"></div>
+    <div class="form-group">
+      <label>Usuário ANS *</label>
+      <input type="text" id="ansUsuario" placeholder="usuario@operadora">
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="ansSenha" placeholder="Deixe vazio para manter a atual">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Registro ANS *</label>
+        <input type="text" id="ansRegistro" placeholder="123456" maxlength="6">
+      </div>
+      <div class="form-group">
+        <label>Ambiente</label>
+        <select id="ansAmbiente">
+          <option value="homologacao">Homologação</option>
+          <option value="producao">Produção</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalAns()">Cancelar</button>
+      <button class="btn btn-ghost btn-sm" onclick="testarAnsCred()" style="margin-right:auto">🧪 Testar</button>
+      <button class="btn btn-primary" onclick="salvarAnsCred()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

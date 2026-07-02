@@ -115,6 +115,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <button class="tab-btn" onclick="switchTab('esocial',this);carregarCertificado()">🔐 eSocial</button>
       <button class="tab-btn" onclick="switchTab('marca',this);carregarMarca()">🎨 Marca Branca</button>
       <button class="tab-btn" onclick="switchTab('whatsapp',this);carregarWhatsApp()">💬 WhatsApp</button>
+      <button class="tab-btn" onclick="switchTab('nfe',this);carregarCredNfe()">🧾 NF-e</button>
     </div>
 
     <!-- TAB 1: SESMT -->
@@ -345,6 +346,58 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
           <button class="btn-sec" onclick="redefinirMarca()">Restaurar Padrão</button>
           <button class="btn-save" onclick="salvarMarca()">Salvar Marca</button>
         </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: NF-e / SEFAZ -->
+    <div class="tab-panel" id="tab-nfe">
+      <div class="card">
+        <div class="card-title">🧾 Nota Fiscal Eletrônica — NF-e / NFC-e via SEFAZ</div>
+        <div class="card-sub">Certificado e-CNPJ A1/A3 (Receita Federal) para emissão de NF-e (mod. 55) e NFC-e (mod. 65). Obtido junto à AC credenciada ICP-Brasil (Serasa, Valid, Certisign…).</div>
+
+        <div id="nfe-cert-status" style="margin:12px 0;padding:12px 14px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font-size:13px">
+          Carregando…
+        </div>
+
+        <div class="section-label" style="margin-top:16px">Dados do Emitente</div>
+        <div class="form-grid">
+          <div class="mf"><label>CNPJ Emitente *</label><input type="text" id="nfe_cnpj" placeholder="00.000.000/0001-00" maxlength="18"></div>
+          <div class="mf"><label>Inscrição Estadual</label><input type="text" id="nfe_ie" placeholder="Inscrição Estadual"></div>
+          <div class="mf"><label>UF *</label><input type="text" id="nfe_uf" placeholder="SP" maxlength="2" style="text-transform:uppercase"></div>
+          <div class="mf"><label>Código IBGE do Município</label><input type="text" id="nfe_ibge" placeholder="3550308"></div>
+          <div class="mf"><label>Série</label><input type="text" id="nfe_serie" placeholder="001" maxlength="3" value="001"></div>
+          <div class="mf">
+            <label>CRT — Regime Tributário</label>
+            <select id="nfe_crt">
+              <option value="1">1 — Simples Nacional</option>
+              <option value="2">2 — Simples Nacional — Excesso</option>
+              <option value="3" selected>3 — Regime Normal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-label" style="margin-top:16px">Certificado e-CNPJ</div>
+        <div class="form-grid">
+          <div class="mf form-col-full">
+            <label>Arquivo .pfx / .p12</label>
+            <input type="file" id="nfe_cert_file" accept=".pfx,.p12" style="padding:8px;font-size:13px">
+            <span style="font-size:11px;color:var(--muted)">Deixe vazio para manter o certificado atual</span>
+          </div>
+          <div class="mf"><label>Senha do Certificado</label><input type="password" id="nfe_cert_senha" placeholder="Deixe vazio para manter a atual"></div>
+          <div class="mf">
+            <label>Ambiente SEFAZ</label>
+            <select id="nfe_ambiente">
+              <option value="2">2 — Homologação</option>
+              <option value="1">1 — Produção</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-sec" onclick="testarNfe()">🧪 Testar Conexão SEFAZ</button>
+          <button class="btn-save" onclick="salvarNfe()">Salvar Configuração NF-e</button>
+        </div>
+        <div id="nfe-msg-teste" style="font-size:12px;margin-top:8px;min-height:16px"></div>
       </div>
     </div>
 
@@ -909,6 +962,79 @@ async function carregarLogs() {
 
 function escHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── NF-e / SEFAZ ──────────────────────────────────────────────
+async function carregarCredNfe() {
+  const el = document.getElementById('nfe-cert-status');
+  try {
+    const r = await fetch('/api/integracoes/credenciais/', { credentials:'same-origin' });
+    const d = await r.json();
+    const s = d.nfe_sefaz || {};
+    if (s.configurado) {
+      el.innerHTML = `<strong style="color:var(--teal)">✓ Certificado e-CNPJ configurado</strong> &nbsp;·&nbsp; CNPJ: <strong>${s.cnpj||'—'}</strong> &nbsp;·&nbsp; UF: <strong>${s.uf||'—'}</strong> &nbsp;·&nbsp; Ambiente: <strong>${s.ambiente === '1' ? 'Produção' : 'Homologação'}</strong>`;
+      if (s.cnpj)    document.getElementById('nfe_cnpj').value   = s.cnpj;
+      if (s.uf)      document.getElementById('nfe_uf').value     = s.uf;
+      if (s.ie)      document.getElementById('nfe_ie').value     = s.ie;
+      if (s.ibge)    document.getElementById('nfe_ibge').value   = s.ibge;
+      if (s.serie)   document.getElementById('nfe_serie').value  = s.serie;
+      if (s.crt)     document.getElementById('nfe_crt').value    = s.crt;
+      if (s.ambiente) document.getElementById('nfe_ambiente').value = s.ambiente;
+    } else {
+      el.innerHTML = '<span style="color:var(--muted)">⚠️ Nenhum certificado configurado — preencha os dados abaixo para habilitar emissão de NF-e.</span>';
+    }
+  } catch(e) { el.textContent = 'Erro ao carregar status.'; }
+}
+
+async function salvarNfe() {
+  const cnpj  = document.getElementById('nfe_cnpj').value.replace(/\D/g,'');
+  const uf    = document.getElementById('nfe_uf').value.trim().toUpperCase();
+  const ie    = document.getElementById('nfe_ie').value.trim();
+  const ibge  = document.getElementById('nfe_ibge').value.trim();
+  const serie = document.getElementById('nfe_serie').value.trim() || '001';
+  const crt   = document.getElementById('nfe_crt').value;
+  const amb   = document.getElementById('nfe_ambiente').value;
+  const senha = document.getElementById('nfe_cert_senha').value;
+  const file  = document.getElementById('nfe_cert_file').files[0];
+  if (!cnpj || cnpj.length !== 14) { showToast('CNPJ deve ter 14 dígitos', true); return; }
+  if (!uf || uf.length !== 2)       { showToast('UF obrigatória (ex: SP)', true); return; }
+  const body = { cnpj_emitente: cnpj, ie, uf, municipio_ibge: ibge, serie, crt, ambiente: amb, ativo: true };
+  if (senha) body.certificado_senha = senha;
+  const enviar = async (b) => {
+    const r = await fetch('/api/integracoes/credenciais/nfe/', {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify(b)
+    });
+    const d = await r.json();
+    showToast(d.mensagem || d.erro || 'Erro', !d.ok);
+    if (d.ok) carregarCredNfe();
+  };
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      body.certificado_pfx_b64 = ev.target.result.split(',')[1];
+      await enviar(body);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    await enviar(body);
+  }
+}
+
+async function testarNfe() {
+  const msg = document.getElementById('nfe-msg-teste');
+  msg.textContent = 'Consultando SEFAZ…';
+  try {
+    const r = await fetch('/api/integracoes/credenciais/nfe/testar/', {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    msg.style.color = d.ok ? 'var(--teal)' : 'var(--red)';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color='var(--red)'; msg.textContent='Erro de conexão'; }
 }
 </script>
 </body>

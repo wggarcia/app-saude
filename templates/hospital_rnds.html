@@ -108,9 +108,61 @@ tr:hover td{background:rgba(0,194,255,.03)}
   </div>
 
   <div class="card">
-    <div class="card-header"><div class="card-title">⚙️ Status das Credenciais</div></div>
+    <div class="card-header">
+      <div class="card-title">⚙️ Status das Credenciais RNDS</div>
+      <button class="btn btn-ghost btn-sm" onclick="abrirModalRnds()">🔐 Configurar Credenciais</button>
+    </div>
     <div id="statusBox" style="padding:18px 20px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px"></div>
   </div>
+
+<!-- Modal: Configurar Credenciais RNDS -->
+<div class="modal-bg" id="modalRnds">
+  <div class="modal">
+    <h3>🔐 Credenciais RNDS / ICP-Brasil</h3>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      Certificado ICP-Brasil A1/A3 emitido em nome do estabelecimento (CNES). Obtido junto ao CONASEMS/CONASS ou AC credenciada.
+    </div>
+    <div id="rndsStatusBadge" style="margin-bottom:14px"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>CPF do Gestor *</label>
+        <input type="text" id="rndsCpf" placeholder="00000000000" maxlength="11">
+      </div>
+      <div class="form-group">
+        <label>CNES *</label>
+        <input type="text" id="rndsCnes" placeholder="1234567" maxlength="7">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Código IBGE do Município</label>
+        <input type="text" id="rndsIbge" placeholder="3550308">
+      </div>
+      <div class="form-group">
+        <label>Ambiente</label>
+        <select id="rndsAmbiente">
+          <option value="homologacao">Homologação</option>
+          <option value="producao">Produção</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Certificado ICP-Brasil (.p12 / .pfx)</label>
+      <input type="file" id="rndsCert" accept=".p12,.pfx" style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
+      <span style="font-size:11px;color:var(--muted);margin-top:4px">Deixe vazio para manter o certificado atual</span>
+    </div>
+    <div class="form-group">
+      <label>Senha do Certificado</label>
+      <input type="password" id="rndsSenha" placeholder="Deixe vazio para manter a atual">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalRnds()">Cancelar</button>
+      <button class="btn btn-ghost btn-sm" onclick="testarRnds()" style="margin-right:auto">🧪 Testar</button>
+      <button class="btn btn-primary" onclick="salvarRnds()">Salvar</button>
+    </div>
+    <div id="rndsMsgTeste" style="font-size:12px;margin-top:10px;text-align:right"></div>
+  </div>
+</div>
 
   <div class="card">
     <div class="card-header">
@@ -242,6 +294,67 @@ async function reprocessar(id) {
 
 function carregarTudo() { carregarStatus(); carregarKpis(); carregarTransmissoes(); }
 carregarTudo();
+
+// ── Credenciais RNDS ──────────────────────────────────────────
+async function abrirModalRnds() {
+  document.getElementById('modalRnds').classList.add('open');
+  try {
+    var r = await fetch('/api/integracoes/credenciais/', { credentials: 'include', headers: {'Content-Type':'application/json'} });
+    var d = await r.json();
+    var s = d.rnds_esus || {};
+    document.getElementById('rndsCpf').value  = s.cpf_gestor  || '';
+    document.getElementById('rndsCnes').value = s.cnes        || '';
+    document.getElementById('rndsIbge').value = s.ibge        || '';
+    document.getElementById('rndsAmbiente').value = s.ambiente || 'homologacao';
+    document.getElementById('rndsStatusBadge').innerHTML = s.configurado
+      ? '<span class="badge badge-ok">✓ Configurado</span>'
+      : '<span class="badge badge-warn">⚠️ Não configurado</span>';
+  } catch(e) {}
+}
+function fecharModalRnds() {
+  document.getElementById('modalRnds').classList.remove('open');
+  document.getElementById('rndsMsgTeste').textContent = '';
+}
+async function salvarRnds() {
+  var cpf  = document.getElementById('rndsCpf').value.trim().replace(/\D/g,'');
+  var cnes = document.getElementById('rndsCnes').value.trim();
+  var ibge = document.getElementById('rndsIbge').value.trim();
+  var amb  = document.getElementById('rndsAmbiente').value;
+  var senha = document.getElementById('rndsSenha').value;
+  if (!cpf || !cnes) return toast('CPF do gestor e CNES são obrigatórios', false);
+  var body = { cpf_gestor: cpf, cnes: cnes, ibge: ibge, ambiente: amb, ativo: true };
+  var certFile = document.getElementById('rndsCert').files[0];
+  if (certFile) {
+    var reader = new FileReader();
+    reader.onload = async function(ev) {
+      body.certificado_pfx_b64 = ev.target.result.split(',')[1];
+      if (senha) body.certificado_senha = senha;
+      await _enviarRnds(body);
+    };
+    reader.readAsDataURL(certFile);
+  } else {
+    if (senha) body.certificado_senha = senha;
+    await _enviarRnds(body);
+  }
+}
+async function _enviarRnds(body) {
+  try {
+    var r = await fetch('/api/integracoes/credenciais/rnds/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify(body) });
+    var d = await r.json();
+    toast(d.mensagem || d.erro || 'Erro', !!d.ok);
+    if (d.ok) { fecharModalRnds(); carregarStatus(); }
+  } catch(e) { toast('Erro de conexão', false); }
+}
+async function testarRnds() {
+  var msg = document.getElementById('rndsMsgTeste');
+  msg.textContent = 'Testando…';
+  try {
+    var r = await fetch('/api/integracoes/credenciais/rnds/testar/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({}) });
+    var d = await r.json();
+    msg.style.color = d.ok ? 'var(--ok)' : 'var(--danger)';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color='var(--danger)'; msg.textContent='Erro de conexão'; }
+}
 </script>
 </body>
 </html>

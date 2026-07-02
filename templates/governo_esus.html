@@ -113,6 +113,21 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="resultadoEnvio" style="display:none;font-size:13px;color:var(--ok);font-weight:600;margin-top:4px"></div>
   </div>
 
+  <!-- Credenciais SISAB / SCNES -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🔐 Credenciais SISAB / DATASUS — SCNES</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Necessárias para transmissão real de fichas ao e-SUS / RNDS em produção</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="susCredBadge"></span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalSus()">⚙️ Configurar</button>
+      </div>
+    </div>
+    <div id="susCredInfo" style="padding:14px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
+  </div>
+
   <!-- Info RNDS -->
   <div class="info-card">
     <div class="info-card-title">Sobre a Integração com a RNDS</div>
@@ -124,9 +139,51 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <li>Serialização das fichas nos padrões FHIR R4 (HL7) conforme o Manual de Integração e-SUS</li>
         <li>Endpoint: <code style="background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px">https://ehr.saude.gov.br/api/fhir/r4</code></li>
       </ul>
-      <br>
-      O botão "Enviar Fichas Pendentes" neste ambiente marca as fichas como processadas (stub).
-      Para produção, configure o certificado e as credenciais de acesso junto ao seu administrador de TI.
+    </div>
+  </div>
+
+  <!-- Modal: Credenciais SUS/SCNES -->
+  <div class="modal-bg" id="modalSusCred" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center">
+    <div class="modal" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--accent)">🔐 Credenciais SISAB / DATASUS — SCNES</h3>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Acesse o portal <strong>CNES.datasus.gov.br</strong> para obter o login SCNES do estabelecimento.
+      </div>
+      <div id="susMsgTeste" style="font-size:12px;margin-bottom:12px;min-height:16px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">CNES *</label>
+          <input type="text" id="susCnes" placeholder="1234567" maxlength="7" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Login SCNES *</label>
+          <input type="text" id="susLogin" placeholder="usuario.scnes" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Senha SCNES</label>
+          <input type="password" id="susSenha" placeholder="Deixe vazio para manter" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Código IBGE</label>
+          <input type="text" id="susIbge" placeholder="3550308" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">UF</label>
+          <input type="text" id="susUf" placeholder="SP" maxlength="2" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;text-transform:uppercase">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">Ambiente</label>
+          <select id="susAmbiente" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none">
+            <option value="producao">Produção</option>
+            <option value="homologacao">Homologação</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button onclick="fecharModalSus()" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);font-family:Manrope,sans-serif">Cancelar</button>
+        <button onclick="testarSusCred()" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);font-family:Manrope,sans-serif;margin-right:auto">🧪 Testar</button>
+        <button onclick="salvarSusCred()" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#001a2e;font-family:Manrope,sans-serif">Salvar</button>
+      </div>
     </div>
   </div>
 
@@ -223,6 +280,72 @@ async function enviarFichas() {
 
 carregarStatus();
 carregarLogs();
+carregarCredSus();
+
+// ── Credenciais SUS / SCNES ───────────────────────────────────
+function getCsrfGov(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+
+async function carregarCredSus() {
+  try {
+    const r = await fetch('/api/integracoes/credenciais/', { credentials:'include' });
+    const d = await r.json();
+    const s = d.sus_datasus || {};
+    document.getElementById('susCredBadge').innerHTML = s.configurado
+      ? '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(0,229,176,.12);color:#00e5b0">✓ Configurado</span>'
+      : '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,179,71,.12);color:#ffb347">⚠️ Não configurado</span>';
+    document.getElementById('susCredInfo').innerHTML = s.configurado
+      ? `CNES: <strong>${s.cnes||'—'}</strong> &nbsp;·&nbsp; Login: <strong>${s.login_scnes||'—'}</strong> &nbsp;·&nbsp; UF: <strong>${s.uf||'—'}</strong> &nbsp;·&nbsp; Ambiente: <strong>${s.ambiente||'—'}</strong>`
+      : 'Configure as credenciais SCNES/DATASUS para habilitar a transmissão real de fichas ao e-SUS em produção.';
+    if (s.cnes)        document.getElementById('susCnes').value   = s.cnes;
+    if (s.login_scnes) document.getElementById('susLogin').value  = s.login_scnes;
+    if (s.ibge)        document.getElementById('susIbge').value   = s.ibge;
+    if (s.uf)          document.getElementById('susUf').value     = s.uf;
+    if (s.ambiente)    document.getElementById('susAmbiente').value = s.ambiente;
+  } catch(e) {}
+}
+function abrirModalSus() {
+  const m = document.getElementById('modalSusCred');
+  m.style.display = 'flex';
+}
+function fecharModalSus() {
+  document.getElementById('modalSusCred').style.display = 'none';
+  document.getElementById('susMsgTeste').textContent = '';
+}
+async function salvarSusCred() {
+  const cnes  = document.getElementById('susCnes').value.trim();
+  const login = document.getElementById('susLogin').value.trim();
+  const senha = document.getElementById('susSenha').value;
+  const ibge  = document.getElementById('susIbge').value.trim();
+  const uf    = document.getElementById('susUf').value.trim().toUpperCase();
+  const amb   = document.getElementById('susAmbiente').value;
+  if (!cnes || !login) return alert('CNES e Login SCNES são obrigatórios');
+  const body = { cnes, login_scnes: login, ibge, uf, ambiente: amb, ativo: true };
+  if (senha) body.senha = senha;
+  try {
+    const r = await fetch('/api/integracoes/credenciais/sus/', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfGov()},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    alert(d.mensagem || d.erro || 'Erro');
+    if (d.ok) { fecharModalSus(); carregarCredSus(); }
+  } catch(e) { alert('Erro de conexão'); }
+}
+async function testarSusCred() {
+  const msg = document.getElementById('susMsgTeste');
+  msg.textContent = 'Testando…';
+  try {
+    const r = await fetch('/api/integracoes/credenciais/sus/testar/', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfGov()},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    msg.style.color = d.ok ? '#00e5b0' : '#ff4d6d';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color='#ff4d6d'; msg.textContent='Erro de conexão'; }
+}
 </script>
 </body>
 </html>
