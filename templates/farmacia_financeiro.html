@@ -83,6 +83,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .chart-legend span::before{content:'';width:10px;height:10px;border-radius:2px;background:var(--accent)}
 .chart-legend .l-lucro::before{background:var(--ok)}
 @media(max-width:1100px){.dre-layout{grid-template-columns:1fr}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
 </style>
 </head>
 <body>
@@ -124,6 +129,21 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="kpi ok"><div class="kpi-val" id="kLucroBruto">—</div><div class="kpi-lbl">Lucro Bruto</div></div>
     <div class="kpi" id="kpiLucroLiquido"><div class="kpi-val" id="kLucroLiquido">—</div><div class="kpi-lbl">Lucro Líquido</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kMargem">—</div><div class="kpi-lbl">Margem Líquida</div></div>
+  </div>
+
+  <!-- NF-e Status Card -->
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:20px">🧾</span>
+      <div>
+        <div style="font-size:13px;font-weight:700">Nota Fiscal Eletrônica — NF-e / SEFAZ</div>
+        <div id="nfeFarInfo" style="font-size:12px;color:var(--muted);margin-top:2px">Carregando…</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="nfeFarBadge"></span>
+      <button class="btn btn-ghost btn-sm" onclick="abrirModalNfe()">⚙️ Configurar e-CNPJ</button>
+    </div>
   </div>
 
   <!-- DRE + Cálculo -->
@@ -419,6 +439,125 @@ async function carregarTabela12Meses(){
 // Carregar mês atual ao abrir
 carregarMes();
 carregarTabela12Meses();
+carregarCredNfeFarmacia();
+
+// ── NF-e / SEFAZ — Farmácia ───────────────────────────────────
+async function carregarCredNfeFarmacia() {
+  try {
+    const r = await fetch('/api/integracoes/credenciais/', { headers });
+    const d = await r.json();
+    const s = d.nfe_sefaz || {};
+    document.getElementById('nfeFarBadge').innerHTML = s.configurado
+      ? '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(0,229,176,.12);color:var(--ok)">✓ Certificado configurado</span>'
+      : '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,179,71,.12);color:var(--warn)">⚠️ Não configurado</span>';
+    document.getElementById('nfeFarInfo').innerHTML = s.configurado
+      ? `CNPJ: <strong>${s.cnpj||'—'}</strong> &nbsp;·&nbsp; UF: <strong>${s.uf||'—'}</strong> &nbsp;·&nbsp; Ambiente: <strong>${s.ambiente==='1'?'Produção':'Homologação'}</strong>`
+      : 'Configure o certificado e-CNPJ para emitir Notas Fiscais Eletrônicas diretamente pelo SolusCRT.';
+    if (s.cnpj)     document.getElementById('nfeFarCnpj').value     = s.cnpj;
+    if (s.ie)       document.getElementById('nfeFarIe').value       = s.ie;
+    if (s.uf)       document.getElementById('nfeFarUf').value       = s.uf;
+    if (s.ibge)     document.getElementById('nfeFarIbge').value     = s.ibge;
+    if (s.serie)    document.getElementById('nfeFarSerie').value    = s.serie;
+    if (s.crt)      document.getElementById('nfeFarCrt').value      = s.crt;
+    if (s.ambiente) document.getElementById('nfeFarAmb').value      = s.ambiente;
+  } catch(e) {}
+}
+function abrirModalNfe() { document.getElementById('modalNfeFar').classList.add('open'); }
+function fecharModalNfe() {
+  document.getElementById('modalNfeFar').classList.remove('open');
+  document.getElementById('nfeFarMsgTeste').textContent = '';
+}
+function getCsrfFar() { const m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
+async function salvarNfeFar() {
+  const cnpj  = document.getElementById('nfeFarCnpj').value.replace(/\D/g,'');
+  const uf    = document.getElementById('nfeFarUf').value.trim().toUpperCase();
+  const ie    = document.getElementById('nfeFarIe').value.trim();
+  const ibge  = document.getElementById('nfeFarIbge').value.trim();
+  const serie = document.getElementById('nfeFarSerie').value.trim() || '001';
+  const crt   = document.getElementById('nfeFarCrt').value;
+  const amb   = document.getElementById('nfeFarAmb').value;
+  const senha = document.getElementById('nfeFarSenha').value;
+  const file  = document.getElementById('nfeFarCert').files[0];
+  if (!cnpj || cnpj.length !== 14) { alert('CNPJ deve ter 14 dígitos'); return; }
+  if (!uf || uf.length !== 2)       { alert('UF obrigatória (ex: SP)'); return; }
+  const body = { cnpj_emitente: cnpj, ie, uf, municipio_ibge: ibge, serie, crt, ambiente: amb, ativo: true };
+  if (senha) body.certificado_senha = senha;
+  const enviar = async (b) => {
+    const r = await fetch('/api/integracoes/credenciais/nfe/', {
+      method: 'POST', headers: { ...headers, 'X-CSRFToken': getCsrfFar() },
+      body: JSON.stringify(b)
+    });
+    const d = await r.json();
+    if (d.ok) { fecharModalNfe(); carregarCredNfeFarmacia(); }
+    else alert(d.erro || 'Erro ao salvar');
+  };
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = async (ev) => { body.certificado_pfx_b64 = ev.target.result.split(',')[1]; await enviar(body); };
+    reader.readAsDataURL(file);
+  } else {
+    await enviar(body);
+  }
+}
+async function testarNfeFar() {
+  const msg = document.getElementById('nfeFarMsgTeste');
+  msg.textContent = 'Consultando SEFAZ…';
+  try {
+    const r = await fetch('/api/integracoes/credenciais/nfe/testar/', {
+      method: 'POST', headers: { ...headers, 'X-CSRFToken': getCsrfFar() }, body: JSON.stringify({})
+    });
+    const d = await r.json();
+    msg.style.color = d.ok ? 'var(--ok)' : 'var(--danger)';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Erro de conexão'; }
+}
 </script>
+
+<!-- Modal: NF-e / e-CNPJ -->
+<div class="modal-bg" id="modalNfeFar">
+  <div class="modal">
+    <h3>🧾 Nota Fiscal Eletrônica — NF-e / SEFAZ</h3>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      Certificado e-CNPJ A1/A3 emitido por AC credenciada ICP-Brasil (Serasa, Valid, Certisign…). Obtido junto à Receita Federal.
+    </div>
+    <div id="nfeFarMsgTeste" style="font-size:12px;margin-bottom:10px;min-height:16px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>CNPJ Emitente *</label><input type="text" id="nfeFarCnpj" placeholder="00.000.000/0001-00" maxlength="18"></div>
+      <div class="form-group"><label>Inscrição Estadual</label><input type="text" id="nfeFarIe" placeholder="Inscrição Estadual"></div>
+      <div class="form-group"><label>UF *</label><input type="text" id="nfeFarUf" placeholder="SP" maxlength="2" style="text-transform:uppercase"></div>
+      <div class="form-group"><label>Código IBGE do Município</label><input type="text" id="nfeFarIbge" placeholder="3550308"></div>
+      <div class="form-group"><label>Série</label><input type="text" id="nfeFarSerie" placeholder="001" maxlength="3" value="001"></div>
+      <div class="form-group">
+        <label>Regime Tributário (CRT)</label>
+        <select id="nfeFarCrt">
+          <option value="1">1 — Simples Nacional</option>
+          <option value="2">2 — Simples Nacional — Excesso</option>
+          <option value="3" selected>3 — Regime Normal</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Certificado e-CNPJ (.pfx / .p12)</label>
+      <input type="file" id="nfeFarCert" accept=".pfx,.p12" style="padding:8px;font-size:13px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;color:var(--text)">
+      <span style="font-size:11px;color:var(--muted)">Deixe vazio para manter o certificado atual</span>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Senha do Certificado</label><input type="password" id="nfeFarSenha" placeholder="Deixe vazio para manter a atual"></div>
+      <div class="form-group">
+        <label>Ambiente SEFAZ</label>
+        <select id="nfeFarAmb">
+          <option value="2">2 — Homologação</option>
+          <option value="1">1 — Produção</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalNfe()">Cancelar</button>
+      <button class="btn btn-ghost btn-sm" onclick="testarNfeFar()" style="margin-right:auto">🧪 Testar SEFAZ</button>
+      <button class="btn btn-primary" onclick="salvarNfeFar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

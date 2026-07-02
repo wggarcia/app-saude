@@ -123,6 +123,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost" onclick="abrirModalIfood()">🛵 Conectar iFood</button>
+      <button class="btn btn-ghost" onclick="abrirModalWhatsApp()">💬 WhatsApp</button>
       <button class="btn btn-primary" onclick="abrirModalNovoPedido()">+ Novo Pedido</button>
     </div>
   </div>
@@ -528,6 +529,63 @@ document.querySelectorAll('.modal-bg').forEach(m=>{
   m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')});
 });
 
+// ── WhatsApp ──────────────────────────────────────────────────
+async function abrirModalWhatsApp() {
+  document.getElementById('modalWhatsApp').classList.add('open');
+  document.getElementById('wzMsg').textContent = '';
+  try {
+    const r = await fetch('/api/gestao/whatsapp/', {headers});
+    const d = await r.json();
+    if (d.integracao) {
+      const w = d.integracao;
+      document.getElementById('wzProvider').value   = w.provider || 'z-api';
+      document.getElementById('wzInstance').value   = w.instance_id || '';
+      document.getElementById('wzToken').value      = '';
+      document.getElementById('wzNumero').value     = w.numero_remetente || '';
+      document.getElementById('wzAtivo').checked    = !!w.ativo;
+      atualizarHintWz(w.provider || 'z-api');
+    }
+    document.getElementById('wzBadge').innerHTML = d.integracao?.ativo
+      ? '<span class="badge badge-ok">✓ Ativo</span>'
+      : '<span class="badge badge-warn">⚠️ Não configurado</span>';
+  } catch(e) {}
+}
+function atualizarHintWz(provider) {
+  const hint = document.getElementById('wzHint');
+  hint.textContent = provider === 'z-api'
+    ? 'Z-API: Instance ID e Token disponíveis no painel zapi.io'
+    : 'Evolution: Instance ID = nome da instância; Token = API Key global do seu servidor Evolution';
+}
+async function salvarWhatsApp() {
+  const provider  = document.getElementById('wzProvider').value;
+  const instance  = document.getElementById('wzInstance').value.trim();
+  const token     = document.getElementById('wzToken').value.trim();
+  const numero    = document.getElementById('wzNumero').value.trim();
+  const ativo     = document.getElementById('wzAtivo').checked;
+  if (!instance) { alert('Instance ID é obrigatório'); return; }
+  const body = {provider, instance_id: instance, numero_remetente: numero, ativo};
+  if (token) body.token = token;
+  try {
+    const r = await fetch('/api/gestao/whatsapp/', {
+      method:'POST', headers,
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.ok) { fecharModal('modalWhatsApp'); alert('WhatsApp salvo com sucesso!'); }
+    else alert(d.erro || 'Erro ao salvar');
+  } catch(e) { alert('Erro de conexão'); }
+}
+async function testarWhatsApp() {
+  const msg = document.getElementById('wzMsg');
+  msg.textContent = 'Testando…'; msg.style.color = 'var(--muted)';
+  try {
+    const r = await fetch('/api/gestao/whatsapp/testar/', {method:'POST', headers, body:JSON.stringify({})});
+    const d = await r.json();
+    msg.style.color = d.ok ? 'var(--ok)' : 'var(--danger)';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color='var(--danger)'; msg.textContent='Erro de conexão'; }
+}
+
 function carregarTudo(){
   carregarKpis();
   carregarKanban();
@@ -538,5 +596,47 @@ carregarTudo();
 // Auto-refresh a cada 60 segundos para manter kanban atualizado
 setInterval(carregarTudo, 60000);
 </script>
+
+<!-- Modal: WhatsApp -->
+<div class="modal-bg" id="modalWhatsApp">
+  <div class="modal">
+    <h3>💬 Integração WhatsApp</h3>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">
+      Receba pedidos e envie notificações automáticas via WhatsApp. Suporta Z-API e Evolution API.
+    </div>
+    <div id="wzBadge" style="margin-bottom:14px"></div>
+    <div class="form-group">
+      <label>Provedor</label>
+      <select id="wzProvider" onchange="atualizarHintWz(this.value)">
+        <option value="z-api">Z-API</option>
+        <option value="evolution">Evolution API</option>
+      </select>
+    </div>
+    <div id="wzHint" style="font-size:11px;color:var(--muted);margin:-8px 0 12px;line-height:1.5"></div>
+    <div class="form-group">
+      <label>Instance ID *</label>
+      <input type="text" id="wzInstance" placeholder="ID da instância">
+    </div>
+    <div class="form-group">
+      <label>Token / API Key</label>
+      <input type="password" id="wzToken" placeholder="Deixe vazio para manter o atual" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label>Número Remetente</label>
+      <input type="text" id="wzNumero" placeholder="5511900000000">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <input type="checkbox" id="wzAtivo" style="width:16px;height:16px;accent-color:var(--accent)">
+      <label for="wzAtivo" style="font-size:13px;font-weight:600">Integração ativa</label>
+    </div>
+    <div id="wzMsg" style="font-size:12px;margin-bottom:8px;min-height:16px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalWhatsApp')">Cancelar</button>
+      <button class="btn btn-ghost btn-sm" onclick="testarWhatsApp()" style="margin-right:auto">🧪 Testar</button>
+      <button class="btn btn-primary" onclick="salvarWhatsApp()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
