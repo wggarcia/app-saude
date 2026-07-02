@@ -113,6 +113,7 @@ def api_rede_farmacia_estoque(request):
 
     resultado = []
     for u in unidades_rede:
+        meds = MedicamentoFarmacia.objects.filter(empresa=u.empresa, ativo=True)
         _m = meds_por_empresa.get(u.empresa_id, {})
         criticos = _m.get("criticos", 0)
         baixos = _m.get("baixos", 0)

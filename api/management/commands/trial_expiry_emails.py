@@ -66,12 +66,12 @@ class Command(BaseCommand):
 
             elif dias_restantes == 0:
                 # Expirou hoje — desativar e notificar
-                if empresa.ativo:
-                    empresa.ativo = False
-                    empresa.save(update_fields=["ativo"])
                 if dry_run:
                     self.stdout.write(f"  [DRY] Trial expirado → {empresa.email}")
                 else:
+                    if empresa.ativo:
+                        empresa.ativo = False
+                        empresa.save(update_fields=["ativo"])
                     enviar_email_trial_expirado(empresa)
                     self.stdout.write(f"  ✉  Trial expirado → {empresa.email}")
                 enviados += 1

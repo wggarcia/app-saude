@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo
+from .access_control import contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
 from .models import (
     BeneficiarioPlano, PortalBeneficiarioToken,
     RedeCredenciadaPlano, IAAutorizacaoGuia,
@@ -26,6 +26,8 @@ def _ps_auth(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return None, JsonResponse({"erro": "Não autenticado"}, status=401)
+    if get_setor(empresa) != "plano_saude":
+        return None, JsonResponse({"erro": "Módulo Plano de Saúde não disponível para este plano."}, status=403)
     return empresa, None
 
 

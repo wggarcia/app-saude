@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo
+from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
 from .models import CredenciaisIntegracoes, DIOPSDeclaracao, SIBRegistro
 from .views_dashboard import _empresa_autenticada
 from .views_diops_real import gerar_diops_3_0
@@ -25,6 +25,8 @@ def _ps_auth(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return None, JsonResponse({"erro": "Não autenticado"}, status=401)
+    if get_setor(empresa) != "plano_saude":
+        return None, JsonResponse({"erro": "Módulo Plano de Saúde não disponível para este plano."}, status=403)
     return empresa, None
 
 

@@ -288,7 +288,7 @@ def api_pcmso_gerar(request):
         from .models import FuncionarioSST, ASOOcupacional, DocumentoSST
 
         funcionarios_ativos = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).count()
-        asos_recentes = ASOOcupacional.objects.filter(empresa=empresa).order_by("-data_exame")[:10]
+        asos_recentes = ASOOcupacional.objects.filter(empresa=empresa).order_by("-data_emissao")[:10]
         total_asos = asos_recentes.count()
 
         doc = DocumentoSST.objects.create(

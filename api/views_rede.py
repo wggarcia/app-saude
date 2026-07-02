@@ -508,9 +508,12 @@ def api_transferencia_detalhe(request, transferencia_id):
         return JsonResponse({'erro': 'Não autenticado'}, status=401)
 
     unidade = get_unidade(empresa)
+    if not unidade or not unidade.rede:
+        return JsonResponse({'erro': 'Empresa não pertence a uma rede'}, status=403)
     try:
         t = TransferenciaEstoque.objects.get(
             id=transferencia_id,
+            rede=unidade.rede,
         )
     except TransferenciaEstoque.DoesNotExist:
         return JsonResponse({'erro': 'Não encontrada'}, status=404)
@@ -616,8 +619,12 @@ def api_mensagem_marcar_lida(request, msg_id):
     if not empresa:
         return JsonResponse({'erro': 'Não autenticado'}, status=401)
 
+    unidade = get_unidade(empresa)
+    if not unidade or not unidade.rede:
+        return JsonResponse({'erro': 'Empresa não pertence a uma rede'}, status=403)
+
     if request.method == 'PUT':
-        MensagemRede.objects.filter(id=msg_id).update(lida=True)
+        MensagemRede.objects.filter(id=msg_id, rede=unidade.rede).update(lida=True)
         return JsonResponse({'ok': True})
     return JsonResponse({'erro': 'Método não permitido'}, status=405)
 

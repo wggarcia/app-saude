@@ -282,9 +282,8 @@ def api_esocial_s2245_transmitir(request, evento_id):
         return JsonResponse({"erro": "XML não gerado. Chame /gerar/ primeiro."}, status=400)
 
     # Transmite via módulo esocial_transmissao (com certificado A1/A3)
-    resultado = transmitir_evento(evento)
-
-    return JsonResponse(resultado)
+    ok, msg = transmitir_evento(evento)
+    return JsonResponse({"ok": ok, "mensagem": msg})
 
 
 @csrf_exempt

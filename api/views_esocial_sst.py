@@ -568,6 +568,7 @@ def api_esocial_registrar_afastamento(request, afastamento_id):
     return JsonResponse({"evento_id": ev.pk, "xml_tamanho": len(xml), "status": "pendente"}, status=201)
 
 
+@require_http_methods(["POST"])
 @api_requer_feature("sst.esocial")
 def api_esocial_marcar_transmitido(request, evento_id):
     """Marca evento como transmitido e registra protocolo."""

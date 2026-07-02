@@ -556,21 +556,8 @@ def status_pagamento(request):
 
     try:
         empresa = Empresa.objects.get(id=empresa_id)
-        if empresa.data_expiracao and empresa.data_expiracao < now():
-            empresa.ativo = False
-            empresa.save(update_fields=["ativo"])
-
-        if empresa.ativo:
-            return JsonResponse({
-                "status": "aprovado",
-                "plano": empresa.plano,
-                "pacote_codigo": empresa.pacote_codigo,
-                "max_usuarios": empresa.max_usuarios,
-                "max_dispositivos": empresa.max_dispositivos,
-                "expira_em": empresa.data_expiracao,
-            })
-
-        return JsonResponse({"status": "pendente"})
+        # Retorna apenas status binário — detalhes do plano exigem autenticação (api_billing_status)
+        return JsonResponse({"status": "aprovado" if empresa.ativo else "pendente"})
     except Exception:
         return JsonResponse({"status": "erro"})
 

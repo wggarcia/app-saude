@@ -176,7 +176,7 @@ def gerar_xml_sngpc(empresa: Empresa, registros, periodo_ini: date, periodo_fim:
 
         # Lote
         if lote:
-            SubElement(mov, "numeroLote").text   = lote.numero or ""
+            SubElement(mov, "numeroLote").text   = lote.numero_lote or ""
             SubElement(mov, "dataValidade").text = _data_anvisa(lote.data_validade) if lote.data_validade else ""
 
         # Dados do paciente (apenas dispensação)

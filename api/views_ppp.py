@@ -178,20 +178,21 @@ def _historico_cargos(funcionario, empresa):
     # fallback: histórico via ASOs
     try:
         from .models import ASOOcupacional
-        asos = ASOOcupacional.objects.filter(funcionario=funcionario).order_by("data_exame")
+        asos = ASOOcupacional.objects.filter(funcionario=funcionario).order_by("data_emissao")
         cargos = []
         cargo_ant = None
         for aso in asos:
-            if aso.cargo != cargo_ant:
+            cargo_val = getattr(funcionario, 'cargo', None) or aso.tipo
+            if cargo_val != cargo_ant:
                 cargos.append({
-                    "cargo": aso.cargo,
-                    "setor": aso.setor or funcionario.setor,
-                    "data_inicio": str(aso.data_exame),
+                    "cargo": cargo_val,
+                    "setor": getattr(funcionario, 'setor', "") or "",
+                    "data_inicio": str(aso.data_emissao),
                     "data_fim": "",
                     "posto_id": None,
                     "tem_agentes_nocivos": 0,
                 })
-                cargo_ant = aso.cargo
+                cargo_ant = cargo_val
         return cargos
     except Exception:
         return []

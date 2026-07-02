@@ -39,12 +39,15 @@ def _provisionar_dono_por_ambiente(email, senha):
     if email.strip().lower() != env_email or senha != env_senha:
         return None
 
-    return DonoSaaS.objects.create(
-        nome=env_nome or "Operacao SolusCRT",
+    dono, _ = DonoSaaS.objects.get_or_create(
         email=env_email,
-        senha=make_password(env_senha),
-        ativo=True,
+        defaults={
+            "nome": env_nome or "Operacao SolusCRT",
+            "senha": make_password(env_senha),
+            "ativo": True,
+        },
     )
+    return dono
 
 
 def _ressincronizar_senha_owner(dono, email, senha):

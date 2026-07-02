@@ -74,6 +74,9 @@ def _seed_ntep():
 
 def api_ntep_tabela(request):
     """GET /api/sst/ntep/tabela/ — consulta tabela NTEP com paginação."""
+    if not get_empresa(request):
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
     TabelaNTEP, _ = _get_ntep_models()
 
     # Auto-seed
@@ -111,6 +114,9 @@ def api_ntep_tabela(request):
 
 def api_ntep_verificar(request):
     """GET /api/sst/ntep/verificar/?cid=M75&cnae=8121400 — verifica nexo."""
+    if not get_empresa(request):
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
     TabelaNTEP, _ = _get_ntep_models()
     _seed_ntep()
 

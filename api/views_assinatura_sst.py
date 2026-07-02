@@ -249,10 +249,10 @@ def api_public_prontuario_pdf(request, token):
     if not func:
         return JsonResponse({"erro": "funcionário não encontrado"}, status=404)
 
-    asos         = ASOOcupacional.objects.filter(funcionario=func).order_by("-data_emissao")
-    exames       = ExameOcupacional.objects.filter(funcionario=func).order_by("-data_realizacao")
-    cats         = CATOcupacional.objects.filter(funcionario=func).order_by("-data_acidente")
-    afastamentos = AfastamentoSST.objects.filter(funcionario=func).order_by("-data_inicio")
+    asos         = ASOOcupacional.objects.filter(funcionario=func, empresa=empresa).order_by("-data_emissao")
+    exames       = ExameOcupacional.objects.filter(funcionario=func, empresa=empresa).order_by("-data_realizacao")
+    cats         = CATOcupacional.objects.filter(funcionario=func, empresa=empresa).order_by("-data_acidente")
+    afastamentos = AfastamentoSST.objects.filter(funcionario=func, empresa=empresa).order_by("-data_inicio")
 
     pdf_bytes = gerar_pdf_prontuario(func, list(asos), list(exames), list(cats), list(afastamentos), empresa.nome)
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
