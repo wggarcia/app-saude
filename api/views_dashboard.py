@@ -1908,19 +1908,24 @@ def api_dono_excluir_cliente(request):
         ),
     )
 
-    # Deleta em cascata (todos os dados relacionados.
+    # Deleta em cascata (todos os dados relacionados).
     # DonoAuditoriaAcao.empresa vira NULL via SET_NULL — log de auditoria sobrevive.
+    # Modelos com PROTECT sem empresa FK (ex: TransferenciaFarmaciaMed, ItemAutorizacaoOPME)
+    # bloqueiam o cascade. Tentamos até 5 vezes, deletando os objetos bloqueadores a cada rodada.
+    from django.db.models import ProtectedError
     try:
-        from django.db.models import ProtectedError
-        empresa.delete()
-    except ProtectedError as e:
-        modelos_bloqueados = ", ".join(
-            f"{obj.__class__.__name__}(id={obj.pk})" for obj in list(e.protected_objects)[:5]
-        )
-        return JsonResponse({
-            "erro": f"Exclusão bloqueada por dados vinculados: {modelos_bloqueados}",
-            "detalhe": str(e)[:400],
-        }, status=409)
+        for _tentativa in range(5):
+            try:
+                empresa.delete()
+                break
+            except ProtectedError as e:
+                for obj in list(e.protected_objects):
+                    try:
+                        obj.delete()
+                    except Exception:
+                        pass
+        else:
+            return JsonResponse({"erro": "Não foi possível excluir — há dados vinculados bloqueando a remoção."}, status=409)
     except Exception as e:
         return JsonResponse({
             "erro": "Erro inesperado ao excluir conta.",

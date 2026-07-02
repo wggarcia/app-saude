@@ -590,18 +590,24 @@ function _t(msg, tipo) {
     async function confirmarExclusao() {
       const digitado = document.getElementById("modalEmailConfirm").value.trim();
       if (!digitado) { _t("Digite o email para confirmar.",'warn'); return; }
-      const res = await fetch("/api/operacao-central/cliente/excluir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ empresa_id: _excluirId, confirmar_email: digitado }),
-      });
-      const data = await res.json();
       fecharModal();
-      if (data.status === "ok") {
-        _t(data.mensagem,'warn');
-        loadOwnerPanel();
-      } else {
-        _t(data.erro || "Erro ao excluir conta.",'err');
+      _t("Excluindo conta, aguarde…", 'warn');
+      try {
+        const res = await fetch("/api/operacao-central/cliente/excluir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ empresa_id: _excluirId, confirmar_email: digitado }),
+        });
+        let data;
+        try { data = await res.json(); } catch(_) { data = {}; }
+        if (data.status === "ok") {
+          _t(data.mensagem || "Conta excluída com sucesso.",'ok');
+          loadOwnerPanel();
+        } else {
+          _t(data.erro || `Erro ${res.status} ao excluir conta.`,'err');
+        }
+      } catch(err) {
+        _t("Falha de rede ao excluir conta.",'err');
       }
     }
 
