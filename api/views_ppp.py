@@ -251,6 +251,9 @@ def api_ppp_preview(request, funcionario_id):
     try:
         from .models import FuncionarioSST
         func = FuncionarioSST.objects.get(id=funcionario_id, empresa=empresa)
+    except FuncionarioSST.DoesNotExist:
+        return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
+    try:
 
         vinculos = _postos_do_funcionario(func)
         postos_preview = []
