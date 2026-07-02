@@ -50,6 +50,12 @@ class Command(BaseCommand):
 
         self.stdout.write("Iniciando exclusão...")
 
+        # RLS do PostgreSQL filtra queries pelo empresa_id da sessão.
+        # Sem setar o contexto, o cascade do Django não enxerga os registros
+        # filhos e o banco rejeita o DELETE com ForeignKeyViolation.
+        from api.middleware import _rls_set_empresa
+        _rls_set_empresa(empresa.id)
+
         # Tenta empresa.delete() até 5 vezes, removendo a cada rodada os objetos
         # que fazem PROTECT sobre tabelas vinculadas à empresa.
         for tentativa in range(1, 6):
