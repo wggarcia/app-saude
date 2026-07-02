@@ -1908,10 +1908,13 @@ def api_dono_excluir_cliente(request):
         ),
     )
 
-    # Deleta em cascata (todos os dados relacionados).
-    # DonoAuditoriaAcao.empresa vira NULL via SET_NULL — log de auditoria sobrevive.
-    # Modelos com PROTECT sem empresa FK (ex: TransferenciaFarmaciaMed, ItemAutorizacaoOPME)
-    # bloqueiam o cascade. Tentamos até 5 vezes, deletando os objetos bloqueadores a cada rodada.
+    # FK com SET_NULL (DonoAuditoriaAcao, AuditoriaInstitucional) precisam ser tratados antes
+    # do empresa.delete() porque o RLS WITH CHECK bloqueia o UPDATE empresa_id→NULL gerado
+    # pelo cascade do Django. Deleta diretamente para evitar esse bloqueio.
+    from api.models import DonoAuditoriaAcao, AuditoriaInstitucional
+    DonoAuditoriaAcao.objects.filter(empresa_id=empresa.id).delete()
+    AuditoriaInstitucional.objects.filter(empresa_id=empresa.id).delete()
+
     from django.db.models import ProtectedError
     try:
         for _tentativa in range(5):

@@ -590,13 +590,14 @@ function _t(msg, tipo) {
     async function confirmarExclusao() {
       const digitado = document.getElementById("modalEmailConfirm").value.trim();
       if (!digitado) { _t("Digite o email para confirmar.",'warn'); return; }
+      const idParaExcluir = _excluirId;
       fecharModal();
       _t("Excluindo conta, aguarde…", 'warn');
       try {
         const res = await fetch("/api/operacao-central/cliente/excluir", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ empresa_id: _excluirId, confirmar_email: digitado }),
+          body: JSON.stringify({ empresa_id: idParaExcluir, confirmar_email: digitado }),
         });
         let data;
         try { data = await res.json(); } catch(_) { data = {}; }

@@ -59,6 +59,14 @@ class Command(BaseCommand):
         from api.middleware import _rls_set_empresa
         _rls_set_empresa(empresa.id)
 
+        # FK com SET_NULL precisam ser removidos antes do empresa.delete()
+        # porque o RLS WITH CHECK bloqueia o UPDATE empresa_id→NULL gerado pelo cascade.
+        from api.models import DonoAuditoriaAcao, AuditoriaInstitucional
+        n_dono = DonoAuditoriaAcao.objects.filter(empresa_id=empresa.id).delete()[0]
+        n_inst = AuditoriaInstitucional.objects.filter(empresa_id=empresa.id).delete()[0]
+        if n_dono or n_inst:
+            self.stdout.write(f"  SET_NULL: removidos {n_dono} audit_dono + {n_inst} audit_inst")
+
         # Tenta até 20 vezes. A cada falha:
         # - ProtectedError (Django ORM): deleta os objetos bloqueadores via ORM
         # - IntegrityError  (FK violation no BD): deleta a tabela bloqueadora via SQL direto
