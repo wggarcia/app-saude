@@ -8,7 +8,9 @@ Farmácia — Fase 2: Multi-unidade & Rede
 import json
 from datetime import date, timedelta
 
-from django.db.models import Q, Sum, Count
+from decimal import Decimal
+
+from django.db.models import Case, F, IntegerField, Q, Sum, Count, Value, When
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -84,16 +86,33 @@ def api_rede_farmacia_estoque(request):
     empresa_ids = [u.empresa_id for u in unidades_rede]
     em_30 = date.today() + timedelta(days=30)
 
-    from django.db.models import Count, Q
+    _CRITICO = Decimal("1.10")
+    _BAIXO   = Decimal("1.50")
     meds_por_empresa = {
         row["empresa_id"]: row
         for row in MedicamentoFarmacia.objects
             .filter(empresa_id__in=empresa_ids, ativo=True)
-            .values("empresa_id")
             .annotate(
-                criticos=Count("id", filter=Q(status_estoque="critico")),
-                baixos=Count("id", filter=Q(status_estoque="baixo")),
+                is_critico=Case(
+                    When(quantidade_atual__lte=0, then=Value(1)),
+                    When(quantidade_minima__gt=0,
+                         quantidade_atual__lte=F("quantidade_minima") * _CRITICO,
+                         then=Value(1)),
+                    default=Value(0), output_field=IntegerField(),
+                ),
+                is_baixo=Case(
+                    When(quantidade_atual__lte=0, then=Value(0)),
+                    When(quantidade_minima__gt=0,
+                         quantidade_atual__lte=F("quantidade_minima") * _CRITICO,
+                         then=Value(0)),
+                    When(quantidade_minima__gt=0,
+                         quantidade_atual__lte=F("quantidade_minima") * _BAIXO,
+                         then=Value(1)),
+                    default=Value(0), output_field=IntegerField(),
+                ),
             )
+            .values("empresa_id")
+            .annotate(criticos=Sum("is_critico"), baixos=Sum("is_baixo"))
     }
     lotes_vencendo = {
         row["empresa_id"]: row["n"]
