@@ -112,7 +112,10 @@ def api_empresa_bem_estar_resumo(request):
     if get_setor(empresa) != "empresa":
         return JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
 
-    dias = int(request.GET.get("dias", 30))
+    try:
+        dias = int(request.GET.get("dias", 30))
+    except (ValueError, TypeError):
+        dias = 30
     desde = timezone.now() - timedelta(days=dias)
     qs = CheckinBemEstar.objects.filter(empresa=empresa, criado_em__gte=desde)
 

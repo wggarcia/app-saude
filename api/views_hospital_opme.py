@@ -17,11 +17,18 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
-    api_requer_feature, requer_setor, requer_feature_pacote,
+    api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _hosp(request):
+    emp = get_empresa(request)
+    if emp and get_setor(emp) == "hospital":
+        return emp
+    return None
 
 
 @ensure_csrf_cookie
@@ -47,7 +54,7 @@ def _get_opme_models():
 @api_requer_feature("hospital.opme")
 def api_opme_catalogo(request):
     """GET/POST /api/hospital/opme/catalogo/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -105,7 +112,7 @@ def api_opme_catalogo(request):
 @api_requer_feature("hospital.opme")
 def api_opme_catalogo_detalhe(request, item_id):
     """GET/PUT/DELETE /api/hospital/opme/catalogo/<id>/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -152,7 +159,7 @@ def api_opme_catalogo_detalhe(request, item_id):
 @api_requer_feature("hospital.opme")
 def api_opme_autorizacoes(request):
     """GET/POST /api/hospital/opme/autorizacoes/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -241,7 +248,7 @@ def api_opme_autorizacoes(request):
 @api_requer_feature("hospital.opme")
 def api_opme_autorizacao_acao(request, aut_id):
     """POST /api/hospital/opme/autorizacoes/<id>/acao/ — aprovar/negar/cancelar."""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -300,7 +307,7 @@ def api_opme_autorizacao_acao(request, aut_id):
 @api_requer_feature("hospital.opme")
 def api_opme_implantaveis(request):
     """GET/POST /api/hospital/opme/implantaveis/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -360,7 +367,7 @@ def api_opme_implantaveis(request):
 @api_requer_feature("hospital.opme")
 def api_opme_kpis(request):
     """GET /api/hospital/opme/kpis/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

@@ -29,11 +29,18 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
-    api_requer_feature, requer_setor, requer_feature_pacote,
+    api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _hosp(request):
+    emp = get_empresa(request)
+    if emp and get_setor(emp) == "hospital":
+        return emp
+    return None
 
 
 def _get_hemo_models():
@@ -57,7 +64,7 @@ def hospital_hemoterapia_page(request):
 @api_requer_feature("hospital.hemoterapia")
 def api_hemo_bolsas(request):
     """GET/POST /api/hospital/hemoterapia/bolsas/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -136,7 +143,7 @@ def api_hemo_bolsas(request):
 @api_requer_feature("hospital.hemoterapia")
 def api_hemo_bolsa_detalhe(request, bolsa_id):
     """GET/PUT /api/hospital/hemoterapia/bolsas/<id>/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -181,7 +188,7 @@ def api_hemo_bolsa_detalhe(request, bolsa_id):
 @api_requer_feature("hospital.hemoterapia")
 def api_hemo_solicitacoes(request):
     """GET/POST /api/hospital/hemoterapia/solicitacoes/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -252,7 +259,7 @@ def api_hemo_solicitacoes(request):
 @api_requer_feature("hospital.hemoterapia")
 def api_hemo_transfusoes(request):
     """GET/POST /api/hospital/hemoterapia/transfusoes/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -329,7 +336,7 @@ def api_hemo_transfusoes(request):
 @api_requer_feature("hospital.hemoterapia")
 def api_hemo_reacoes(request):
     """GET/POST /api/hospital/hemoterapia/reacoes/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -395,7 +402,7 @@ def api_hemo_notificar_anvisa(request, reacao_id):
     O operador deve baixar o XML em /notificar-anvisa/download/<id>/
     e importar no portal NOTIVISA com seu login de notificador.
     """
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -442,7 +449,7 @@ def api_hemo_notificar_anvisa(request, reacao_id):
 @api_requer_feature("hospital.hemoterapia")
 def api_hemo_notivisa_download(request, reacao_id):
     """GET /api/hospital/hemoterapia/reacoes/<id>/notificar-anvisa/download/ — baixa XML NOTIVISA."""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -539,7 +546,7 @@ def _gerar_xml_notivisa(reacao, empresa):
 @api_requer_feature("hospital.hemoterapia")
 def api_hemo_kpis(request):
     """GET /api/hospital/hemoterapia/kpis/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

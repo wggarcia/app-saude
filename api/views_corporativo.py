@@ -564,16 +564,16 @@ def api_sst_benchmarking_unidades(request):
         total_func = func_qs.filter(ativo=True).count()
 
         asos_vencidos = ASOOcupacional.objects.filter(
-            funcionario__unidade=u, data_validade__lt=hoje
+            empresa=empresa, funcionario__unidade=u, data_validade__lt=hoje
         ).count()
         afastamentos_ativos = AfastamentoSST.objects.filter(
-            funcionario__unidade=u, status=AfastamentoSST.STATUS_ATIVO
+            empresa=empresa, funcionario__unidade=u, status=AfastamentoSST.STATUS_ATIVO
         ).count()
         treinamentos_vencidos = TreinamentoNR.objects.filter(
-            funcionario__unidade=u, status="vencido"
+            empresa=empresa, funcionario__unidade=u, status="vencido"
         ).count()
         epis_entregues_mes = EntregaEPI.objects.filter(
-            funcionario__unidade=u, data_entrega__gte=inicio_mes
+            empresa=empresa, funcionario__unidade=u, data_entrega__gte=inicio_mes
         ).count()
 
         # Score de conformidade 0–100: cada pendência por funcionário pesa contra a unidade.
@@ -662,16 +662,16 @@ def api_sst_multi_estado(request):
     for uf, unidades_uf in sorted(por_estado.items()):
         total_func = FuncionarioSST.objects.filter(empresa=empresa, unidade__in=unidades_uf, ativo=True).count()
         asos_vencidos = ASOOcupacional.objects.filter(
-            funcionario__unidade__in=unidades_uf, data_validade__lt=hoje
+            empresa=empresa, funcionario__unidade__in=unidades_uf, data_validade__lt=hoje
         ).count()
         afastamentos_ativos = AfastamentoSST.objects.filter(
-            funcionario__unidade__in=unidades_uf, status=AfastamentoSST.STATUS_ATIVO
+            empresa=empresa, funcionario__unidade__in=unidades_uf, status=AfastamentoSST.STATUS_ATIVO
         ).count()
         treinamentos_vencidos = TreinamentoNR.objects.filter(
-            funcionario__unidade__in=unidades_uf, status="vencido"
+            empresa=empresa, funcionario__unidade__in=unidades_uf, status="vencido"
         ).count()
         epis_entregues_mes = EntregaEPI.objects.filter(
-            funcionario__unidade__in=unidades_uf, data_entrega__gte=inicio_mes
+            empresa=empresa, funcionario__unidade__in=unidades_uf, data_entrega__gte=inicio_mes
         ).count()
 
         regioes.append({
@@ -711,7 +711,10 @@ def api_turnos_corporativos(request):
         return JsonResponse({"turnos": [_turno_dict(t) for t in qs]})
 
     if request.method == "POST":
-        dados = json.loads(request.body or "{}")
+        try:
+            dados = json.loads(request.body or "{}")
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
         nome = (dados.get("nome") or "").strip()
         if not nome:
             return JsonResponse({"erro": "nome é obrigatório"}, status=400)
@@ -736,7 +739,10 @@ def api_turno_detalhe(request, turno_id):
         return JsonResponse({"erro": "turno não encontrado"}, status=404)
 
     if request.method == "PATCH":
-        dados = json.loads(request.body or "{}")
+        try:
+            dados = json.loads(request.body or "{}")
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
         if "nome" in dados:
             nome = (dados.get("nome") or "").strip()
             if not nome:

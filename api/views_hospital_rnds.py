@@ -144,7 +144,7 @@ def api_hospital_rnds_transmitir_alta(request, internacao_id):
     POST /api/hospital/rnds/transmitir-alta/<internacao_id>
     Gera e envia o Sumário de Alta (IPS-BR) ao RNDS para uma internação.
     """
-    empresa = _hosp(request)
+    empresa = _hosp_gerencia(request)
     if not empresa:
         return JsonResponse({"erro": "Acesso restrito ao módulo Hospital"}, status=403)
 
@@ -206,7 +206,7 @@ def api_hospital_rnds_transmitir_rac(request, prontuario_id):
     POST /api/hospital/rnds/transmitir-rac/<prontuario_id>
     Envia o Registro de Atendimento Clínico (RAC) para consultas ambulatoriais.
     """
-    empresa = _hosp(request)
+    empresa = _hosp_gerencia(request)
     if not empresa:
         return JsonResponse({"erro": "Acesso restrito ao módulo Hospital"}, status=403)
 
@@ -259,7 +259,7 @@ def api_hospital_rnds_transmitir_rac(request, prontuario_id):
 @api_requer_feature("hospital.rnds")
 def api_hospital_rnds_reprocessar(request, tx_id):
     """POST /api/hospital/rnds/reprocessar/<id> — reprocessa transmissão com erro."""
-    empresa = _hosp(request)
+    empresa = _hosp_gerencia(request)
     if not empresa:
         return JsonResponse({"erro": "Acesso restrito ao módulo Hospital"}, status=403)
 

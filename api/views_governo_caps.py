@@ -377,8 +377,9 @@ def api_caps_raas_exportar(request):
             "competencia":          competencia,
         })
 
-    # Marca como incluídos no RAAS
-    atendimentos.update(enviado_raas=True)
+    # Marca como incluídos no RAAS apenas quando explicitamente confirmado
+    if request.GET.get("confirmar") == "true":
+        atendimentos.update(enviado_raas=True)
 
     return JsonResponse({
         "competencia":       competencia,

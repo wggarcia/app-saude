@@ -18,11 +18,18 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
-    api_requer_feature, requer_setor, requer_feature_pacote,
+    api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _hosp(request):
+    emp = get_empresa(request)
+    if emp and get_setor(emp) == "hospital":
+        return emp
+    return None
 
 
 def _get_ccih_models():
@@ -46,7 +53,7 @@ def hospital_ccih_page(request):
 @api_requer_feature("hospital.ccih")
 def api_ccih_infeccoes(request):
     """GET/POST /api/hospital/ccih/infeccoes/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -126,7 +133,7 @@ def api_ccih_infeccoes(request):
 @api_requer_feature("hospital.ccih")
 def api_ccih_infeccao_detalhe(request, ih_id):
     """GET/PUT /api/hospital/ccih/infeccoes/<id>/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -175,7 +182,7 @@ def api_ccih_infeccao_detalhe(request, ih_id):
 @api_requer_feature("hospital.ccih")
 def api_ccih_isolamentos(request):
     """GET/POST /api/hospital/ccih/isolamentos/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -229,7 +236,7 @@ def api_ccih_isolamentos(request):
 @api_requer_feature("hospital.ccih")
 def api_ccih_isolamento_encerrar(request, iso_id):
     """POST /api/hospital/ccih/isolamentos/<id>/encerrar/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -254,7 +261,7 @@ def api_ccih_isolamento_encerrar(request, iso_id):
 @api_requer_feature("hospital.ccih")
 def api_ccih_indicadores(request):
     """GET/POST /api/hospital/ccih/indicadores/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -316,7 +323,7 @@ def api_ccih_indicadores(request):
 @api_requer_feature("hospital.ccih")
 def api_ccih_kpis(request):
     """GET /api/hospital/ccih/kpis/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

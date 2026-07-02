@@ -17,11 +17,18 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
-    api_requer_feature, requer_setor, requer_feature_pacote,
+    api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _hosp(request):
+    emp = get_empresa(request)
+    if emp and get_setor(emp) == "hospital":
+        return emp
+    return None
 
 
 @ensure_csrf_cookie
@@ -83,7 +90,7 @@ def _sc_dubois(peso_kg, altura_cm):
 @api_requer_feature("hospital.oncologia")
 def api_onco_protocolos(request):
     """GET /api/hospital/oncologia/protocolos/ — catálogo com seed PCDT."""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -139,7 +146,7 @@ def api_onco_protocolos(request):
 @api_requer_feature("hospital.oncologia")
 def api_onco_ciclos(request):
     """GET/POST /api/hospital/oncologia/ciclos/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -211,7 +218,7 @@ def api_onco_ciclos(request):
 @api_requer_feature("hospital.oncologia")
 def api_onco_ciclo_detalhe(request, ciclo_id):
     """GET/PUT /api/hospital/oncologia/ciclos/<id>/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -270,7 +277,7 @@ def api_onco_ciclo_detalhe(request, ciclo_id):
 @api_requer_feature("hospital.oncologia")
 def api_onco_toxicidade(request, ciclo_id):
     """POST /api/hospital/oncologia/ciclos/<id>/toxicidade/ — registra toxicidade CTCAE."""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -311,7 +318,7 @@ def api_onco_toxicidade(request, ciclo_id):
 @api_requer_feature("hospital.oncologia")
 def api_onco_apacs(request):
     """GET/POST /api/hospital/oncologia/apacs/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -383,7 +390,7 @@ def api_onco_apacs(request):
 @api_requer_feature("hospital.oncologia")
 def api_onco_apac_detalhe(request, apac_id):
     """GET/PUT /api/hospital/oncologia/apacs/<id>/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -426,7 +433,7 @@ def api_onco_apac_detalhe(request, apac_id):
 @api_requer_feature("hospital.oncologia")
 def api_onco_kpis(request):
     """GET /api/hospital/oncologia/kpis/"""
-    empresa = get_empresa(request)
+    empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

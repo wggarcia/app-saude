@@ -224,6 +224,7 @@ def api_assinatura_assinar_lote(request):
     resultados   = []
     assinados    = 0
     erros_count  = 0
+    metodo       = None
 
     for ev in evs:
         if pfx_b64:
