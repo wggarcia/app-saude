@@ -250,20 +250,29 @@ class EmpresaMiddleware:
             if request.path.startswith(rota):
                 return self.get_response(request)
 
-        owner_paths = (
+        # Rotas que exigem owner_token incondicionalmente.
+        strict_owner_paths = (
             "/console-operacional/",
             "/api/operacao/",
             "/api/operacao-central/",
-            "/api/governanca/",
-            "/api/financeiro/",
-            "/api/gtm/",
             "/financeiro/",
             "/governanca/",
             "/gtm/",
         )
 
-        if any(request.path.startswith(path) for path in owner_paths):
-            owner_token = request.COOKIES.get("owner_token")
+        # Rotas de API acessadas tanto pelo dono (console) quanto por empresas (JWT).
+        # Usa owner auth somente se owner_token estiver presente; senão cai no JWT empresarial.
+        shared_owner_api_paths = (
+            "/api/governanca/",
+            "/api/financeiro/",
+            "/api/gtm/",
+        )
+
+        owner_token = request.COOKIES.get("owner_token")
+        is_strict = any(request.path.startswith(p) for p in strict_owner_paths)
+        is_shared_with_token = owner_token and any(request.path.startswith(p) for p in shared_owner_api_paths)
+
+        if is_strict or is_shared_with_token:
             if not owner_token:
                 if request.path.startswith("/api/"):
                     return JsonResponse({"erro": "não autenticado"}, status=401)
