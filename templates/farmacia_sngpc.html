@@ -123,6 +123,36 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
       <div id="xmlPreview"></div>
     </div>
   </div>
+  <!-- RNDS — Dispensação CEAF -->
+  <div class="card" style="margin-top:8px">
+    <div class="card-header">
+      <span class="card-title">🏥 RNDS — Dispensação CEAF</span>
+      <span id="rndsStatusBadge"></span>
+    </div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        Farmácias que dispensam medicamentos do Componente Especializado (CEAF) devem transmitir cada dispensação à RNDS (Portaria GM/MS 1.434/2020). Requer certificado ICP-Brasil A1/A3 emitido em nome do estabelecimento.
+      </p>
+      <div class="form-row">
+        <div class="form-group"><label>CPF do Gestor *</label><input id="rndsRxCpf" placeholder="00000000000" maxlength="11"></div>
+        <div class="form-group"><label>CNES da Farmácia *</label><input id="rndsRxCnes" placeholder="0000000" maxlength="7"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Código IBGE do Município *</label><input id="rndsRxIbge" placeholder="0000000" maxlength="7"></div>
+        <div class="form-group"><label>Ambiente</label>
+          <select id="rndsRxAmbiente"><option value="homologacao">Homologação</option><option value="producao">Produção</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Certificado ICP-Brasil (.pfx / .p12)</label><input type="file" id="rndsRxFile" accept=".pfx,.p12"></div>
+      <div class="form-group"><label>Senha do Certificado</label><input type="password" id="rndsRxSenha" placeholder="Deixe vazio para manter a atual"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="salvarRndsFarm()">💾 Salvar</button>
+        <button class="btn btn-ghost" id="btnTestarRnds" onclick="testarRndsFarm()">🧪 Testar</button>
+      </div>
+      <div id="rndsRxInfo" style="margin-top:12px"></div>
+    </div>
+  </div>
+
 </main>
 
 <script>
@@ -221,8 +251,57 @@ async function transmitirSngpc() {
   }
 }
 
+async function carregarStatusRnds() {
+  const r = await api('/api/integracoes/credenciais/');
+  if (!r.ok) return;
+  const s = r.data.rnds_esus || {};
+  document.getElementById('rndsRxCpf').value = s.cpf_gestor || '';
+  document.getElementById('rndsRxCnes').value = s.cnes || '';
+  document.getElementById('rndsRxIbge').value = s.ibge || '';
+  document.getElementById('rndsRxAmbiente').value = s.ambiente || 'homologacao';
+  document.getElementById('rndsStatusBadge').innerHTML = s.configurado
+    ? '<span class="badge badge-ok">✅ Configurado</span>'
+    : '<span class="badge badge-warn">⚠️ Não configurado</span>';
+}
+
+async function salvarRndsFarm() {
+  const cpf_gestor = v('rndsRxCpf'), cnes = v('rndsRxCnes');
+  const ibge = v('rndsRxIbge'), ambiente = v('rndsRxAmbiente');
+  const senha = v('rndsRxSenha');
+  if (!cpf_gestor || !cnes) return alert('CPF do gestor e CNES são obrigatórios');
+  const file = document.getElementById('rndsRxFile').files[0];
+  let certificado_pfx_b64 = '';
+  if (file) {
+    certificado_pfx_b64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = e => res(e.target.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+  }
+  const body = {cpf_gestor, cnes, ibge, ambiente, ativo: true};
+  if (certificado_pfx_b64) body.certificado_pfx_b64 = certificado_pfx_b64;
+  if (senha) body.certificado_senha = senha;
+  const r = await api('/api/integracoes/credenciais/rnds/', {method:'POST', body:JSON.stringify(body)});
+  if (r.ok) {
+    alert('Credenciais RNDS salvas com sucesso.');
+    document.getElementById('rndsRxFile').value = '';
+    document.getElementById('rndsRxSenha').value = '';
+    carregarStatusRnds();
+  } else { alert(r.data.erro || 'Erro ao salvar credenciais RNDS'); }
+}
+
+async function testarRndsFarm() {
+  const btn = document.getElementById('btnTestarRnds');
+  btn.disabled = true; btn.textContent = '⏳ Testando...';
+  const r = await api('/api/integracoes/credenciais/rnds/testar/', {method:'POST', body:JSON.stringify({})});
+  btn.disabled = false; btn.textContent = '🧪 Testar';
+  alert(r.data.mensagem || r.data.erro || 'Sem resposta');
+}
+
 setPeriodoDefault();
 carregarStatusCredenciais();
+carregarStatusRnds();
 </script>
 </body>
 </html>

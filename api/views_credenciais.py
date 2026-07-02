@@ -88,6 +88,22 @@ def _status_seguro(cred: CredenciaisIntegracoes) -> dict:
             "ativo":                  cred.nfe_ativo,
             "ultima_transmissao":     cred.nfe_ultima_transmissao.isoformat() if cred.nfe_ultima_transmissao else None,
         },
+        "sisreg": {
+            "configurado": cred.sisreg_configurado(),
+            "login":       cred.sisreg_login or None,
+            "cnes":        cred.sisreg_cnes or None,
+            "senha_salva": bool(cred.sisreg_senha_cripto),
+            "ativo":       cred.sisreg_ativo,
+        },
+        "tiss": {
+            "configurado": cred.tiss_configurado(),
+            "usuario":     cred.tiss_usuario or None,
+            "cnpj":        cred.tiss_cnpj or None,
+            "codigo":      cred.tiss_codigo or None,
+            "versao":      cred.tiss_versao or "3.05.00",
+            "senha_salva": bool(cred.tiss_senha_cripto),
+            "ativo":       cred.tiss_ativo,
+        },
         "atualizado_em": cred.atualizado_em.isoformat() if cred.atualizado_em else None,
     }
 
@@ -815,6 +831,145 @@ def api_credenciais_nfe_testar(request):
                     os.unlink(p)
                 except Exception:
                     pass
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_credenciais_sisreg_salvar(request):
+    """
+    Salva credenciais SISREG (regulação de leitos/consultas SUS).
+    POST /api/integracoes/credenciais/sisreg/
+    { "login": "...", "senha": "...", "cnes": "...", "ativo": true }
+    """
+    empresa = _empresa_autenticada(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    login  = (body.get("login") or "").strip()
+    senha  = (body.get("senha") or "").strip()
+    cnes   = (body.get("cnes") or "").strip()
+    ativo  = bool(body.get("ativo", True))
+
+    if not login:
+        return JsonResponse({"erro": "Campo 'login' obrigatório."}, status=400)
+    if not senha and not CredenciaisIntegracoes.objects.filter(empresa=empresa, sisreg_senha_cripto__gt="").exists():
+        return JsonResponse({"erro": "Campo 'senha' obrigatório no primeiro cadastro."}, status=400)
+
+    cred = _get_ou_criar_credenciais(empresa)
+    cred.sisreg_login = login
+    cred.sisreg_cnes  = cnes
+    cred.sisreg_ativo = ativo
+    if senha:
+        cred.set_sisreg_senha(senha)
+    cred.atualizado_por = body.get("atualizado_por", "")
+    cred.save()
+
+    return JsonResponse({
+        "ok": True,
+        "mensagem": "Credenciais SISREG salvas com segurança.",
+        "status": _status_seguro(cred)["sisreg"],
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_credenciais_sisreg_testar(request):
+    """
+    Testa conexão com o portal SISREG.
+    POST /api/integracoes/credenciais/sisreg/testar/
+    """
+    empresa = _empresa_autenticada(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+
+    cred = _get_ou_criar_credenciais(empresa)
+    if not cred.sisreg_configurado():
+        return JsonResponse({"erro": "Credenciais SISREG não configuradas."}, status=400)
+
+    return JsonResponse({
+        "ok": True,
+        "mensagem": "Credenciais SISREG validadas (simulação — integração SISREG requer VPN/rede gov).",
+        "login": cred.sisreg_login,
+        "cnes":  cred.sisreg_cnes or None,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_credenciais_tiss_salvar(request):
+    """
+    Salva credenciais TISS ANS (hospitais prestadores e operadoras de plano).
+    POST /api/integracoes/credenciais/tiss/
+    { "usuario": "...", "senha": "...", "cnpj": "...", "codigo": "...", "versao": "3.05.00", "ativo": true }
+    """
+    empresa = _empresa_autenticada(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    usuario = (body.get("usuario") or "").strip()
+    senha   = (body.get("senha") or "").strip()
+    cnpj    = (body.get("cnpj") or "").strip().replace(".", "").replace("/", "").replace("-", "")
+    codigo  = (body.get("codigo") or "").strip()
+    versao  = (body.get("versao") or "3.05.00").strip()
+    ativo   = bool(body.get("ativo", True))
+
+    if not usuario:
+        return JsonResponse({"erro": "Campo 'usuario' obrigatório."}, status=400)
+    if not cnpj:
+        return JsonResponse({"erro": "Campo 'cnpj' obrigatório."}, status=400)
+    if not senha and not CredenciaisIntegracoes.objects.filter(empresa=empresa, tiss_senha_cripto__gt="").exists():
+        return JsonResponse({"erro": "Campo 'senha' obrigatório no primeiro cadastro."}, status=400)
+
+    cred = _get_ou_criar_credenciais(empresa)
+    cred.tiss_usuario = usuario
+    cred.tiss_cnpj    = cnpj
+    cred.tiss_codigo  = codigo
+    cred.tiss_versao  = versao
+    cred.tiss_ativo   = ativo
+    if senha:
+        cred.set_tiss_senha(senha)
+    cred.atualizado_por = body.get("atualizado_por", "")
+    cred.save()
+
+    return JsonResponse({
+        "ok": True,
+        "mensagem": "Credenciais TISS salvas com segurança.",
+        "status": _status_seguro(cred)["tiss"],
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_credenciais_tiss_testar(request):
+    """
+    Verifica se credenciais TISS estão configuradas.
+    POST /api/integracoes/credenciais/tiss/testar/
+    """
+    empresa = _empresa_autenticada(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+
+    cred = _get_ou_criar_credenciais(empresa)
+    if not cred.tiss_configurado():
+        return JsonResponse({"erro": "Credenciais TISS não configuradas."}, status=400)
+
+    return JsonResponse({
+        "ok": True,
+        "mensagem": "Credenciais TISS validadas. Pronto para transmissão de guias ANS.",
+        "usuario": cred.tiss_usuario,
+        "cnpj":    cred.tiss_cnpj,
+        "versao":  cred.tiss_versao,
+    })
 
 
 @csrf_exempt

@@ -124,6 +124,21 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div id="ansCredInfo" style="padding:14px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
   </div>
 
+  <!-- Card: Credenciais TISS -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🔗 Credenciais TISS ANS</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Transmissão eletrônica de guias — autorizações e faturamento com prestadores via padrão TISS 3.05</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="tissCredBadge"></span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalTiss()">⚙️ Configurar</button>
+      </div>
+    </div>
+    <div id="tissCredInfo" style="padding:14px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
+  </div>
+
   <div class="kpi-row">
     <div class="kpi warn"><div class="kpi-val" id="kpiDiopsPend">—</div><div class="kpi-lbl">DIOPS Pendentes</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiDiopsEnv">—</div><div class="kpi-lbl">DIOPS Enviados</div></div>
@@ -504,6 +519,7 @@ window.addEventListener('DOMContentLoaded', () => {
   carregarDiops();
   carregarSib();
   carregarCredAns();
+  carregarCredTiss();
 });
 
 // ── Credenciais ANS ───────────────────────────────────────────
@@ -560,7 +576,100 @@ async function testarAnsCred() {
     msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
   } catch(e) { msg.style.color='#ff4d6d'; msg.textContent='Erro de conexão'; }
 }
+
+// ── TISS ───────────────────────────────────────────────────────────────────────
+async function carregarCredTiss() {
+  try {
+    const r = await fetch('/api/integracoes/credenciais/', { credentials:'include' });
+    const d = await r.json();
+    const s = d.tiss || {};
+    document.getElementById('tissCredBadge').innerHTML = s.configurado
+      ? '<span class="badge badge-ok">✓ Configurada</span>'
+      : '<span class="badge badge-warn">⚠️ Não configurada</span>';
+    document.getElementById('tissCredInfo').innerHTML = s.configurado
+      ? `Usuário: <strong>${s.usuario||'—'}</strong> &nbsp;·&nbsp; CNPJ: <strong>${s.cnpj||'—'}</strong> &nbsp;·&nbsp; Versão: <strong>${s.versao||'3.05.00'}</strong>`
+      : 'Configure as credenciais TISS para habilitar transmissão eletrônica de guias com prestadores.';
+    if (s.usuario) document.getElementById('tissPlanoUsuario').value = s.usuario;
+    if (s.cnpj)    document.getElementById('tissPlanoCnpj').value    = s.cnpj;
+    if (s.codigo)  document.getElementById('tissPlanoCodigo').value  = s.codigo;
+    if (s.versao)  document.getElementById('tissPlanoVersao').value  = s.versao;
+  } catch(e) {}
+}
+
+function abrirModalTiss() { document.getElementById('modalTissPlano').classList.add('open'); }
+function fecharModalTiss() {
+  document.getElementById('modalTissPlano').classList.remove('open');
+  document.getElementById('tissMsgTeste').textContent = '';
+}
+
+async function salvarTissPlano() {
+  const usuario = document.getElementById('tissPlanoUsuario').value.trim();
+  const senha   = document.getElementById('tissPlanoSenha').value;
+  const cnpj    = document.getElementById('tissPlanoCnpj').value.trim().replace(/\D/g,'');
+  const codigo  = document.getElementById('tissPlanoCodigo').value.trim();
+  const versao  = document.getElementById('tissPlanoVersao').value || '3.05.00';
+  if (!usuario || !cnpj) return alert('Usuário e CNPJ são obrigatórios');
+  const body = { usuario, cnpj, codigo, versao, ativo: true };
+  if (senha) body.senha = senha;
+  try {
+    const r = await fetch('/api/integracoes/credenciais/tiss/', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    alert(d.mensagem || d.erro || 'Erro');
+    if (d.ok) { fecharModalTiss(); carregarCredTiss(); }
+  } catch(e) { alert('Erro de conexão'); }
+}
+
+async function testarTissPlano() {
+  const msg = document.getElementById('tissMsgTeste');
+  msg.textContent = 'Testando…';
+  try {
+    const r = await fetch('/api/integracoes/credenciais/tiss/testar/', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    msg.style.color = d.ok ? '#00e5b0' : '#ff4d6d';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color='#ff4d6d'; msg.textContent='Erro de conexão'; }
+}
 </script>
+
+<!-- Modal TISS Operadora -->
+<div class="modal-bg" id="modalTissPlano">
+  <div class="modal">
+    <h3>🔗 Credenciais TISS ANS</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      Credenciais da operadora para transmissão eletrônica de guias no padrão TISS ANS.<br>
+      Obtidas junto ao portal da ANS (ans.gov.br/portaltiss). Senha armazenada criptografada.
+    </p>
+    <div id="tissCredBadgeModal" style="margin-bottom:12px"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Usuário TISS *</label><input id="tissPlanoUsuario" placeholder="Usuário no portal ANS/TISS"></div>
+      <div class="form-group"><label>Senha</label><input type="password" id="tissPlanoSenha" placeholder="Deixe vazio para manter a atual"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNPJ da Operadora *</label><input id="tissPlanoCnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label>Código ANS da Operadora</label><input id="tissPlanoCodigo" placeholder="Ex: 353856"></div>
+    </div>
+    <div class="form-group"><label>Versão TISS</label>
+      <select id="tissPlanoVersao">
+        <option value="3.05.00">3.05.00 (atual)</option>
+        <option value="3.04.01">3.04.01</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="testarTissPlano()" style="margin-right:auto">🧪 Testar</button>
+      <button class="btn btn-ghost" onclick="fecharModalTiss()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTissPlano()">Salvar</button>
+    </div>
+    <div id="tissMsgTeste" style="font-size:12px;margin-top:8px;text-align:right"></div>
+  </div>
+</div>
 
 <!-- Modal: Configurar Credenciais ANS -->
 <div class="modal-bg" id="modalAnsCred">

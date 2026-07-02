@@ -147,7 +147,55 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </tbody>
     </table>
   </div>
+
+  <!-- SISREG Credenciais -->
+  <div class="card" style="margin-top:0">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🔐 Credenciais SISREG</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Acesso ao portal SISREG do Ministério da Saúde para regulação de leitos e consultas SUS</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="sisregStatusBadge"></span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalSisreg()">⚙️ Configurar</button>
+      </div>
+    </div>
+    <div id="sisregInfo" style="padding:14px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
+  </div>
+
 </main>
+
+<!-- Modal SISREG -->
+<div class="modal-bg" id="modalSisreg">
+  <div class="modal">
+    <h3>🔐 Credenciais SISREG</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      Login obtido junto à Central de Regulação estadual ou Ministério da Saúde via SCNES.<br>
+      A senha é armazenada criptografada — nunca exibida de volta.
+    </p>
+    <div id="sisregCredBadge" style="margin-bottom:12px"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Login SISREG *</label>
+        <input id="sisregLogin" placeholder="Login de acesso ao portal SISREG">
+      </div>
+      <div class="form-group">
+        <label>CNES da Unidade</label>
+        <input id="sisregCnes" placeholder="0000000" maxlength="7">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="sisregSenha" placeholder="Deixe vazio para manter a atual">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnTestarSisreg" onclick="testarSisreg()">🧪 Testar</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modalSisreg')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSisreg()">💾 Salvar</button>
+    </div>
+    <div id="sisregMsgTeste" style="font-size:12px;margin-top:8px;text-align:right"></div>
+  </div>
+</div>
 
 <!-- Modal: Nova Solicitação -->
 <div class="modal-bg" id="modalNova">
@@ -336,6 +384,55 @@ document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", 
 
 carregarKpis();
 carregarFila();
+carregarSisregStatus();
+
+// ── SISREG ────────────────────────────────────────────────────────────────────
+async function carregarSisregStatus() {
+  try {
+    const r = await fetchJSON('/api/integracoes/credenciais/');
+    const s = r.sisreg || {};
+    document.getElementById('sisregStatusBadge').innerHTML = s.configurado
+      ? '<span style="background:rgba(0,229,176,.12);color:#00e5b0;border:1px solid rgba(0,229,176,.25);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700">✅ Configurado</span>'
+      : '<span style="background:rgba(255,179,71,.1);color:#ffb347;border:1px solid rgba(255,179,71,.2);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700">⚠️ Não configurado</span>';
+    document.getElementById('sisregInfo').innerHTML = s.login
+      ? `Login: <strong>${s.login}</strong>${s.cnes ? ' · CNES: <strong>' + s.cnes + '</strong>' : ''} · Senha: <strong>${s.senha_salva ? 'Salva ✅' : 'Não salva'}</strong>`
+      : 'Credenciais SISREG não configuradas. Clique em Configurar para cadastrar.';
+    document.getElementById('sisregCredBadge').innerHTML = s.configurado
+      ? '<span style="color:#00e5b0;font-size:12px">✅ Credenciais cadastradas</span>'
+      : '<span style="color:#ffb347;font-size:12px">⚠️ Não configurado</span>';
+    if (s.login) document.getElementById('sisregLogin').value = s.login;
+    if (s.cnes)  document.getElementById('sisregCnes').value  = s.cnes;
+  } catch(e) {}
+}
+
+function abrirModalSisreg() { document.getElementById('modalSisreg').classList.add('open'); }
+
+async function salvarSisreg() {
+  const login = document.getElementById('sisregLogin').value.trim();
+  const senha = document.getElementById('sisregSenha').value.trim();
+  const cnes  = document.getElementById('sisregCnes').value.trim();
+  if (!login) return alert('Login SISREG é obrigatório');
+  const r = await fetchJSON('/api/integracoes/credenciais/sisreg/', {
+    method:'POST',
+    body: JSON.stringify({login, senha, cnes, ativo: true})
+  });
+  if (r.ok) {
+    alert('Credenciais SISREG salvas com sucesso.');
+    document.getElementById('sisregSenha').value = '';
+    fecharModal('modalSisreg');
+    carregarSisregStatus();
+  } else { alert(r.erro || 'Erro ao salvar'); }
+}
+
+async function testarSisreg() {
+  const btn = document.getElementById('btnTestarSisreg');
+  const msg = document.getElementById('sisregMsgTeste');
+  btn.disabled = true; btn.textContent = '⏳ Testando...';
+  const r = await fetchJSON('/api/integracoes/credenciais/sisreg/testar/', {method:'POST', body:JSON.stringify({})});
+  msg.style.color = r.ok ? '#00e5b0' : '#ff4d6d';
+  msg.textContent = r.mensagem || r.erro || (r.ok ? 'OK' : 'Falha');
+  btn.disabled = false; btn.textContent = '🧪 Testar';
+}
 </script>
 </body>
 </html>

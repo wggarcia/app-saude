@@ -131,6 +131,39 @@ tr:hover td{background:rgba(255,255,255,.018)}
     <div class="kpi kpi-ok"><div class="kpi-val" id="kvPagas">—</div><div class="kpi-lbl">Pagas</div></div>
   </div>
 
+  <!-- Credenciais TISS + NF-e -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🔐 Credenciais TISS</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Transmissão eletrônica de guias ANS</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span id="tissStatusBadge"></span>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('modalTissCred')">⚙️ Configurar</button>
+        </div>
+      </div>
+      <div id="tissCredInfo" style="padding:12px 16px;font-size:12px;color:var(--muted)">Carregando…</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🧾 NF-e / SEFAZ</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Nota fiscal eletrônica hospitalar</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span id="nfeStatusBadge"></span>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('modalNfeCred')">⚙️ Configurar</button>
+        </div>
+      </div>
+      <div id="nfeCredInfo" style="padding:12px 16px;font-size:12px;color:var(--muted)">Carregando…</div>
+    </div>
+
+  </div>
+
   <!-- TABLE: guias -->
   <div class="card">
     <div class="card-header">
@@ -399,6 +432,159 @@ function toast(msg,type='ok'){
 }
 
 loadKpis(); loadGuias();
+carregarCredTiss(); carregarCredNfeHosp();
+
+// ── TISS Credenciais ──────────────────────────────────────────────────────────
+async function carregarCredTiss() {
+  const r = await fetch('/api/integracoes/credenciais/', {credentials:'include'});
+  const d = await r.json().catch(()=>({}));
+  const s = d.tiss || {};
+  document.getElementById('tissStatusBadge').innerHTML = s.configurado
+    ? '<span class="badge badge-ok">✅ Configurado</span>'
+    : '<span style="background:rgba(255,179,71,.1);color:var(--warn);border:1px solid rgba(255,179,71,.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">⚠️ Não configurado</span>';
+  document.getElementById('tissCredInfo').innerHTML = s.usuario
+    ? `Usuário: <strong>${s.usuario}</strong> · CNPJ: <strong>${s.cnpj||'—'}</strong> · Versão TISS: <strong>${s.versao||'3.05.00'}</strong>`
+    : 'TISS não configurado. Clique em Configurar para cadastrar as credenciais ANS.';
+  if (s.usuario)  document.getElementById('tissUsuario').value = s.usuario;
+  if (s.cnpj)     document.getElementById('tissCnpj').value    = s.cnpj;
+  if (s.codigo)   document.getElementById('tissCodigo').value  = s.codigo;
+  if (s.versao)   document.getElementById('tissVersao').value  = s.versao;
+}
+
+async function salvarTiss() {
+  const usuario = document.getElementById('tissUsuario').value.trim();
+  const senha   = document.getElementById('tissSenha').value.trim();
+  const cnpj    = document.getElementById('tissCnpj').value.trim();
+  const codigo  = document.getElementById('tissCodigo').value.trim();
+  const versao  = document.getElementById('tissVersao').value.trim() || '3.05.00';
+  if (!usuario || !cnpj) return toast('Usuário e CNPJ são obrigatórios', 'error');
+  const r = await fetch('/api/integracoes/credenciais/tiss/', {
+    method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({usuario, senha, cnpj, codigo, versao, ativo: true})
+  });
+  const d = await r.json().catch(()=>({}));
+  if (d.ok) { toast('Credenciais TISS salvas.'); closeModal('modalTissCred'); carregarCredTiss(); }
+  else toast(d.erro || 'Erro ao salvar', 'error');
+}
+
+async function testarTiss() {
+  const r = await fetch('/api/integracoes/credenciais/tiss/testar/', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:'{}'});
+  const d = await r.json().catch(()=>({}));
+  toast(d.mensagem || d.erro || (d.ok ? 'OK' : 'Falha'), d.ok ? 'ok' : 'error');
+}
+
+// ── NF-e Hospital ─────────────────────────────────────────────────────────────
+async function carregarCredNfeHosp() {
+  const r = await fetch('/api/integracoes/credenciais/', {credentials:'include'});
+  const d = await r.json().catch(()=>({}));
+  const s = d.nfe_sefaz || {};
+  document.getElementById('nfeStatusBadge').innerHTML = s.configurado
+    ? '<span class="badge badge-ok">✅ Configurado</span>'
+    : '<span style="background:rgba(255,179,71,.1);color:var(--warn);border:1px solid rgba(255,179,71,.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">⚠️ Não configurado</span>';
+  document.getElementById('nfeCredInfo').innerHTML = s.cnpj_emitente
+    ? `CNPJ: <strong>${s.cnpj_emitente}</strong> · UF: <strong>${s.uf||'—'}</strong> · Ambiente: <strong>${s.ambiente==='1'?'Produção':'Homologação'}</strong>`
+    : 'NF-e não configurada. Clique em Configurar para cadastrar o e-CNPJ.';
+  if (s.cnpj_emitente) document.getElementById('nfeHospCnpj').value   = s.cnpj_emitente;
+  if (s.ie)            document.getElementById('nfeHospIe').value      = s.ie;
+  if (s.uf)            document.getElementById('nfeHospUf').value      = s.uf;
+  if (s.serie)         document.getElementById('nfeHospSerie').value   = s.serie;
+  if (s.crt)           document.getElementById('nfeHospCrt').value     = s.crt;
+  if (s.ambiente)      document.getElementById('nfeHospAmb').value     = s.ambiente;
+}
+
+async function salvarNfeHosp() {
+  const cnpj = document.getElementById('nfeHospCnpj').value.trim().replace(/\D/g,'');
+  const ie   = document.getElementById('nfeHospIe').value.trim();
+  const uf   = document.getElementById('nfeHospUf').value.trim();
+  const ibge = document.getElementById('nfeHospIbge').value.trim();
+  const serie = document.getElementById('nfeHospSerie').value.trim() || '001';
+  const crt   = document.getElementById('nfeHospCrt').value;
+  const senha = document.getElementById('nfeHospSenha').value.trim();
+  const amb   = document.getElementById('nfeHospAmb').value;
+  if (!cnpj || !uf) return toast('CNPJ e UF são obrigatórios', 'error');
+  const file = document.getElementById('nfeHospFile').files[0];
+  let certificado_pfx_b64 = '';
+  if (file) {
+    certificado_pfx_b64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = e => res(e.target.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+  }
+  const body = {cnpj_emitente:cnpj, ie, uf, municipio_ibge:ibge, serie, crt, ambiente:amb, ativo:true};
+  if (certificado_pfx_b64) body.certificado_pfx_b64 = certificado_pfx_b64;
+  if (senha) body.certificado_senha = senha;
+  const r = await fetch('/api/integracoes/credenciais/nfe/', {
+    method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json().catch(()=>({}));
+  if (d.ok) { toast('Credenciais NF-e salvas.'); closeModal('modalNfeCred'); carregarCredNfeHosp(); }
+  else toast(d.erro || 'Erro ao salvar', 'error');
+}
+
+async function testarNfeHosp() {
+  const r = await fetch('/api/integracoes/credenciais/nfe/testar/', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:'{}'});
+  const d = await r.json().catch(()=>({}));
+  toast(d.mensagem || d.erro || (d.ok ? 'OK' : 'Falha'), d.ok ? 'ok' : 'error');
+}
 </script>
+
+<!-- Modal TISS Credenciais -->
+<div class="modal-bg" id="modalTissCred">
+  <div class="modal">
+    <h3>🔐 Credenciais TISS ANS</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Usuário e senha do portal TISS da ANS para transmissão eletrônica de guias. Obtido junto à ANS ou operadora contratante.</p>
+    <div class="form-row">
+      <div class="form-group"><label>Usuário TISS *</label><input id="tissUsuario" placeholder="Usuário ANS/TISS"></div>
+      <div class="form-group"><label>Senha</label><input type="password" id="tissSenha" placeholder="Deixe vazio para manter a atual"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNPJ do Prestador *</label><input id="tissCnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label>Código ANS do Prestador</label><input id="tissCodigo" placeholder="Ex: 353856"></div>
+    </div>
+    <div class="form-group"><label>Versão TISS</label>
+      <select id="tissVersao"><option value="3.05.00">3.05.00 (atual)</option><option value="3.04.01">3.04.01</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="testarTiss()">🧪 Testar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalTissCred')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTiss()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal NF-e Hospital -->
+<div class="modal-bg" id="modalNfeCred">
+  <div class="modal">
+    <h3>🧾 Credenciais NF-e / SEFAZ</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Certificado digital e-CNPJ A1/A3 para emissão de nota fiscal eletrônica hospitalar.</p>
+    <div class="form-row">
+      <div class="form-group"><label>CNPJ Emitente *</label><input id="nfeHospCnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label>Inscrição Estadual</label><input id="nfeHospIe" placeholder="Opcional"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>UF *</label><input id="nfeHospUf" placeholder="SP" maxlength="2"></div>
+      <div class="form-group"><label>Código IBGE do Município</label><input id="nfeHospIbge" placeholder="3550308"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Série NF-e</label><input id="nfeHospSerie" value="001" maxlength="3"></div>
+      <div class="form-group"><label>Regime Tributário</label>
+        <select id="nfeHospCrt"><option value="1">1 — Simples Nacional</option><option value="3" selected>3 — Regime Normal</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Certificado e-CNPJ (.pfx / .p12)</label><input type="file" id="nfeHospFile" accept=".pfx,.p12"></div>
+    <div class="form-group"><label>Senha do Certificado</label><input type="password" id="nfeHospSenha" placeholder="Deixe vazio para manter a atual"></div>
+    <div class="form-group"><label>Ambiente</label>
+      <select id="nfeHospAmb"><option value="2">Homologação (testes)</option><option value="1">Produção SEFAZ</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="testarNfeHosp()">🧪 Testar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalNfeCred')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNfeHosp()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -971,6 +971,10 @@ from api.views_credenciais import (
     api_credenciais_rnds_testar,
     api_credenciais_nfe_salvar,
     api_credenciais_nfe_testar,
+    api_credenciais_sisreg_salvar,
+    api_credenciais_sisreg_testar,
+    api_credenciais_tiss_salvar,
+    api_credenciais_tiss_testar,
     api_credenciais_revogar,
 )
 from api.views_nfe import (
@@ -1771,6 +1775,10 @@ urlpatterns = [
     path('api/integracoes/credenciais/rnds/testar/', api_credenciais_rnds_testar),
     path('api/integracoes/credenciais/nfe/', api_credenciais_nfe_salvar),
     path('api/integracoes/credenciais/nfe/testar/', api_credenciais_nfe_testar),
+    path('api/integracoes/credenciais/sisreg/', api_credenciais_sisreg_salvar),
+    path('api/integracoes/credenciais/sisreg/testar/', api_credenciais_sisreg_testar),
+    path('api/integracoes/credenciais/tiss/', api_credenciais_tiss_salvar),
+    path('api/integracoes/credenciais/tiss/testar/', api_credenciais_tiss_testar),
     path('api/integracoes/credenciais/revogar/', api_credenciais_revogar),
     # NF-e / SEFAZ
     path('api/nfe/', api_nfe_lista),

@@ -198,7 +198,53 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <tbody id="txBody"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
+
+  <!-- WhatsApp — Notificações de Pacientes -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">💬 WhatsApp — Notificações</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="waStatusBadge"></span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalWa()">⚙️ Configurar</button>
+      </div>
+    </div>
+    <div id="waInfo" style="padding:14px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
+  </div>
+
 </main>
+
+<!-- Modal WhatsApp -->
+<div class="modal-bg" id="modalWa">
+  <div class="modal">
+    <h3>💬 Configurar WhatsApp</h3>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Notificações de alta, triagem e resultados via Z-API ou Evolution API.</div>
+    <div class="form-group"><label>Provedor</label>
+      <select id="waProvider" onchange="atualizarHintWa()">
+        <option value="z-api">Z-API</option>
+        <option value="evolution">Evolution API</option>
+      </select>
+    </div>
+    <div class="form-group"><label id="waInstanceLabel">Instance ID (Z-API)</label>
+      <input id="waInstance" placeholder="Ex: 3EB0C4D1A2B3">
+    </div>
+    <div class="form-group"><label>Token</label>
+      <input type="password" id="waToken" placeholder="Token de autenticação">
+    </div>
+    <div class="form-group"><label>Número Remetente (com DDI)</label>
+      <input id="waNumero" placeholder="Ex: 5511999999999">
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px" id="waHint">Z-API: Instance ID no painel Z-API · Token: token da instância.</div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="waAtivo" checked> Integração ativa
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="waBtnTestar" onclick="testarWaHosp()">🧪 Testar</button>
+      <button class="btn btn-ghost" onclick="fecharModalWa()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarWaHosp()">💾 Salvar</button>
+    </div>
+    <div id="waMsgTeste" style="font-size:12px;margin-top:10px;text-align:right"></div>
+  </div>
+</div>
 
 <script>
 function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
@@ -355,6 +401,66 @@ async function testarRnds() {
     msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
   } catch(e) { msg.style.color='var(--danger)'; msg.textContent='Erro de conexão'; }
 }
+
+// ── WhatsApp ─────────────────────────────────────────────────────────────────
+async function carregarWaStatus() {
+  try {
+    const r = await fetch('/api/gestao/whatsapp/', {credentials:'include', headers:headers()});
+    const d = await r.json();
+    const s = d.data || d;
+    document.getElementById('waStatusBadge').innerHTML = s.ativo
+      ? '<span style="background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700">✅ Ativo</span>'
+      : '<span style="background:rgba(255,179,71,.1);color:var(--warn);border:1px solid rgba(255,179,71,.2);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700">⚠️ Não configurado</span>';
+    document.getElementById('waInfo').innerHTML = s.provider
+      ? `Provedor: <strong>${s.provider}</strong> · Número: <strong>${s.numero_remetente||'—'}</strong>`
+      : 'WhatsApp não configurado. Clique em Configurar para conectar.';
+  } catch(e) {}
+}
+
+function abrirModalWa() { document.getElementById('modalWa').classList.add('open'); carregarWaStatus(); }
+function fecharModalWa() { document.getElementById('modalWa').classList.remove('open'); }
+
+function atualizarHintWa() {
+  const p = document.getElementById('waProvider').value;
+  document.getElementById('waInstanceLabel').textContent = p === 'evolution' ? 'Instance Name (Evolution)' : 'Instance ID (Z-API)';
+  document.getElementById('waHint').textContent = p === 'evolution'
+    ? 'Evolution API: Nome da instância criada no painel Evolution.'
+    : 'Z-API: Instance ID disponível no painel Z-API · Token: token da instância.';
+}
+
+async function salvarWaHosp() {
+  const provider = document.getElementById('waProvider').value;
+  const instance_id = document.getElementById('waInstance').value.trim();
+  const token = document.getElementById('waToken').value.trim();
+  const numero_remetente = document.getElementById('waNumero').value.trim();
+  const ativo = document.getElementById('waAtivo').checked;
+  if (!instance_id || !token) return alert('Instance ID e Token são obrigatórios');
+  try {
+    const r = await fetch('/api/gestao/whatsapp/', {
+      method:'POST', credentials:'include', headers:headers(),
+      body: JSON.stringify({provider, instance_id, token, numero_remetente, ativo})
+    });
+    const d = await r.json();
+    if (d.ok || d.id) { alert('WhatsApp salvo com sucesso.'); fecharModalWa(); carregarWaStatus(); }
+    else alert(d.erro || 'Erro ao salvar');
+  } catch(e) { alert('Erro de conexão'); }
+}
+
+async function testarWaHosp() {
+  const btn = document.getElementById('waBtnTestar');
+  const msg = document.getElementById('waMsgTeste');
+  btn.disabled = true; btn.textContent = '⏳ Testando...';
+  try {
+    const r = await fetch('/api/gestao/whatsapp/testar/', {method:'POST', credentials:'include', headers:headers(), body:JSON.stringify({})});
+    const d = await r.json();
+    msg.style.color = d.ok ? 'var(--ok)' : 'var(--danger)';
+    msg.textContent = d.mensagem || d.erro || (d.ok ? 'Conexão OK' : 'Falha');
+  } catch(e) { msg.style.color='var(--danger)'; msg.textContent='Erro de conexão'; }
+  btn.disabled = false; btn.textContent = '🧪 Testar';
+}
+
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+carregarWaStatus();
 </script>
 </body>
 </html>

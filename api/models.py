@@ -7435,6 +7435,27 @@ class CredenciaisIntegracoes(models.Model):
     nfe_ativo          = models.BooleanField(default=False)
     nfe_ultima_transmissao = models.DateTimeField(null=True, blank=True)
 
+    # ── SISREG / Ministério da Saúde ──────────────────────────────────────────
+    sisreg_login        = models.CharField(max_length=120, blank=True, default="",
+                                           help_text="Login de acesso ao portal SISREG")
+    sisreg_senha_cripto = models.TextField(blank=True, default="",
+                                           help_text="Senha SISREG criptografada (Fernet)")
+    sisreg_cnes         = models.CharField(max_length=7, blank=True, default="",
+                                           help_text="CNES da unidade reguladora")
+    sisreg_ativo        = models.BooleanField(default=False)
+
+    # ── TISS / ANS ────────────────────────────────────────────────────────────
+    tiss_usuario        = models.CharField(max_length=120, blank=True, default="",
+                                           help_text="Usuário no portal TISS ANS")
+    tiss_senha_cripto   = models.TextField(blank=True, default="",
+                                           help_text="Senha TISS criptografada (Fernet)")
+    tiss_cnpj           = models.CharField(max_length=14, blank=True, default="",
+                                           help_text="CNPJ do prestador ou operadora")
+    tiss_codigo         = models.CharField(max_length=10, blank=True, default="",
+                                           help_text="Código ANS do prestador/operadora")
+    tiss_versao         = models.CharField(max_length=10, blank=True, default="3.05.00")
+    tiss_ativo          = models.BooleanField(default=False)
+
     # ── Metadados ─────────────────────────────────────────────────────────────
     atualizado_em   = models.DateTimeField(auto_now=True)
     atualizado_por  = models.CharField(max_length=120, blank=True, default="")
@@ -7550,6 +7571,40 @@ class CredenciaisIntegracoes(models.Model):
             and self.nfe_uf
             and self.nfe_ativo
         )
+
+    def sisreg_configurado(self) -> bool:
+        return bool(self.sisreg_login and self.sisreg_senha_cripto and self.sisreg_ativo)
+
+    def set_sisreg_senha(self, senha_plain: str):
+        if senha_plain:
+            self.sisreg_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+        else:
+            self.sisreg_senha_cripto = ""
+
+    def get_sisreg_senha(self) -> str:
+        if not self.sisreg_senha_cripto:
+            return ""
+        try:
+            return self._fernet().decrypt(self.sisreg_senha_cripto.encode()).decode()
+        except Exception:
+            return ""
+
+    def tiss_configurado(self) -> bool:
+        return bool(self.tiss_usuario and self.tiss_senha_cripto and self.tiss_cnpj and self.tiss_ativo)
+
+    def set_tiss_senha(self, senha_plain: str):
+        if senha_plain:
+            self.tiss_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+        else:
+            self.tiss_senha_cripto = ""
+
+    def get_tiss_senha(self) -> str:
+        if not self.tiss_senha_cripto:
+            return ""
+        try:
+            return self._fernet().decrypt(self.tiss_senha_cripto.encode()).decode()
+        except Exception:
+            return ""
 
 
 class NotaFiscalEletronica(models.Model):
