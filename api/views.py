@@ -2852,7 +2852,7 @@ def app_vigilancia_resumo(request):
     """
     from api.services.dashboard_core import _resumo_vigilancia_publica
     response = JsonResponse(_resumo_vigilancia_publica(timezone.now()))
-    response["Cache-Control"] = "public, s-maxage=60, max-age=0, stale-while-revalidate=30"
+    response["Cache-Control"] = "public, s-maxage=25, max-age=0, stale-while-revalidate=25"
     return response
 
 
@@ -2976,7 +2976,7 @@ def app_resumo_publico(request):
             for item in doencas
         ],
     })
-    response["Cache-Control"] = "public, s-maxage=60, max-age=0, stale-while-revalidate=30"
+    response["Cache-Control"] = "public, s-maxage=25, max-age=0, stale-while-revalidate=25"
     return response
 
 
@@ -3108,7 +3108,7 @@ def app_radar_local(request):
         "doencas_provaveis": doencas_provaveis,
         "sintomas": sintomas,
     })
-    response["Cache-Control"] = "public, s-maxage=60, max-age=0, stale-while-revalidate=30"
+    response["Cache-Control"] = "public, s-maxage=25, max-age=0, stale-while-revalidate=25"
     return response
 
 
@@ -3229,7 +3229,7 @@ def app_mapa_publico(request):
         )
 
     response = JsonResponse({"hotspots": hotspots}, safe=False)
-    response["Cache-Control"] = "public, s-maxage=60, max-age=0, stale-while-revalidate=30"
+    response["Cache-Control"] = "public, s-maxage=25, max-age=0, stale-while-revalidate=25"
     return response
 
 
