@@ -390,7 +390,10 @@ class EmpresaMiddleware:
                 return JsonResponse({"erro": "plano não ativo", "redirect": redirect_target}, status=403)
             if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
                 return redirect("/contrato-governo/")
-            return redirect("/pagamento/")
+            from .services.dashboard_core import setor_conta
+            setor_bloquio = setor_conta(empresa)
+            pacote_bloqueio = getattr(empresa, "pacote_codigo", "") or ""
+            return redirect(f"/pagamento/?setor={setor_bloquio}&pacote={pacote_bloqueio}")
 
         response = self.get_response(request)
         if getattr(request, "_tab_auth_token", None):

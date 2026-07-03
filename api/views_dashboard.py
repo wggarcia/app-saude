@@ -202,6 +202,12 @@ def _dashboard_url_por_setor(setor):
     return dashboard_url_por_setor(setor)
 
 
+def _url_pagamento(empresa):
+    setor = _setor_conta(empresa)
+    pacote = getattr(empresa, "pacote_codigo", "") or ""
+    return f"/pagamento/?setor={setor}&pacote={pacote}"
+
+
 def _setor_label(setor):
     return setor_label(setor)
 
@@ -245,7 +251,7 @@ def _render_dashboard(request, variant):
     if not empresa.ativo:
         if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
             return redirect("/contrato-governo/")
-        return redirect("/pagamento/")
+        return redirect(_url_pagamento(empresa))
 
     # ⏰ verifica trial expirado — bloqueia e desativa a conta
     if empresa.ativo and empresa.tipo_conta != Empresa.TIPO_GOVERNO:
@@ -253,7 +259,7 @@ def _render_dashboard(request, variant):
         if trial and not trial.convertido and trial.expira_em < timezone.now():
             empresa.ativo = False
             empresa.save(update_fields=["ativo"])
-            return redirect("/pagamento/")
+            return redirect(_url_pagamento(empresa))
 
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO and variant != "governo":
         return redirect("/dashboard-governo/")
@@ -432,7 +438,7 @@ def command_ai(request):
     if not empresa.ativo:
         if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
             return redirect("/contrato-governo/")
-        return redirect("/pagamento/")
+        return redirect(_url_pagamento(empresa))
     return render(request, "command_ai.html", {
         "empresa_id": str(empresa.id),
         "empresa_nome": empresa.nome,
