@@ -3730,6 +3730,12 @@ def tela_cadastro(request):
     from django.shortcuts import render
     return render(request, 'cadastro.html')
 
+
+def tela_verificar_email(request):
+    from django.shortcuts import render
+    empresa_id = request.GET.get("empresa_id", "")
+    return render(request, "verificar-email.html", {"empresa_id": empresa_id})
+
 def login(request):
     body = json.loads(request.body)
 

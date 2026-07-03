@@ -37,6 +37,7 @@ class Empresa(models.Model):
     cortesia_ciclo_original = models.CharField(max_length=20, null=True, blank=True)
     cortesia_expira_em = models.DateTimeField(null=True, blank=True)
     codigo_acesso_corporativo = models.CharField(max_length=32, unique=True, default=_codigo_acesso)
+    email_verificado = models.BooleanField(default=False)
 
     def __str__(self):
         return self.nome

@@ -937,3 +937,41 @@ def enviar_email_contrato_vencido(empresa):
             f"Reative em: {base_url}/pagamento/\n"
             "Ajuda: comercial@soluscrt.com.br\n")
     _send("🔴 Seu acesso SolusCRT foi pausado — renove para reativar", empresa.email, html, text)
+
+
+def enviar_codigo_verificacao(email: str, nome: str, codigo: str) -> None:
+    """Send 6-digit verification code after self-service registration."""
+    try:
+        base_url = _base_url()
+        card = f"""
+    <h1>Confirme seu e-mail</h1>
+    <div class="sub">Olá, {nome}!</div>
+    <p style="font-size:15px;line-height:1.6;color:#b0c4d8">
+      Para ativar sua conta SolusCRT insira o código abaixo na tela de verificação.
+    </p>
+    <div style="margin:28px auto;text-align:center;background:rgba(0,201,167,.08);
+      border:1px solid rgba(0,201,167,.25);border-radius:16px;padding:28px 20px;
+      max-width:300px;">
+      <div style="font-size:2.4rem;font-weight:900;letter-spacing:.3em;color:#00c9a7;
+        font-variant-numeric:tabular-nums;">{codigo}</div>
+      <div style="color:#7b90b0;font-size:.8rem;margin-top:10px;">Válido por 15 minutos</div>
+    </div>
+    <p style="font-size:13px;color:#7b90b0">
+      Se você não criou uma conta no SolusCRT ignore este e-mail com segurança.
+    </p>
+    <a class="btn" href="{base_url}/verificar-email/">Verificar meu e-mail</a>
+    <p style="font-size:12px;color:#7b90b0;margin-top:18px;">
+      Precisa de ajuda? <a href="mailto:suporte@soluscrt.com.br" style="color:#00c9a7">suporte@soluscrt.com.br</a>
+    </p>
+        """
+        html = _html_base(card, "SolusCRT · Verificação de E-mail")
+        text = (
+            f"SolusCRT — confirme seu e-mail\n\n"
+            f"Código: {codigo}\n"
+            f"Válido por 15 minutos.\n\n"
+            f"Acesse: {base_url}/verificar-email/\n"
+            "Suporte: suporte@soluscrt.com.br\n"
+        )
+        _send("Seu código de verificação SolusCRT", email, html, text)
+    except Exception:
+        pass

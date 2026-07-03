@@ -196,6 +196,7 @@ class EmpresaMiddleware:
             "/status/",
             "/solicitar-reset-senha/",
             "/reset-senha-sucesso/",
+            "/verificar-email/",
         }
         rotas_livres_prefixo = (
             "/redefinir-senha/",
@@ -205,6 +206,7 @@ class EmpresaMiddleware:
             "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",
+            "/api/email/",
             "/api/corporativo/",
             "/api/corporativo/mobile/",
             "/api/colaborador-mobile/",

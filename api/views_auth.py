@@ -2,7 +2,10 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
 import os
+import random
+import string
 from django.conf import settings
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.contrib.auth.hashers import check_password, make_password
 from .models import Empresa, EmpresaUsuario, DonoSaaS, TrialEmpresa
@@ -305,6 +308,12 @@ def registrar_empresa(request):
     if Empresa.objects.filter(email=email).exists():
         return JsonResponse({"erro": "Email já cadastrado"}, status=400)
 
+    # Bloqueia emails de provedores gratuitos / pessoais
+    from .services.email_validation import validar_dominio_corporativo, is_demo_email
+    ok, motivo = validar_dominio_corporativo(email)
+    if not ok:
+        return JsonResponse({"erro": motivo}, status=400)
+
     # Resolve pacote — governo só via contrato, nunca via self-service
     from .planos import PACOTES_SAAS
     pacote_solicitado = normalizar_codigo_pacote(dados.get("pacote_codigo") or pacote_padrao())
@@ -312,6 +321,9 @@ def registrar_empresa(request):
     if pacote_info.get("setor") == "governo":
         pacote_solicitado = pacote_padrao()
         pacote_info = PACOTES_SAAS[pacote_padrao()]
+
+    # Emails internos/demo pulam etapa de verificação
+    email_ja_verificado = is_demo_email(email)
 
     # 🔐 salva empresa — INATIVA até escolher plano ou ativar trial
     empresa = Empresa.objects.create(
@@ -322,6 +334,7 @@ def registrar_empresa(request):
         max_dispositivos=pacote_info["dispositivos"],
         max_usuarios=pacote_info["usuarios"],
         ativo=False,  # bloqueado até pagamento ou ativação do trial
+        email_verificado=email_ja_verificado,
     )
 
     autorizado, device_id, dispositivos_em_uso, erro_dispositivo = _registrar_dispositivo_login(empresa, request, dados)
@@ -341,9 +354,24 @@ def registrar_empresa(request):
         empresa.id,
         empresa.nome,
     )
-    # Redireciona para pagamento filtrando pelo setor escolhido no cadastro
+
     setor_destino = pacote_info.get("setor", "")
-    payload["destination"] = f"/pagamento/?setor={setor_destino}&pacote={pacote_solicitado}"
+    pagamento_url = f"/pagamento/?setor={setor_destino}&pacote={pacote_solicitado}"
+
+    if email_ja_verificado:
+        payload["destination"] = pagamento_url
+    else:
+        # Gera e armazena código de 6 dígitos (TTL 15 min)
+        codigo = "".join(random.choices(string.digits, k=6))
+        cache.set(f"email_verificacao:{empresa.id}", codigo, timeout=900)
+        # Salva destino pós-verificação no cache para não precisar repassar setor na URL
+        cache.set(f"email_verificacao_destino:{empresa.id}", pagamento_url, timeout=900)
+        try:
+            from .email_service import enviar_codigo_verificacao
+            enviar_codigo_verificacao(email, nome, codigo)
+        except Exception:
+            pass
+        payload["destination"] = f"/verificar-email/?empresa_id={empresa.id}"
 
     response = JsonResponse(payload)
     return _aplicar_cookies_autenticacao(response, empresa, token)
@@ -444,6 +472,14 @@ def ativar_trial(request):
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
         return JsonResponse({"status": "erro", "mensagem": "Governo não usa trial"}, status=403)
 
+    if not empresa.email_verificado:
+        return JsonResponse({
+            "status": "erro",
+            "mensagem": "Confirme seu e-mail antes de ativar o período de teste.",
+            "codigo": "email_nao_verificado",
+            "destination": f"/verificar-email/?empresa_id={empresa.id}",
+        }, status=403)
+
     # Verifica se já tem trial ativo
     trial = getattr(empresa, "trial", None)
     if trial:
@@ -482,6 +518,96 @@ def ativar_trial(request):
         "dias_restantes": settings.TRIAL_DAYS,
         "destination": _destino_conta(empresa),
     })
+
+
+@csrf_exempt
+def verificar_codigo_email(request):
+    """POST /api/email/verificar-codigo — valida o código de 6 dígitos e marca email_verificado=True."""
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    empresa_id = dados.get("empresa_id")
+    codigo_enviado = str(dados.get("codigo", "")).strip()
+
+    if not empresa_id or not codigo_enviado:
+        return JsonResponse({"erro": "empresa_id e codigo são obrigatórios"}, status=400)
+
+    empresa = Empresa.objects.filter(id=empresa_id).first()
+    if not empresa:
+        return JsonResponse({"erro": "Conta não encontrada"}, status=404)
+
+    if empresa.email_verificado:
+        destino = cache.get(f"email_verificacao_destino:{empresa_id}", "/pagamento/")
+        return JsonResponse({"status": "ok", "destination": destino})
+
+    cache_key = f"email_verificacao:{empresa_id}"
+    codigo_correto = cache.get(cache_key)
+
+    if codigo_correto is None:
+        return JsonResponse({
+            "erro": "Código expirado. Solicite um novo código.",
+            "codigo": "expirado",
+        }, status=400)
+
+    if codigo_enviado != str(codigo_correto):
+        return JsonResponse({"erro": "Código incorreto. Verifique e tente novamente."}, status=400)
+
+    empresa.email_verificado = True
+    empresa.save(update_fields=["email_verificado"])
+    cache.delete(cache_key)
+
+    destino = cache.get(f"email_verificacao_destino:{empresa_id}", "/pagamento/")
+    cache.delete(f"email_verificacao_destino:{empresa_id}")
+
+    return JsonResponse({"status": "ok", "destination": destino})
+
+
+@csrf_exempt
+def reenviar_codigo_email(request):
+    """POST /api/email/reenviar-codigo — gera novo código e reenvia."""
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    empresa_id = dados.get("empresa_id")
+    if not empresa_id:
+        return JsonResponse({"erro": "empresa_id é obrigatório"}, status=400)
+
+    empresa = Empresa.objects.filter(id=empresa_id).first()
+    if not empresa:
+        return JsonResponse({"erro": "Conta não encontrada"}, status=404)
+
+    if empresa.email_verificado:
+        return JsonResponse({"status": "ok", "mensagem": "E-mail já verificado"})
+
+    # Rate limit: não permite reenvio se código ainda não expirou (aguarda 60 s)
+    cooldown_key = f"email_verificacao_cooldown:{empresa_id}"
+    if cache.get(cooldown_key):
+        return JsonResponse({
+            "erro": "Aguarde antes de solicitar um novo código.",
+            "codigo": "cooldown",
+        }, status=429)
+
+    codigo = "".join(random.choices(string.digits, k=6))
+    cache.set(f"email_verificacao:{empresa_id}", codigo, timeout=900)
+    cache.set(cooldown_key, 1, timeout=60)
+
+    try:
+        from .email_service import enviar_codigo_verificacao
+        enviar_codigo_verificacao(empresa.email, empresa.nome, codigo)
+    except Exception:
+        pass
+
+    return JsonResponse({"status": "ok", "mensagem": "Novo código enviado para seu e-mail"})
 
 
 def _logout(request, redirect_to="/"):

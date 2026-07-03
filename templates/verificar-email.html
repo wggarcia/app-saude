@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+  <meta charset="UTF-8">
+  <title>SolusCRT — Verificação de E-mail</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    *{box-sizing:border-box;font-family:"Avenir Next","Segoe UI",sans-serif}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,#07131d,#102433,#07131d);color:#eef8ff}
+    .card{width:100%;max-width:460px;padding:40px 36px;
+      border:1px solid rgba(255,255,255,.08);background:rgba(6,16,26,.82);
+      border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.38)}
+    .logo{font-size:1.1rem;font-weight:900;color:#5af0d3;letter-spacing:-.5px;margin-bottom:28px}
+    h1{margin:0 0 8px;font-size:1.8rem;font-weight:800}
+    .sub{color:#9cc4db;font-size:.92rem;line-height:1.55;margin-bottom:28px}
+    .code-wrap{display:flex;gap:10px;justify-content:center;margin-bottom:24px}
+    .digit{width:46px;height:58px;border-radius:12px;border:1.5px solid rgba(255,255,255,.15);
+      background:rgba(255,255,255,.05);color:#eef8ff;font-size:1.6rem;font-weight:800;
+      text-align:center;caret-color:#5af0d3;transition:border-color .15s}
+    .digit:focus{outline:none;border-color:#5af0d3;background:rgba(90,240,211,.06)}
+    .btn{width:100%;padding:15px;border:none;border-radius:14px;cursor:pointer;
+      font-size:1rem;font-weight:800;transition:opacity .15s}
+    .btn-primary{background:linear-gradient(135deg,#5af0d3,#6fb4ff);color:#04111a}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-link{background:none;color:#9cc4db;font-size:.82rem;margin-top:14px;
+      border:none;cursor:pointer;text-decoration:underline;padding:0}
+    .btn-link:disabled{opacity:.4;cursor:not-allowed;text-decoration:none}
+    .msg{margin-top:14px;padding:10px 16px;border-radius:10px;font-size:.84rem;font-weight:700;
+      text-align:center;display:none}
+    .msg.err{background:rgba(255,54,95,.12);border:1px solid rgba(255,54,95,.25);color:#ff6680}
+    .msg.ok{background:rgba(90,240,211,.1);border:1px solid rgba(90,240,211,.2);color:#5af0d3}
+    .cooldown{color:#9cc4db;font-size:.78rem;text-align:center;margin-top:6px;min-height:18px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">SolusCRT</div>
+    <h1>Verifique seu e-mail</h1>
+    <p class="sub">Enviamos um código de 6 dígitos para o seu e-mail corporativo. Digite-o abaixo para ativar sua conta.</p>
+
+    <div class="code-wrap" id="codeWrap">
+      <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" id="d0">
+      <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" id="d1">
+      <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" id="d2">
+      <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" id="d3">
+      <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" id="d4">
+      <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" id="d5">
+    </div>
+
+    <button class="btn btn-primary" id="btnVerificar" onclick="verificar()" disabled>Verificar e continuar</button>
+
+    <div class="msg" id="msg"></div>
+
+    <div style="text-align:center;margin-top:20px">
+      <button class="btn-link" id="btnReenviar" onclick="reenviar()">Não recebi o código — reenviar</button>
+      <div class="cooldown" id="cooldownMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    const empresaId = {{ empresa_id|default:"null" }};
+    const digits = Array.from({length: 6}, (_, i) => document.getElementById(`d${i}`));
+    const btnVerif = document.getElementById("btnVerificar");
+    const msgEl = document.getElementById("msg");
+    const btnReenv = document.getElementById("btnReenviar");
+    const cooldownEl = document.getElementById("cooldownMsg");
+    let cooldownTimer = null;
+
+    function getCode() {
+      return digits.map(d => d.value).join("");
+    }
+
+    function updateBtn() {
+      btnVerif.disabled = getCode().length < 6;
+    }
+
+    digits.forEach((d, i) => {
+      d.addEventListener("input", e => {
+        const val = e.target.value.replace(/\D/g, "");
+        e.target.value = val.slice(-1);
+        if (val && i < 5) digits[i + 1].focus();
+        updateBtn();
+      });
+
+      d.addEventListener("keydown", e => {
+        if (e.key === "Backspace" && !e.target.value && i > 0) {
+          digits[i - 1].focus();
+          digits[i - 1].value = "";
+          updateBtn();
+        }
+        if (e.key === "ArrowLeft" && i > 0) digits[i - 1].focus();
+        if (e.key === "ArrowRight" && i < 5) digits[i + 1].focus();
+      });
+
+      d.addEventListener("paste", e => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+        pasted.split("").slice(0, 6).forEach((ch, j) => {
+          if (digits[j]) digits[j].value = ch;
+        });
+        const next = Math.min(pasted.length, 5);
+        digits[next].focus();
+        updateBtn();
+      });
+    });
+
+    digits[0].focus();
+
+    function showMsg(text, tipo) {
+      msgEl.textContent = text;
+      msgEl.className = "msg " + tipo;
+      msgEl.style.display = "block";
+    }
+
+    async function verificar() {
+      const codigo = getCode();
+      if (codigo.length < 6) return;
+
+      btnVerif.disabled = true;
+      btnVerif.textContent = "Verificando…";
+      msgEl.style.display = "none";
+
+      try {
+        const res = await fetch("/api/email/verificar-codigo", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({empresa_id: empresaId, codigo}),
+        });
+        const data = await res.json();
+
+        if (data.status === "ok") {
+          showMsg("E-mail verificado! Redirecionando…", "ok");
+          setTimeout(() => { window.location.href = data.destination || "/pagamento/"; }, 900);
+        } else {
+          showMsg(data.erro || "Código inválido.", "err");
+          digits.forEach(d => { d.value = ""; });
+          digits[0].focus();
+          btnVerif.disabled = true;
+          btnVerif.textContent = "Verificar e continuar";
+        }
+      } catch {
+        showMsg("Erro ao conectar com o servidor. Tente novamente.", "err");
+        btnVerif.disabled = false;
+        btnVerif.textContent = "Verificar e continuar";
+      }
+    }
+
+    async function reenviar() {
+      if (!empresaId) { showMsg("Conta não identificada. Refaça o cadastro.", "err"); return; }
+      btnReenv.disabled = true;
+      msgEl.style.display = "none";
+
+      try {
+        const res = await fetch("/api/email/reenviar-codigo", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({empresa_id: empresaId}),
+        });
+        const data = await res.json();
+
+        if (data.status === "ok") {
+          showMsg("Novo código enviado! Verifique sua caixa de entrada.", "ok");
+          startCooldown(60);
+        } else if (data.codigo === "cooldown") {
+          showMsg("Aguarde antes de solicitar um novo código.", "err");
+          startCooldown(60);
+        } else {
+          showMsg(data.erro || "Não foi possível reenviar.", "err");
+          btnReenv.disabled = false;
+        }
+      } catch {
+        showMsg("Erro ao conectar. Tente novamente.", "err");
+        btnReenv.disabled = false;
+      }
+    }
+
+    function startCooldown(seconds) {
+      if (cooldownTimer) clearInterval(cooldownTimer);
+      let remaining = seconds;
+      cooldownEl.textContent = `Próximo reenvio em ${remaining}s`;
+      cooldownTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(cooldownTimer);
+          cooldownEl.textContent = "";
+          btnReenv.disabled = false;
+        } else {
+          cooldownEl.textContent = `Próximo reenvio em ${remaining}s`;
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
