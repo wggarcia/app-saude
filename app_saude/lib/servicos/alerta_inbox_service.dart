@@ -94,6 +94,15 @@ class AlertaInboxService {
 
   static Future<void> syncAlerts(List<dynamic> alertas) async {
     final inbox = await loadInbox();
+
+    // IDs atualmente ativos no servidor (alertas publicados e não revogados).
+    final activeIds = alertas
+        .map((item) => (item as Map)['id'])
+        .whereType<num>()
+        .map((id) => id.toInt())
+        .where((id) => id > 0)
+        .toSet();
+
     final byKey = <String, Map<String, dynamic>>{
       for (final item in inbox)
         _alertKey(item): Map<String, dynamic>.from(item),
@@ -113,7 +122,17 @@ class AlertaInboxService {
       };
     }
 
-    final merged = byKey.values.toList()
+    // Remove do inbox alertas com id de servidor que não constam mais na
+    // resposta da API (revogados ou excluídos pelo gestor).
+    final merged = byKey.values
+        .where((item) {
+          final id = (item['id'] as num?)?.toInt();
+          if (id != null && id > 0) {
+            return activeIds.contains(id);
+          }
+          return true; // sem id válido: mantém (push sem id de servidor)
+        })
+        .toList()
       ..sort((a, b) => (b['received_at'] ?? '')
           .toString()
           .compareTo((a['received_at'] ?? '').toString()));
