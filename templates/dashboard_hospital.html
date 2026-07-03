@@ -987,7 +987,9 @@
 
         <section class="section" id="secPrevisao">
           <h2>Previsão de Internações — 7 Dias</h2>
-          <canvas id="hospPrevisaoChart" style="max-height:140px;"></canvas>
+          <div style="height:140px;">
+            <canvas id="hospPrevisaoChart"></canvas>
+          </div>
         </section>
 
         <section class="section" id="secZonas">
@@ -1858,6 +1860,7 @@
               },
               options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
                   x: { ticks: { color: "#97bfd9", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.05)" } },
