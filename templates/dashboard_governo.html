@@ -2108,7 +2108,7 @@
     function _buildNoticiaHtml(n) {
       const lido = n.status === "lido";
       const arquivado = n.status === "arquivado";
-      const diseases = (n.doencas_detectadas || "").split(",").map(d => d.trim()).filter(Boolean);
+      const diseases = Array.isArray(n.doencas_detectadas) ? n.doencas_detectadas.filter(Boolean) : [];
       const diseaseTags = diseases.map(d => `<span class="tag">${d}</span>`).join("");
       const dotHtml = n.status === "novo" ? '<span class="news-novo-dot"></span>' : "";
       const btnLido = !lido && !arquivado
