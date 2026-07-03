@@ -3035,8 +3035,7 @@ class TemporalDecayTests(TestCase):
                 data_registro=agora - timedelta(days=15)
             )
 
-        epidemiologia._PANORAMA_CACHE["created_at"] = 0.0
-        epidemiologia._PANORAMA_CACHE["payload"] = None
+        epidemiologia.clear_panorama_cache()
         payload = epidemiologia.build_panorama_payload()
         area = payload["layers"]["bairros"][0]
 
@@ -3076,8 +3075,7 @@ class TemporalDecayTests(TestCase):
             fonte_referencia="stress-test-map",
         )
 
-        epidemiologia._PANORAMA_CACHE["created_at"] = 0.0
-        epidemiologia._PANORAMA_CACHE["payload"] = None
+        epidemiologia.clear_panorama_cache()
         payload = epidemiologia.build_panorama_payload()
         area = payload["layers"]["bairros"][0]
 
@@ -3176,8 +3174,7 @@ class TemporalDecayTests(TestCase):
                 data_registro=agora - timedelta(days=20)
             )
 
-        epidemiologia._PANORAMA_CACHE["created_at"] = 0.0
-        epidemiologia._PANORAMA_CACHE["payload"] = None
+        epidemiologia.clear_panorama_cache()
         payload = epidemiologia.build_panorama_payload()
         area = payload["layers"]["bairros"][0]
 
