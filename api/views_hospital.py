@@ -82,7 +82,9 @@ def api_hospital_painel(request):
     from datetime import date, timedelta
     today = date.today()
     taxa = max(growth_percent / 100, 0)
-    base_internacoes = max(int(total_cases * 0.04), 1)
+    # Deriva base de internações da carga hospitalar global para evitar valores de 1
+    # quando total_cases é baixo (dados esparsos no período).
+    base_internacoes = max(int(global_load * 0.3), int(total_cases * 0.04), 2)
     for i in range(1, 8):
         dia = today + timedelta(days=i)
         est = int(base_internacoes * (1 + taxa * i * 0.12))
