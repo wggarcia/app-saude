@@ -284,10 +284,14 @@ if _REDIS_URL:
             },
         }
     }
+elif IS_PRODUCTION:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "REDIS_URL é obrigatório em produção. "
+        "Crie o serviço Redis no Render e vincule a variável REDIS_URL ao backend."
+    )
 else:
-    # FileBasedCache é compartilhado entre workers do mesmo processo Gunicorn,
-    # evitando que caches por processo (LocMemCache) causem inconsistência
-    # entre workers ao servir dados diferentes para o mesmo endpoint.
+    # Dev local: FileBasedCache compartilhado entre workers Gunicorn via filesystem.
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
