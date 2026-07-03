@@ -779,6 +779,46 @@
         font-size: 0.76rem;
       }
     }
+    /* ── Monitor de Notícias Epidemiológicas ───────────────────────────── */
+    .news-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+    .news-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:8px 10px}
+    .news-kpi span{display:block;font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    .news-kpi strong{display:block;margin-top:3px;font-size:1.1rem;font-variant-numeric:tabular-nums}
+    .news-kpi.kpi-critico strong{color:var(--danger)}
+    .news-kpi.kpi-alerta strong{color:var(--warn)}
+    .news-kpi.kpi-novos strong{color:var(--accent)}
+    .news-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+    .news-pill{padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);color:var(--muted);font:inherit;font-size:.73rem;
+      font-weight:700;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+    .news-pill.active{background:rgba(90,240,211,.14);border-color:rgba(90,240,211,.32);color:var(--accent)}
+    .news-pill.pill-alerta.active{background:rgba(255,155,84,.14);border-color:rgba(255,155,84,.32);color:var(--warn)}
+    .news-pill.pill-critico.active{background:rgba(255,85,116,.14);border-color:rgba(255,85,116,.32);color:var(--danger)}
+    .news-item{border-radius:15px;padding:11px 13px;background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);transition:border-color .15s}
+    .news-item+.news-item{margin-top:8px}
+    .news-item:hover{border-color:rgba(255,255,255,.16)}
+    .news-item .ni-head{display:flex;align-items:flex-start;gap:8px;justify-content:space-between}
+    .news-item .ni-title{flex:1;font-size:.84rem;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+    .news-item .ni-meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+    .news-item .ni-resumo{margin-top:6px;font-size:.77rem;color:var(--muted);line-height:1.45;
+      display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .news-item .ni-diseases{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+    .news-item .ni-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+    .ni-btn{padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);color:var(--muted);font:inherit;font-size:.71rem;
+      font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+    .ni-btn:hover{background:rgba(255,255,255,.12);color:var(--text)}
+    .ni-btn.ativo{background:rgba(90,240,211,.11);border-color:rgba(90,240,211,.25);color:var(--accent)}
+    .ni-btn:disabled{opacity:.5;cursor:not-allowed}
+    .nivel-badge-informativo{background:rgba(111,180,255,.16);border:1px solid rgba(111,180,255,.28);color:#aad5ff;
+      font-size:.65rem;font-weight:800;border-radius:999px;padding:3px 8px;white-space:nowrap;flex-shrink:0}
+    .nivel-badge-alerta{background:rgba(255,155,84,.16);border:1px solid rgba(255,155,84,.28);color:#ffd0a4;
+      font-size:.65rem;font-weight:800;border-radius:999px;padding:3px 8px;white-space:nowrap;flex-shrink:0}
+    .nivel-badge-critico{background:rgba(255,85,116,.16);border:1px solid rgba(255,85,116,.28);color:#ffaabb;
+      font-size:.65rem;font-weight:800;border-radius:999px;padding:3px 8px;white-space:nowrap;flex-shrink:0}
+    .news-empty{color:var(--muted);font-size:.82rem;text-align:center;padding:22px 0}
+    .news-novo-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0}
   </style>
 </head>
 <body>
@@ -953,6 +993,31 @@
         <section class="section">
           <h2>Prioridades de Resposta</h2>
           <div class="list" id="focusList">Carregando focos...</div>
+        </section>
+
+        <section class="section">
+          <h2>Monitor de Notícias</h2>
+          <div class="news-kpis">
+            <div class="news-kpi kpi-novos"><span>Não lidas</span><strong id="newsKpiNovos">—</strong></div>
+            <div class="news-kpi"><span>Total</span><strong id="newsKpiTotal">—</strong></div>
+            <div class="news-kpi kpi-alerta"><span>Alertas</span><strong id="newsKpiAlertas">—</strong></div>
+            <div class="news-kpi kpi-critico"><span>Críticos</span><strong id="newsKpiCriticos">—</strong></div>
+          </div>
+          <div class="news-filters" id="newsFilterNivel">
+            <button class="news-pill active" data-nivel="">Todos</button>
+            <button class="news-pill" data-nivel="informativo">Informativo</button>
+            <button class="news-pill pill-alerta" data-nivel="alerta">Alerta</button>
+            <button class="news-pill pill-critico" data-nivel="critico">Crítico</button>
+          </div>
+          <div class="news-filters" id="newsFilterStatus">
+            <button class="news-pill active" data-status="">Todos</button>
+            <button class="news-pill" data-status="novo">Não lidos</button>
+            <button class="news-pill" data-status="lido">Lidos</button>
+            <button class="news-pill" data-status="arquivado">Arquivados</button>
+          </div>
+          <div id="newsListContainer">
+            <div class="news-empty">Carregando notícias...</div>
+          </div>
         </section>
       </div>
     </aside>
@@ -2021,6 +2086,128 @@
     setInterval(loadPanorama, 30000);
     // Fontes oficiais externas: 5 min (cache de 15 min no servidor torna polling rápido inútil).
     setInterval(loadOfficialBrazil, 300000);
+
+    // ── Monitor de Notícias Epidemiológicas ──────────────────────────────
+    let _newsNivel = "";
+    let _newsStatus = "";
+
+    function _nivelBadgeHtml(nivel) {
+      if (nivel === "critico") return '<span class="nivel-badge-critico">CRÍTICO</span>';
+      if (nivel === "alerta")  return '<span class="nivel-badge-alerta">ALERTA</span>';
+      return '<span class="nivel-badge-informativo">INFO</span>';
+    }
+
+    function _fmtNotDate(iso) {
+      if (!iso) return "";
+      try {
+        const d = new Date(iso);
+        return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      } catch (e) { return ""; }
+    }
+
+    function _buildNoticiaHtml(n) {
+      const lido = n.status === "lido";
+      const arquivado = n.status === "arquivado";
+      const diseases = (n.doencas_detectadas || "").split(",").map(d => d.trim()).filter(Boolean);
+      const diseaseTags = diseases.map(d => `<span class="tag">${d}</span>`).join("");
+      const dotHtml = n.status === "novo" ? '<span class="news-novo-dot"></span>' : "";
+      const btnLido = !lido && !arquivado
+        ? `<button class="ni-btn" onclick="atualizarStatusNoticia(${n.id},'lido')">Marcar lido</button>`
+        : lido ? `<button class="ni-btn ativo" disabled>Lido</button>` : "";
+      const btnArq = !arquivado
+        ? `<button class="ni-btn" onclick="atualizarStatusNoticia(${n.id},'arquivado')">Arquivar</button>`
+        : `<button class="ni-btn ativo" disabled>Arquivado</button>`;
+      const linkBtn = n.url
+        ? `<a class="ni-btn" href="${n.url}" target="_blank" rel="noopener noreferrer">Ver fonte ↗</a>`
+        : "";
+      return `<div class="news-item" id="newsItem${n.id}" ${arquivado || lido ? 'style="opacity:.65"' : ""}>
+  <div class="ni-head">
+    <span class="ni-title">${n.titulo || "(sem título)"}</span>
+    ${_nivelBadgeHtml(n.nivel_alerta)}
+  </div>
+  <div class="ni-meta">
+    <span class="mini" style="font-size:.72rem">${n.fonte || ""}</span>
+    <span class="mini" style="font-size:.7rem;color:var(--muted)">${_fmtNotDate(n.publicado_em)}</span>
+    ${dotHtml}
+  </div>
+  ${n.resumo ? `<div class="ni-resumo">${n.resumo}</div>` : ""}
+  ${diseases.length ? `<div class="ni-diseases">${diseaseTags}</div>` : ""}
+  <div class="ni-actions">${btnLido}${btnArq}${linkBtn}</div>
+</div>`;
+    }
+
+    async function atualizarStatusNoticia(id, status) {
+      try {
+        const res = await fetch(`/api/governo/noticias-epidemiologicas/${id}/status/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        await loadNoticias(false);
+      } catch (e) {
+        _t("Não foi possível atualizar o status da notícia.", "err");
+      }
+    }
+
+    async function loadNoticias(showLoading) {
+      if (showLoading === undefined) showLoading = true;
+      const container = document.getElementById("newsListContainer");
+      if (!container) return;
+      if (showLoading) container.innerHTML = '<div class="news-empty">Carregando notícias...</div>';
+
+      const params = new URLSearchParams({ limite: 30 });
+      if (_newsNivel) params.set("nivel", _newsNivel);
+      if (_newsStatus) params.set("status", _newsStatus);
+
+      try {
+        const res = await fetch("/api/governo/noticias-epidemiologicas/?" + params.toString());
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const r = data.resumo || {};
+        ["Novos", "Total", "Alertas", "Criticos"].forEach(function(k) {
+          const el = document.getElementById("newsKpi" + k);
+          if (el) el.textContent = r[k.toLowerCase()] != null ? r[k.toLowerCase()] : "—";
+        });
+        const noticias = data.noticias || [];
+        if (!noticias.length) {
+          container.innerHTML = '<div class="news-empty">Nenhuma notícia para os filtros selecionados.</div>';
+          return;
+        }
+        container.innerHTML = noticias.map(_buildNoticiaHtml).join("");
+      } catch (e) {
+        container.innerHTML = '<div class="news-empty">Erro ao carregar notícias.</div>';
+      }
+    }
+
+    (function() {
+      const elNivel = document.getElementById("newsFilterNivel");
+      const elStatus = document.getElementById("newsFilterStatus");
+      if (elNivel) {
+        elNivel.addEventListener("click", function(e) {
+          const pill = e.target.closest("[data-nivel]");
+          if (!pill) return;
+          elNivel.querySelectorAll(".news-pill").forEach(function(p) { p.classList.remove("active"); });
+          pill.classList.add("active");
+          _newsNivel = pill.dataset.nivel;
+          loadNoticias();
+        });
+      }
+      if (elStatus) {
+        elStatus.addEventListener("click", function(e) {
+          const pill = e.target.closest("[data-status]");
+          if (!pill) return;
+          elStatus.querySelectorAll(".news-pill").forEach(function(p) { p.classList.remove("active"); });
+          pill.classList.add("active");
+          _newsStatus = pill.dataset.status;
+          loadNoticias();
+        });
+      }
+    })();
+
+    loadNoticias();
+    // Recarrega notícias a cada 2 minutos silenciosamente.
+    setInterval(function() { loadNoticias(false); }, 120000);
   </script>
 <!-- ══ Widget Vigilância Nacional (fonte única: /api/public/vigilancia-resumo) ══ -->
 <div id="vgn-root">
