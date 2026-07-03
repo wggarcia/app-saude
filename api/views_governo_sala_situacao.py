@@ -49,18 +49,29 @@ def api_governo_sala_situacao(request):
     hoje = date.today()
     trinta_dias = hoje - timedelta(days=30)
 
+    # Uma query com aggregate — substitui 3 counts separados
     surtos_ativos_qs = SurtoEpidemiologico.objects.filter(empresa=e, status="ativo")
-    surtos = [{
-        "id": s.id, "doenca": s.doenca, "municipio": s.municipio, "uf": s.uf,
-        "total_casos": s.total_casos, "total_obitos": s.total_obitos,
-        "nivel_alerta": s.nivel_alerta, "data_inicio": s.data_inicio.isoformat(),
-    } for s in surtos_ativos_qs]
-    surtos_vermelhos = surtos_ativos_qs.filter(nivel_alerta="vermelho").count()
-    surtos_laranja = surtos_ativos_qs.filter(nivel_alerta="laranja").count()
+    surtos_stats = surtos_ativos_qs.aggregate(
+        vermelhos=Count("id", filter=Q(nivel_alerta="vermelho")),
+        laranja=Count("id", filter=Q(nivel_alerta="laranja")),
+    )
+    surtos_vermelhos = surtos_stats["vermelhos"]
+    surtos_laranja = surtos_stats["laranja"]
+    surtos = list(surtos_ativos_qs.values(
+        "id", "doenca", "municipio", "uf",
+        "total_casos", "total_obitos", "nivel_alerta", "data_inicio",
+    ))
+    for s in surtos:
+        s["data_inicio"] = s["data_inicio"].isoformat() if s["data_inicio"] else ""
 
+    # Uma query com aggregate — substitui 2 counts separados
     notif_30d = NotificacaoCompulsoria.objects.filter(empresa=e, data_notificacao__gte=trinta_dias)
-    total_notif_30d = notif_30d.count()
-    obitos_30d = notif_30d.filter(evolucao="obito").count()
+    notif_stats = notif_30d.aggregate(
+        total=Count("id"),
+        obitos=Count("id", filter=Q(evolucao="obito")),
+    )
+    total_notif_30d = notif_stats["total"]
+    obitos_30d = notif_stats["obitos"]
 
     por_doenca = list(
         notif_30d.values("doenca").annotate(total=Count("id")).order_by("-total")[:10]
@@ -80,9 +91,15 @@ def api_governo_sala_situacao(request):
     if len(tendencia_semanal) >= 2:
         crescendo = tendencia_semanal[-1]["total"] > tendencia_semanal[-2]["total"]
 
-    endemias_30d = VisitaCombateEndemias.objects.filter(empresa=e, data_visita__gte=trinta_dias)
-    total_imoveis_30d = endemias_30d.count()
-    imoveis_foco_30d = endemias_30d.filter(foco_encontrado=True).count()
+    # Uma query com aggregate — substitui 2 counts separados
+    endemias_stats = VisitaCombateEndemias.objects.filter(
+        empresa=e, data_visita__gte=trinta_dias
+    ).aggregate(
+        total=Count("id"),
+        com_foco=Count("id", filter=Q(foco_encontrado=True)),
+    )
+    total_imoveis_30d = endemias_stats["total"]
+    imoveis_foco_30d = endemias_stats["com_foco"]
     indice_infestacao_pct = round((imoveis_foco_30d / total_imoveis_30d) * 100, 2) if total_imoveis_30d else 0.0
 
     sintomas_populacao = None

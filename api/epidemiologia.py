@@ -131,6 +131,7 @@ DISEASE_WEIGHTS = {
 }
 
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None, "version": None}
+_PANORAMA_CACHE_PAYLOAD_KEY = "epidemiologia:panorama:payload"
 # TTL de 5 min: as queries de mapa custam 4-9 s sem cache. O cache é
 # invalidado imediatamente por clear_panorama_cache() quando chega um novo
 # registro, então dados nunca ficam velhos além do necessário.
@@ -1203,12 +1204,22 @@ def build_panorama_payload():
     now = time()
     current_version = _current_panorama_cache_version()
 
+    # Cache local por worker (evita round-trip ao Redis em requests rápidos)
     if (
         _PANORAMA_CACHE["payload"] is not None
         and _PANORAMA_CACHE.get("version") == current_version
         and now - _PANORAMA_CACHE["created_at"] < _CACHE_TTL_SECONDS
     ):
         return _PANORAMA_CACHE["payload"]
+
+    # Cache compartilhado no Redis — válido entre todos os workers
+    redis_key = f"{_PANORAMA_CACHE_PAYLOAD_KEY}:{current_version}"
+    cached = cache.get(redis_key)
+    if cached is not None:
+        _PANORAMA_CACHE["payload"] = cached
+        _PANORAMA_CACHE["created_at"] = now
+        _PANORAMA_CACHE["version"] = current_version
+        return cached
 
     risco_oficial_map = _risco_oficial_map_seguro()
     risco_oficial_doenca_map = _risco_oficial_doenca_map_seguro()
@@ -1239,6 +1250,8 @@ def build_panorama_payload():
         },
     }
 
+    # Salva no Redis e no cache local do worker
+    cache.set(redis_key, payload, _CACHE_TTL_SECONDS)
     _PANORAMA_CACHE["created_at"] = now
     _PANORAMA_CACHE["payload"] = payload
     _PANORAMA_CACHE["version"] = current_version

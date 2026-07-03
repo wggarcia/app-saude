@@ -2532,6 +2532,12 @@ class SurtoEpidemiologico(models.Model):
 
     class Meta:
         ordering = ["-data_inicio"]
+        indexes = [
+            models.Index(fields=["empresa", "status"], name="surto_emp_status_idx"),
+            models.Index(fields=["empresa", "nivel_alerta"], name="surto_emp_nivel_idx"),
+            models.Index(fields=["empresa", "status", "nivel_alerta"], name="surto_emp_status_nivel_idx"),
+            models.Index(fields=["empresa", "data_inicio"], name="surto_emp_data_idx"),
+        ]
 
     def __str__(self):
         return f"Surto {self.doenca} — {self.municipio}/{self.uf}"
