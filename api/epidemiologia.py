@@ -628,6 +628,8 @@ def _normalize_probabilities(raw_scores):
 
 
 def _build_disease_probabilities(symptom_counts, total_cases, risco_oficial_doenca_map=None, estado_uf=None):
+    from .classificador_doencas import _prior_geografico, SINTOMA_CHAVE_OBRIGATORIO
+
     rates = {
         name: (count / total_cases) if total_cases else 0.0
         for name, count in symptom_counts.items()
@@ -636,25 +638,29 @@ def _build_disease_probabilities(symptom_counts, total_cases, risco_oficial_doen
     calculo_ml_oficial_doencas = []
 
     for disease, weights in DISEASE_WEIGHTS.items():
+        # Sintoma mínimo obrigatório: doenças raras exigem ao menos 1 sintoma-chave
+        # presente na população do foco — sem ele, score é zerado (evita FA sem icterícia)
+        chaves = SINTOMA_CHAVE_OBRIGATORIO.get(disease)
+        if chaves and not any(rates.get(s, 0.0) > 0.05 for s in chaves):
+            raw_scores[disease] = 0.0
+            continue
+
         score = 0.08
 
         for symptom, weight in weights.items():
             rate = rates.get(symptom, 0.0)
-            if weight >= 0:
-                score += rate * weight
-            else:
-                # Ausencia do sintoma contrario e neutra.
-                # Penalidade so deve existir quando o sintoma que aponta contra
-                # a doenca aparece de fato no conjunto observado.
-                score += rate * weight
+            score += rate * weight
 
         score = max(score, 0.01)
 
+        # Prior geográfico bayesiano: multiplica pelo prior do estado
+        # (ex: Febre Amarela prior=0.005 no RJ, Dengue prior=0.80 no RJ)
+        # Sem isso, FA e Dengue competem de igual após normalização.
+        if estado_uf:
+            score *= _prior_geografico(disease, estado_uf)
+            score = max(score, 0.0001)
+
         # Calibra com ML real treinado em notificacao oficial (DATASUS/SINAN)
-        # quando essa doenca e esse estado tem modelo treinado disponivel —
-        # ver api/epidemiologia_ml.py DOENCAS_REGISTRADAS. Mesmo fator
-        # 0.85x-1.25x do blend de risk_score: ajusta sem dominar o sinal de
-        # sintomas autorrelatados.
         oficial_probability = (risco_oficial_doenca_map or {}).get(disease, {}).get(estado_uf) if estado_uf else None
         if oficial_probability is not None:
             score *= 0.85 + (0.40 * max(min(oficial_probability, 1.0), 0.0))
