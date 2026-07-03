@@ -341,8 +341,9 @@ def registrar_empresa(request):
         empresa.id,
         empresa.nome,
     )
-    # Força destino para pagamento independente do setor
-    payload["destination"] = "/pagamento/"
+    # Redireciona para pagamento filtrando pelo setor escolhido no cadastro
+    setor_destino = pacote_info.get("setor", "")
+    payload["destination"] = f"/pagamento/?setor={setor_destino}&pacote={pacote_solicitado}"
 
     response = JsonResponse(payload)
     return _aplicar_cookies_autenticacao(response, empresa, token)

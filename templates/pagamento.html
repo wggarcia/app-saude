@@ -39,14 +39,43 @@
   <main class="shell">
     <section class="hero">
       <div class="eyebrow">Contratação Healthtech B2B</div>
-      <h1>Pacotes por setor e capacidade operacional.</h1>
-      <div class="muted">Cada pacote define o valor entregue por setor: saúde ocupacional, farmácias, hospitais e redes empresariais. Governo possui contratação separada por contrato anual fechado.</div>
-      <div class="grid">
-        <div class="metric"><span>Usuários</span><strong>5 a 1000</strong></div>
-        <div class="metric"><span>Máquinas</span><strong>5 a 1000</strong></div>
-        <div class="metric"><span>Modelos B2B</span><strong>Mensal ou anual</strong></div>
-        <div class="metric"><span>Governo</span><strong>Contrato anual</strong></div>
-      </div>
+      {% if setor == "farmacia" %}
+        <h1>Planos para Farmácias.</h1>
+        <div class="muted">Escolha o pacote ideal para sua rede de farmácias: desde a unidade local até redes nacionais com múltiplas filiais e integração epidemiológica avançada.</div>
+        <div class="grid">
+          <div class="metric"><span>Farmácia Local</span><strong>5 usuários</strong></div>
+          <div class="metric"><span>Rede Regional</span><strong>30 usuários</strong></div>
+          <div class="metric"><span>Rede Nacional</span><strong>200 usuários</strong></div>
+          <div class="metric"><span>Cobrança</span><strong>Mensal ou anual</strong></div>
+        </div>
+      {% elif setor == "hospital" %}
+        <h1>Planos para Hospitais.</h1>
+        <div class="muted">Pacotes para hospitais médios, grandes redes hospitalares e grupos com múltiplas unidades — triagem inteligente, gestão de leitos e painel epidemiológico em tempo real.</div>
+        <div class="grid">
+          <div class="metric"><span>Hospital Médio</span><strong>60 usuários</strong></div>
+          <div class="metric"><span>Hospital Rede</span><strong>250 usuários</strong></div>
+          <div class="metric"><span>Grupo Hospitalar</span><strong>600 usuários</strong></div>
+          <div class="metric"><span>Cobrança</span><strong>Mensal ou anual</strong></div>
+        </div>
+      {% elif setor == "plano_saude" %}
+        <h1>Planos para Operadoras de Saúde.</h1>
+        <div class="muted">Soluções para operadoras de planos de saúde — gestão de beneficiários, vigilância epidemiológica da carteira e indicadores de sinistralidade.</div>
+        <div class="grid">
+          <div class="metric"><span>Operadora</span><strong>100 usuários</strong></div>
+          <div class="metric"><span>Enterprise</span><strong>500 usuários</strong></div>
+          <div class="metric"><span>Cobertura</span><strong>Nacional</strong></div>
+          <div class="metric"><span>Cobrança</span><strong>Mensal ou anual</strong></div>
+        </div>
+      {% else %}
+        <h1>Pacotes por setor e capacidade operacional.</h1>
+        <div class="muted">Cada pacote define o valor entregue por setor: saúde ocupacional, farmácias, hospitais e redes empresariais. Governo possui contratação separada por contrato anual fechado.</div>
+        <div class="grid">
+          <div class="metric"><span>Usuários</span><strong>5 a 1000</strong></div>
+          <div class="metric"><span>Máquinas</span><strong>5 a 1000</strong></div>
+          <div class="metric"><span>Modelos B2B</span><strong>Mensal ou anual</strong></div>
+          <div class="metric"><span>Governo</span><strong>Contrato anual</strong></div>
+        </div>
+      {% endif %}
       <div class="pack-list">
         {% for codigo, pacote in pacotes.items %}
         <div class="pack">
@@ -66,12 +95,19 @@
     </section>
 
     <section class="card">
-      <h2 style="margin:0;">Escolha o pacote</h2>
+      <h2 style="margin:0;">{% if setor %}Escolha o plano{% else %}Escolha o pacote{% endif %}</h2>
       <label>
         Pacote contratado
         <select id="pacote" onchange="atualizarPreco()">
           {% for codigo, pacote in pacotes.items %}
-          <option value="{{ codigo }}" data-mensal="{{ pacote.mensal|stringformat:'f' }}" data-anual="{{ pacote.anual|stringformat:'f' }}" data-usuarios="{{ pacote.usuarios }}" data-dispositivos="{{ pacote.dispositivos }}" data-setor="{{ pacote.setor }}" data-ciclos="{{ pacote.ciclos|join:',' }}">{{ pacote.label }} — {{ pacote.setor|title }}</option>
+          <option value="{{ codigo }}"
+            data-mensal="{{ pacote.mensal|stringformat:'f' }}"
+            data-anual="{{ pacote.anual|stringformat:'f' }}"
+            data-usuarios="{{ pacote.usuarios }}"
+            data-dispositivos="{{ pacote.dispositivos }}"
+            data-setor="{{ pacote.setor }}"
+            data-ciclos="{{ pacote.ciclos|join:',' }}"
+            {% if codigo == pacote_pre %}selected{% endif %}>{{ pacote.label }}</option>
           {% endfor %}
         </select>
       </label>

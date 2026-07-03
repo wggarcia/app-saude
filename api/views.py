@@ -2636,8 +2636,13 @@ def alertas(request):
 
 def tela_pagamento(request):
     from .planos import pacotes_por_setor
+    setor = request.GET.get("setor", "")
+    pacote_pre = request.GET.get("pacote", "")
+    pacotes = pacotes_por_setor(setor=setor or None, incluir_governo=False)
     return render(request, "pagamento.html", {
-        "pacotes": pacotes_por_setor(incluir_governo=False),
+        "pacotes": pacotes,
+        "setor": setor,
+        "pacote_pre": pacote_pre,
     })
 
 
