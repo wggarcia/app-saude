@@ -19,6 +19,7 @@ SYNTHETIC_MARKERS = (
 SYNTHETIC_DEVICE_PREFIXES = (
     "stress-soluscrt-brasil",
     "sim-br-",
+    "clf-br-",
     "demo-",
     "test-",
     "fake-",
