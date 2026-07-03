@@ -1475,14 +1475,15 @@
       dz.map(function(x){return '<div class="vgn-row"><div class="l">'+x.grupo+'</div><div class="vgn-bar"><i style="width:'+(x.total/maxD*100).toFixed(0)+'%"></i></div><div class="v">'+nf(x.total)+'</div></div>';}).join('')+
       '<div class="vgn-sec">Casos por estado (top 8)</div>'+
       es.map(function(x){return '<div class="vgn-row"><div class="l">'+x.estado+'</div><div class="vgn-bar"><i style="width:'+(x.total/maxE*100).toFixed(0)+'%"></i></div><div class="v">'+nf(x.total)+'</div></div>';}).join('');
-    foot.textContent="Fonte: app da população (gratuito/anônimo) · atualiza ao reabrir";
+    foot.textContent="Fonte: app da população (gratuito/anônimo) · atualiza a cada 30s";
   }
   function load(){
     fetch("/api/public/vigilancia-resumo").then(function(r){return r.json();}).then(render)
       .catch(function(){ body.innerHTML='<div class="vgn-loading">Não foi possível carregar.</div>'; });
   }
-  function open(){ root.classList.add("open"); if(!loaded){loaded=true;load();} }
+  function open(){ root.classList.add("open"); if(!loaded){loaded=true;load();} else load(); }
   function close(){ root.classList.remove("open"); }
+  setInterval(function(){ if(root.classList.contains("open")) load(); }, 30000);
   toggle.addEventListener("click",open);
   closeBtn.addEventListener("click",close);
 })();

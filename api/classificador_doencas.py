@@ -1075,6 +1075,12 @@ def _prior_geografico(doenca: str, estado: str | None) -> float:
     }
     if len(uf) > 2:
         uf = _nome_para_sigla.get(uf, "")
+    # Aliases: DISEASE_WEIGHTS usa nomes curtos; PRIOR_GEOGRAFICO usa nomes completos
+    _alias = {
+        "Gripe": "Gripe (Influenza)",
+        "Bronquite": "Bronquite / DPOC Agudização",
+    }
+    doenca = _alias.get(doenca, doenca)
     priors_uf = PRIOR_GEOGRAFICO.get(uf, _PRIOR_DEFAULT)
     return priors_uf.get(doenca, _PRIOR_DEFAULT.get(doenca, 0.05))
 
@@ -1099,6 +1105,7 @@ SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     "Leptospirose":   ["ictericia", "dor_corpo", "calafrios"],       # precisa ≥1 dos 3
     "Hepatite A/B":   ["ictericia"],                                 # icterícia é essencial
     # Novas doenças expandidas
+    "Bronquite":      ["tosse"],            # bronquite sem tosse é rara — tosse crônica é critério clínico
     "Tuberculose":    ["tosse"],           # TB pulmonar sem tosse é rara no cidadão sintomático
     "Varicela":       ["exantema"],        # sem exantema, não é varicela
     "Mpox":           ["exantema_vesicular", "febre"],  # tríade: vesículas + febre + contato

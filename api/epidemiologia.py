@@ -87,6 +87,7 @@ DISEASE_WEIGHTS = {
     "Leptospirose": {
         "febre": 0.90, "dor_corpo": 0.92, "cansaco": 0.80, "dor_cabeca": 0.82,
         "vomito_nausea": 0.75, "ictericia": 0.78, "dor_abdominal": 0.72, "calafrios": 0.70,
+        "exposicao_agua_enchente": 0.90,  # fator epidemiológico forte — distingue de FA/Hepatite
         "coriza": -0.45, "exantema": -0.20, "perda_olfato_paladar": -0.70,
     },
     "Malaria": {
@@ -653,11 +654,18 @@ def _build_disease_probabilities(symptom_counts, total_cases, risco_oficial_doen
 
         score = max(score, 0.01)
 
-        # Prior geográfico bayesiano: multiplica pelo prior do estado
-        # (ex: Febre Amarela prior=0.005 no RJ, Dengue prior=0.80 no RJ)
-        # Sem isso, FA e Dengue competem de igual após normalização.
+        # Prior geográfico bayesiano com suavização por raiz quadrada.
+        # Prior bruto: razão Dengue/Meningite = 15x (0.78 vs 0.05).
+        # Com sqrt:    razão = 4x (0.883 vs 0.224) — mantém epidemiologia sem sufocar doenças raras.
+        # Sintoma patognomônico presente → piso de 0.80 (impede prior suprimir doença com sinal claro).
         if estado_uf:
-            score *= _prior_geografico(disease, estado_uf)
+            import math
+            prior = _prior_geografico(disease, estado_uf)
+            effective_prior = math.sqrt(prior)
+            chaves = SINTOMA_CHAVE_OBRIGATORIO.get(disease, [])
+            if max((rates.get(s, 0.0) for s in chaves), default=0.0) > 0.30:
+                effective_prior = max(effective_prior, 0.80)
+            score *= effective_prior
             score = max(score, 0.0001)
 
         # Calibra com ML real treinado em notificacao oficial (DATASUS/SINAN)
@@ -751,6 +759,7 @@ def _build_layer_queryset(group_fields):
             dor_garganta=Count("id", filter=Q(dor_garganta=True)),
             coriza=Count("id", filter=Q(coriza=True)),
             calafrios=Count("id", filter=Q(calafrios=True)),
+            exposicao_agua_enchente=Count("id", filter=Q(exposicao_agua_enchente=True)),
         )
         .order_by("-total")
     )
@@ -790,9 +799,12 @@ def _serialize_layer(level, group_fields, risco_oficial_map=None, risco_oficial_
         raw_total_cases = int(row.get("raw_total_cases", row["total"] or 0) or 0)
         total_cases = float(row.get("active_cases", raw_total_cases) or 0)
         normalized_state = _normalize_state(row.get("cidade"), row.get("estado"))
+        # SYMPTOM_LABELS: sintomas exibidos na UI
+        # _EXTRA_SCORING: campos epidemiológicos sem label visual — usados só no scoring
+        _EXTRA_SCORING = {"exposicao_agua_enchente"}
         symptom_counts = {
             key: int(row.get(key, 0) or 0)
-            for key in SYMPTOM_LABELS
+            for key in set(SYMPTOM_LABELS) | _EXTRA_SCORING
         }
         symptom_breakdown = _serialize_symptoms(symptom_counts, raw_total_cases)
         dominant_symptom = symptom_breakdown[0]["label"] if symptom_breakdown else "Sem dados"
