@@ -285,11 +285,16 @@ if _REDIS_URL:
         }
     }
 elif IS_PRODUCTION:
-    from django.core.exceptions import ImproperlyConfigured
-    raise ImproperlyConfigured(
-        "REDIS_URL é obrigatório em produção. "
-        "Crie o serviço Redis no Render e vincule a variável REDIS_URL ao backend."
+    import logging as _logging
+    _logging.getLogger(__name__).critical(
+        "REDIS_URL não configurado em produção — usando LocMemCache. "
+        "Vincule REDIS_URL ao serviço no Render para cache persistente."
     )
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
 else:
     # Dev local: FileBasedCache compartilhado entre workers Gunicorn via filesystem.
     CACHES = {
