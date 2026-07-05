@@ -2145,6 +2145,11 @@
       const linkBtn = n.url
         ? `<a class="ni-btn" href="${n.url}" target="_blank" rel="noopener noreferrer">Ver fonte ↗</a>`
         : "";
+      // Show translate button when title/resumo lack Portuguese diacritics (foreign language)
+      const textoParaDeteccao = ((n.titulo || "") + " " + (n.resumo || "")).toLowerCase();
+      const btnTranslate = !/[ãõçáéíóúâêôàü]/.test(textoParaDeteccao) && textoParaDeteccao.trim().length > 20
+        ? `<button class="ni-btn ni-btn-translate" onclick="traduzirNoticia(${n.id})">🌐 Traduzir</button>`
+        : "";
       const nivelClass = n.nivel_alerta === "critico" ? " news-item-critico" : n.nivel_alerta === "alerta" ? " news-item-alerta" : "";
       return `<div class="news-item${nivelClass}" id="newsItem${n.id}" ${arquivado || lido ? 'style="opacity:.65"' : ""}>
   <div class="ni-head">
@@ -2158,8 +2163,56 @@
   </div>
   ${n.resumo ? `<div class="ni-resumo">${n.resumo}</div>` : ""}
   ${diseases.length ? `<div class="ni-diseases">${diseaseTags}</div>` : ""}
-  <div class="ni-actions">${btnLido}${btnArq}${linkBtn}</div>
+  <div class="ni-actions">${btnLido}${btnArq}${linkBtn}${btnTranslate}</div>
 </div>`;
+    }
+
+    async function traduzirNoticia(id) {
+      const card = document.getElementById("newsItem" + id);
+      if (!card) return;
+      const titleEl  = card.querySelector(".ni-title");
+      const resumoEl = card.querySelector(".ni-resumo");
+      const btn = card.querySelector(".ni-btn-translate");
+      if (!btn) return;
+
+      // Toggle back to original
+      if (btn.dataset.estado === "traduzido") {
+        titleEl.textContent  = btn.dataset.origTitulo;
+        if (resumoEl && btn.dataset.origResumo) resumoEl.textContent = btn.dataset.origResumo;
+        btn.dataset.estado = "";
+        btn.textContent = "🌐 Traduzir";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Traduzindo…";
+
+      const titulo = titleEl.textContent.trim();
+      const resumo = resumoEl ? resumoEl.textContent.trim() : "";
+
+      async function _mymemory(text) {
+        if (!text) return null;
+        try {
+          const r = await fetch(
+            "https://api.mymemory.translated.net/get?q=" +
+            encodeURIComponent(text.slice(0, 500)) + "&langpair=en|pt-br"
+          );
+          const d = await r.json();
+          return d.responseStatus === 200 ? d.responseData.translatedText : null;
+        } catch { return null; }
+      }
+
+      const [tTitulo, tResumo] = await Promise.all([_mymemory(titulo), _mymemory(resumo)]);
+
+      btn.dataset.origTitulo = titulo;
+      btn.dataset.origResumo = resumo;
+
+      if (tTitulo) titleEl.textContent = tTitulo;
+      if (tResumo && resumoEl) resumoEl.textContent = tResumo;
+
+      btn.dataset.estado = "traduzido";
+      btn.textContent = "🌐 Original";
+      btn.disabled = false;
     }
 
     async function atualizarStatusNoticia(id, status) {
