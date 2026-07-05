@@ -283,7 +283,7 @@ services:
     plan: starter
     buildCommand: "./build_cron.sh"
     schedule: "0 13 * * *"
-    startCommand: "python3 manage.py monitorar_noticias --fontes gdelt-intl,who,fiocruz,ecdc && python3 manage.py analisar_noticias_ia && python3 manage.py gerar_alertas_noticias && python3 manage.py limpar_noticias_antigas"
+    startCommand: "python3 manage.py monitorar_noticias --fontes gdelt-intl,who,fiocruz,ecdc,bbc-health,who-africa,nicd-za,reliefweb,india-pib,nhc-china,sciencedaily,healio-id && python3 manage.py analisar_noticias_ia && python3 manage.py gerar_alertas_noticias && python3 manage.py limpar_noticias_antigas"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9

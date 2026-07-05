@@ -66,22 +66,56 @@ GDELT_URL_INTL = (
 # Cada entrada: tipo ("gdelt" ou "rss") + configuração
 
 FONTES_CATALOGO = {
-    "gdelt-br":    ("gdelt", GDELT_URL_BR),
-    "gdelt-intl":  ("gdelt", GDELT_URL_INTL),
-    "opas":        ("rss",   ("OPAS",    "https://www.paho.org/pt/rss.xml")),
-    "svs":         ("rss",   ("SVS",     "https://www.gov.br/saude/pt-br/assuntos/noticias/RSS")),
-    "agbrasil":    ("rss",   ("AgBrasil", "https://agenciabrasil.ebc.com.br/rss/saude/feed.xml")),
-    # ProMED encerrou RSS público em 2025; substituído por CDC EID Expedited
-    "cdc-eid":     ("rss",   ("CDC-EID", "https://wwwnc.cdc.gov/eid/rss/expedited.xml")),
-    "who":         ("rss",   ("WHO",     "https://www.who.int/feeds/entity/csr/don/en/rss.xml")),
-    "fiocruz":     ("rss",   ("Fiocruz", "https://agencia.fiocruz.br/rss.xml")),
-    "ecdc":        ("rss",   ("ECDC",    "https://www.ecdc.europa.eu/en/rss.xml")),
+    # ── GDELT (detecção por palavra-chave em notícias gerais) ──────────────────
+    "gdelt-br":       ("gdelt", GDELT_URL_BR),
+    "gdelt-intl":     ("gdelt", GDELT_URL_INTL),
+
+    # ── Brasil ─────────────────────────────────────────────────────────────────
+    "agbrasil":       ("rss", ("AgBrasil",  "https://agenciabrasil.ebc.com.br/rss/saude/feed.xml")),
+    "fiocruz":        ("rss", ("Fiocruz",   "https://agencia.fiocruz.br/rss.xml")),
+    "g1":             ("rss", ("G1-Saude",  "https://g1.globo.com/rss/g1/ciencia-e-saude/")),
+    "folha":          ("rss", ("Folha",     "https://feeds.folha.uol.com.br/equilibrioesaude/rss091.xml")),
+    "svs":            ("rss", ("SVS",       "https://www.gov.br/saude/pt-br/assuntos/noticias/RSS")),  # RSS 1.0/RDF
+
+    # ── Américas ───────────────────────────────────────────────────────────────
+    "opas":           ("rss", ("OPAS",      "https://www.paho.org/pt/rss.xml")),
+    "cdc-eid":        ("rss", ("CDC-EID",   "https://wwwnc.cdc.gov/eid/rss/expedited.xml")),
+    "healio-id":      ("rss", ("Healio-ID", "https://www.healio.com/rss/infectious-disease")),
+
+    # ── Europa ─────────────────────────────────────────────────────────────────
+    "ecdc":           ("rss", ("ECDC",      "https://www.ecdc.europa.eu/en/rss.xml")),
+    "bbc-health":     ("rss", ("BBC-Health","https://feeds.bbci.co.uk/news/health/rss.xml")),
+
+    # ── África ─────────────────────────────────────────────────────────────────
+    "who-africa":     ("rss", ("WHO-Africa","https://www.afro.who.int/rss.xml")),
+    "nicd-za":        ("rss", ("NICD-ZA",   "https://www.nicd.ac.za/feed/")),
+    "reliefweb":      ("rss", ("ReliefWeb", "https://reliefweb.int/updates/rss.xml?primary_country=0&topic=3&format=0")),
+
+    # ── Ásia ───────────────────────────────────────────────────────────────────
+    "india-pib":      ("rss", ("India-PIB", "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3")),
+    "nhc-china":      ("rss", ("NHC-China", "http://en.nhc.gov.cn/rss.xml")),
+
+    # ── Global ─────────────────────────────────────────────────────────────────
+    "who":            ("rss", ("WHO",           "https://www.who.int/feeds/entity/csr/don/en/rss.xml")),
+    "outbreaknews":   ("rss", ("OutbreakNews",  "https://outbreaknewstoday.com/feed/")),
+    "sciencedaily":   ("rss", ("ScienceDaily",  "https://www.sciencedaily.com/rss/top/health.xml")),
 }
 
 # Fontes de saúde curadas — salvam todos os artigos sem exigir palavra-chave de doença
-FONTES_CURADAS = {"opas", "svs", "agbrasil", "who", "fiocruz", "cdc-eid", "ecdc"}
+FONTES_CURADAS = {
+    "agbrasil", "fiocruz", "g1", "folha", "svs",
+    "opas", "cdc-eid", "healio-id",
+    "ecdc", "bbc-health",
+    "who-africa", "nicd-za", "reliefweb",
+    "india-pib", "nhc-china",
+    "who", "outbreaknews", "sciencedaily",
+}
 
-FONTES_PADRAO = "gdelt-br,opas,agbrasil,cdc-eid"
+# Cron BR — fontes nacionais + Américas + global diário
+FONTES_PADRAO = "gdelt-br,agbrasil,folha,g1,opas,cdc-eid,outbreaknews"
+
+# Cron Internacional — Europa, África, Ásia + global científico
+FONTES_INTL   = "gdelt-intl,who,ecdc,bbc-health,who-africa,nicd-za,reliefweb,india-pib,nhc-china,sciencedaily,healio-id"
 
 
 class Command(BaseCommand):
@@ -148,9 +182,17 @@ class Command(BaseCommand):
         self.stdout.write(f"Total bruto: {len(artigos)} artigos coletados.")
 
         corte = datetime.now(timezone.utc) - timedelta(days=7)
+
+        def _dentro_janela(pub):
+            if pub is None:
+                return True
+            if pub.tzinfo is None:
+                pub = pub.replace(tzinfo=timezone.utc)
+            return pub >= corte
+
         artigos_relevantes = [
             a for a in artigos
-            if (a["publicado_em"] is None or a["publicado_em"] >= corte)
+            if _dentro_janela(a["publicado_em"])
             and (a["curada"] or a["doencas_detectadas"])
         ]
         self.stdout.write(f"Relevantes (saúde ou doença detectada, ≤7 dias): {len(artigos_relevantes)}")
