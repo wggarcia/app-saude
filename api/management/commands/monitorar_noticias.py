@@ -70,6 +70,7 @@ FONTES_CATALOGO = {
     "gdelt-intl":  ("gdelt", GDELT_URL_INTL),
     "opas":        ("rss",   ("OPAS",    "https://www.paho.org/pt/rss.xml")),
     "svs":         ("rss",   ("SVS",     "https://www.gov.br/saude/pt-br/assuntos/noticias/RSS")),
+    "agbrasil":    ("rss",   ("AgBrasil", "https://agenciabrasil.ebc.com.br/rss/saude/feed.xml")),
     # ProMED encerrou RSS público em 2025; substituído por CDC EID Expedited
     "cdc-eid":     ("rss",   ("CDC-EID", "https://wwwnc.cdc.gov/eid/rss/expedited.xml")),
     "who":         ("rss",   ("WHO",     "https://www.who.int/feeds/entity/csr/don/en/rss.xml")),
@@ -77,7 +78,10 @@ FONTES_CATALOGO = {
     "ecdc":        ("rss",   ("ECDC",    "https://www.ecdc.europa.eu/en/rss.xml")),
 }
 
-FONTES_PADRAO = "gdelt-br,opas,svs,cdc-eid"
+# Fontes de saúde curadas — salvam todos os artigos sem exigir palavra-chave de doença
+FONTES_CURADAS = {"opas", "svs", "agbrasil", "who", "fiocruz", "cdc-eid", "ecdc"}
+
+FONTES_PADRAO = "gdelt-br,opas,agbrasil,cdc-eid"
 
 
 class Command(BaseCommand):
@@ -131,26 +135,31 @@ class Command(BaseCommand):
                 self.stderr.write(f"Fonte desconhecida: '{fonte_key}' — ignorada.")
                 continue
             tipo, params = config
+            curada = fonte_key in FONTES_CURADAS
             if tipo == "gdelt":
-                artigos.extend(self._fetch_gdelt(params))
+                novos = self._fetch_gdelt(params)
             else:
                 nome, url = params
-                artigos.extend(self._fetch_rss(nome, url))
+                novos = self._fetch_rss(nome, url)
+            for a in novos:
+                a["curada"] = curada
+            artigos.extend(novos)
 
         self.stdout.write(f"Total bruto: {len(artigos)} artigos coletados.")
 
         corte = datetime.now(timezone.utc) - timedelta(days=7)
         artigos_relevantes = [
             a for a in artigos
-            if a["doencas_detectadas"]
-            and (a["publicado_em"] is None or a["publicado_em"] >= corte)
+            if (a["publicado_em"] is None or a["publicado_em"] >= corte)
+            and (a["curada"] or a["doencas_detectadas"])
         ]
-        self.stdout.write(f"Relevantes (com doença identificada, ≤7 dias): {len(artigos_relevantes)}")
+        self.stdout.write(f"Relevantes (saúde ou doença detectada, ≤7 dias): {len(artigos_relevantes)}")
 
         if dry_run:
             for a in artigos_relevantes:
+                tag = "CURADA" if a["curada"] else ",".join(a["doencas_detectadas"])
                 self.stdout.write(
-                    f"  [{a['nivel_alerta'].upper()}] {a['titulo'][:80]} — {a['doencas_detectadas']}"
+                    f"  [{a['nivel_alerta'].upper()}] {a['titulo'][:80]} — {tag}"
                 )
             return
 
@@ -228,17 +237,23 @@ class Command(BaseCommand):
             resp = requests.get(feed_url, timeout=15, headers={"User-Agent": "SolusCRT/2.0"})
             resp.raise_for_status()
             root = ET.fromstring(resp.content)
-            ns   = {"atom": "http://www.w3.org/2005/Atom"}
+            ns = {
+                "atom": "http://www.w3.org/2005/Atom",
+                "rss1": "http://purl.org/rss/1.0/",
+                "dc":   "http://purl.org/dc/elements/1.1/",
+            }
 
             items = root.findall(".//item")
             if not items:
                 items = root.findall(".//atom:entry", ns)
+            if not items:
+                items = root.findall(".//rss1:item", ns)
 
             for item in items[:30]:
-                titulo  = _tag(item, ["title",       "atom:title"],   ns)
-                url     = _tag(item, ["link",         "atom:link"],    ns)
-                resumo  = _tag(item, ["description",  "summary",  "atom:summary"], ns)
-                pub_str = _tag(item, ["pubDate",      "published", "atom:published"], ns)
+                titulo  = _tag(item, ["title",      "atom:title",   "rss1:title"],   ns)
+                url     = _tag(item, ["link",       "atom:link",    "rss1:link"],    ns)
+                resumo  = _tag(item, ["description", "summary", "atom:summary", "rss1:description"], ns)
+                pub_str = _tag(item, ["pubDate",     "published", "atom:published", "dc:date"], ns)
 
                 if not titulo or not url:
                     continue
