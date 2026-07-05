@@ -84,6 +84,14 @@ label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bot
     <div class="kpi"><div class="kpi-val" id="kpiTipoTop">—</div><div class="kpi-lbl">Tipo Mais Enviado</div></div>
   </div>
 
+  <div class="card" id="cardSituacao" style="display:none">
+    <div class="card-header" style="justify-content:space-between">
+      <span class="card-title">🗺️ Situação Epidemiológica Atual (App da População)</span>
+      <span id="sitBadgeRisco" class="badge"></span>
+    </div>
+    <div id="sitBody" style="display:grid;grid-template-columns:repeat(3,1fr)"></div>
+  </div>
+
   <div class="card">
     <div class="card-header"><span class="card-title">📋 Alertas</span></div>
     <table>
@@ -175,6 +183,31 @@ async function carregar() {
   document.getElementById("kpiEnviados").textContent = k.total_alertas_enviados ?? "—";
   document.getElementById("kpiRascunhos").textContent = k.total_rascunhos ?? "—";
   document.getElementById("kpiTipoTop").textContent = (k.por_tipo_enviado && k.por_tipo_enviado[0]) ? k.por_tipo_enviado[0].tipo_label : "—";
+
+  if (k.situacao_epidemiologica) {
+    const sp = k.situacao_epidemiologica;
+    const risco = (sp.risco || "BAIXO").toUpperCase();
+    const RISCO_COR = { "BAIXO":"badge-ok","MODERADO":"badge-warn","ALTO":"badge-laranja","CRÍTICO":"badge-danger","CRITICO":"badge-danger" };
+    const badge = document.getElementById("sitBadgeRisco");
+    badge.className = "badge " + (RISCO_COR[risco] || "badge-ok");
+    badge.textContent = risco;
+    const crescStr = sp.crescimento_percent > 0 ? "+" + sp.crescimento_percent + "%" : sp.crescimento_percent + "%";
+    const crescColor = sp.crescimento_percent > 20 ? "var(--danger)" : sp.crescimento_percent > 0 ? "var(--warn)" : "var(--ok)";
+    document.getElementById("sitBody").innerHTML = `
+      <div style="padding:20px 24px;border-right:1px solid var(--border)">
+        <div style="font-size:26px;font-weight:800;color:${crescColor}">${crescStr}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:4px">Crescimento Semanal</div>
+      </div>
+      <div style="padding:20px 24px;border-right:1px solid var(--border)">
+        <div style="font-size:26px;font-weight:800;color:var(--accent)">${sp.casos_total}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:4px">Casos Relatados (app)</div>
+      </div>
+      <div style="padding:20px 24px">
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:4px">${sp.doenca_dominante || "—"}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:4px">Doença Dominante (app)</div>
+      </div>`;
+    document.getElementById("cardSituacao").style.display = "block";
+  }
 
   const d = await fetchJSON("/api/governo/app-cidadao/alertas/");
   const tbody = document.getElementById("tbodyAlertas");

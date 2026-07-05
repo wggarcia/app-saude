@@ -113,8 +113,11 @@ td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
   </div>
 
   <div class="card" id="cardSintomas" style="display:none">
-    <div class="card-header"><span class="card-title">👥 Sintomas Relatados pela População (App Cidadão)</span></div>
-    <div style="padding:16px 20px;font-size:13px" id="sintomasBody"></div>
+    <div class="card-header">
+      <span class="card-title">📱 Sintomas Relatados pelo App da População</span>
+      <span id="spBadgeRisco" class="badge"></span>
+    </div>
+    <div id="sintomasBody" style="display:grid;grid-template-columns:repeat(3,1fr)"></div>
   </div>
 </main>
 
@@ -161,11 +164,28 @@ async function carregar() {
     : '<tr><td colspan="2" class="empty">Nenhuma notificação nos últimos 30 dias.</td></tr>';
 
   if (d.sintomas_populacao) {
-    document.getElementById("cardSintomas").style.display = "block";
     const sp = d.sintomas_populacao;
-    document.getElementById("sintomasBody").innerHTML =
-      `Risco territorial: <strong>${sp.risco}</strong> · Crescimento: <strong>${sp.crescimento_percent}%</strong> · ` +
-      `Casos relatados: <strong>${sp.casos_total}</strong> · Doença dominante: <strong>${sp.doenca_dominante || '—'}</strong>`;
+    const risco = (sp.risco || "BAIXO").toUpperCase();
+    const RISCO_COR = { "BAIXO":"badge-ok","MODERADO":"badge-warn","ALTO":"badge-laranja","CRÍTICO":"badge-danger","CRITICO":"badge-danger" };
+    const badge = document.getElementById("spBadgeRisco");
+    badge.className = "badge " + (RISCO_COR[risco] || "badge-ok");
+    badge.textContent = risco;
+    const crescStr = sp.crescimento_percent > 0 ? "+" + sp.crescimento_percent + "%" : sp.crescimento_percent + "%";
+    const crescColor = sp.crescimento_percent > 20 ? "var(--danger)" : sp.crescimento_percent > 0 ? "var(--warn)" : "var(--ok)";
+    document.getElementById("sintomasBody").innerHTML = `
+      <div style="padding:20px 24px;border-right:1px solid var(--border)">
+        <div style="font-size:26px;font-weight:800;color:${crescColor}">${crescStr}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:4px">Crescimento Semanal</div>
+      </div>
+      <div style="padding:20px 24px;border-right:1px solid var(--border)">
+        <div style="font-size:26px;font-weight:800;color:var(--accent)">${sp.casos_total}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:4px">Casos Relatados (app)</div>
+      </div>
+      <div style="padding:20px 24px">
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:4px">${sp.doenca_dominante || "—"}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-top:4px">Doença Dominante (app)</div>
+      </div>`;
+    document.getElementById("cardSintomas").style.display = "block";
   }
 }
 

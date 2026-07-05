@@ -166,9 +166,24 @@ def api_app_cidadao_kpis(request):
     for item in por_tipo:
         item["tipo_label"] = dict(AlertaCidadao.TIPO_CHOICES).get(item["tipo"], item["tipo"])
 
+    situacao_epidemiologica = None
+    try:
+        from .epidemiologia import build_panorama_payload
+        payload = build_panorama_payload()
+        overview = payload.get("overview", {})
+        situacao_epidemiologica = {
+            "risco": overview.get("risk_level", "BAIXO"),
+            "crescimento_percent": overview.get("growth_percent", 0),
+            "casos_total": overview.get("total_cases", 0),
+            "doenca_dominante": (overview.get("probable_diseases") or [{}])[0].get("name", ""),
+        }
+    except Exception:
+        pass
+
     return JsonResponse({
         "total_cidadaos_alcancaveis": total_cidadaos,
         "total_alertas_enviados": alertas.filter(status="enviado").count(),
         "total_rascunhos": alertas.filter(status="rascunho").count(),
         "por_tipo_enviado": por_tipo,
+        "situacao_epidemiologica": situacao_epidemiologica,
     })
