@@ -1,6 +1,6 @@
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
 import requests
@@ -139,8 +139,13 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Total bruto: {len(artigos)} artigos coletados.")
 
-        artigos_relevantes = [a for a in artigos if a["doencas_detectadas"]]
-        self.stdout.write(f"Relevantes (com doença identificada): {len(artigos_relevantes)}")
+        corte = datetime.now(timezone.utc) - timedelta(days=7)
+        artigos_relevantes = [
+            a for a in artigos
+            if a["doencas_detectadas"]
+            and (a["publicado_em"] is None or a["publicado_em"] >= corte)
+        ]
+        self.stdout.write(f"Relevantes (com doença identificada, ≤7 dias): {len(artigos_relevantes)}")
 
         if dry_run:
             for a in artigos_relevantes:
