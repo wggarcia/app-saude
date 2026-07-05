@@ -10310,7 +10310,7 @@ class NoticiaEpidemiologica(models.Model):
     ia_cid10            = models.CharField(max_length=10, blank=True, default="")
     ia_regiao_uf        = models.CharField(max_length=2,  blank=True, default="")
     ia_municipio        = models.CharField(max_length=120, blank=True, default="")
-    ia_casos_estimados  = models.IntegerField(null=True, blank=True)
+    ia_casos_estimados  = models.BigIntegerField(null=True, blank=True)
     ia_tendencia        = models.CharField(max_length=20, blank=True, default="")  # crescendo | estavel | diminuindo
     ia_confianca        = models.FloatField(null=True, blank=True)    # 0.0 – 1.0
     ia_justificativa    = models.TextField(blank=True, default="")
