@@ -17,7 +17,8 @@ from .access_control import (
     api_requer_feature, get_setor, principal_pode_operacao_setorial,
     requer_setor, requer_operacao_page, requer_permissao_modulo,
 )
-from .models import AlertaCidadao, ProntuarioCidadao
+from .models import AlertaCidadao, DispositivoPushPublico, ProntuarioCidadao
+from .push_service import enviar_push_alerta_cidadao
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
 
 
@@ -117,24 +118,36 @@ def api_alerta_cidadao_enviar(request, alerta_id):
     if alerta.status == "enviado":
         return JsonResponse({"erro": "Alerta já foi enviado"}, status=400)
 
-    alerta.total_destinatarios_estimado = _estimar_destinatarios(
-        e, alerta.publico_alvo, alerta.microarea_filtro, alerta.unidade_filtro
-    )
+    devices_ativos = DispositivoPushPublico.objects.filter(ativo=True).count()
+    alerta.total_destinatarios_estimado = devices_ativos
     alerta.status = "enviado"
     alerta.enviado_em = timezone.now()
     principal = getattr(request, "principal", None)
     alerta.enviado_por = getattr(principal, "nome", None) or getattr(principal, "email", "") or e.nome
     alerta.save()
 
+    push = enviar_push_alerta_cidadao(alerta)
+
+    if push["status"] == "ok":
+        aviso = (
+            f"✅ Push enviado para {push['enviados']} dispositivo(s) do app da população "
+            f"({push['destinatarios']} devices ativos)."
+        )
+    elif push["status"] == "push_indisponivel":
+        aviso = "⚠️ Push não disponível — FIREBASE_SERVICE_ACCOUNT_JSON não configurado no Render."
+    elif push["status"] == "sem_tokens":
+        aviso = "ℹ️ Nenhum cidadão com o app instalado encontrado. O alerta foi salvo."
+    else:
+        aviso = (
+            f"⚠️ Push parcialmente entregue: {push.get('enviados', 0)} enviados, "
+            f"{push.get('falhas', 0)} falhas."
+        )
+
     return JsonResponse({
         "ok": True,
         "alerta": _alerta_dict(alerta),
-        "aviso": (
-            "Alerta marcado como enviado e contabilizado para "
-            f"{alerta.total_destinatarios_estimado} cidadão(s) com telefone cadastrado. "
-            "A entrega efetiva via SMS/push depende de gateway de telecom contratado pelo município "
-            "(não incluso nesta versão)."
-        ),
+        "push": push,
+        "aviso": aviso,
     })
 
 
@@ -145,7 +158,7 @@ def api_app_cidadao_kpis(request):
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    total_cidadaos = ProntuarioCidadao.objects.filter(empresa=e).exclude(telefone="").count()
+    total_cidadaos = DispositivoPushPublico.objects.filter(ativo=True).count()
     alertas = AlertaCidadao.objects.filter(empresa=e)
     por_tipo = list(
         alertas.filter(status="enviado").values("tipo").annotate(total=Count("id")).order_by("-total")

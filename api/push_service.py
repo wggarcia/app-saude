@@ -313,3 +313,73 @@ def enviar_alerta_governamental(alerta):
             "tokens_ativos": tokens_ativos,
             "estrategia": estrategia,
         }
+
+
+def enviar_push_alerta_cidadao(alerta):
+    """
+    Envia push FCM para todos os devices ativos do app da população
+    (DispositivoPushPublico) quando um AlertaCidadao é publicado pelo governo.
+    Retorna resumo de entrega para exibir na UI do gestor.
+    """
+    app = _firebase_app()
+    if app is None or messaging is None:
+        return {"status": "push_indisponivel", "enviados": 0, "destinatarios": 0}
+
+    tokens = list(
+        DispositivoPushPublico.objects.filter(ativo=True)
+        .values_list("token", flat=True)
+        .distinct()
+    )
+    if not tokens:
+        return {"status": "sem_tokens", "enviados": 0, "destinatarios": 0}
+
+    nivel = {
+        "alerta_sanitario": "critico",
+        "epidemiologico": "alerta",
+        "campanha_vacinacao": "alerta",
+    }.get(alerta.tipo, "informativo")
+
+    total_sucesso = 0
+    total_falha = 0
+    invalid_tokens = []
+
+    for start in range(0, len(tokens), 500):
+        lote = tokens[start:start + 500]
+        message = messaging.MulticastMessage(
+            notification=messaging.Notification(
+                title=alerta.titulo,
+                body=(alerta.mensagem or "")[:180],
+            ),
+            data={
+                "tipo": "alerta_cidadao",
+                "alerta_id": str(alerta.id),
+                "nivel": nivel,
+            },
+            tokens=lote,
+        )
+        try:
+            response = messaging.send_each_for_multicast(message, app=app)
+            total_sucesso += response.success_count
+            total_falha += response.failure_count
+            for i, resp in enumerate(response.responses):
+                if not resp.success:
+                    code = getattr(resp.exception, "code", None) or resp.exception.__class__.__name__
+                    if str(code) in {
+                        "unregistered", "registration-token-not-registered",
+                        "invalid-argument", "invalid-registration-token",
+                        "UnregisteredError", "SenderIdMismatchError",
+                    }:
+                        invalid_tokens.append(lote[i])
+        except Exception:
+            total_falha += len(lote)
+
+    if invalid_tokens:
+        DispositivoPushPublico.objects.filter(token__in=invalid_tokens).update(ativo=False)
+
+    return {
+        "status": "ok" if total_sucesso > 0 else ("falha_total" if total_falha > 0 else "sem_tokens"),
+        "enviados": total_sucesso,
+        "falhas": total_falha,
+        "destinatarios": len(tokens),
+        "tokens_invalidados": len(invalid_tokens),
+    }
