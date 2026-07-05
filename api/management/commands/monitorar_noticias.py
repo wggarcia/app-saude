@@ -102,13 +102,15 @@ FONTES_CATALOGO = {
 }
 
 # Fontes de saúde curadas — salvam todos os artigos sem exigir palavra-chave de doença
+# Fontes de vigilância epidemiológica pura — salvam TODOS os artigos sem filtro de doença.
+# NÃO incluir mídia geral (Folha, G1, BBC) mesmo com seção de saúde — publicam lifestyle/Copa etc.
 FONTES_CURADAS = {
-    "agbrasil", "fiocruz", "g1", "folha", "svs",
-    "opas", "cdc-eid", "healio-id",
-    "ecdc", "bbc-health",
-    "who-africa", "nicd-za", "reliefweb",
-    "india-pib", "nhc-china",
-    "who", "outbreaknews", "sciencedaily",
+    "agbrasil", "fiocruz", "svs",          # Brasil — agências oficiais
+    "opas", "cdc-eid", "healio-id",        # Américas — vigilância
+    "ecdc",                                 # Europa — vigilância
+    "who-africa", "nicd-za", "reliefweb",  # África
+    "india-pib", "nhc-china",              # Ásia — ministérios de saúde
+    "who", "outbreaknews", "sciencedaily", # Global — vigilância e ciência
 }
 
 # Cron BR — fontes nacionais + Américas + global diário
