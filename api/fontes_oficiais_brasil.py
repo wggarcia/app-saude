@@ -470,7 +470,9 @@ def _fetch_infodengue(codigo_ibge, disease, ano):
     if not isinstance(data, list) or not data:
         return None
 
-    latest = data[-1]
+    # InfoDengue returns data newest-first; pick the entry with the highest SE
+    # (avoids relying on sort order and always gets the most recent week)
+    latest = max(data, key=lambda x: x.get("SE", 0))
     return {
         "doenca": disease,
         "semana_epidemiologica": latest.get("SE"),
@@ -494,8 +496,11 @@ def _parse_float(value):
 
 
 def _fetch_infogripe_brasil():
-    ano = datetime.now().year
-    url = f"https://info.gripe.fiocruz.br/data/detailed/1/2/{ano}/52/Brasil/weekly-incidence-curve"
+    now_dt = datetime.now()
+    ano = now_dt.year
+    # Use the current epidemiological week (not 52 = end-of-year which may not exist yet)
+    semana = now_dt.isocalendar()[1]
+    url = f"https://info.gripe.fiocruz.br/data/detailed/1/2/{ano}/{semana}/Brasil/weekly-incidence-curve"
     try:
         response = requests.get(url, timeout=OFFICIAL_HTTP_TIMEOUT_SECONDS)
         response.raise_for_status()
