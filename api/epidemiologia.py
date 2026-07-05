@@ -137,7 +137,8 @@ _PANORAMA_CACHE_PAYLOAD_KEY = "epidemiologia:panorama:payload"
 # invalidado imediatamente por clear_panorama_cache() quando chega um novo
 # registro, então dados nunca ficam velhos além do necessário.
 _CACHE_TTL_SECONDS = 300
-_PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False}
+_PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False, "next_retry": 0.0}
+_EMPRESA_MISS_RETRY_S = 30  # retry interval when empresa not found (cold-start guard)
 _PANORAMA_CACHE_VERSION_KEY = "epidemiologia:panorama:version"
 PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
 
@@ -162,10 +163,26 @@ def clear_panorama_cache():
 
 
 def _public_population_empresa():
-    if not _PUBLIC_EMPRESA_CACHE["loaded"]:
-        _PUBLIC_EMPRESA_CACHE["obj"] = Empresa.objects.filter(email=PUBLIC_APP_EMAIL).first()
-        _PUBLIC_EMPRESA_CACHE["loaded"] = True
-    return _PUBLIC_EMPRESA_CACHE["obj"]
+    from time import time as _time
+    if _PUBLIC_EMPRESA_CACHE["loaded"]:
+        return _PUBLIC_EMPRESA_CACHE["obj"]
+    now = _time()
+    if now < _PUBLIC_EMPRESA_CACHE["next_retry"]:
+        # Still in retry cooldown — don't hammer DB on every request
+        return None
+    try:
+        obj = Empresa.objects.filter(email=PUBLIC_APP_EMAIL).first()
+    except Exception:
+        _PUBLIC_EMPRESA_CACHE["next_retry"] = now + 10
+        return None
+    _PUBLIC_EMPRESA_CACHE["obj"] = obj
+    if obj is not None:
+        _PUBLIC_EMPRESA_CACHE["loaded"] = True  # permanent cache — empresa found
+    else:
+        # Empresa not found yet (cold-start DB hiccup) — retry in 30s instead of
+        # caching None forever, which would poison all panorama queries.
+        _PUBLIC_EMPRESA_CACHE["next_retry"] = now + _EMPRESA_MISS_RETRY_S
+    return obj
 
 
 def _scope_public_population_queryset(queryset):
@@ -1268,11 +1285,14 @@ def build_panorama_payload():
         },
     }
 
-    # Salva no Redis e no cache local do worker
-    cache.set(redis_key, payload, _CACHE_TTL_SECONDS)
-    _PANORAMA_CACHE["created_at"] = now
-    _PANORAMA_CACHE["payload"] = payload
-    _PANORAMA_CACHE["version"] = current_version
+    # Só cacheia quando há dados reais — impede que um payload vazio (empresa não
+    # encontrada no cold-start) fique travado no Redis por 5 min.
+    total_registros = sum(a.get("total", 0) for a in layers.get("bairros", []))
+    if total_registros > 0:
+        cache.set(redis_key, payload, _CACHE_TTL_SECONDS)
+        _PANORAMA_CACHE["created_at"] = now
+        _PANORAMA_CACHE["payload"] = payload
+        _PANORAMA_CACHE["version"] = current_version
     return payload
 
 
