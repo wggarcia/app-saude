@@ -38,7 +38,7 @@ def api_noticias_epidemiologicas(request):
         qs = qs.filter(doencas_detectadas__icontains=doenca[:100])
 
     noticias = list(
-        qs.values(
+        qs.order_by("-publicado_em", "-criado_em").values(
             "id", "titulo", "fonte", "url", "resumo",
             "doencas_detectadas", "nivel_alerta", "status",
             "publicado_em", "criado_em",
