@@ -160,6 +160,7 @@ def clear_panorama_cache():
     _PANORAMA_CACHE["version"] = _current_panorama_cache_version()
     _PUBLIC_EMPRESA_CACHE["obj"] = None
     _PUBLIC_EMPRESA_CACHE["loaded"] = False
+    _PUBLIC_EMPRESA_CACHE["next_retry"] = 0.0
 
 
 def _public_population_empresa():

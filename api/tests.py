@@ -6113,6 +6113,8 @@ class MonitorarNoticiasCommandTests(TransactionTestCase):
         )
 
     def _rss_xml(self, titulo="Surto de dengue no Nordeste", url="https://svs.gov.br/rss/dengue-1"):
+        from datetime import datetime, timezone as tz
+        pub_date = datetime.now(tz.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
@@ -6120,7 +6122,7 @@ class MonitorarNoticiasCommandTests(TransactionTestCase):
       <title>{titulo}</title>
       <link>{url}</link>
       <description>Aumento de casos confirmados. surto dengue.</description>
-      <pubDate>Fri, 20 Jun 2026 12:00:00 +0000</pubDate>
+      <pubDate>{pub_date}</pubDate>
     </item>
   </channel>
 </rss>""".encode()
