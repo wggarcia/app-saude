@@ -31,6 +31,7 @@ import io
 import json
 import base64
 import hashlib
+import importlib.util
 import logging
 import numpy as np
 from pathlib import Path
@@ -413,6 +414,6 @@ def api_biometria_status_facial(request):
         "com_biometria_cadastrada": com_bio,
         "com_embedding_real": com_embedding,
         "cobertura_pct": round(com_embedding / total_func * 100, 1) if total_func else 0,
-        "deepface_instalado": True,
+        "deepface_instalado": importlib.util.find_spec("deepface") is not None,
         "conformidade_lgpd": "Embeddings derivados armazenados localmente — imagens não retidas",
     })
