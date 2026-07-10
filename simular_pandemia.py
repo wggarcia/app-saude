@@ -43,6 +43,8 @@ for ciclo in range(60):
         for i in range(quantidade):
             RegistroSintoma.objects.create(
                 id_anonimo=uuid.uuid4(),
+                device_id=f"demo-simularpandemia-{ciclo:03d}-{i:04d}",
+                fonte_referencia="simulacao-local",
                 febre=True,
                 tosse=random.choice([True, False]),
                 dor_corpo=True,
