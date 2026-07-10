@@ -4,8 +4,8 @@ services:
     env: python
     plan: starter
     buildCommand: "./build.sh"
-    preDeployCommand: "APP_DATABASE_URL= python3 manage.py migrate --noinput && APP_DATABASE_URL= python3 manage.py bootstrap_acessos && APP_DATABASE_URL= python3 manage.py sanear_producao --apply"
-    startCommand: "./start.sh"
+    preDeployCommand: "APP_DATABASE_URL= python3 manage.py migrate --noinput && APP_DATABASE_URL= python3 manage.py bootstrap_acessos && APP_DATABASE_URL= python3 manage.py sanear_producao --apply && APP_DATABASE_URL= python3 manage.py demo_setup --upsert"    
+        startCommand: "./start.sh"
     healthCheckPath: /api/public/resumo
     disk:
       name: soluscrt-media
