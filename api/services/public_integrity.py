@@ -20,6 +20,7 @@ SYNTHETIC_DEVICE_PREFIXES = (
     "stress-soluscrt-brasil",
     "sim-br-",
     "clf-br-",
+    "pandemia-br-",
     "demo-",
     "test-",
     "fake-",
