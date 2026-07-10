@@ -9,7 +9,7 @@ Ou interativo:
     >>> exec(open('scripts/sim_30_casos_rj.py').read())
 
 Para apagar os casos de simulação depois:
-    RegistroSintoma.objects.filter(device_id__startswith='sim_').delete()
+        RegistroSintoma.objects.filter(device_id__startswith='sim-br-').delete()
 """
 
 import uuid
@@ -173,7 +173,7 @@ for i, caso in enumerate(CASOS):
         grupo=grupo,
         classificacao=classificacao,
         ip="203.0.113.1",
-        device_id=f"sim_{i:03d}",
+        device_id=f"sim-br-{i:03d}",
         confianca=0.95,
         suspeito=False,
     )
