@@ -54,6 +54,8 @@ for i in range(TOTAL):
 
         febre=random.random() < 0.6,
         tosse=random.random() < 0.7,
+        device_id=f"demo-simulardados-{i:05d}",
+        fonte_referencia="simulacao-local",
         dor_corpo=random.random() < 0.5,
         cansaco=random.random() < 0.5,
         falta_ar=random.random() < 0.3,
