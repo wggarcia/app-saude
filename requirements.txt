@@ -18,12 +18,10 @@ numpy==1.26.4
 joblib==1.4.2
 scikit-learn==1.4.2
 opencv-python-headless==4.9.0.80
-# deepface e tensorflow-cpu removidos temporariamente:
-# o starter (512MB) não suporta TF (~400MB só de runtime).
-# Reativar ao migrar para instância com ≥2GB de RAM.
-# deepface==0.0.93
-# tensorflow-cpu==2.16.1
-# tf-keras==2.16.0
+# deepface e tensorflow-cpu reativados no Hostinger (8GB RAM disponivel).
+deepface==0.0.93
+tensorflow-cpu==2.16.1
+tf-keras==2.16.0
 python-dotenv==1.0.1
 anthropic==0.40.0
 pydicom==2.4.4
