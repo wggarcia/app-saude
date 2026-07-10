@@ -5,9 +5,18 @@ from django.db import transaction
 
 from api.models import AlertaGovernamental, DispositivoAutorizado, Empresa, RegistroSintoma
 from api.services.public_integrity import (
+    SYNTHETIC_DEVICE_PREFIXES,
     q_alerta_governamental_sintetico,
     q_registro_sintoma_sintetico,
 )
+def _q_dispositivo_sintetico():
+    from django.db.models import Q
+
+    query = Q()
+    for prefix in SYNTHETIC_DEVICE_PREFIXES:
+        query |= Q(device_id__istartswith=prefix)
+        return query
+
 
 
 DEMO_EMAILS = {
@@ -51,14 +60,7 @@ class Command(BaseCommand):
             removidos_empresas = Empresa.objects.filter(email__in=DEMO_EMAILS).delete()[0]
             removidos_alertas = AlertaGovernamental.objects.filter(q_alerta_governamental_sintetico()).delete()[0]
             removidos_registros = RegistroSintoma.objects.filter(q_registro_sintoma_sintetico()).delete()[0]
-            removidos_dispositivos = DispositivoAutorizado.objects.filter(
-                device_id__istartswith="stress-soluscrt-brasil"
-            ).delete()[0]
-            removidos_dispositivos += DispositivoAutorizado.objects.filter(device_id__istartswith="sim-br-").delete()[0]
-            removidos_dispositivos += DispositivoAutorizado.objects.filter(device_id__istartswith="demo-").delete()[0]
-            removidos_dispositivos += DispositivoAutorizado.objects.filter(device_id__istartswith="test-").delete()[0]
-            removidos_dispositivos += DispositivoAutorizado.objects.filter(device_id__istartswith="fake-").delete()[0]
-
+            removidos_dispositivos = DispositivoAutorizado.objects.filter(_q_dispositivo_sintetico()).delete()[0]
         self.stdout.write(self.style.SUCCESS("\nLimpeza concluída."))
         self.stdout.write(f"Empresas removidas: {removidos_empresas}")
         self.stdout.write(f"Alertas removidos: {removidos_alertas}")
@@ -75,12 +77,6 @@ class Command(BaseCommand):
             "empresas_demo": Empresa.objects.filter(email__in=DEMO_EMAILS).count(),
             "alertas_sinteticos": AlertaGovernamental.objects.filter(q_alerta_governamental_sintetico()).count(),
             "registros_sinteticos": RegistroSintoma.objects.filter(q_registro_sintoma_sintetico()).count(),
-            "dispositivos_sinteticos": (
-                DispositivoAutorizado.objects.filter(device_id__istartswith="stress-soluscrt-brasil").count()
-                + DispositivoAutorizado.objects.filter(device_id__istartswith="sim-br-").count()
-                + DispositivoAutorizado.objects.filter(device_id__istartswith="demo-").count()
-                + DispositivoAutorizado.objects.filter(device_id__istartswith="test-").count()
-                + DispositivoAutorizado.objects.filter(device_id__istartswith="fake-").count()
-            ),
+            "dispositivos_sinteticos": DispositivoAutorizado.objects.filter(_q_dispositivo_sintetico()).count(),
         }
 
