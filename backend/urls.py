@@ -1050,7 +1050,7 @@ def service_worker(request):
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('gestor-638fb21b19cf/', admin.site.urls),
 
     # 🔐 LOGIN
     path('', site_principal),
