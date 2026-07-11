@@ -65,6 +65,8 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         sync: false
+      - key: BIOMETRIA_EMBEDDING_KEY
+        sync: false
       # ── Observabilidade — Sentry ─────────────────────────────────────────
       # Crie um projeto Django em sentry.io e configure o DSN no painel Render.
       # Sem isso, o sentry_sdk.init() em settings.py não é ativado.
@@ -137,6 +139,8 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         sync: false
+      - key: BIOMETRIA_EMBEDDING_KEY
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: soluscrt-saude-db
@@ -179,6 +183,8 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         sync: false
+      - key: BIOMETRIA_EMBEDDING_KEY
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: soluscrt-saude-db
@@ -217,6 +223,8 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         sync: false
+      - key: BIOMETRIA_EMBEDDING_KEY
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: soluscrt-saude-db
@@ -254,6 +262,8 @@ services:
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
+        sync: false
+      - key: BIOMETRIA_EMBEDDING_KEY
         sync: false
       - key: DATABASE_URL
         fromDatabase:
@@ -294,6 +304,8 @@ services:
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
+        sync: false
+      - key: BIOMETRIA_EMBEDDING_KEY
         sync: false
       - key: DATABASE_URL
         fromDatabase:
