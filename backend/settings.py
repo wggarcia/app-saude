@@ -89,9 +89,10 @@ if IS_PRODUCTION and (
     or JWT_SECRET_KEY.startswith("dev-only-")
     or len(SECRET_KEY) < 50
     or len(JWT_SECRET_KEY) < 50
+    or SECRET_KEY == JWT_SECRET_KEY
 ):
     raise RuntimeError(
-        "Configure DJANGO_SECRET_KEY e JWT_SECRET_KEY longas antes de subir em produção."
+        "Configure DJANGO_SECRET_KEY e JWT_SECRET_KEY longas e distintas antes de subir em produção."
     )
 
 

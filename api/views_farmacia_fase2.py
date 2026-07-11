@@ -266,9 +266,11 @@ def api_rede_farmacia_transferencias(request):
     try:
         med = MedicamentoFarmacia.objects.get(pk=med_id, empresa=empresa)
     except MedicamentoFarmacia.DoesNotExist:
-        # Pode solicitar um medicamento de outra unidade (não precisa ser do próprio estoque)
+        # Pode solicitar um medicamento do estoque da própria unidade fornecedora
+        # declarada (não precisa ser do estoque do solicitante) — mas nunca de
+        # uma empresa arbitrária fora dessa relação.
         try:
-            med = MedicamentoFarmacia.objects.get(pk=med_id)
+            med = MedicamentoFarmacia.objects.get(pk=med_id, empresa_id=empresa_forn_id)
         except MedicamentoFarmacia.DoesNotExist:
             return JsonResponse({"erro": "Medicamento não encontrado"}, status=404)
 

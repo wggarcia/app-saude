@@ -982,11 +982,12 @@ def api_clinica_solicitacao_acao(request, sol_id):
 
 # ── Link de Resultado para Clínica ────────────────────────────────────────────
 
-def _gerar_token_resultado(sol_id: int) -> str:
-    """Token HMAC-SHA256 (32 hex chars) — identifica univocamente a solicitação."""
+def _gerar_token_resultado(sol_id: int, expira_em_ts: int) -> str:
+    """Token HMAC-SHA256 com prazo de validade embutido (formato: <expira_hex>.<assinatura>)."""
     key = settings.SECRET_KEY.encode("utf-8")
-    msg = f"link-resultado:{sol_id}".encode("utf-8")
-    return hmac.new(key, msg, hashlib.sha256).hexdigest()[:32]
+    msg = f"link-resultado:{sol_id}:{expira_em_ts}".encode("utf-8")
+    sig = hmac.new(key, msg, hashlib.sha256).hexdigest()[:32]
+    return f"{expira_em_ts:x}.{sig}"
 
 
 @csrf_exempt
@@ -1013,10 +1014,12 @@ def api_link_resultado(request, sol_id: int):
     except Exception:
         data = {}
 
-    token = _gerar_token_resultado(sol_id)
+    from datetime import timedelta
+    dias = int(data.get("dias", 30))
+    expira_em_ts = int((timezone.now() + timedelta(days=dias)).timestamp())
+    token = _gerar_token_resultado(sol_id, expira_em_ts)
     base_url = getattr(settings, "PUBLIC_BASE_URL", "https://app-saude-p9n8.onrender.com")
     link = f"{base_url}/clinica/resultado/{sol_id}/{token}/"
-    dias = int(data.get("dias", 30))
     clinica_nome = data.get("clinica_nome") or sol.clinica_nome_externo or "Clínica"
     notificar = bool(data.get("notificar", False))
 
@@ -1060,8 +1063,16 @@ def clinica_resultado_page(request, sol_id: int, token: str):
     GET /clinica/resultado/<sol_id>/<token>/
     Página pública para a clínica preencher os laudos do exame.
     """
-    token_esperado = _gerar_token_resultado(sol_id)
+    try:
+        ts_hex, _sig = token.split(".", 1)
+        expira_em_ts = int(ts_hex, 16)
+    except (ValueError, AttributeError):
+        return JsonResponse({"erro": "Link inválido ou expirado"}, status=403)
+
+    token_esperado = _gerar_token_resultado(sol_id, expira_em_ts)
     if not hmac.compare_digest(token, token_esperado):
+        return JsonResponse({"erro": "Link inválido ou expirado"}, status=403)
+    if timezone.now().timestamp() > expira_em_ts:
         return JsonResponse({"erro": "Link inválido ou expirado"}, status=403)
 
     sol = SolicitacaoExame.objects.filter(id=sol_id).select_related(

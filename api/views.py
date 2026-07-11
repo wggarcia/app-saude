@@ -3416,17 +3416,22 @@ def simular_focos_epidemicos(request):
     Cria dados de simulação epidemiológica reais no banco de produção.
     Fases: 1=50 casos/10 focos, 2=~700/46 focos, 3=~5000/46 focos
     Uso: GET/POST /api/simular-focos?fase=1&limpar=1
-    Protegido: requer sessão empresa autenticada.
+    Protegido: restrito às contas demo usadas para demonstração de ambientes
+    a clientes (EMAILS_CONTAS_DEMO) — não basta ser uma empresa autenticada
+    qualquer, pois esta rotina altera o tenant público de vigilância.
     """
     import random as _rnd
     from datetime import timedelta as _td
     from django.utils import timezone as _tz
     from api.epidemiologia import clear_panorama_cache as _clr
+    from api.utils import EMAILS_CONTAS_DEMO
 
-    # Requer sessão autenticada (empresa logada)
+    # Requer sessão autenticada (empresa logada) E que seja uma conta demo
     empresa_req = getattr(request, "empresa", None)
     if not empresa_req:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if empresa_req.email not in EMAILS_CONTAS_DEMO:
+        return JsonResponse({"erro": "recurso restrito a contas de demonstração"}, status=403)
 
     try:
         body = json.loads(request.body or "{}")
@@ -3578,11 +3583,15 @@ def regeocodificar_focos(request):
     "Centro, Rio de Janeiro" cujo lat/lng real é Copacabana/Tijuca/Niterói etc.,
     fazendo o foco agregado deixar de cair na Baía de Guanabara.
 
-    Aceita GET ou POST. Requer sessão autenticada (bypass de plano no middleware).
+    Aceita GET ou POST. Restrito às contas demo (mesmo motivo de
+    simular_focos_epidemicos: opera sobre o tenant público compartilhado).
     """
+    from api.utils import EMAILS_CONTAS_DEMO
     empresa_req = getattr(request, "empresa", None)
     if not empresa_req:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if empresa_req.email not in EMAILS_CONTAS_DEMO:
+        return JsonResponse({"erro": "recurso restrito a contas de demonstração"}, status=403)
 
     from api.utils_geo import _fallback_local as _geo
     from api.epidemiologia import (

@@ -606,6 +606,21 @@ EXTENSOES_UPLOAD_PERMITIDAS = {
 }
 
 
+# ── Contas demo — usadas para demonstração de ambientes a clientes ───────────
+# Únicas contas autorizadas a acionar rotinas que geram/alteram dados no
+# tenant público de vigilância epidemiológica (ver simular_focos_epidemicos
+# e regeocodificar_focos em api/views.py, e sanear_producao.py).
+EMAILS_CONTAS_DEMO = {
+    "demo@govsoluscrt.com",
+    "demo.sst@soluscrt.com",
+    "demo.farmacia@soluscrt.com",
+    "demo.hospital@soluscrt.com",
+    "demo.governo@soluscrt.com",
+    "demo.plano@soluscrt.com",
+    "empresa.demo@soluscrt.com",
+}
+
+
 def validar_arquivo_upload(arquivo, extensoes_extra=None):
     """
     Valida um arquivo de upload (Django UploadedFile) por extensao e

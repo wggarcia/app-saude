@@ -9,24 +9,14 @@ from api.services.public_integrity import (
     q_alerta_governamental_sintetico,
     q_registro_sintoma_sintetico,
 )
+from api.utils import EMAILS_CONTAS_DEMO as DEMO_EMAILS
 def _q_dispositivo_sintetico():
     from django.db.models import Q
 
     query = Q()
     for prefix in SYNTHETIC_DEVICE_PREFIXES:
         query |= Q(device_id__istartswith=prefix)
-        return query
-
-
-
-DEMO_EMAILS = {
-    "demo.sst@soluscrt.com",
-    "demo.farmacia@soluscrt.com",
-    "demo.hospital@soluscrt.com",
-    "demo.governo@soluscrt.com",
-    "demo.plano@soluscrt.com",
-    "empresa.demo@soluscrt.com",
-}
+    return query
 
 
 class Command(BaseCommand):

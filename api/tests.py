@@ -3423,6 +3423,8 @@ class GestaoIntegracaoTests(TestCase):
         self.assertEqual(len(resp.json()["integracoes"]), 1)
 
     def test_webhook_importa_funcionarios(self):
+        import hmac as _hmac
+        import hashlib as _hashlib
         from api.models import IntegracaoRH
         integracao = IntegracaoRH.objects.create(
             empresa=self.empresa,
@@ -3433,11 +3435,15 @@ class GestaoIntegracaoTests(TestCase):
             {"cpf": "111.222.333-44", "nome": "Maria Silva", "cargo": "Operadora", "setor": "Produção"},
             {"cpf": "555.666.777-88", "nome": "João Souza", "cargo": "Técnico", "setor": "TI"},
         ])
+        assinatura = "sha256=" + _hmac.new(
+            integracao.webhook_secret.encode(), payload.encode(), _hashlib.sha256
+        ).hexdigest()
         resp = self.client.post(
             "/api/gestao/integracoes/webhook/totvs",
             data=payload,
             content_type="application/json",
             HTTP_X_EMPRESA_ID=str(self.empresa.id),
+            HTTP_X_SIGNATURE=assinatura,
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["importados"], 2)

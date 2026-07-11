@@ -664,7 +664,7 @@ def api_integracao_webhook(request, sistema):
     sig_header = request.headers.get("X-Signature", "")
     body = request.body
     expected = "sha256=" + hmac.new(secret, body, hashlib.sha256).hexdigest()
-    if sig_header and not hmac.compare_digest(sig_header, expected):
+    if not sig_header or not hmac.compare_digest(sig_header, expected):
         return JsonResponse({"erro": "assinatura inválida"}, status=401)
 
     try:
