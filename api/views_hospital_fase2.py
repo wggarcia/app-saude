@@ -315,6 +315,10 @@ def api_resultado_arquivo(request, resultado_id):
         return JsonResponse({"erro": "Nenhum arquivo enviado. Use o campo 'arquivo'."}, status=400)
     if arquivo.size > MAX_LAUDO_UPLOAD_BYTES:
         return JsonResponse({"erro": f"Arquivo maior que {MAX_LAUDO_UPLOAD_BYTES // (1024*1024)}MB"}, status=400)
+    from .utils import validar_arquivo_upload
+    erro_tipo = validar_arquivo_upload(arquivo)
+    if erro_tipo:
+        return JsonResponse({"erro": erro_tipo}, status=400)
 
     resultado.arquivo_laudo = arquivo
     resultado.save(update_fields=["arquivo_laudo"])

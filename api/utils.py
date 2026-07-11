@@ -579,3 +579,57 @@ def prever_com_aprendizado(sintomas, modelo):
     }
 
     return probabilidades
+
+
+# ── Validação de upload — extensão + content-type declarado ──────────────────
+# Allowlist (não blocklist): mais seguro rejeitar por padrão o que não é
+# reconhecido do que tentar enumerar todo tipo de arquivo perigoso.
+EXTENSOES_UPLOAD_PERMITIDAS = {
+    ".pdf": {"application/pdf"},
+    ".doc": {"application/msword"},
+    ".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+    ".xls": {"application/vnd.ms-excel"},
+    ".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+    ".ppt": {"application/vnd.ms-powerpoint"},
+    ".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+    ".jpg": {"image/jpeg"},
+    ".jpeg": {"image/jpeg"},
+    ".png": {"image/png"},
+    ".gif": {"image/gif"},
+    ".webp": {"image/webp"},
+    ".bmp": {"image/bmp"},
+    ".tif": {"image/tiff"},
+    ".tiff": {"image/tiff"},
+    ".txt": {"text/plain"},
+    ".csv": {"text/csv", "application/vnd.ms-excel"},
+    ".dcm": {"application/dicom", "application/octet-stream"},
+}
+
+
+def validar_arquivo_upload(arquivo, extensoes_extra=None):
+    """
+    Valida um arquivo de upload (Django UploadedFile) por extensao e
+    content-type declarado, contra uma allowlist. Retorna None se valido,
+    ou uma string de erro para exibir ao usuario.
+
+    extensoes_extra: dict opcional {".ext": {"mime/type", ...}} para
+    permitir tipos adicionais especificos daquele endpoint (ex.: DICOM).
+    """
+    import os
+
+    nome = arquivo.name or ""
+    ext = os.path.splitext(nome)[1].lower()
+
+    permitidas = dict(EXTENSOES_UPLOAD_PERMITIDAS)
+    if extensoes_extra:
+        permitidas.update(extensoes_extra)
+
+    if ext not in permitidas:
+        return f"Tipo de arquivo '{ext or 'desconhecido'}' nao permitido."
+
+    content_type = (getattr(arquivo, "content_type", "") or "").lower()
+    tipos_ok = permitidas[ext]
+    if content_type and content_type not in tipos_ok:
+        return f"Content-Type '{content_type}' nao confere com a extensao '{ext}'."
+
+    return None

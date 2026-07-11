@@ -395,10 +395,13 @@ def criar_pagamento(request, empresa_id=None):
     if not empresa_id:
         return JsonResponse({"erro": "empresa nao identificada"}, status=400)
 
-    try:
-        empresa = Empresa.objects.get(id=empresa_id)
-    except ObjectDoesNotExist:
-        return JsonResponse({"erro": "Conta empresarial nao encontrada."}, status=404)
+    # Autenticacao via EmpresaMiddleware (JWT). Nunca confiar apenas no
+    # empresa_id da URL — precisa bater com a empresa autenticada no token,
+    # senao qualquer chamador anonimo poderia reescrever o contrato de
+    # qualquer empresa so sabendo o ID dela.
+    empresa = getattr(request, "empresa", None)
+    if not empresa or empresa.id != empresa_id:
+        return JsonResponse({"erro": "nao autorizado para esta empresa"}, status=403)
 
     payload = _payload_pagamento(request)
     pacote_codigo, plano, pacote, valor = _resolver_pacote_ciclo(payload)

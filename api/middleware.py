@@ -211,7 +211,6 @@ class EmpresaMiddleware:
             "/api/corporativo/mobile/",
             "/api/colaborador-mobile/",
             "/api/public/",
-            "/api/assinatura/",
             "/assinatura/sst/",    # página pública de assinatura SST (link por e-mail)
             "/validar-assinatura/", # página pública de validação de assinatura SST
             "/sst/aso/portal/",    # portal público de visualização de ASO (LGPD — link por e-mail)
@@ -236,6 +235,7 @@ class EmpresaMiddleware:
             "/api/login-empresa-api",
             "/api/login-governo",
             "/api/operacao-central/login",
+            "/solicitar-reset-senha/",
         )
         if any(request.path.startswith(r) for r in rotas_login):
             if _rate_limit_login(request):
@@ -582,4 +582,31 @@ class FetchAuthInterceptorMiddleware:
         ct = response.get("Content-Type", "")
         if "text/html" in ct and hasattr(response, "content") and b"</body>" in response.content:
             response.content = response.content.replace(b"</body>", _FETCH_INTERCEPTOR + b"</body>", 1)
+        return response
+
+
+class ContentSecurityPolicyMiddleware:
+    """
+    Adiciona Content-Security-Policy em modo Report-Only: apenas registra
+    violações no console do navegador, sem bloquear nada. Primeiro passo
+    de hardening — depois de revisar os relatórios de violação, trocar
+    para o header de enforcement (Content-Security-Policy) quando a
+    política estiver ajustada às necessidades reais do app.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.policy = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' https:; "
+            "frame-ancestors 'self';"
+        )
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        response["Content-Security-Policy-Report-Only"] = self.policy
         return response

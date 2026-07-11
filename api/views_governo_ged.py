@@ -71,6 +71,10 @@ def api_ged_documentos(request):
         return JsonResponse({"erro": "Envie o arquivo no campo 'arquivo'"}, status=400)
     if arquivo.size > MAX_UPLOAD_BYTES:
         return JsonResponse({"erro": f"Arquivo maior que {MAX_UPLOAD_BYTES // (1024*1024)}MB"}, status=400)
+    from .utils import validar_arquivo_upload
+    erro_tipo = validar_arquivo_upload(arquivo)
+    if erro_tipo:
+        return JsonResponse({"erro": erro_tipo}, status=400)
     titulo = request.POST.get("titulo", "").strip()
     if not titulo:
         return JsonResponse({"erro": "titulo obrigatório"}, status=400)

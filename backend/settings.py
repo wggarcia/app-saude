@@ -119,6 +119,7 @@ MIDDLEWARE = [
     'api.middleware.SegmentoAccessMiddleware',   # isolamento por segmento (SST/Farmácia/Hospital/Governo/Plano)
     'api.middleware.FetchAuthInterceptorMiddleware',
     'api.views_api_versioning.EnterpriseAPIMiddleware',
+    'api.middleware.ContentSecurityPolicyMiddleware',
 ]
 
 if not DEBUG:

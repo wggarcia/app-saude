@@ -1170,7 +1170,11 @@ def _empresa_por_api_key(request):
     if not auth.startswith("ApiKey "):
         return None, None
     chave = auth[7:].strip()
-    key = ApiKeyEmpresa.objects.filter(chave=chave, ativa=True).select_related("empresa").first()
+    key = None
+    for candidata in ApiKeyEmpresa.objects.filter(ativa=True).select_related("empresa"):
+        if hmac.compare_digest(candidata.chave, chave):
+            key = candidata
+            break
     if not key:
         return None, None
 

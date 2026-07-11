@@ -229,6 +229,8 @@ class AuthDeviceTests(TestCase):
 
     def test_checkout_com_cpf_invalido_nao_altera_pacote_nem_gera_evento(self):
         pacote_original = self.empresa.pacote_codigo
+        login = self._login("checkout-device")
+        token = login.json()["token"]
 
         response = self.client.post(
             f"/api/assinatura/{self.empresa.id}/",
@@ -238,6 +240,7 @@ class AuthDeviceTests(TestCase):
                 "cpf_cnpj": "123",
             }),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
         )
 
         self.assertEqual(response.status_code, 400)

@@ -220,6 +220,10 @@ def api_resultado_lote_csv(request):
         arquivo = request.FILES.get("arquivo")
         if not arquivo:
             return JsonResponse({"erro": "Envie o arquivo CSV no campo 'arquivo'"}, status=400)
+        from .utils import validar_arquivo_upload
+        erro_tipo = validar_arquivo_upload(arquivo)
+        if erro_tipo:
+            return JsonResponse({"erro": erro_tipo}, status=400)
 
         conteudo = arquivo.read().decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(conteudo))
