@@ -115,9 +115,11 @@ def _cpf_formatado(cpf):
 def _funcionarios_ativos_por_cpf(cpf):
     cpf = _cpf_limpo(cpf)
     cpf_fmt = _cpf_formatado(cpf)
-    filtro = Q(cpf__icontains=cpf)
+    # Match exato (não substring) — icontains permitia que um CPF parcial
+    # retornasse dados de qualquer funcionário cujo CPF contivesse aquele trecho.
+    filtro = Q(cpf=cpf)
     if cpf_fmt:
-        filtro |= Q(cpf__icontains=cpf_fmt)
+        filtro |= Q(cpf=cpf_fmt)
     return FuncionarioSST.objects.using(_OWNER_DB).filter(filtro, ativo=True)
 
 

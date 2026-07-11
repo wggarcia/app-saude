@@ -236,6 +236,7 @@ class EmpresaMiddleware:
             "/api/login-governo",
             "/api/operacao-central/login",
             "/solicitar-reset-senha/",
+            "/api/funcionario/buscar-cpf",
         )
         if any(request.path.startswith(r) for r in rotas_login):
             if _rate_limit_login(request):
