@@ -46,11 +46,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("\nPreview apenas. Use --apply para executar a limpeza."))
             return
 
-        with transaction.atomic():
-            removidos_empresas = Empresa.objects.filter(email__in=DEMO_EMAILS).delete()[0]
-            removidos_alertas = AlertaGovernamental.objects.filter(q_alerta_governamental_sintetico()).delete()[0]
-            removidos_registros = RegistroSintoma.objects.filter(q_registro_sintoma_sintetico()).delete()[0]
-            removidos_dispositivos = DispositivoAutorizado.objects.filter(_q_dispositivo_sintetico()).delete()[0]
+        with transaction.atomic(using="owner"):
+            removidos_empresas = Empresa.objects.using("owner").filter(email__in=DEMO_EMAILS).delete()[0]
+            removidos_alertas = AlertaGovernamental.objects.using("owner").filter(q_alerta_governamental_sintetico()).delete()[0]
+            removidos_registros = RegistroSintoma.objects.using("owner").filter(q_registro_sintoma_sintetico()).delete()[0]
+            removidos_dispositivos = DispositivoAutorizado.objects.using("owner").filter(_q_dispositivo_sintetico()).delete()[0]
         self.stdout.write(self.style.SUCCESS("\nLimpeza concluída."))
         self.stdout.write(f"Empresas removidas: {removidos_empresas}")
         self.stdout.write(f"Alertas removidos: {removidos_alertas}")
@@ -64,9 +64,9 @@ class Command(BaseCommand):
 
     def _collect_preview(self):
         return {
-            "empresas_demo": Empresa.objects.filter(email__in=DEMO_EMAILS).count(),
-            "alertas_sinteticos": AlertaGovernamental.objects.filter(q_alerta_governamental_sintetico()).count(),
-            "registros_sinteticos": RegistroSintoma.objects.filter(q_registro_sintoma_sintetico()).count(),
-            "dispositivos_sinteticos": DispositivoAutorizado.objects.filter(_q_dispositivo_sintetico()).count(),
+            "empresas_demo": Empresa.objects.using("owner").filter(email__in=DEMO_EMAILS).count(),
+            "alertas_sinteticos": AlertaGovernamental.objects.using("owner").filter(q_alerta_governamental_sintetico()).count(),
+            "registros_sinteticos": RegistroSintoma.objects.using("owner").filter(q_registro_sintoma_sintetico()).count(),
+            "dispositivos_sinteticos": DispositivoAutorizado.objects.using("owner").filter(_q_dispositivo_sintetico()).count(),
         }
 
