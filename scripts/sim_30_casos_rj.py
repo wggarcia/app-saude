@@ -188,4 +188,4 @@ except Exception as e:
     print(f"\n⚠ Cache: {e}")
 
 print(f"\n✓ {criados} casos criados. Abra o app — o mapa já deve mostrar os focos!")
-print(f"\nPara limpar depois:\n  RegistroSintoma.objects.filter(device_id__startswith='sim_').delete()")
+print(f"\nPara limpar depois:\n  RegistroSintoma.objects.filter(device_id__startswith='sim-br-').delete()")

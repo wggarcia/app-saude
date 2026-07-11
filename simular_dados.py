@@ -51,6 +51,8 @@ for i in range(TOTAL):
 
     RegistroSintoma.objects.create(
         id_anonimo=str(uuid.uuid4()),
+        device_id=f"demo-simulardados-{i:05d}",
+        fonte_referencia="simulacao-local",
 
         febre=random.random() < 0.6,
         tosse=random.random() < 0.7,

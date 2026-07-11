@@ -620,7 +620,10 @@ class _TelaSintomasState extends State<TelaSintomas> {
           ),
         );
       }
-// Sempre reseta a tela após o envio, independente de como ela foi aberta (aba inferior ou botão do painel inicial) — sem isso, quem entra pelo botão do painel fica preso na tela de revisão, porque o botão "Recomeçar" fica escondido justo quando _concluido == true.
+      // Sempre reseta a tela após o envio, independente de como ela foi
+      // aberta (aba inferior ou botão do painel inicial) — sem isso, quem
+      // entra pelo botão do painel fica preso na tela de revisão, porque o
+      // botão "Recomeçar" fica escondido justo quando _concluido == true.
       if (mounted) _limparTudo();
       widget.onSintomasEnviados?.call();
     } catch (e) {
