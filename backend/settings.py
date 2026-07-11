@@ -55,6 +55,13 @@ JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
 
+# Chave Fernet para cifrar embeddings biométricos em repouso (LGPD Art. 11).
+# O placeholder abaixo NÃO é uma chave Fernet válida de propósito — só existe
+# pra deixar claro (com erro imediato ao usar) que ninguém configurou a chave
+# real via env var. Nunca usado em produção por causa do guard logo abaixo.
+_BIOMETRIA_KEY_DEV = "dev-only-configure-BIOMETRIA_EMBEDDING_KEY-before-producao"
+BIOMETRIA_EMBEDDING_KEY = os.environ.get("BIOMETRIA_EMBEDDING_KEY", _BIOMETRIA_KEY_DEV)
+
 DEBUG = env_bool("DJANGO_DEBUG", default=not IS_PRODUCTION)
 TRIAL_DAYS = env_int("TRIAL_DAYS", 15, minimum=1, maximum=90)
 ALLOW_ENTERPRISE_DEMO_MUTATIONS = env_bool(
@@ -93,6 +100,11 @@ if IS_PRODUCTION and (
 ):
     raise RuntimeError(
         "Configure DJANGO_SECRET_KEY e JWT_SECRET_KEY longas e distintas antes de subir em produção."
+    )
+
+if IS_PRODUCTION and BIOMETRIA_EMBEDDING_KEY == _BIOMETRIA_KEY_DEV:
+    raise RuntimeError(
+        "Configure BIOMETRIA_EMBEDDING_KEY (chave Fernet própria) antes de subir em produção."
     )
 
 

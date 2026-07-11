@@ -123,18 +123,31 @@ def _similaridade(distancia: float) -> float:
     return max(0.0, min(1.0, 1.0 - distancia / 2.0))
 
 
+def _embedding_path(funcionario_id: int) -> Path:
+    return EMBEDDINGS_DIR / f"func_{funcionario_id}.npy.enc"
+
+
+def _fernet_embeddings():
+    from cryptography.fernet import Fernet
+    chave = settings.BIOMETRIA_EMBEDDING_KEY
+    return Fernet(chave.encode() if isinstance(chave, str) else chave)
+
+
 def _salvar_embedding(funcionario_id: int, embedding: list):
-    """Salva embedding em arquivo .npy (mais eficiente que banco de dados)."""
-    path = EMBEDDINGS_DIR / f"func_{funcionario_id}.npy"
-    np.save(str(path), np.array(embedding, dtype=np.float32))
+    """Salva embedding cifrado (Fernet) em disco — dado biométrico sensível (LGPD Art. 11)."""
+    buf = io.BytesIO()
+    np.save(buf, np.array(embedding, dtype=np.float32))
+    cifrado = _fernet_embeddings().encrypt(buf.getvalue())
+    _embedding_path(funcionario_id).write_bytes(cifrado)
 
 
 def _carregar_embedding(funcionario_id: int) -> list | None:
-    """Carrega embedding do funcionário, ou None se não existir."""
-    path = EMBEDDINGS_DIR / f"func_{funcionario_id}.npy"
+    """Carrega e decifra o embedding do funcionário, ou None se não existir."""
+    path = _embedding_path(funcionario_id)
     if not path.exists():
         return None
-    return np.load(str(path)).tolist()
+    decifrado = _fernet_embeddings().decrypt(path.read_bytes())
+    return np.load(io.BytesIO(decifrado)).tolist()
 
 
 # ─── LGPD: anonimização ───────────────────────────────────────────────────────
@@ -142,9 +155,9 @@ def _carregar_embedding(funcionario_id: int) -> list | None:
 def _anonimizar_biometria(funcionario_id: int):
     """
     Remove todos os dados biométricos do funcionário (direito ao apagamento LGPD).
-    Remove embedding .npy e limpa campos do banco.
+    Remove embedding cifrado e limpa campos do banco.
     """
-    path = EMBEDDINGS_DIR / f"func_{funcionario_id}.npy"
+    path = _embedding_path(funcionario_id)
     if path.exists():
         path.unlink()
 
@@ -411,7 +424,7 @@ def api_biometria_status_facial(request):
         1 for bio in BiometriaFuncionario.objects.filter(
             funcionario__empresa=empresa, ativo=True
         ).values_list("funcionario_id", flat=True)
-        if (EMBEDDINGS_DIR / f"func_{bio}.npy").exists()
+        if _embedding_path(bio).exists()
     )
 
     return JsonResponse({
