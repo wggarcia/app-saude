@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import timedelta
 import json
+import logging
 from time import time
+
+logger = logging.getLogger(__name__)
 
 from django.core.cache import cache
 from django.db.models import Avg, Count, Q
@@ -158,9 +161,6 @@ def clear_panorama_cache():
     _PANORAMA_CACHE["created_at"] = 0.0
     _PANORAMA_CACHE["payload"] = None
     _PANORAMA_CACHE["version"] = _current_panorama_cache_version()
-    _PUBLIC_EMPRESA_CACHE["obj"] = None
-    _PUBLIC_EMPRESA_CACHE["loaded"] = False
-    _PUBLIC_EMPRESA_CACHE["next_retry"] = 0.0
 
 
 def _public_population_empresa():
@@ -190,11 +190,15 @@ def _scope_public_population_queryset(queryset):
     empresa = _public_population_empresa()
     if not empresa:
         return queryset
+    from django.db import connection
     try:
-        from api.middleware import _rls_set_empresa
-        _rls_set_empresa(empresa.id)
-    except Exception:
-        pass
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT set_config('app.empresa_id', %s, false)",
+                [str(empresa.id)],
+            )
+    except Exception as exc:
+        logger.error("panorama: RLS set empresa=%s falhou: %s", empresa.id, exc)
     return queryset.filter(empresa=empresa)
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
@@ -1257,6 +1261,24 @@ def build_panorama_payload():
         _PANORAMA_CACHE["version"] = current_version
         return cached
 
+    # ── RLS: o panorama é sempre da empresa populacao (app cidadão).
+    # Sobrescreve qualquer empresa_id que o middleware tenha setado (governo,
+    # hospital, etc.) antes que qualquer query de RegistroSintoma seja executada.
+    _empresa_pub = _public_population_empresa()
+    if _empresa_pub:
+        from django.db import connection as _conn
+        try:
+            with _conn.cursor() as _cur:
+                _cur.execute(
+                    "SELECT set_config('app.empresa_id', %s, false)",
+                    [str(_empresa_pub.id)],
+                )
+        except Exception as _exc:
+            logger.error(
+                "panorama: RLS override empresa=%s falhou antes das queries: %s",
+                _empresa_pub.id, _exc,
+            )
+
     risco_oficial_map = _risco_oficial_map_seguro()
     risco_oficial_doenca_map = _risco_oficial_doenca_map_seguro()
     bairros = _serialize_layer(
@@ -1288,7 +1310,7 @@ def build_panorama_payload():
 
     # Só cacheia quando há dados reais — impede que um payload vazio (empresa não
     # encontrada no cold-start) fique travado no Redis por 5 min.
-    total_registros = sum(a.get("total", 0) for a in layers.get("bairros", []))
+    total_registros = sum(a.get("raw_total_cases", 0) for a in layers.get("bairros", []))
     if total_registros > 0:
         cache.set(redis_key, payload, _CACHE_TTL_SECONDS)
         _PANORAMA_CACHE["created_at"] = now
