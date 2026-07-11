@@ -183,6 +183,10 @@ def api_biometria_cadastrar_facial(request, funcionario_id):
         foto_b64 = body.get("foto_base64", "")
         if not foto_b64:
             return JsonResponse({"erro": "Campo foto_base64 obrigatório."}, status=400)
+        if body.get("consentimento") is not True:
+            return JsonResponse({
+                "erro": "É necessário confirmar que o funcionário consentiu com a coleta de dado biométrico facial (LGPD Art. 11).",
+            }, status=400)
     except Exception:
         return JsonResponse({"erro": "JSON inválido."}, status=400)
 
@@ -203,12 +207,15 @@ def api_biometria_cadastrar_facial(request, funcionario_id):
     _salvar_embedding(funcionario.pk, embedding)
 
     # Atualiza registro no banco (sem salvar a foto completa — LGPD)
+    from django.utils import timezone as _tz
     bio, criado = BiometriaFuncionario.objects.update_or_create(
         funcionario=funcionario,
         defaults={
             "foto_base64": "",          # Não armazenamos a foto — apenas embedding
             "hash_foto": hash_foto,
             "ativo": True,
+            "consentimento_confirmado_em": _tz.now(),
+            "consentimento_confirmado_por": empresa.email,
         }
     )
 

@@ -136,6 +136,10 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     Clique para selecionar a foto ou arraste aqui
     <input type="file" id="bio-file" accept="image/*" style="display:none" onchange="onBioFile(event)">
   </label>
+  <label style="display:flex;align-items:flex-start;gap:8px;margin-top:16px;font-size:.76rem;color:var(--muted);cursor:pointer;line-height:1.4">
+    <input type="checkbox" id="bio-consentimento" onchange="atualizarBotaoSalvar()" style="margin-top:2px">
+    Confirmo que o funcionário foi informado e consentiu com a coleta desta foto para fins de identificação/confirmação de entrega de EPI, conforme a LGPD (Art. 11).
+  </label>
   <div style="display:flex;gap:10px;margin-top:18px">
     <button onclick="fecharModalBio()" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--line2);background:none;color:var(--muted);font-size:.8rem;cursor:pointer">Cancelar</button>
     <button id="bio-btn-salvar" onclick="salvarBiometria()" style="flex:2;padding:9px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.8rem;font-weight:800;cursor:pointer;opacity:.4" disabled>Salvar Foto</button>
@@ -265,6 +269,7 @@ function abrirModalBio(id, nome) {
   document.getElementById("bio-modal-nome").textContent = nome;
   document.getElementById("bio-preview-wrap").style.display = "none";
   document.getElementById("bio-file").value = "";
+  document.getElementById("bio-consentimento").checked = false;
   document.getElementById("bio-btn-salvar").disabled = true;
   document.getElementById("bio-btn-salvar").style.opacity = ".4";
   document.getElementById("bio-erro").style.display = "none";
@@ -278,6 +283,12 @@ function fecharModalBio() {
   document.getElementById("bio-modal").style.display = "none";
 }
 
+function atualizarBotaoSalvar() {
+  const pronto = !!_bioBase64 && document.getElementById("bio-consentimento").checked;
+  document.getElementById("bio-btn-salvar").disabled = !pronto;
+  document.getElementById("bio-btn-salvar").style.opacity = pronto ? "1" : ".4";
+}
+
 function onBioFile(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -288,21 +299,20 @@ function onBioFile(e) {
     document.getElementById("bio-preview").src = _bioBase64;
     document.getElementById("bio-preview-wrap").style.display = "block";
     document.getElementById("bio-drop-label").style.borderColor = "var(--teal)";
-    document.getElementById("bio-btn-salvar").disabled = false;
-    document.getElementById("bio-btn-salvar").style.opacity = "1";
     document.getElementById("bio-erro").style.display = "none";
+    atualizarBotaoSalvar();
   };
   reader.readAsDataURL(file);
 }
 
 async function salvarBiometria() {
-  if (!_bioBase64 || !_bioFuncId) return;
+  if (!_bioBase64 || !_bioFuncId || !document.getElementById("bio-consentimento").checked) return;
   const btn = document.getElementById("bio-btn-salvar");
   btn.textContent = "Salvando..."; btn.disabled = true;
   try {
     const r = await fetch("/api/sst/biometria/cadastrar/", {
       method: "POST", credentials: "include", headers: headers(),
-      body: JSON.stringify({ funcionario_id: _bioFuncId, foto_base64: _bioBase64 })
+      body: JSON.stringify({ funcionario_id: _bioFuncId, foto_base64: _bioBase64, consentimento: true })
     });
     const d = await r.json();
     if (!r.ok) { document.getElementById("bio-erro").textContent = d.erro || "Erro ao salvar."; document.getElementById("bio-erro").style.display = "block"; btn.textContent = "Salvar Foto"; btn.disabled = false; return; }

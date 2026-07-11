@@ -6108,6 +6108,14 @@ class BiometriaFuncionario(models.Model):
     cadastrado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     ativo = models.BooleanField(default=True)
+    consentimento_confirmado_em = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Data/hora em que o consentimento do titular para coleta de dado biométrico foi confirmado (LGPD Art. 11)",
+    )
+    consentimento_confirmado_por = models.CharField(
+        max_length=150, blank=True, default="",
+        help_text="Quem confirmou o consentimento (e-mail do gestor/empresa que registrou a coleta)",
+    )
 
     class Meta:
         ordering = ["-cadastrado_em"]

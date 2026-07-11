@@ -78,6 +78,10 @@ def api_biometria_cadastrar(request):
             return JsonResponse({"erro": "funcionario_id é obrigatório"}, status=400)
         if not foto_base64:
             return JsonResponse({"erro": "foto_base64 é obrigatório"}, status=400)
+        if data.get("consentimento") is not True:
+            return JsonResponse({
+                "erro": "É necessário confirmar que o funcionário consentiu com a coleta desta foto (LGPD Art. 11).",
+            }, status=400)
 
         # Validação básica de tamanho (~500KB em base64 ≈ 680.000 chars)
         if len(foto_base64) > 700_000:
@@ -86,12 +90,15 @@ def api_biometria_cadastrar(request):
         func = FuncionarioSST.objects.get(id=funcionario_id, empresa=empresa)
         hash_foto = _sha256(foto_base64)
 
+        from django.utils import timezone as _tz
         bio, criado = BiometriaFuncionario.objects.update_or_create(
             funcionario=func,
             defaults={
                 "foto_base64": foto_base64,
                 "hash_foto": hash_foto,
                 "ativo": True,
+                "consentimento_confirmado_em": _tz.now(),
+                "consentimento_confirmado_por": empresa.email,
             }
         )
 
