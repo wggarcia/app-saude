@@ -586,6 +586,13 @@ class Command(BaseCommand):
                 DescarteItemFarmacia.objects.filter(empresa=empresa).delete()
             except Exception:
                 pass
+            # Módulo de gestão atual (views_farmacia_gestao.py / views_farmacia_fase2.py)
+            # usa MedicamentoFarmacia, não ItemFarmacia — precisa ser limpo também.
+            try:
+                from api.models import MedicamentoFarmacia
+                MedicamentoFarmacia.objects.filter(empresa=empresa).delete()
+            except Exception:
+                pass
 
         def _limpar_hospital(empresa):
             # cascade: DepartamentoHospital → LeitoHospital → InternacaoHospital
@@ -2049,6 +2056,50 @@ class Command(BaseCommand):
                 )
             except Exception:
                 pass
+
+        # ── 10. Estoque do módulo de gestão atual (MedicamentoFarmacia) ─────────
+        # views_farmacia_gestao.py (dashboard/estoque) e views_farmacia_fase2.py
+        # (transferências em rede) usam este modelo, não o ItemFarmacia acima.
+        try:
+            from decimal import Decimal
+            from api.models import MedicamentoFarmacia, Rede, UnidadeRede
+
+            rede, _ = Rede.objects.get_or_create(
+                nome="Rede Demo SolusCRT",
+                defaults={"tipo": "farmacia", "descricao": "Rede de demonstração"},
+            )
+            UnidadeRede.objects.update_or_create(
+                empresa=empresa, defaults={"rede": rede, "tipo": "farmacia"},
+            )
+
+            catalogo_medicamentos = [
+                ("Dipirona Sódica", "Dipirona monoidratada", "comprimido", "500mg", "analgesico", 320, 50, 500, Decimal("0.35"), Decimal("1.20"), False, ""),
+                ("Paracetamol", "Paracetamol", "comprimido", "750mg", "analgesico", 210, 40, 400, Decimal("0.40"), Decimal("1.50"), False, ""),
+                ("Amoxicilina", "Amoxicilina triidratada", "capsula", "500mg", "antibiotico", 85, 30, 200, Decimal("0.90"), Decimal("3.20"), False, ""),
+                ("Azitromicina", "Azitromicina diidratada", "comprimido", "500mg", "antibiotico", 40, 20, 120, Decimal("2.10"), Decimal("6.90"), False, ""),
+                ("Ibuprofeno", "Ibuprofeno", "comprimido", "400mg", "anti_inflamatorio", 150, 30, 300, Decimal("0.55"), Decimal("1.90"), False, ""),
+                ("Losartana Potássica", "Losartana potássica", "comprimido", "50mg", "antihipertensivo", 12, 30, 250, Decimal("0.60"), Decimal("2.10"), False, ""),
+                ("Metformina", "Cloridrato de metformina", "comprimido", "850mg", "antidiabetes", 95, 25, 200, Decimal("0.45"), Decimal("1.60"), False, ""),
+                ("Atorvastatina", "Atorvastatina cálcica", "comprimido", "20mg", "cardiovascular", 60, 20, 150, Decimal("1.10"), Decimal("3.80"), False, ""),
+                ("Omeprazol", "Omeprazol", "capsula", "20mg", "outro", 0, 30, 200, Decimal("0.50"), Decimal("1.80"), False, ""),
+                ("Sertralina", "Cloridrato de sertralina", "comprimido", "50mg", "psiquiatrico", 18, 15, 100, Decimal("1.80"), Decimal("5.90"), True, "B1"),
+                ("Clonazepam", "Clonazepam", "comprimido", "2mg", "psiquiatrico", 8, 10, 60, Decimal("1.20"), Decimal("4.50"), True, "B1"),
+                ("Insulina NPH", "Insulina humana NPH", "injetavel", "100UI/mL", "antidiabetes", 22, 10, 80, Decimal("18.00"), Decimal("42.00"), False, ""),
+                ("Vitamina D3", "Colecalciferol", "gotas", "2000UI/mL", "vitamina", 55, 15, 150, Decimal("12.00"), Decimal("28.00"), False, ""),
+                ("Complexo B", "Complexo B", "comprimido", "-", "vitamina", 40, 15, 150, Decimal("0.70"), Decimal("2.40"), False, ""),
+            ]
+            for nome, principio, forma, conc, classe, qtd, minimo, maximo, custo, venda, controlado, lista344 in catalogo_medicamentos:
+                MedicamentoFarmacia.objects.update_or_create(
+                    empresa=empresa, nome=nome,
+                    defaults=dict(
+                        principio_ativo=principio, forma_farmaceutica=forma, concentracao=conc,
+                        classe_terapeutica=classe, quantidade_atual=qtd, quantidade_minima=minimo,
+                        quantidade_maxima=maximo, preco_custo=custo, preco_venda=venda,
+                        controlado=controlado, lista_portaria_344=lista344, ativo=True,
+                    )
+                )
+        except Exception:
+            pass
 
         self.out(
             f"     ✓ Farmácia: {len([x for x in item_objs if x])} itens | "

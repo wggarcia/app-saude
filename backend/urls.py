@@ -1027,6 +1027,7 @@ from api.views_funcionario_portal import (
     funcionario_comunicados, funcionario_comunicado_lido,
     funcionario_psicossocial_ativa, funcionario_epis_pendentes,
     funcionario_meus_afastamentos, funcionario_minha_biometria,
+    funcionario_exportar_dados,
 )
 
 from api.views_bem_estar import (
@@ -2173,6 +2174,7 @@ urlpatterns = [
     path('api/funcionario/minhas-solicitacoes', funcionario_minhas_solicitacoes),
     path('api/funcionario/meus-afastamentos', funcionario_meus_afastamentos),
     path('api/funcionario/minha-biometria', funcionario_minha_biometria),
+    path('api/funcionario/exportar-dados', funcionario_exportar_dados),
     path('api/funcionario/comunicados', funcionario_comunicados),
     path('api/funcionario/comunicados/<int:comunicado_id>/lido', funcionario_comunicado_lido),
     path('api/funcionario/psicossocial/ativa/', funcionario_psicossocial_ativa),

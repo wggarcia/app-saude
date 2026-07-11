@@ -796,3 +796,94 @@ def funcionario_minha_biometria(request):
         })
     except BiometriaFuncionario.DoesNotExist:
         return JsonResponse({"cadastrada": False})
+
+
+# ── exportação de dados pessoais (LGPD — direito de portabilidade) ─────────
+
+def funcionario_exportar_dados(request):
+    """
+    GET /api/funcionario/exportar-dados
+    Exporta, em um único JSON, todos os dados pessoais que o SolusCRT mantém
+    sobre o funcionário autenticado (LGPD Art. 18, direito de portabilidade).
+    """
+    if request.method != "GET":
+        return JsonResponse({"erro": "Use GET"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    from .models import BiometriaFuncionario
+
+    hoje = timezone.now().date()
+
+    perfil = {
+        "nome": func.nome,
+        "cpf": func.cpf,
+        "matricula": func.matricula,
+        "cargo": func.cargo,
+        "setor": func.setor,
+        "sexo": func.sexo,
+        "data_nascimento": str(func.data_nascimento) if func.data_nascimento else None,
+        "data_admissao": str(func.data_admissao) if func.data_admissao else None,
+        "classe_risco": func.classe_risco,
+        "empresa_nome": func.empresa.nome,
+    }
+
+    asos = [
+        {
+            "tipo_display": a.get_tipo_display(),
+            "data_emissao": str(a.data_emissao),
+            "data_validade": str(a.data_validade) if a.data_validade else None,
+            "resultado_display": a.get_resultado_display(),
+            "medico_responsavel": a.medico_responsavel,
+            "crm": a.crm,
+            "restricoes": a.restricoes,
+        }
+        for a in ASOOcupacional.objects.filter(funcionario=func, empresa=func.empresa).order_by("-data_emissao")
+    ]
+
+    treinamentos = [
+        {
+            "nr": t.nr,
+            "titulo": t.titulo,
+            "carga_horaria": t.carga_horaria,
+            "data_realizacao": str(t.data_realizacao) if t.data_realizacao else None,
+            "data_validade": str(t.data_validade) if t.data_validade else None,
+            "instrutor": t.instrutor,
+            "status": t.status,
+        }
+        for t in TreinamentoNR.objects.filter(funcionario=func, empresa=func.empresa).order_by("-data_realizacao")
+    ]
+
+    try:
+        epis = [
+            {
+                "epi_nome": e.epi.nome if e.epi else "—",
+                "ca": e.epi.ca_numero if e.epi else "",
+                "quantidade": e.quantidade,
+                "data_entrega": str(e.data_entrega),
+                "data_devolucao": str(e.data_devolucao) if e.data_devolucao else None,
+            }
+            for e in EntregaEPI.objects.filter(funcionario=func, empresa=func.empresa).select_related("epi").order_by("-data_entrega")
+        ]
+    except Exception:
+        epis = []
+
+    try:
+        bio = BiometriaFuncionario.objects.get(funcionario=func, ativo=True)
+        biometria = {
+            "cadastrada": True,
+            "cadastrado_em": str(bio.cadastrado_em.date()),
+            "consentimento_confirmado_em": str(bio.consentimento_confirmado_em) if bio.consentimento_confirmado_em else None,
+        }
+    except BiometriaFuncionario.DoesNotExist:
+        biometria = {"cadastrada": False}
+
+    return JsonResponse({
+        "gerado_em": str(hoje),
+        "titular": perfil,
+        "asos": asos,
+        "treinamentos_nr": treinamentos,
+        "epis_entregues": epis,
+        "biometria": biometria,
+    }, json_dumps_params={"indent": 2, "ensure_ascii": False})
