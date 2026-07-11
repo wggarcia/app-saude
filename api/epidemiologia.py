@@ -190,16 +190,7 @@ def _scope_public_population_queryset(queryset):
     empresa = _public_population_empresa()
     if not empresa:
         return queryset
-    from django.db import connection
-    try:
-        with connection.cursor() as cur:
-            cur.execute(
-                "SELECT set_config('app.empresa_id', %s, false)",
-                [str(empresa.id)],
-            )
-    except Exception as exc:
-        logger.error("panorama: RLS set empresa=%s falhou: %s", empresa.id, exc)
-    return queryset.filter(empresa=empresa)
+    return queryset.using("owner").filter(empresa=empresa)
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
 FOCUS_DECAY_WINDOW_DAYS = 30
@@ -1035,12 +1026,14 @@ def _build_state_layer(municipios, risco_oficial_map=None, risco_oficial_doenca_
     return states
 
 
-def _build_timeline():
+def _build_timeline(empresa_pub=None):
     now = timezone.now()
     start = (now - timedelta(days=13)).replace(hour=0, minute=0, second=0, microsecond=0)
+    qs = RegistroSintoma.objects.using("owner").filter(data_registro__gte=start)
+    if empresa_pub:
+        qs = qs.filter(empresa=empresa_pub)
     rows = (
-        RegistroSintoma.objects.filter(data_registro__gte=start)
-        .extra(select={"day": "date(data_registro)"})
+        qs.extra(select={"day": "date(data_registro)"})
         .values("day")
         .annotate(total=Count("id"))
         .order_by("day")
@@ -1069,8 +1062,11 @@ def _build_timeline():
     }
 
 
-def _build_data_quality():
-    summary = RegistroSintoma.objects.aggregate(
+def _build_data_quality(empresa_pub=None):
+    qs = RegistroSintoma.objects.using("owner")
+    if empresa_pub:
+        qs = qs.filter(empresa=empresa_pub)
+    summary = qs.aggregate(
         total=Count("id"),
         suspected=Count("id", filter=Q(suspeito=True)),
         avg_confidence=Avg("confianca"),
@@ -1088,9 +1084,12 @@ def _build_data_quality():
     }
 
 
-def _top_value_counts(field_name, label, limit=5):
+def _top_value_counts(field_name, label, limit=5, empresa_pub=None):
+    qs = RegistroSintoma.objects.using("owner")
+    if empresa_pub:
+        qs = qs.filter(empresa=empresa_pub)
     rows = (
-        RegistroSintoma.objects.exclude(**{f"{field_name}__isnull": True})
+        qs.exclude(**{f"{field_name}__isnull": True})
         .exclude(**{field_name: ""})
         .values(field_name)
         .annotate(total=Count("id"))
@@ -1102,15 +1101,15 @@ def _top_value_counts(field_name, label, limit=5):
     ]
 
 
-def _build_operational_profiles():
+def _build_operational_profiles(empresa_pub=None):
     return {
-        "groups": _top_value_counts("grupo", "grupo"),
-        "classifications": _top_value_counts("classificacao", "classificacao"),
-        "confirmed_diseases": _top_value_counts("doenca_confirmada", "doenca"),
+        "groups": _top_value_counts("grupo", "grupo", empresa_pub=empresa_pub),
+        "classifications": _top_value_counts("classificacao", "classificacao", empresa_pub=empresa_pub),
+        "confirmed_diseases": _top_value_counts("doenca_confirmada", "doenca", empresa_pub=empresa_pub),
     }
 
 
-def _aggregate_overview(layers):
+def _aggregate_overview(layers, empresa_pub=None):
     bairros = layers["bairros"]
     total_cases = sum(area["total_cases"] for area in bairros)
     raw_total_cases = sum(area.get("raw_total_cases", area["total_cases"]) for area in bairros)
@@ -1153,9 +1152,9 @@ def _aggregate_overview(layers):
             "active_probability": round((active_disease_totals[disease_name] / active_disease_total_sum) * 100, 2),
         })
 
-    timeline = _build_timeline()
-    data_quality = _build_data_quality()
-    operational_profiles = _build_operational_profiles()
+    timeline = _build_timeline(empresa_pub=empresa_pub)
+    data_quality = _build_data_quality(empresa_pub=empresa_pub)
+    operational_profiles = _build_operational_profiles(empresa_pub=empresa_pub)
     top_stock_pressure = sorted(bairros, key=lambda area: (area["stock_pressure"], area["growth_percent"]), reverse=True)[:5]
     top_hospital_load = sorted(bairros, key=lambda area: (area["hospital_load_estimate"], area["growth_percent"]), reverse=True)[:5]
 
@@ -1261,23 +1260,9 @@ def build_panorama_payload():
         _PANORAMA_CACHE["version"] = current_version
         return cached
 
-    # ── RLS: o panorama é sempre da empresa populacao (app cidadão).
-    # Sobrescreve qualquer empresa_id que o middleware tenha setado (governo,
-    # hospital, etc.) antes que qualquer query de RegistroSintoma seja executada.
+    # Todas as queries do panorama usam .using("owner") + .filter(empresa=_empresa_pub)
+    # para não depender do RLS (que varia conforme o middleware do gestor logado).
     _empresa_pub = _public_population_empresa()
-    if _empresa_pub:
-        from django.db import connection as _conn
-        try:
-            with _conn.cursor() as _cur:
-                _cur.execute(
-                    "SELECT set_config('app.empresa_id', %s, false)",
-                    [str(_empresa_pub.id)],
-                )
-        except Exception as _exc:
-            logger.error(
-                "panorama: RLS override empresa=%s falhou antes das queries: %s",
-                _empresa_pub.id, _exc,
-            )
 
     risco_oficial_map = _risco_oficial_map_seguro()
     risco_oficial_doenca_map = _risco_oficial_doenca_map_seguro()
@@ -1300,7 +1285,7 @@ def build_panorama_payload():
 
     payload = {
         "generated_at": timezone.now().isoformat(),
-        "overview": _aggregate_overview(layers),
+        "overview": _aggregate_overview(layers, empresa_pub=_empresa_pub),
         "layers": layers,
         "filters": {
             "estados": sorted({area["estado"] for area in layers["bairros"] if area.get("estado")}),
