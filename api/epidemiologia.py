@@ -172,7 +172,10 @@ def _public_population_empresa():
         # Still in retry cooldown — don't hammer DB on every request
         return None
     try:
-        obj = Empresa.objects.filter(email=PUBLIC_APP_EMAIL).first()
+        # Must use "owner" (superuser) — default connection has RLS active.
+        # When called during a gestão request, RLS is set to the gestor's empresa_id,
+        # so the populacao empresa (different id) would be invisible on the default conn.
+        obj = Empresa.objects.using("owner").filter(email=PUBLIC_APP_EMAIL).first()
     except Exception:
         _PUBLIC_EMPRESA_CACHE["next_retry"] = now + 10
         return None
@@ -189,7 +192,9 @@ def _public_population_empresa():
 def _scope_public_population_queryset(queryset):
     empresa = _public_population_empresa()
     if not empresa:
-        return queryset
+        # Fail safe: return empty queryset rather than leaking data via the
+        # default (RLS-restricted) connection.
+        return queryset.none()
     return queryset.using("owner").filter(empresa=empresa)
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
