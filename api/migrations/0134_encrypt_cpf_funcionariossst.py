@@ -71,11 +71,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # 1. Schema: TextField suporta o ciphertext mais longo (36+ chars)
-        migrations.AlterField(
-            model_name="funcionariossst",
-            name="cpf",
-            field=models.TextField(blank=True, default=""),
+        # 1. Schema: expande coluna para TEXT via SQL direto (AlterField falha quando
+        #    o modelo não está registrado no estado de migrações do Django).
+        migrations.RunSQL(
+            sql="ALTER TABLE api_funcionariossst ALTER COLUMN cpf TYPE TEXT",
+            reverse_sql="ALTER TABLE api_funcionariossst ALTER COLUMN cpf TYPE varchar(14)",
         ),
         # 2. Dados: criptografa todos os CPFs existentes
         migrations.RunPython(
