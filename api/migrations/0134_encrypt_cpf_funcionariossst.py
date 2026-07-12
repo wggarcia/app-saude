@@ -74,8 +74,8 @@ class Migration(migrations.Migration):
         # 1. Schema: expande coluna para TEXT via SQL direto (AlterField falha quando
         #    o modelo não está registrado no estado de migrações do Django).
         migrations.RunSQL(
-            sql="ALTER TABLE api_funcionariossst ALTER COLUMN cpf TYPE TEXT",
-            reverse_sql="ALTER TABLE api_funcionariossst ALTER COLUMN cpf TYPE varchar(14)",
+            sql="ALTER TABLE api_funcionariosst ALTER COLUMN cpf TYPE TEXT",
+            reverse_sql="ALTER TABLE api_funcionariosst ALTER COLUMN cpf TYPE varchar(14)",
         ),
         # 2. Dados: criptografa todos os CPFs existentes
         migrations.RunPython(
