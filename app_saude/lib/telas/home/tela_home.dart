@@ -550,6 +550,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                       'Acompanhe o radar local, o mapa público e comunicados oficiais para tomar decisões melhores no seu dia a dia.',
                   icon: Icons.language,
                 ),
+                const SizedBox(height: 16),
+                const _LgpdCard(),
               ],
             ),
           ),
@@ -1317,6 +1319,114 @@ class _HeroCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LgpdCard extends StatefulWidget {
+  const _LgpdCard();
+
+  @override
+  State<_LgpdCard> createState() => _LgpdCardState();
+}
+
+class _LgpdCardState extends State<_LgpdCard> {
+  bool _loading = false;
+
+  Future<void> _confirmarApagar() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apagar meus dados'),
+        content: const Text(
+          'Isso removerá todos os registros de sintomas, token de notificação e aceites legais associados a este aparelho.\n\nDados epidemiológicos anonimizados podem ser retidos conforme a LGPD Art. 11.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Apagar meus dados'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    setState(() => _loading = true);
+    try {
+      await PublicApiService.apagarMeusDados();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seus dados foram removidos conforme a LGPD Art. 18.'),
+          backgroundColor: Color(0xFF1A7A6E),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            const Icon(Icons.manage_accounts_outlined,
+                color: Color(0xFF39D0C3), size: 26),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Seus dados (LGPD)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Solicite a exclusão dos dados associados a este aparelho a qualquer momento.',
+                    style: TextStyle(color: Color(0xFF9CC4DB), height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : TextButton(
+                    onPressed: _confirmarApagar,
+                    child: const Text(
+                      'Apagar',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+          ],
+        ),
       ),
     );
   }

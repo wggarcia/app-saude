@@ -324,4 +324,22 @@ class PublicApiService {
         )
         .timeout(_timeout);
   }
+
+  static Future<Map<String, dynamic>> apagarMeusDados() async {
+    final deviceId = await DeviceService.getDeviceId();
+    final response = await http
+        .post(
+          _uri('/api/public/lgpd/apagar-meus-dados'),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-Id': deviceId,
+          },
+          body: jsonEncode({'device_id': deviceId}),
+        )
+        .timeout(_timeout);
+    if (response.statusCode == 200) {
+      return _decodeObject(response.body);
+    }
+    throw Exception('Não foi possível remover seus dados agora. Tente novamente.');
+  }
 }
