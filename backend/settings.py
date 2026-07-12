@@ -299,16 +299,10 @@ if _REDIS_URL:
         }
     }
 elif IS_PRODUCTION:
-    import logging as _logging
-    _logging.getLogger(__name__).critical(
-        "REDIS_URL não configurado em produção — usando LocMemCache. "
-        "Vincule REDIS_URL ao serviço no Render para cache persistente."
+    raise RuntimeError(
+        "Configure REDIS_URL em produção. Sem Redis o rate limiting de login "
+        "não funciona entre workers e o cache é perdido a cada restart."
     )
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        }
-    }
 else:
     # Dev local: FileBasedCache compartilhado entre workers Gunicorn via filesystem.
     CACHES = {

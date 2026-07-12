@@ -56,7 +56,7 @@ MODELO_DETECTOR  = "retinaface"   # Detector de rosto mais preciso
 LIMIAR_MATCH     = 0.68           # Threshold de distância (abaixo = match)
 # ArcFace: distância cosseno < 0.68 → mesma pessoa (fonte: FaceNet paper)
 
-EMBEDDINGS_DIR = Path(getattr(settings, "BASE_DIR", "/tmp")) / "biometria_embeddings"
+EMBEDDINGS_DIR = Path(getattr(settings, "MEDIA_ROOT", getattr(settings, "BASE_DIR", "/tmp"))) / "biometria_embeddings"
 EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
 
 

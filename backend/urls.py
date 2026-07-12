@@ -23,6 +23,7 @@ from api.views import (
     insights_nacional,
     tela_cadastro, tela_login_empresa, tela_login_governo,
     registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_vigilancia_resumo, app_alertas_publicos, registrar_push_publico,
+    apagar_meus_dados_lgpd,
     site_principal, apresentacao_comercial, documento_publico
 )
 
@@ -1514,6 +1515,7 @@ urlpatterns = [
     path('api/public/alertas', app_alertas_publicos),
     path('api/public/legal-consent', views.registrar_aceite_legal_publico),
     path('api/public/push-token', registrar_push_publico),
+    path('api/public/lgpd/apagar-meus-dados', apagar_meus_dados_lgpd),
 
     path('api/registrar_empresa', registrar_empresa),
     path('api/global-paises', global_paises),

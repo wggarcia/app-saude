@@ -3332,6 +3332,51 @@ def app_alertas_publicos(request):
 
 
 @csrf_exempt
+def apagar_meus_dados_lgpd(request):
+    """
+    POST /api/public/lgpd/apagar-meus-dados
+    LGPD Art. 18, II e III — direito de exclusão/anonimização de dados pessoais.
+
+    Remove todos os dados identificadores ligados ao device_id:
+    - Anonimiza RegistroSintoma: zera device_id e ip (dado epidemiológico retido
+      sem identificador — permitido por LGPD Art. 11, II, f — saúde pública)
+    - Exclui DispositivoPushPublico (push token é dado pessoal)
+    - Exclui AceiteLegalPublico (contém IP — dado pessoal)
+    """
+    if request.method not in ("POST", "DELETE"):
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    device_id = (request.headers.get("X-Device-Id") or dados.get("device_id") or "").strip()
+    if not device_id:
+        return JsonResponse({"erro": "device_id é obrigatório"}, status=400)
+
+    device_id = device_id[:120]
+
+    sintomas_anonimizados = RegistroSintoma.objects.filter(device_id=device_id).update(
+        device_id="",
+        ip=None,
+    )
+
+    push_excluidos, _ = DispositivoPushPublico.objects.filter(device_id=device_id).delete()
+    aceites_excluidos, _ = AceiteLegalPublico.objects.filter(device_id=device_id).delete()
+
+    return JsonResponse({
+        "status": "ok",
+        "mensagem": "Dados pessoais removidos conforme LGPD Art. 18.",
+        "detalhes": {
+            "sintomas_anonimizados": sintomas_anonimizados,
+            "push_tokens_excluidos": push_excluidos,
+            "aceites_excluidos": aceites_excluidos,
+        },
+    })
+
+
+@csrf_exempt
 def registrar_aceite_legal_publico(request):
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
