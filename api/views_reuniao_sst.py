@@ -2,9 +2,12 @@
 Reuniões SST — API e páginas
 """
 import json
+import logging
 import time
 import jwt as pyjwt
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -250,12 +253,29 @@ def api_funcionario_reunioes(request):
     return JsonResponse({"reunioes": resultado})
 
 
-# ── JWT para Jitsi self-hosted ─────────────────────────────────────────────────
+# ── JWT para JaaS (8x8.vc) — RS256 ───────────────────────────────────────────
+
+def _jaas_private_key():
+    """Carrega chave privada RSA do JaaS a partir de arquivo ou env var base64."""
+    path = getattr(settings, "JITSI_PRIVATE_KEY_PATH", "")
+    if path:
+        try:
+            with open(path) as f:
+                return f.read()
+        except OSError as exc:
+            logger.error("Não foi possível ler JITSI_PRIVATE_KEY_PATH %s: %s", path, exc)
+            return None
+    b64 = getattr(settings, "JITSI_PRIVATE_KEY_B64", "")
+    if b64:
+        import base64 as _b64
+        return _b64.b64decode(b64).decode()
+    return None
+
 
 def api_reuniao_token(request, reuniao_id):
     """
-    Gera um JWT assinado para o usuário entrar na reunião via Jitsi self-hosted.
-    Se JITSI_SECRET não estiver configurado (dev), retorna token=None
+    Gera JWT RS256 assinado para o usuário entrar na reunião via JaaS (8x8.vc).
+    Se a chave privada não estiver configurada (dev), retorna token=None
     e o frontend usa meet.jit.si sem autenticação.
     """
     empresa, redir = _autenticar(request)
@@ -266,49 +286,60 @@ def api_reuniao_token(request, reuniao_id):
     if not reuniao:
         return JsonResponse({"erro": "Reunião não encontrada"}, status=404)
 
-    domain = settings.JITSI_DOMAIN
-    app_id = settings.JITSI_APP_ID
-    secret = settings.JITSI_SECRET
+    app_id = getattr(settings, "JITSI_APP_ID", "")
+    kid = getattr(settings, "JITSI_KID", "")
     sala = reuniao.sala_jitsi
+    private_key = _jaas_private_key()
 
-    # Sem secret configurado → modo dev (meet.jit.si público, sem JWT)
-    if not secret:
+    # Sem chave configurada → modo dev (meet.jit.si público, sem JWT)
+    if not private_key or not app_id or not kid:
+        if getattr(settings, "IS_PRODUCTION", False):
+            logger.warning(
+                "Jitsi sem JWT configurado em produção — sala %s é pública",
+                sala,
+            )
         return JsonResponse({
             "token": None,
-            "domain": domain,
+            "domain": "meet.jit.si",
             "room": sala,
             "link": reuniao.link_reuniao,
             "dev_mode": True,
         })
 
+    # JaaS: domínio = 8x8.vc, sala = app_id/nome_sala
+    jaas_room = f"{app_id}/{sala}"
     agora = int(time.time())
     payload = {
-        "iss": app_id,
-        "sub": domain,
+        "iss": "chat",
         "aud": "jitsi",
         "iat": agora,
-        "exp": agora + 7200,  # válido por 2 horas
-        "room": sala,
+        "nbf": agora - 10,
+        "exp": agora + 7200,
+        "sub": app_id,
+        "room": "*",  # wildcard — token válido para qualquer sala do app
         "context": {
             "user": {
                 "name": empresa.nome,
-                "email": "",
+                "email": getattr(empresa, "email", ""),
                 "avatar": "",
-                "moderator": True,
+                "moderator": "true",
+                "id": str(empresa.id),
             },
             "features": {
-                "livestreaming": False,
-                "recording": False,
+                "livestreaming": "false",
+                "recording": "false",
+                "transcription": "false",
+                "outbound-call": "false",
             },
         },
     }
 
-    token = pyjwt.encode(payload, secret, algorithm="HS256")
+    token = pyjwt.encode(payload, private_key, algorithm="RS256", headers={"kid": kid})
 
     return JsonResponse({
         "token": token,
-        "domain": domain,
-        "room": sala,
-        "link": f"https://{domain}/{sala}?jwt={token}",
+        "domain": "8x8.vc",
+        "room": jaas_room,
+        "link": f"https://8x8.vc/{jaas_room}?jwt={token}",
         "dev_mode": False,
     })

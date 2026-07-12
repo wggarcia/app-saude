@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import csv
+import logging
 import re
+import time
 import unicodedata
 import zipfile
 from collections import defaultdict
@@ -9,6 +11,44 @@ from io import BytesIO, StringIO, TextIOWrapper
 
 import requests
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
+
+
+def _req_get(url, *, tentativas=3, backoff=2.0, **kwargs):
+    """requests.get com retry exponencial para fontes públicas instáveis."""
+    ultimo_exc = None
+    for tentativa in range(tentativas):
+        try:
+            r = requests.get(url, **kwargs)
+            r.raise_for_status()
+            return r
+        except requests.RequestException as exc:
+            ultimo_exc = exc
+            if tentativa < tentativas - 1:
+                espera = backoff ** tentativa
+                logger.warning("GET %s falhou (tentativa %d/%d): %s — aguardando %.0fs",
+                               url, tentativa + 1, tentativas, exc, espera)
+                time.sleep(espera)
+    raise ultimo_exc
+
+
+def _req_post(url, *, tentativas=3, backoff=2.0, **kwargs):
+    """requests.post com retry exponencial."""
+    ultimo_exc = None
+    for tentativa in range(tentativas):
+        try:
+            r = requests.post(url, **kwargs)
+            r.raise_for_status()
+            return r
+        except requests.RequestException as exc:
+            ultimo_exc = exc
+            if tentativa < tentativas - 1:
+                espera = backoff ** tentativa
+                logger.warning("POST %s falhou (tentativa %d/%d): %s — aguardando %.0fs",
+                               url, tentativa + 1, tentativas, exc, espera)
+                time.sleep(espera)
+    raise ultimo_exc
 
 from .fontes_oficiais_brasil import OPENDATASUS_DATASUS_MANIFEST, UF_CODES
 from .models import FonteOficialAgregado, FonteOficialExecucao
@@ -322,10 +362,9 @@ def _tabnet_form_defaults(def_path, *, base_url=None):
 
     base_url existe porque o HIV/Aids vive num TabNet separado
     (www2.aids.gov.br), nao no tabnet.datasus.gov.br principal."""
-    response = requests.get(
+    response = _req_get(
         f"{base_url or TABNET_BASE_URL}?{def_path}", timeout=40, headers={"User-Agent": "Mozilla/5.0"}
     )
-    response.raise_for_status()
     html = response.content.decode("iso-8859-1", errors="ignore")
 
     form_start = html.find("<FORM")
@@ -360,7 +399,7 @@ def _tabnet_post_tabela(def_path, defaults, *, linha, coluna, arquivo, base_url=
         return quote(s.encode("iso-8859-1", errors="ignore"))
 
     corpo = "&".join(f"{_quote_latin1(k)}={_quote_latin1(v)}" for k, v in partes)
-    response = requests.post(
+    response = _req_post(
         f"{base_url or TABNET_BASE_URL}?{def_path}",
         data=corpo.encode("ascii"),
         headers={
@@ -369,7 +408,6 @@ def _tabnet_post_tabela(def_path, defaults, *, linha, coluna, arquivo, base_url=
         },
         timeout=40,
     )
-    response.raise_for_status()
     return response.content.decode("iso-8859-1", errors="ignore")
 
 
@@ -749,8 +787,7 @@ def _resolver_url(config):
     page = config.get("resource_page")
     pattern = config.get("url_pattern")
     if page and pattern:
-        response = requests.get(page, timeout=30)
-        response.raise_for_status()
+        response = _req_get(page, timeout=30)
         matches = sorted(set(re.findall(pattern, response.text)))
         if matches:
             return matches[0]
@@ -803,12 +840,11 @@ def _localizar_periodo(row, config):
 
 def _processar_csv_oficial(execucao, fonte_id, config, *, max_bytes, max_linhas):
     url = _resolver_url(config)
-    response = requests.get(
+    response = _req_get(
         url,
         headers={"Range": f"bytes=0-{max_bytes - 1}"},
         timeout=30,
     )
-    response.raise_for_status()
     content = response.content.decode(config.get("encoding", "latin-1"), errors="ignore")
     lines = content.splitlines()
     if len(lines) > 1 and not content.endswith(("\n", "\r")):
@@ -892,12 +928,11 @@ def _parse_sivep_blocks(
     max_linhas: int,
     uf: str | None = None,
 ):
-    header_response = requests.get(
+    header_response = _req_get(
         SIVEP_GRIPE_2026_CSV_URL,
         headers={"Range": "bytes=0-8191"},
         timeout=20,
     )
-    header_response.raise_for_status()
     header_text = header_response.content.decode("latin-1", errors="ignore")
     header_line = header_text.splitlines()[0]
     fieldnames = next(csv.reader([header_line], delimiter=";"))
@@ -915,12 +950,11 @@ def _parse_sivep_blocks(
 
         start = byte_start + (block_index * bloco_bytes)
         end = start + bloco_bytes - 1
-        response = requests.get(
+        response = _req_get(
             SIVEP_GRIPE_2026_CSV_URL,
             headers={"Range": f"bytes={start}-{end}"},
             timeout=25,
         )
-        response.raise_for_status()
         bytes_lidos += len(response.content)
         blocos_lidos += 1
         last_content_range = response.headers.get("content-range")
@@ -963,12 +997,11 @@ def _parse_sivep_blocks(
 
 
 def _parse_sivep_sample(max_bytes: int, max_linhas: int, uf: str | None = None):
-    response = requests.get(
+    response = _req_get(
         SIVEP_GRIPE_2026_CSV_URL,
         headers={"Range": f"bytes=0-{max_bytes - 1}"},
         timeout=25,
     )
-    response.raise_for_status()
     content = response.content.decode("latin-1", errors="ignore")
     lines = content.splitlines()
     if len(lines) > 1 and not content.endswith(("\n", "\r")):
@@ -1079,8 +1112,22 @@ def _processar_sivep_amostra(
 def _processar_zip_oficial(execucao, fonte_id, config, *, max_linhas, max_download_bytes):
     # Baixa o zip completo com teto de tamanho, descompacta em streaming e agrega.
     # Nada de microdados brutos e persistido: somente contagens/somas por territorio/periodo.
-    with requests.get(config["url"], stream=True, timeout=300) as response:
-        response.raise_for_status()
+    ultimo_exc = None
+    for tentativa in range(3):
+        try:
+            resp_stream = requests.get(config["url"], stream=True, timeout=300)
+            resp_stream.raise_for_status()
+            break
+        except requests.RequestException as exc:
+            ultimo_exc = exc
+            if tentativa < 2:
+                espera = 2.0 ** tentativa
+                logger.warning("ZIP download falhou (tentativa %d/3): %s — aguardando %.0fs",
+                               tentativa + 1, exc, espera)
+                time.sleep(espera)
+    else:
+        raise ultimo_exc
+    with resp_stream as response:
         buffer = BytesIO()
         baixado = 0
         for chunk in response.iter_content(chunk_size=1 << 20):

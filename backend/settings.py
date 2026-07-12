@@ -341,12 +341,15 @@ ASAAS_API_KEY = (os.environ.get("ASAAS_API_KEY", "") or "").strip()
 ASAAS_BASE_URL = (os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3") or "").strip().rstrip("/")
 ASAAS_WEBHOOK_TOKEN = (os.environ.get("ASAAS_WEBHOOK_TOKEN", "") or "").strip()
 
-# ── Jitsi Meet (vídeo conferência) ────────────────────────────────────────────
-# Durante dev: deixe JITSI_SECRET vazio → usa meet.jit.si público sem JWT
-# Em produção: aponte para seu servidor self-hosted e configure as 3 variáveis
+# ── Jitsi Meet / JaaS (8x8.vc) ───────────────────────────────────────────────
+# Dev: deixe JITSI_APP_ID e JITSI_KID vazios → usa meet.jit.si público sem JWT
+# Prod (JaaS): defina JITSI_APP_ID, JITSI_KID e JITSI_PRIVATE_KEY_PATH (ou _B64)
 JITSI_DOMAIN = os.environ.get("JITSI_DOMAIN", "meet.jit.si")
-JITSI_APP_ID = os.environ.get("JITSI_APP_ID", "soluscrt")
-JITSI_SECRET = os.environ.get("JITSI_SECRET", "")  # vazio = sem JWT (dev mode)
+JITSI_APP_ID = os.environ.get("JITSI_APP_ID", "")
+JITSI_KID = os.environ.get("JITSI_KID", "")
+JITSI_PRIVATE_KEY_PATH = os.environ.get("JITSI_PRIVATE_KEY_PATH", "")  # caminho do .pk
+JITSI_PRIVATE_KEY_B64 = os.environ.get("JITSI_PRIVATE_KEY_B64", "")   # alternativa base64
+JITSI_SECRET = os.environ.get("JITSI_SECRET", "")  # legado HS256 — não usado com JaaS
 if IS_PRODUCTION and not ASAAS_WEBHOOK_TOKEN:
     raise RuntimeError("Configure ASAAS_WEBHOOK_TOKEN em producao para validar webhooks de pagamento.")
 ASAAS_USER_AGENT = (os.environ.get("ASAAS_USER_AGENT", "SolusCRT-Saude/1.0") or "SolusCRT-Saude/1.0").strip()

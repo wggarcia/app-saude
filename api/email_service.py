@@ -2,8 +2,12 @@
 Email service — transactional emails sent by SolusCRT.
 All calls are wrapped in try/except so email failures never break core flows.
 """
+import logging
+
 from django.conf import settings
 from django.core.mail import send_mail
+
+logger = logging.getLogger(__name__)
 
 
 def _from():
@@ -108,8 +112,8 @@ h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
             html_message=body_html,
             fail_silently=False,
         )
-    except Exception:
-        pass  # Email failure must never break registration
+    except Exception as exc:
+        logger.error("email boas_vindas falhou para %s: %s", getattr(empresa, "email", "?"), exc)
 
 
 def enviar_email_trial_expirando(empresa, dias_restantes):
@@ -182,8 +186,8 @@ h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
             html_message=body_html,
             fail_silently=False,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("email trial_expirando falhou para %s: %s", getattr(empresa, "email", "?"), exc)
 
 
 def enviar_email_trial_expirado(empresa):
@@ -246,8 +250,8 @@ h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
             html_message=body_html,
             fail_silently=False,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("email trial_expirado falhou para %s: %s", getattr(empresa, "email", "?"), exc)
 
 
 def _base_url():
@@ -310,8 +314,8 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
             html_message=body_html,
             fail_silently=False,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("email confirmacao_pagamento falhou para %s: %s", getattr(empresa, "email", "?"), exc)
 
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -382,8 +386,8 @@ def _send(subject: str, to: str, html: str, text: str) -> None:
             html_message=html,
             fail_silently=False,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("email falhou (assunto=%r, para=%s): %s", subject, to, exc)
 
 
 # ── 1. Novo Contrato Corporativo ──────────────────────────────────────────────
@@ -973,5 +977,5 @@ def enviar_codigo_verificacao(email: str, nome: str, codigo: str) -> None:
             "Suporte: suporte@soluscrt.com.br\n"
         )
         _send("Seu código de verificação SolusCRT", email, html, text)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("email codigo_verificacao falhou para %s: %s", email, exc)
