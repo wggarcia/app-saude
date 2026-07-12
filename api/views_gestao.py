@@ -1204,11 +1204,21 @@ def api_dados_empresa(request):
 
     from .models import ASOOcupacional, FuncionarioSST
 
-    funcionarios = list(
-        FuncionarioSST.objects.filter(empresa=empresa).values(
+    # .values() bypassa from_db_value do EncryptedCPFField — iteramos objetos para descriptografar.
+    funcionarios = [
+        {
+            "id": f.id,
+            "nome": f.nome,
+            "cpf": f.cpf,
+            "cargo": f.cargo,
+            "setor": f.setor,
+            "data_admissao": f.data_admissao,
+            "ativo": f.ativo,
+        }
+        for f in FuncionarioSST.objects.filter(empresa=empresa).only(
             "id", "nome", "cpf", "cargo", "setor", "data_admissao", "ativo"
         )[:1000]
-    )
+    ]
     asos_recentes = list(
         ASOOcupacional.objects.filter(empresa=empresa)
         .order_by("-data_emissao")

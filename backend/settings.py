@@ -62,6 +62,9 @@ JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
 _BIOMETRIA_KEY_DEV = "dev-only-configure-BIOMETRIA_EMBEDDING_KEY-before-producao"
 BIOMETRIA_EMBEDDING_KEY = os.environ.get("BIOMETRIA_EMBEDDING_KEY", _BIOMETRIA_KEY_DEV)
 
+_CPF_KEY_DEV = "dev-cpf-nao-usar-em-producao-altere-via-CPF_ENCRYPTION_KEY"
+CPF_ENCRYPTION_KEY = os.environ.get("CPF_ENCRYPTION_KEY", _CPF_KEY_DEV)
+
 DEBUG = env_bool("DJANGO_DEBUG", default=not IS_PRODUCTION)
 TRIAL_DAYS = env_int("TRIAL_DAYS", 15, minimum=1, maximum=90)
 ALLOW_ENTERPRISE_DEMO_MUTATIONS = env_bool(
@@ -105,6 +108,12 @@ if IS_PRODUCTION and (
 if IS_PRODUCTION and BIOMETRIA_EMBEDDING_KEY == _BIOMETRIA_KEY_DEV:
     raise RuntimeError(
         "Configure BIOMETRIA_EMBEDDING_KEY (chave Fernet própria) antes de subir em produção."
+    )
+
+if IS_PRODUCTION and CPF_ENCRYPTION_KEY == _CPF_KEY_DEV:
+    raise RuntimeError(
+        "Configure CPF_ENCRYPTION_KEY antes de subir em produção. "
+        "Gere com: python -c \"import secrets; print(secrets.token_hex(32))\""
     )
 
 

@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from django.db import models
 
+from .crypto_cpf import EncryptedCPFField
+
 
 def _codigo_acesso():
     return uuid.uuid4().hex
@@ -970,7 +972,7 @@ class FuncionarioSST(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="funcionarios_sst")
     unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="funcionarios_sst")
     nome = models.CharField(max_length=200)
-    cpf = models.CharField(max_length=14, blank=True)
+    cpf = EncryptedCPFField(blank=True, default="")
     matricula = models.CharField(max_length=40, blank=True)
     cargo = models.CharField(max_length=120)
     setor = models.CharField(max_length=120, blank=True)
