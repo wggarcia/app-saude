@@ -15,6 +15,7 @@ from datetime import date
 
 from django.http import JsonResponse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 from .access_control import api_requer_feature, requer_permissao_modulo, requer_feature_pacote
 
@@ -58,6 +59,7 @@ def _biometria_dict(b):
 
 # ── Views ─────────────────────────────────────────────────────────────────────
 
+@csrf_exempt
 @api_requer_feature("sst.biometria")
 def api_biometria_cadastrar(request):
     """POST — cadastra ou atualiza foto de referência do funcionário."""
@@ -150,6 +152,7 @@ def api_biometria_detalhe(request, funcionario_id):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 @api_requer_feature("sst.biometria")
 def api_biometria_confirmar_entrega(request, entrega_id):
     """POST — confirma entrega de EPI com biometria facial.
