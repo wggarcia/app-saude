@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../servicos/funcionario_sst_service.dart';
+import 'tela_video_reuniao.dart';
 
 class TelaReunioesFunc extends StatefulWidget {
   const TelaReunioesFunc({super.key});
@@ -35,17 +35,13 @@ class _TelaReunioesState extends State<TelaReunioesFunc> {
     }
   }
 
-  Future<void> _entrar(String link) async {
-    final uri = Uri.tryParse(link);
-    if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível abrir o link da reunião.')),
-      );
-    }
+  Future<void> _entrar(String link, String titulo) async {
+    if (link.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TelaVideoReuniao(url: link, titulo: titulo),
+      ),
+    );
   }
 
   Color _statusColor(String status) {
@@ -213,7 +209,7 @@ class _TelaReunioesState extends State<TelaReunioesFunc> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: () => _entrar(link),
+                        onPressed: () => _entrar(link, r['titulo']?.toString() ?? 'Reunião'),
                         icon: const Icon(Icons.videocam_outlined, size: 18),
                         label: Text(emAndamento
                           ? 'Entrar agora'
