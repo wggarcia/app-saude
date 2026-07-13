@@ -572,13 +572,14 @@ async function entrarJitsi(reuniaoId, sala, titulo, linkExterno){
       height:'100%',
       parentNode:container,
       userInfo:{displayName:'{{ empresa_nome }}'},
-      configOverwrite:{startWithAudioMuted:false,startWithVideoMuted:false,prejoinPageEnabled:false},
+      configOverwrite:{startWithAudioMuted:false,startWithVideoMuted:false,prejoinPageEnabled:false,hideConferenceSubject:false},
       interfaceConfigOverwrite:{SHOW_JITSI_WATERMARK:false,SHOW_WATERMARK_FOR_GUESTS:false,TOOLBAR_BUTTONS:['microphone','camera','hangup','chat','tileview','fullscreen','settings']},
     };
     // JWT só é adicionado quando JITSI_SECRET está configurado (produção)
     if(token) opts.jwt=token;
     _jitsiApi=new JitsiMeetExternalAPI(domain,opts);
     _jitsiApi.addEventListener('readyToClose',()=>encerrarVideo());
+    _jitsiApi.addEventListener('videoConferenceLeft',()=>encerrarVideo());
   }catch(err){
     window.open(`https://${domain}/${room}`+(token?`?jwt=${token}`:''),'_blank');
     showView('empty');
