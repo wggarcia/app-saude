@@ -234,10 +234,39 @@ def api_funcionario_reunioes(request):
         data_hora__gte=agora - timezone.timedelta(hours=2),
     ).prefetch_related("participantes")
 
+    app_id = getattr(settings, "JITSI_APP_ID", "")
+    kid = getattr(settings, "JITSI_KID", "")
+    private_key = _jaas_private_key()
+    jaas_ativo = bool(private_key and app_id and kid)
+
     resultado = []
     for r in reunioes_todas:
         parte = r.participantes.count() == 0 or r.participantes.filter(id=func.id).exists()
         if parte and r.tipo in (ReuniaoSST.TIPO_FUNCIONARIOS, ReuniaoSST.TIPO_TODOS):
+            if jaas_ativo:
+                jaas_room = f"{app_id}/{r.sala_jitsi}"
+                agora = int(time.time())
+                payload = {
+                    "iss": "chat", "aud": "jitsi",
+                    "iat": agora, "nbf": agora - 10, "exp": agora + 7200,
+                    "sub": app_id, "room": "*",
+                    "context": {
+                        "user": {
+                            "name": func.nome,
+                            "email": getattr(func, "email", ""),
+                            "avatar": "", "moderator": "false", "id": str(func.id),
+                        },
+                        "features": {
+                            "livestreaming": "false", "recording": "false",
+                            "transcription": "false", "outbound-call": "false",
+                        },
+                    },
+                }
+                token = pyjwt.encode(payload, private_key, algorithm="RS256", headers={"kid": kid})
+                link = f"https://8x8.vc/{jaas_room}?jwt={token}"
+            else:
+                link = r.link_reuniao
+
             resultado.append({
                 "id": r.id,
                 "titulo": r.titulo,
@@ -247,7 +276,7 @@ def api_funcionario_reunioes(request):
                 "duracao_minutos": r.duracao_minutos,
                 "status": r.status,
                 "status_label": r.get_status_display(),
-                "link": r.link_reuniao,
+                "link": link,
             })
 
     return JsonResponse({"reunioes": resultado})
