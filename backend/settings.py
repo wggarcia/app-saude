@@ -334,8 +334,13 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "SolusCRT <admin@solus
 
 PUBLIC_BASE_URL = os.environ.get(
     "PUBLIC_BASE_URL",
-    "https://app-saude-p9n8.onrender.com" if IS_PRODUCTION else "http://127.0.0.1:8000",
+    "" if IS_PRODUCTION else "http://127.0.0.1:8000",
 ).rstrip("/")
+if IS_PRODUCTION and not PUBLIC_BASE_URL:
+    raise RuntimeError(
+        "Configure PUBLIC_BASE_URL com a URL publica do servidor antes de subir em producao. "
+        "Exemplo: PUBLIC_BASE_URL=https://app.soluscrt.com.br"
+    )
 
 ASAAS_API_KEY = (os.environ.get("ASAAS_API_KEY", "") or "").strip()
 ASAAS_BASE_URL = (os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3") or "").strip().rstrip("/")
