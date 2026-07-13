@@ -415,7 +415,8 @@ from api.views_comunicacao import (
     painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo, api_editar_grupo,
 )
 from api.views_reuniao_sst import (
-    sst_comunicacao_page, api_reunioes, api_reuniao_detalhe, api_funcionario_reunioes, api_reuniao_token,
+    sst_comunicacao_page, api_reunioes, api_reuniao_detalhe, api_funcionario_reunioes,
+    api_reuniao_token, api_funcionario_reuniao_token,
 )
 from api.views_saude_ocupacional import (
     sst_saude_comunicacao_page,
@@ -1196,6 +1197,7 @@ urlpatterns = [
     path('api/sst/reunioes/<int:reuniao_id>/', api_reuniao_detalhe),
     path('api/sst/reunioes/<int:reuniao_id>/token/', api_reuniao_token),
     path('api/funcionario/reunioes', api_funcionario_reunioes),
+    path('api/funcionario/reunioes/<int:reuniao_id>/token/', api_funcionario_reuniao_token),
     # colaborador side
     path('colaborador/c/<str:codigo>/chat/', colaborador_chat),
     path('colaborador/c/<str:codigo>/video/<str:sala>/', colaborador_video),

@@ -253,6 +253,84 @@ def api_funcionario_reunioes(request):
     return JsonResponse({"reunioes": resultado})
 
 
+def api_funcionario_reuniao_token(request, reuniao_id):
+    """
+    Gera JWT RS256 para o funcionário entrar na reunião via JaaS (8x8.vc).
+    Retorna os mesmos campos que api_reuniao_token, mas com moderator=false.
+    """
+    from .views_funcionario_portal import _autenticar_funcionario
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autorizado"}, status=401)
+
+    reuniao = ReuniaoSST.objects.filter(
+        id=reuniao_id,
+        empresa=func.empresa,
+        status__in=[ReuniaoSST.STATUS_AGENDADA, ReuniaoSST.STATUS_EM_ANDAMENTO],
+    ).first()
+    if not reuniao:
+        return JsonResponse({"erro": "Reunião não encontrada"}, status=404)
+
+    # Verifica se o funcionário tem acesso à reunião
+    tem_acesso = (
+        reuniao.tipo in (ReuniaoSST.TIPO_FUNCIONARIOS, ReuniaoSST.TIPO_TODOS)
+        and (reuniao.participantes.count() == 0 or reuniao.participantes.filter(id=func.id).exists())
+    )
+    if not tem_acesso:
+        return JsonResponse({"erro": "Acesso não permitido"}, status=403)
+
+    app_id = getattr(settings, "JITSI_APP_ID", "")
+    kid = getattr(settings, "JITSI_KID", "")
+    sala = reuniao.sala_jitsi
+    private_key = _jaas_private_key()
+
+    if not private_key or not app_id or not kid:
+        return JsonResponse({
+            "token": None,
+            "domain": "meet.jit.si",
+            "room": sala,
+            "link": reuniao.link_reuniao,
+            "dev_mode": True,
+        })
+
+    jaas_room = f"{app_id}/{sala}"
+    agora = int(time.time())
+    payload = {
+        "iss": "chat",
+        "aud": "jitsi",
+        "iat": agora,
+        "nbf": agora - 10,
+        "exp": agora + 7200,
+        "sub": app_id,
+        "room": "*",
+        "context": {
+            "user": {
+                "name": func.nome,
+                "email": getattr(func, "email", ""),
+                "avatar": "",
+                "moderator": "false",
+                "id": str(func.id),
+            },
+            "features": {
+                "livestreaming": "false",
+                "recording": "false",
+                "transcription": "false",
+                "outbound-call": "false",
+            },
+        },
+    }
+
+    token = pyjwt.encode(payload, private_key, algorithm="RS256", headers={"kid": kid})
+
+    return JsonResponse({
+        "token": token,
+        "domain": "8x8.vc",
+        "room": jaas_room,
+        "link": f"https://8x8.vc/{jaas_room}?jwt={token}",
+        "dev_mode": False,
+    })
+
+
 # ── JWT para JaaS (8x8.vc) — RS256 ───────────────────────────────────────────
 
 def _jaas_private_key():
