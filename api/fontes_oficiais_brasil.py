@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import csv
 from datetime import datetime
-from io import StringIO
 from time import time
 
 import requests
+from django.core.cache import cache
 from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
@@ -19,8 +18,9 @@ _POP_CACHE = {}
 _CACHE_TTL_SECONDS = 15 * 60
 POPULATION_YEAR = datetime.now().year - 1
 OFFICIAL_HTTP_TIMEOUT_SECONDS = 2.5
-INFOGRIPE_HTTP_TIMEOUT_SECONDS = 8  # Fiocruz research servers are slow to connect
 OFFICIAL_PANEL_TIME_BUDGET_SECONDS = 10
+_INFOGRIPE_CACHE_KEY = "infogripe_last_good_response"
+_INFOGRIPE_CACHE_TTL = 48 * 3600  # serve stale data for up to 48h when Fiocruz is down
 MUNICIPIOS_OFICIAIS_SENTINELA = [
     {"cidade": "Rio de Janeiro", "estado": "RJ", "total": 0},
     {"cidade": "São Paulo", "estado": "SP", "total": 0},
@@ -497,72 +497,27 @@ def _parse_float(value):
 
 
 def _fetch_infogripe_brasil():
-    now_dt = datetime.now()
-    ano = now_dt.year
-    # Use the current epidemiological week (not 52 = end-of-year which may not exist yet)
-    semana = now_dt.isocalendar()[1]
-    url = f"https://info.gripe.fiocruz.br/data/detailed/1/2/{ano}/{semana}/Brasil/weekly-incidence-curve"
-    try:
-        response = requests.get(url, timeout=INFOGRIPE_HTTP_TIMEOUT_SECONDS)
-        response.raise_for_status()
-    except Exception as exc:
-        return {
-            "fonte": "InfoGripe / Fiocruz",
-            "status": "temporariamente_indisponivel",
-            "motivo": type(exc).__name__,
-            "url": url,
-            "resumo": "A fonte oficial respiratoria esta catalogada, mas nao respondeu dentro do tempo limite.",
-        }
-
-    text = response.text.strip()
-    if not text:
-        return {
-            "fonte": "InfoGripe / Fiocruz",
-            "status": "sem_dados",
-            "url": url,
-            "resumo": "A fonte respondeu sem registros no periodo consultado.",
-        }
-
-    delimiter = ";" if text.splitlines()[0].count(";") > text.splitlines()[0].count(",") else ","
-    rows = list(csv.DictReader(StringIO(text), delimiter=delimiter))
-    if not rows:
-        return {
-            "fonte": "InfoGripe / Fiocruz",
-            "status": "sem_dados",
-            "url": url,
-            "resumo": "A fonte respondeu sem registros estruturados.",
-        }
-
-    numeric_columns = {}
-    for key in rows[0].keys():
-        values = [_parse_float(row.get(key)) for row in rows[-8:]]
-        values = [value for value in values if value is not None]
-        if values:
-            numeric_columns[key] = values
-
-    top_columns = sorted(
-        numeric_columns.items(),
-        key=lambda item: sum(item[1]),
-        reverse=True,
-    )[:5]
-
-    latest = rows[-1]
+    # info.gripe.fiocruz.br was decommissioned — the domain now redirects to fiocruz.br homepage.
+    # SIVEP-Gripe raw data remains available via OpenDataSUS (already catalogued as sivep_gripe).
+    cached = cache.get(_INFOGRIPE_CACHE_KEY)
+    if cached:
+        cached_at = cached.get("_cached_at", 0)
+        age_h = round((time() - cached_at) / 3600, 1)
+        resultado = {k: v for k, v in cached.items() if k != "_cached_at"}
+        resultado["status"] = "cache_anterior"
+        resultado["aviso"] = f"Dados de {age_h}h atrás. Fiocruz migrou InfoGripe — atualizando integração."
+        return resultado
     return {
         "fonte": "InfoGripe / Fiocruz",
-        "status": "ativo",
-        "url": url,
-        "ano": ano,
-        "registros": len(rows),
-        "ultima_semana": latest,
-        "series_relevantes": [
-            {
-                "campo": key,
-                "soma_ultimas_8_semanas": round(sum(values), 2),
-                "ultimo_valor": round(values[-1], 2),
-            }
-            for key, values in top_columns
-        ],
+        "status": "fonte_migrada",
+        "resumo": (
+            "O domínio info.gripe.fiocruz.br foi desativado pela Fiocruz. "
+            "Dados de SRAG disponíveis via SIVEP-Gripe/OpenDataSUS (catalogado no sistema)."
+        ),
+        "alternativa": "sivep_gripe",
+        "url_alternativa": "https://opendatasus.saude.gov.br/dataset/srag-2019-a-2026",
     }
+
 
 
 def _arboviroses_oficiais(municipios):
