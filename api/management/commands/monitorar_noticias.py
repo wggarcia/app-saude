@@ -75,7 +75,7 @@ FONTES_CATALOGO = {
     "fiocruz":        ("rss", ("Fiocruz",   "https://agencia.fiocruz.br/rss.xml")),
     "g1":             ("rss", ("G1-Saude",  "https://g1.globo.com/rss/g1/ciencia-e-saude/")),
     "folha":          ("rss", ("Folha",     "https://feeds.folha.uol.com.br/equilibrioesaude/rss091.xml")),
-    "svs":            ("rss", ("SVS",       "https://www.gov.br/saude/pt-br/assuntos/noticias/RSS")),  # RSS 1.0/RDF
+    "svs":            ("rss", ("SVS-MS",    "https://www.gov.br/saude/pt-br/assuntos/noticias-ms/noticias-da-saude/RSS")),  # RSS 1.0/RDF — Notícias oficiais do Ministério da Saúde
 
     # ── Américas ───────────────────────────────────────────────────────────────
     "opas":           ("rss", ("OPAS",      "https://www.paho.org/pt/rss.xml")),
