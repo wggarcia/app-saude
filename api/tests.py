@@ -89,6 +89,29 @@ from .push_service import _tokens_para_alerta
 from .views import _indice_temporal_publico
 
 
+class _OwnerSharesDefaultMixin:
+    """Makes .using('owner') queries share default's test transaction.
+
+    In production, 'default' and 'owner' are different PostgreSQL roles on the
+    same database. In tests, they are separate connections with separate
+    transactions, so data written via 'default' is invisible to 'owner' queries
+    (PostgreSQL READ COMMITTED). This mixin aliases 'owner' to 'default's
+    connection object so both aliases run inside the same transaction.
+    """
+    def setUp(self):
+        from django.db import connections
+        connections['owner'] = connections['default']
+        super().setUp()
+
+    def tearDown(self):
+        super().tearDown()
+        from django.db import connections
+        try:
+            del connections['owner']
+        except Exception:
+            pass
+
+
 class PlanosSaasTests(TestCase):
     def test_catalogo_empresarial_chega_a_mil_maquinas(self):
         pacotes_empresa = pacotes_por_setor(incluir_governo=False)
@@ -2287,7 +2310,7 @@ class MaintenanceTests(TestCase):
         self.assertIn("Nenhuma alteracao aplicada", output)
 
 
-class PublicApiTests(TestCase):
+class PublicApiTests(_OwnerSharesDefaultMixin, TestCase):
     databases = {"default", "owner"}
 
     def test_catalogo_epidemiologico_inclui_doencas_prioritarias(self):
@@ -2951,7 +2974,7 @@ class GovernanceTests(TestCase):
         self.assertFalse(DispositivoPushPublico.objects.get(token="token-antigo").ativo)
 
 
-class TemporalDecayTests(TestCase):
+class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
     databases = {"default", "owner"}
 
     def test_indice_temporal_preserva_10_dias_e_cai_depois(self):

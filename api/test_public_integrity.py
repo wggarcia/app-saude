@@ -3,6 +3,28 @@ from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
+from django.db import connections as _connections
+
+
+class _OwnerSharesDefaultMixin:
+    """Makes .using('owner') queries share default's test transaction.
+
+    In production, 'default' and 'owner' are different PostgreSQL roles on the
+    same database. In tests, they are separate connections with separate
+    transactions, so data written via 'default' is invisible to 'owner' queries
+    (PostgreSQL READ COMMITTED). This mixin aliases 'owner' to default's
+    connection object so both aliases run inside the same transaction.
+    """
+    def setUp(self):
+        _connections['owner'] = _connections['default']
+        super().setUp()
+
+    def tearDown(self):
+        super().tearDown()
+        try:
+            del _connections['owner']
+        except Exception:
+            pass
 from django.test import Client, TestCase, TransactionTestCase
 from django.utils import timezone
 
@@ -17,10 +39,11 @@ from api.models import (
 from api.views import _empresa_app_publico
 
 
-class PublicIntegrityTests(TestCase):
+class PublicIntegrityTests(_OwnerSharesDefaultMixin, TestCase):
     databases = {"default", "owner"}
 
     def setUp(self):
+        super().setUp()
         self.client = Client()
         epidemiologia.clear_panorama_cache()
         self.empresa_publica = _empresa_app_publico()
