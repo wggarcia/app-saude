@@ -19,6 +19,7 @@ _POP_CACHE = {}
 _CACHE_TTL_SECONDS = 15 * 60
 POPULATION_YEAR = datetime.now().year - 1
 OFFICIAL_HTTP_TIMEOUT_SECONDS = 2.5
+INFOGRIPE_HTTP_TIMEOUT_SECONDS = 8  # Fiocruz research servers are slow to connect
 OFFICIAL_PANEL_TIME_BUDGET_SECONDS = 10
 MUNICIPIOS_OFICIAIS_SENTINELA = [
     {"cidade": "Rio de Janeiro", "estado": "RJ", "total": 0},
@@ -502,7 +503,7 @@ def _fetch_infogripe_brasil():
     semana = now_dt.isocalendar()[1]
     url = f"https://info.gripe.fiocruz.br/data/detailed/1/2/{ano}/{semana}/Brasil/weekly-incidence-curve"
     try:
-        response = requests.get(url, timeout=OFFICIAL_HTTP_TIMEOUT_SECONDS)
+        response = requests.get(url, timeout=INFOGRIPE_HTTP_TIMEOUT_SECONDS)
         response.raise_for_status()
     except Exception as exc:
         return {
