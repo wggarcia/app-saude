@@ -24,6 +24,8 @@ from .models import (
 
 
 class CommandAITests(TestCase):
+    databases = {"default", "owner"}
+
     def setUp(self):
         self.client = Client()
         self.empresa = Empresa.objects.create(

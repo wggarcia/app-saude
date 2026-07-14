@@ -240,6 +240,9 @@ if DATABASE_URL:
         # Sem URL de owner distinta (dev, ou APP_DATABASE_URL ausente): o alias
         # "owner" aponta para a mesma config da default — sem RLS a contornar.
         DATABASES["owner"] = dict(default_database)
+    # Em testes, "owner" usa o mesmo banco de teste que "default" para que dados
+    # criados via default sejam visíveis em queries .using("owner") (sem RLS em testes).
+    DATABASES["owner"]["TEST"] = {"MIRROR": "default"}
 else:
     if IS_PRODUCTION:
         raise RuntimeError("Configure DATABASE_URL com PostgreSQL gerenciado antes de subir em producao.")
@@ -252,6 +255,7 @@ else:
     # SQLite não tem RLS; o alias "owner" espelha a default só para que
     # `.using("owner")` funcione igual em dev e em produção.
     DATABASES["owner"] = dict(DATABASES["default"])
+    DATABASES["owner"]["TEST"] = {"MIRROR": "default"}
 
 # ── Multi-tenant RLS ──────────────────────────────────────────────────────────
 # Envolve cada requisição HTTP em uma única transação PostgreSQL.

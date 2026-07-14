@@ -2288,6 +2288,8 @@ class MaintenanceTests(TestCase):
 
 
 class PublicApiTests(TestCase):
+    databases = {"default", "owner"}
+
     def test_catalogo_epidemiologico_inclui_doencas_prioritarias(self):
         for doenca in [
             "Febre Amarela",
@@ -2950,6 +2952,8 @@ class GovernanceTests(TestCase):
 
 
 class TemporalDecayTests(TestCase):
+    databases = {"default", "owner"}
+
     def test_indice_temporal_preserva_10_dias_e_cai_depois(self):
         empresa = Empresa.objects.create(
             nome="Populacao Teste",
@@ -5620,6 +5624,8 @@ class EpidemiologiaMLTests(TestCase):
 
     Usa um MODELS_DIR temporario em todos os testes para nunca sobrescrever o
     modelo real treinado em produção com dado oficial verdadeiro."""
+
+    databases = {"default", "owner"}
 
     FONTE = "sinan_agravos"
     INDICADOR = "dengue_notificacoes_sinan"
