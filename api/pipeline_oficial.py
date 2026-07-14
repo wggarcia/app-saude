@@ -56,7 +56,7 @@ from .models import FonteOficialAgregado, FonteOficialExecucao
 
 MANIFEST_BY_ID = {item["id"]: item for item in OPENDATASUS_DATASUS_MANIFEST}
 
-SIVEP_GRIPE_2026_CSV_URL = "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SRAG/2026/INFLUD26-23-03-2026.csv"
+SIVEP_GRIPE_2026_CSV_URL = "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SRAG/2026/INFLUD26-13-07-2026.csv"
 SIVEP_GRIPE_2026_ANO = "2026"  # arquivo e por ano; SEM_NOT/SEM_PRI vem so com a semana (sem ano)
 
 

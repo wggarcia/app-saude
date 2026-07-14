@@ -497,25 +497,53 @@ def _parse_float(value):
 
 
 def _fetch_infogripe_brasil():
-    # info.gripe.fiocruz.br was decommissioned — the domain now redirects to fiocruz.br homepage.
-    # SIVEP-Gripe raw data remains available via OpenDataSUS (already catalogued as sivep_gripe).
-    cached = cache.get(_INFOGRIPE_CACHE_KEY)
-    if cached:
-        cached_at = cached.get("_cached_at", 0)
-        age_h = round((time() - cached_at) / 3600, 1)
-        resultado = {k: v for k, v in cached.items() if k != "_cached_at"}
-        resultado["status"] = "cache_anterior"
-        resultado["aviso"] = f"Dados de {age_h}h atrás. Fiocruz migrou InfoGripe — atualizando integração."
-        return resultado
+    from django.db.models import Sum
+
+    qs = (
+        FonteOficialAgregado.objects
+        .filter(fonte_id="sivep_gripe")
+        .values("periodo")
+        .annotate(total=Sum("valor"))
+        .order_by("periodo")
+    )
+    semanas = list(qs)
+
+    if not semanas:
+        return {
+            "fonte": "SIVEP-Gripe / OpenDataSUS",
+            "status": "sem_dados",
+            "resumo": "Nenhum dado de SRAG no banco. Execute: manage.py processar_fonte_oficial sivep_gripe --executar-download",
+        }
+
+    ultimas = semanas[-12:]
+    ultima = ultimas[-1]
+    penultima = ultimas[-2] if len(ultimas) >= 2 else None
+    tendencia = None
+    if penultima:
+        diff = ultima["total"] - penultima["total"]
+        tendencia = "crescimento" if diff > 0 else ("queda" if diff < 0 else "estavel")
+
+    atualizado_em = (
+        FonteOficialAgregado.objects
+        .filter(fonte_id="sivep_gripe")
+        .order_by("-atualizado_em")
+        .values_list("atualizado_em", flat=True)
+        .first()
+    )
+
     return {
-        "fonte": "InfoGripe / Fiocruz",
-        "status": "fonte_migrada",
-        "resumo": (
-            "O domínio info.gripe.fiocruz.br foi desativado pela Fiocruz. "
-            "Dados de SRAG disponíveis via SIVEP-Gripe/OpenDataSUS (catalogado no sistema)."
-        ),
-        "alternativa": "sivep_gripe",
-        "url_alternativa": "https://opendatasus.saude.gov.br/dataset/srag-2019-a-2026",
+        "fonte": "SIVEP-Gripe / OpenDataSUS",
+        "status": "ativo",
+        "url": "https://opendatasus.saude.gov.br/dataset/srag-2019-a-2026",
+        "total_semanas_disponíveis": len(semanas),
+        "semana_mais_recente": ultima["periodo"],
+        "total_notificacoes_ultima_semana": int(ultima["total"]),
+        "tendencia": tendencia,
+        "atualizado_em": atualizado_em.isoformat() if atualizado_em else None,
+        "serie_semanal": [
+            {"periodo": s["periodo"], "notificacoes": int(s["total"])}
+            for s in ultimas
+        ],
     }
 
 
@@ -634,9 +662,9 @@ def panorama_brasil_oficial_payload(force=False):
                 "entrega": "casos, incidencia, nivel de alerta, Rt e semana epidemiologica",
             },
             {
-                "nome": "InfoGripe respiratorio",
-                "status": "ativo" if respiratorio.get("status") == "ativo" else "resiliente",
-                "entrega": "SRAG e sinais respiratorios oficiais quando a fonte responde; queda controlada quando indisponivel",
+                "nome": "SIVEP-Gripe / SRAG respiratorio",
+                "status": "ativo" if respiratorio.get("status") == "ativo" else "sem_dados",
+                "entrega": "notificacoes de SRAG por semana epidemiologica via SIVEP-Gripe/OpenDataSUS",
             },
             {
                 "nome": "SIM/Mortalidade (OpenDataSUS DO*OPEN)",
