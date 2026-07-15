@@ -66,7 +66,7 @@ def _inspecao_to_dict(i):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_permissao_modulo("governo.vigilancia_acs")
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_vigsan_estabelecimentos(request):
     """GET/POST /api/governo/vigilancia-sanitaria/estabelecimentos/"""
     empresa = get_empresa(request)
@@ -110,7 +110,7 @@ def api_vigsan_estabelecimentos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_permissao_modulo("governo.vigilancia_acs")
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_vigsan_alvaras(request, estab_id):
     """GET/POST /api/governo/vigilancia-sanitaria/estabelecimentos/<id>/alvaras/"""
     empresa = get_empresa(request)
@@ -153,7 +153,7 @@ def api_vigsan_alvaras(request, estab_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_permissao_modulo("governo.vigilancia_acs")
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_vigsan_inspecoes(request, estab_id):
     """GET/POST /api/governo/vigilancia-sanitaria/estabelecimentos/<id>/inspecoes/"""
     empresa = get_empresa(request)

@@ -22,10 +22,20 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .services.rnds_fhir import transmitir_bundle, get_cred as _rnds_cred
 
 logger = logging.getLogger(__name__)
+
+
+def _e(request):
+    empresa = get_empresa(request)
+    if not empresa or get_setor(empresa) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
+        return None
+    return empresa
 
 # ── Catálogo RENAME 7ª Edição (2020) — Componente Especializado ───────────────
 # Código: CATMAT DATASUS (código de sequência do Banco de Preços em Saúde / BPS)
@@ -111,9 +121,10 @@ def api_ceaf_medicamentos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.farmacia", "governo.atencao_clinica")
 def api_ceaf_solicitacoes(request):
     """GET/POST /api/governo/ceaf/solicitacoes/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -195,9 +206,10 @@ def api_ceaf_solicitacoes(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_permissao_modulo("governo.farmacia", "governo.atencao_clinica")
 def api_ceaf_solicitacao_detalhe(request, sol_id):
     """GET/PUT /api/governo/ceaf/solicitacoes/<id>/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -257,9 +269,10 @@ def api_ceaf_solicitacao_detalhe(request, sol_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.farmacia", "governo.atencao_clinica")
 def api_ceaf_dispensar(request, sol_id):
     """POST /api/governo/ceaf/solicitacoes/<id>/dispensar/ — registra dispensação."""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -299,6 +312,7 @@ def api_ceaf_dispensar(request, sol_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.farmacia", "governo.atencao_clinica")
 def api_ceaf_horus_enviar(request, disp_id):
     """
     POST /api/governo/ceaf/dispensacoes/<id>/horus/
@@ -310,7 +324,7 @@ def api_ceaf_horus_enviar(request, disp_id):
       Profile: BRDispensacaoMedicamento-1.0
       https://simplifier.net/redenacionaldedadosemsaude
     """
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -416,9 +430,10 @@ def api_ceaf_horus_enviar(request, disp_id):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.farmacia", "governo.atencao_clinica")
 def api_ceaf_kpis(request):
     """GET /api/governo/ceaf/kpis/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

@@ -11,7 +11,10 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_plataforma_ti, get_setor, principal_pode_operacao_setorial
+from .access_control import (
+    api_requer_plataforma_ti, get_setor, principal_pode_operacao_setorial,
+    api_requer_permissao_modulo,
+)
 from .models import (
     UnidadeSaude, EquipeSaude,
     NotificacaoCompulsoria, SurtoEpidemiologico,
@@ -58,6 +61,7 @@ def _unidade_dict(u):
 # ═══════════════════════════════════════════════════════════════
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_unidades_saude(request):
     e = _e(request)
     if not e:
@@ -101,6 +105,7 @@ def api_unidades_saude(request):
 
 
 @require_http_methods(["GET", "PUT", "DELETE"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_unidade_saude_detalhe(request, unidade_id):
     e = _e(request)
     if not e:
@@ -136,6 +141,7 @@ def api_unidade_saude_detalhe(request, unidade_id):
 
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_equipes_saude(request, unidade_id):
     e = _e(request)
     if not e:
@@ -169,6 +175,7 @@ def api_equipes_saude(request, unidade_id):
 # ═══════════════════════════════════════════════════════════════
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_notificacoes(request):
     e = _e(request)
     if not e:
@@ -232,6 +239,7 @@ def api_notificacoes(request):
 
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_surtos(request):
     e = _e(request)
     if not e:
@@ -278,6 +286,7 @@ def api_surtos(request):
 
 
 @require_http_methods(["GET", "PUT"])
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_surto_detalhe(request, surto_id):
     e = _e(request)
     if not e:
@@ -310,6 +319,7 @@ def api_surto_detalhe(request, surto_id):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_vigilancia_dashboard(request):
     e = _e(request)
     if not e:
@@ -409,6 +419,7 @@ def _gerar_numero_solicitacao():
 
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_regulacao_leitos(request):
     e = _e(request)
     if not e:
@@ -449,6 +460,7 @@ def api_regulacao_leitos(request):
 
 
 @require_http_methods(["GET", "PATCH"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_regulacao_detalhe(request, regulacao_id):
     e = _e(request)
     if not e:
@@ -494,6 +506,7 @@ def api_regulacao_detalhe(request, regulacao_id):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_regulacao_dashboard(request):
     e = _e(request)
     if not e:
@@ -537,6 +550,7 @@ def api_regulacao_dashboard(request):
 # ═══════════════════════════════════════════════════════════════
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_producao_ambulatorial(request):
     e = _e(request)
     if not e:
@@ -594,6 +608,7 @@ def api_producao_ambulatorial(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_producao_dashboard(request):
     e = _e(request)
     if not e:
@@ -652,6 +667,7 @@ def api_producao_dashboard(request):
 # ═══════════════════════════════════════════════════════════════
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_metas_previne(request):
     e = _e(request)
     if not e:
@@ -706,6 +722,7 @@ def api_metas_previne(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_previne_dashboard(request):
     e = _e(request)
     if not e:
@@ -793,6 +810,7 @@ def _contrato_dict(c):
 
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_contratos_gestao(request):
     e = _e(request)
     if not e:
@@ -835,6 +853,7 @@ def api_contratos_gestao(request):
 
 
 @require_http_methods(["GET", "PUT"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_contrato_detalhe(request, contrato_id):
     e = _e(request)
     if not e:
@@ -878,6 +897,7 @@ def _urgencia_dict(a):
 
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_atendimentos_urgencia(request):
     e = _e(request)
     if not e:
@@ -920,6 +940,7 @@ def api_atendimentos_urgencia(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 def api_urgencia_dashboard(request):
     e = _e(request)
     if not e:

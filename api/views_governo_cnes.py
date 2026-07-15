@@ -20,6 +20,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
 from .services.auth_session import empresa_autenticada_from_request
 
 logger = logging.getLogger(__name__)
@@ -30,13 +31,16 @@ _CNES_TIMEOUT    = 10  # segundos
 
 def _gov(request):
     emp = empresa_autenticada_from_request(request)
-    if emp and emp.tipo_conta == "governo":
-        return emp
-    return None
+    if not emp or get_setor(emp) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
+        return None
+    return emp
 
 
 # ── Busca no DATASUS ──────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.administrativo")
 def api_cnes_buscar(request):
     """
     GET /api/governo/cnes/buscar?q=<nome_ou_cnes>&uf=SP&municipio=Campinas&page=1
@@ -82,6 +86,7 @@ def api_cnes_buscar(request):
     })
 
 
+@api_requer_permissao_modulo("governo.administrativo")
 def api_cnes_detalhe(request, codigo_cnes):
     """GET /api/governo/cnes/<codigo> — detalhe completo do DATASUS."""
     empresa = _gov(request)
@@ -109,6 +114,7 @@ def api_cnes_detalhe(request, codigo_cnes):
 # ── Sincronizar ───────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.administrativo")
 def api_cnes_sincronizar(request):
     """
     POST /api/governo/cnes/sincronizar
@@ -164,6 +170,7 @@ def api_cnes_sincronizar(request):
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.administrativo")
 def api_cnes_sincronizar_todas(request):
     """
     POST /api/governo/cnes/sincronizar-todas
@@ -220,6 +227,7 @@ def api_cnes_sincronizar_todas(request):
 
 # ── Status e KPIs ─────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.administrativo")
 def api_cnes_status(request):
     """GET /api/governo/cnes/status — status de sincronização das unidades locais."""
     empresa = _gov(request)
@@ -252,6 +260,7 @@ def api_cnes_status(request):
     })
 
 
+@api_requer_permissao_modulo("governo.administrativo")
 def api_cnes_kpis(request):
     """GET /api/governo/cnes/kpis — completude do cadastro."""
     empresa = _gov(request)

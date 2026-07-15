@@ -19,6 +19,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
 from .services.auth_session import empresa_autenticada_from_request
 
 logger = logging.getLogger(__name__)
@@ -46,9 +47,11 @@ _RNDS_URLS = {
 
 def _gov(request):
     emp = empresa_autenticada_from_request(request)
-    if emp and emp.tipo_conta == "governo":
-        return emp
-    return None
+    if not emp or get_setor(emp) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
+        return None
+    return emp
 
 
 def _get_cred(empresa):
@@ -62,6 +65,7 @@ def _get_cred(empresa):
 
 # ── Status ────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def api_sipni_status(request):
     """GET /api/governo/sipni/status."""
     empresa = _gov(request)
@@ -89,6 +93,7 @@ def api_sipni_status(request):
 
 # ── Histórico ─────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def api_sipni_historico(request):
     """GET /api/governo/sipni/historico."""
     empresa = _gov(request)
@@ -115,6 +120,7 @@ def api_sipni_historico(request):
 # ── Transmitir ────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def api_sipni_transmitir(request):
     """
     POST /api/governo/sipni/transmitir
@@ -213,6 +219,7 @@ def api_sipni_transmitir(request):
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def api_sipni_reprocessar(request, tx_id):
     """POST /api/governo/sipni/reprocessar/<id>."""
     empresa = _gov(request)
@@ -253,6 +260,7 @@ def api_sipni_reprocessar(request, tx_id):
 
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def api_sipni_kpis(request):
     """GET /api/governo/sipni/kpis."""
     empresa = _gov(request)

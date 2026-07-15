@@ -13,7 +13,17 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+
+
+def _e(request):
+    empresa = get_empresa(request)
+    if not empresa or get_setor(empresa) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
+        return None
+    return empresa
 
 
 def _get_endemias_model():
@@ -43,9 +53,10 @@ def _visita_to_dict(v):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_endemias_visitas(request):
     """GET/POST /api/governo/endemias/visitas/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -103,9 +114,10 @@ def api_endemias_visitas(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def api_endemias_indicadores(request):
     """GET /api/governo/endemias/indicadores/ — índice de infestação por bairro (estilo LIRAa)."""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

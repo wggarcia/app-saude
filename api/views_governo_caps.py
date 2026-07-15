@@ -13,19 +13,23 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
 from .services.auth_session import empresa_autenticada_from_request
 
 
 def _gov(request):
     emp = empresa_autenticada_from_request(request)
-    if emp and emp.tipo_conta == "governo":
-        return emp
-    return None
+    if not emp or get_setor(emp) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
+        return None
+    return emp
 
 
 # ── Unidades CAPS ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_caps_unidades(request):
     """GET lista | POST cria unidade CAPS."""
     empresa = _gov(request)
@@ -75,6 +79,7 @@ def api_caps_unidades(request):
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_caps_unidade_detalhe(request, caps_id):
     """GET detalhe | PATCH atualiza | DELETE desativa."""
     empresa = _gov(request)
@@ -118,6 +123,7 @@ def api_caps_unidade_detalhe(request, caps_id):
 # ── Atendimentos ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_caps_atendimentos(request):
     """GET lista | POST registra atendimento."""
     empresa = _gov(request)
@@ -208,6 +214,7 @@ def api_caps_atendimentos(request):
 # ── Encaminhamentos RAPS ──────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_caps_encaminhamentos(request):
     """GET lista | POST cria encaminhamento RAPS."""
     empresa = _gov(request)
@@ -268,6 +275,7 @@ def api_caps_encaminhamentos(request):
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_caps_encaminhamento_acao(request, enc_id):
     """PATCH /api/governo/caps/encaminhamentos/<id>/acao — atualiza status."""
     empresa = _gov(request)
@@ -302,6 +310,7 @@ def api_caps_encaminhamento_acao(request, enc_id):
 
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_caps_kpis(request):
     """GET /api/governo/caps/kpis — indicadores CAPS por competência."""
     empresa = _gov(request)
@@ -342,6 +351,7 @@ def api_caps_kpis(request):
     })
 
 
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_caps_raas_exportar(request):
     """
     GET /api/governo/caps/raas-exportar?competencia=AAAAMM

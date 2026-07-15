@@ -13,19 +13,23 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
 from .services.auth_session import empresa_autenticada_from_request
 
 
 def _gov(request):
     """Retorna empresa governo autenticada ou None."""
     emp = empresa_autenticada_from_request(request)
-    if emp and emp.tipo_conta == "governo":
-        return emp
-    return None
+    if not emp or get_setor(emp) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
+        return None
+    return emp
 
 
 # ── Busca ─────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sigtap_buscar(request):
     """
     GET /api/governo/sigtap/buscar?q=<texto>&complexidade=AB&instrumento=BPA-I&page=1
@@ -78,6 +82,7 @@ def api_sigtap_buscar(request):
     })
 
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sigtap_detalhe(request, codigo):
     """GET /api/governo/sigtap/<codigo> — detalhe + CIDs compatíveis."""
     empresa = _gov(request)
@@ -107,6 +112,7 @@ def api_sigtap_detalhe(request, codigo):
     })
 
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sigtap_validar(request):
     """
     GET /api/governo/sigtap/validar?codigo=<code>&cid=<cid>
@@ -171,6 +177,7 @@ def api_sigtap_validar(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sigtap_validar_bpa(request):
     """
     POST /api/governo/sigtap/validar-bpa
@@ -268,6 +275,7 @@ def api_sigtap_validar_bpa(request):
     })
 
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sigtap_grupos(request):
     """GET /api/governo/sigtap/grupos — lista grupos com contagem de procedimentos."""
     empresa = _gov(request)
@@ -308,6 +316,7 @@ def api_sigtap_grupos(request):
     })
 
 
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sigtap_kpis(request):
     """GET /api/governo/sigtap/kpis — status e métricas da tabela importada."""
     empresa = _gov(request)

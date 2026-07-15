@@ -16,9 +16,19 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 
 logger = logging.getLogger(__name__)
+
+
+def _e(request):
+    empresa = get_empresa(request)
+    if not empresa or get_setor(empresa) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
+        return None
+    return empresa
 
 # Procedimentos odontológicos mais comuns (SIGTAP) por especialidade CEO
 _PROCEDIMENTOS_CEO = {
@@ -55,9 +65,10 @@ def _get_ceo_models():
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_atendimentos(request):
     """GET/POST /api/governo/ceo/atendimentos/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -135,9 +146,10 @@ def api_ceo_atendimentos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_atendimento_detalhe(request, atend_id):
     """GET/PUT /api/governo/ceo/atendimentos/<id>/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -183,9 +195,10 @@ def api_ceo_atendimento_detalhe(request, atend_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_producao(request):
     """GET/POST /api/governo/ceo/producao/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -226,9 +239,10 @@ def api_ceo_producao(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_fechar_producao(request, prod_id):
     """POST /api/governo/ceo/producao/<id>/fechar/ — consolida e gera BPA."""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -281,6 +295,7 @@ def api_ceo_fechar_producao(request, prod_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_transmitir(request, prod_id):
     """
     POST /api/governo/ceo/producao/<id>/transmitir/
@@ -299,7 +314,7 @@ def api_ceo_transmitir(request, prod_id):
     Este endpoint gera o arquivo e retorna instruções para a equipe executar
     manualmente no Posto de Transmissão — exatamente como acontece na prática.
     """
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -360,12 +375,13 @@ def api_ceo_transmitir(request, prod_id):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_bpa_download(request, prod_id):
     """
     GET /api/governo/ceo/producao/<id>/bpa-download/
     Retorna o arquivo BPA-I como download (.txt, encoding latin-1).
     """
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -405,9 +421,10 @@ def api_ceo_procedimentos(request):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_kpis(request):
     """GET /api/governo/ceo/kpis/"""
-    empresa = get_empresa(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
