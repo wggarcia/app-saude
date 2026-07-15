@@ -32,6 +32,14 @@ echo "==> flutter pub get"
 cd "$CI_PRIMARY_REPOSITORY_PATH/app_ocupacional"
 flutter pub get
 
+echo "==> GoogleService-Info.plist"
+if [ -n "${GOOGLE_SERVICE_INFO_PLIST_B64:-}" ]; then
+  echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > ios/GoogleService-Info.plist
+  cp ios/GoogleService-Info.plist "ios/GoogleService-Info 2.plist"
+else
+  echo "[WARN] GOOGLE_SERVICE_INFO_PLIST_B64 nao definida; esperando arquivo existente"
+fi
+
 echo "==> pod install"
 cd ios
 pod install --repo-update
