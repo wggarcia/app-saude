@@ -14,17 +14,25 @@ class _OwnerSharesDefaultMixin:
     transactions, so data written via 'default' is invisible to 'owner' queries
     (PostgreSQL READ COMMITTED). This mixin aliases 'owner' to default's
     connection object so both aliases run inside the same transaction.
-    """
-    def setUp(self):
-        _connections['owner'] = _connections['default']
-        super().setUp()
 
-    def tearDown(self):
-        super().tearDown()
+    The alias must be installed in _pre_setup (before super()._pre_setup opens
+    atomics) so that Django's _enter_atomics and _rollback_atomics see a
+    consistent view of which databases are mirrors. Installing in setUp() would
+    corrupt settings_dict lookups inside _rollback_atomics, causing
+    TransactionManagementError on test teardown.
+    """
+    def _pre_setup(self):
+        _connections['owner'] = _connections['default']
+        super()._pre_setup()
+
+    def _post_teardown(self):
         try:
-            del _connections['owner']
-        except Exception:
-            pass
+            super()._post_teardown()
+        finally:
+            try:
+                del _connections['owner']
+            except Exception:
+                pass
 from django.test import Client, TestCase, TransactionTestCase
 from django.utils import timezone
 
