@@ -201,6 +201,9 @@ async function carregarLista(){
     if(r.status !== 'encerrada' && r.status !== 'cancelada'){
       acoes.push(`<a href="${r.sala_url}" class="btn btn-teal btn-sm">Entrar na Sala</a>`);
     }
+    if(r.status === 'encerrada'){
+      acoes.push(`<button class="btn btn-ghost btn-sm" onclick="reabrirReuniao(${r.id})">↩ Reabrir</button>`);
+    }
     if(r.tem_ata){
       acoes.push(`<button class="btn btn-violet btn-sm" onclick="verAta(${r.id},'${r.titulo.replace(/'/g,"\\'")}')">Ver Ata</button>`);
     }
@@ -220,6 +223,13 @@ function abrirModalCriar(){
   now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
   document.getElementById('cDataHora').value = now.toISOString().slice(0,16);
   document.getElementById('modalCriar').classList.add('open');
+}
+
+async function reabrirReuniao(id){
+  if(!confirm('Reabrir esta reunião?')) return;
+  const d = await fj(`/api/governo/reuniao/${id}/atualizar/`,{method:'POST',body:JSON.stringify({status:'agendada'})});
+  if(d.ok) carregarLista();
+  else alert(d.erro||'Erro ao reabrir reunião.');
 }
 
 async function criarReuniao(){
