@@ -261,7 +261,7 @@ function carregarScriptJitsi(devMode) {
     if (window.JitsiMeetExternalAPI) { resolve(); return; }
     const src = devMode
       ? 'https://meet.jit.si/external_api.js'
-      : 'https://8x8.vc/libs/lib.jitsi.min.js';
+      : 'https://8x8.vc/libs/external_api.min.js';
     const s = document.createElement('script');
     s.src = src; s.onload = resolve; s.onerror = reject;
     document.head.appendChild(s);
