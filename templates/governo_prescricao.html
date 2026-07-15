@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Receita Médica — SolusCRT</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.logo{font-size:15px;font-weight:800;color:var(--accent)}
+.sep{width:1px;height:24px;background:var(--border)}
+.page-title{font-size:15px;font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--accent2);border:1px solid rgba(0,229,176,.3)}.btn-ok:hover{background:rgba(0,229,176,.25)}
+.main{max-width:820px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;color:var(--accent)}
+.paciente-info{background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.15);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--muted);margin-bottom:20px}
+.paciente-info strong{color:var(--text);display:block;font-size:15px;font-weight:700;margin-bottom:4px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none;transition:.15s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:rgba(0,194,255,.04)}
+select option{background:#072030}
+textarea{resize:vertical;min-height:72px}
+.med-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.med-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.med-item-info{flex:1;font-size:13px}
+.med-item-info strong{display:block;font-weight:700;margin-bottom:2px}
+.med-item-info span{color:var(--muted);font-size:12px}
+.btn-remove{background:rgba(255,77,109,.1);color:#ff4d6d;border:1px solid rgba(255,77,109,.2);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:Manrope,sans-serif}
+.actions{display:flex;gap:10px;justify-content:flex-end}
+.add-form{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:6px}
+.add-form-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+
+@media print{
+  body{background:#fff;color:#000;font-family:Arial,sans-serif}
+  .topbar,.actions,.add-form,.no-print{display:none!important}
+  .card{border:1px solid #ccc;break-inside:avoid;background:#fff;color:#000}
+  .card-title{color:#000;border-bottom:1px solid #ccc;padding-bottom:8px;margin-bottom:12px}
+  .med-item{border:1px solid #ddd;background:#f9f9f9}
+  .med-item-info strong,.med-item-info span{color:#000}
+  .paciente-info{background:#f0f8ff;border:1px solid #bbb;color:#000}
+  .paciente-info strong{color:#000}
+  input,select,textarea{border:1px solid #ccc;background:#fff;color:#000}
+  .print-header{display:block!important}
+}
+.print-header{display:none;text-align:center;margin-bottom:20px}
+.print-header h1{font-size:20px;font-weight:700}
+.print-header p{font-size:12px;color:#666;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo">SolusCRT</span>
+    <span class="sep"></span>
+    <span class="page-title">Receita Médica</span>
+  </div>
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-ghost no-print" onclick="window.close()">← Fechar</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="print-header">
+    <h1>Receita Médica</h1>
+    <p>SolusCRT — Sistema Unificado de Saúde</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Paciente</div>
+    <div class="paciente-info">
+      <strong id="paciente-nome">{% if tc %}{{ tc.paciente_nome }}{% else %}—{% endif %}</strong>
+      CNS: <span id="paciente-cns">{% if tc %}{{ tc.cns|default:"não informado" }}{% else %}—{% endif %}</span>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Profissional</label>
+        <input type="text" id="profissional" value="{% if tc %}{{ tc.profissional }}{% endif %}" placeholder="Nome do médico">
+      </div>
+      <div class="form-group">
+        <label>Especialidade</label>
+        <input type="text" id="especialidade" value="{% if tc %}{{ tc.especialidade }}{% endif %}" placeholder="Especialidade">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Medicamentos Prescritos</div>
+    <div class="med-list" id="med-list"></div>
+
+    <div class="add-form no-print">
+      <div class="add-form-title">Adicionar medicamento</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Medicamento</label>
+          <input type="text" id="med-nome" placeholder="Ex: Amoxicilina 500mg">
+        </div>
+        <div class="form-group">
+          <label>Dose</label>
+          <input type="text" id="med-dose" placeholder="Ex: 1 comprimido">
+        </div>
+        <div class="form-group">
+          <label>Via de administração</label>
+          <select id="med-via">
+            <option value="oral">Oral</option>
+            <option value="ev">Endovenosa (EV)</option>
+            <option value="im">Intramuscular (IM)</option>
+            <option value="sc">Subcutânea (SC)</option>
+            <option value="inalatória">Inalatória</option>
+            <option value="tópica">Tópica</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Frequência</label>
+          <input type="text" id="med-freq" placeholder="Ex: de 8 em 8 horas">
+        </div>
+        <div class="form-group">
+          <label>Duração (dias)</label>
+          <input type="number" id="med-dias" min="1" placeholder="Ex: 7">
+        </div>
+        <div class="form-group">
+          <label>Observações</label>
+          <input type="text" id="med-obs" placeholder="Observações adicionais">
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end">
+        <button class="btn btn-ok" onclick="adicionarMedicamento()">+ Adicionar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card no-print" id="obs-card">
+    <div class="card-title">Observações Gerais</div>
+    <div class="form-group">
+      <textarea id="obs-gerais" rows="3" placeholder="Instruções adicionais ao paciente..."></textarea>
+    </div>
+  </div>
+
+  <div class="actions no-print">
+    <button class="btn btn-ghost" onclick="window.close()">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarEImprimir()">Salvar e Imprimir</button>
+  </div>
+</div>
+
+<script>
+const TC_ID = {% if tc %}{{ tc.id }}{% else %}null{% endif %};
+const medicamentos = [];
+
+function adicionarMedicamento() {
+  const nome = document.getElementById('med-nome').value.trim();
+  if (!nome) { alert('Informe o nome do medicamento.'); return; }
+  medicamentos.push({
+    medicamento: nome,
+    dose: document.getElementById('med-dose').value.trim(),
+    via: document.getElementById('med-via').value,
+    frequencia: document.getElementById('med-freq').value.trim(),
+    duracao_dias: document.getElementById('med-dias').value,
+    observacoes: document.getElementById('med-obs').value.trim(),
+  });
+  renderMeds();
+  ['med-nome','med-dose','med-freq','med-dias','med-obs'].forEach(id => document.getElementById(id).value = '');
+}
+
+function renderMeds() {
+  const list = document.getElementById('med-list');
+  if (!medicamentos.length) {
+    list.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">Nenhum medicamento adicionado.</p>';
+    return;
+  }
+  list.innerHTML = medicamentos.map((m, i) => `
+    <div class="med-item">
+      <div class="med-item-info">
+        <strong>${m.medicamento}${m.dose ? ' — ' + m.dose : ''}</strong>
+        <span>${m.via}${m.frequencia ? ' · ' + m.frequencia : ''}${m.duracao_dias ? ' · ' + m.duracao_dias + ' dias' : ''}${m.observacoes ? ' · ' + m.observacoes : ''}</span>
+      </div>
+      <button class="btn-remove no-print" onclick="removerMed(${i})">Remover</button>
+    </div>
+  `).join('');
+}
+
+function removerMed(i) {
+  medicamentos.splice(i, 1);
+  renderMeds();
+}
+
+async function salvarEImprimir() {
+  if (!medicamentos.length) { alert('Adicione pelo menos um medicamento.'); return; }
+  const payload = {
+    teleconsulta_id: TC_ID,
+    paciente_nome: document.getElementById('paciente-nome').textContent,
+    cns: document.getElementById('paciente-cns').textContent,
+    profissional: document.getElementById('profissional').value,
+    especialidade: document.getElementById('especialidade').value,
+    medicamentos,
+    observacoes_gerais: document.getElementById('obs-gerais').value,
+  };
+  try {
+    const csrf = (document.cookie.split(';').find(c => c.trim().startsWith('csrftoken=')) || '').split('=')[1] || '';
+    const r = await fetch('/api/governo/teleconsulta/prescricao/salvar/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf},
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      window.print();
+    } else {
+      alert('Erro ao salvar: ' + (data.erro || 'Tente novamente.'));
+    }
+  } catch(e) {
+    console.error(e);
+    alert('Erro de comunicação com o servidor.');
+  }
+}
+
+renderMeds();
+</script>
+</body>
+</html>

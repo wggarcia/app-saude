@@ -7112,6 +7112,25 @@ class TeleconsultaGoverno(models.Model):
         ordering = ["-data_hora"]
 
 
+class DocumentoClinicoGov(models.Model):
+    TIPO_CHOICES = [
+        ('receita', 'Receita Médica'),
+        ('atestado', 'Atestado Médico'),
+        ('exame', 'Solicitação de Exame'),
+    ]
+    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='documentos_clinicos_gov')
+    teleconsulta = models.ForeignKey('TeleconsultaGoverno', null=True, blank=True, on_delete=models.SET_NULL, related_name='documentos')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    paciente_nome = models.CharField(max_length=200)
+    cns = models.CharField(max_length=20, blank=True)
+    profissional = models.CharField(max_length=200, blank=True)
+    dados = models.JSONField(default=dict)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+
+
 class ReuniaoGoverno(models.Model):
     """Reunião institucional para gestores de saúde (diretores, secretários).
     Ambiente B — independente da teleconsulta clínica (Ambiente A)."""

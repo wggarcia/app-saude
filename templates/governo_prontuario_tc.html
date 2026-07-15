@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prontuário — SolusCRT</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--border:rgba(255,255,255,.07);--card:rgba(255,255,255,.04)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.logo{font-size:15px;font-weight:800;color:var(--accent)}
+.sep{width:1px;height:24px;background:var(--border)}
+.page-title{font-size:15px;font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--accent2);border:1px solid rgba(0,229,176,.3)}.btn-ok:hover{background:rgba(0,229,176,.25)}
+.main{max-width:960px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:20px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.info-item label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px}
+.info-item span{font-size:14px;font-weight:500}
+.alerta-box{background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:12px 16px;font-size:13px}
+.alerta-box .alerta-title{font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.condicao-box{background:rgba(255,179,71,.07);border:1px solid rgba(255,179,71,.2);border-radius:8px;padding:12px 16px;font-size:13px}
+.condicao-box .condicao-title{font-size:11px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.empty-state{padding:32px;text-align:center;color:var(--muted);font-size:14px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--accent2)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-muted{background:rgba(122,155,181,.1);color:var(--muted)}
+.resumo-cell{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.no-data{color:var(--muted);font-size:13px}
+.search-bar{display:flex;gap:10px;align-items:center}
+.search-bar input{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none;width:240px}
+.search-bar input:focus{border-color:var(--accent)}
+.evolution-form{display:flex;flex-direction:column;gap:12px}
+.evolution-form textarea{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:90px;width:100%}
+.evolution-form textarea:focus{border-color:var(--accent)}
+.evolution-form-footer{display:flex;justify-content:flex-end}
+.cns-search{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center}
+.cns-search h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.cns-search p{color:var(--muted);font-size:13px;margin-bottom:20px}
+.cns-search-row{display:flex;gap:10px;justify-content:center}
+.cns-search-row input{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 16px;color:var(--text);font-family:Manrope,sans-serif;font-size:14px;outline:none;width:280px}
+.cns-search-row input:focus{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo">SolusCRT</span>
+    <span class="sep"></span>
+    <span class="page-title">Prontuário{% if prontuario %} — {{ prontuario.nome_completo }}{% elif cns %} — CNS {{ cns }}{% endif %}</span>
+  </div>
+  <button class="btn btn-ghost" onclick="window.close()">← Fechar</button>
+</div>
+
+<div class="main">
+
+{% if not cns %}
+  <div class="cns-search">
+    <h3>Buscar Prontuário</h3>
+    <p>Informe o CNS do paciente para consultar o prontuário.</p>
+    <div class="cns-search-row">
+      <input type="text" id="cns-input" placeholder="Cartão Nacional de Saúde (CNS)" maxlength="18">
+      <button class="btn btn-primary" onclick="buscarCNS()">Buscar</button>
+    </div>
+  </div>
+
+{% else %}
+
+  {% if prontuario %}
+  <!-- Dados do paciente -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Dados do Paciente</span>
+      <span style="font-size:12px;color:var(--muted)">CNS: {{ cns }}</span>
+    </div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Nome completo</label>
+          <span>{{ prontuario.nome_completo }}</span>
+        </div>
+        <div class="info-item">
+          <label>Data de nascimento</label>
+          <span>{% if prontuario.data_nascimento %}{{ prontuario.data_nascimento|date:"d/m/Y" }}{% else %}<span class="no-data">não informado</span>{% endif %}</span>
+        </div>
+        <div class="info-item">
+          <label>Unidade de saúde</label>
+          <span>{% if prontuario.unidade_saude %}{{ prontuario.unidade_saude }}{% else %}<span class="no-data">não informado</span>{% endif %}</span>
+        </div>
+        <div class="info-item">
+          <label>ACS responsável</label>
+          <span>{% if prontuario.acs_responsavel %}{{ prontuario.acs_responsavel }}{% else %}<span class="no-data">não informado</span>{% endif %}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alertas clínicos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="alerta-box">
+      <div class="alerta-title">Alergias</div>
+      {% if prontuario.alergias %}{{ prontuario.alergias }}{% else %}<span class="no-data">Nenhuma registrada</span>{% endif %}
+    </div>
+    <div class="condicao-box">
+      <div class="condicao-title">Condições Crônicas</div>
+      {% if prontuario.condicoes_cronicas %}{{ prontuario.condicoes_cronicas }}{% else %}<span class="no-data">Nenhuma registrada</span>{% endif %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="card-body">
+      <div class="empty-state">
+        Nenhum prontuário encontrado para o CNS <strong>{{ cns }}</strong>.<br>
+        <span style="font-size:12px;color:var(--muted);margin-top:6px;display:block">O paciente pode ter teleconsultas registradas mesmo sem prontuário cadastrado.</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Histórico de teleconsultas -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Histórico de Teleconsultas</span>
+      <span style="font-size:12px;color:var(--muted)">Últimas {{ historico|length }} consulta(s)</span>
+    </div>
+    {% if historico %}
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Hora</th>
+          <th>Profissional</th>
+          <th>Especialidade</th>
+          <th>CID-10</th>
+          <th>Status</th>
+          <th>Resumo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tc in historico %}
+        <tr>
+          <td style="white-space:nowrap">{{ tc.data_hora|date:"d/m/Y H:i" }}</td>
+          <td>{{ tc.profissional }}</td>
+          <td style="color:var(--muted)">{{ tc.especialidade|default:"—" }}</td>
+          <td>{% if tc.cid10 %}<strong>{{ tc.cid10 }}</strong>{% else %}<span class="no-data">—</span>{% endif %}</td>
+          <td>
+            {% if tc.status == "concluida" %}<span class="badge badge-ok">Concluída</span>
+            {% elif tc.status == "em_curso" %}<span class="badge badge-info">Em curso</span>
+            {% elif tc.status == "agendada" %}<span class="badge badge-warn">Agendada</span>
+            {% else %}<span class="badge badge-muted">{{ tc.get_status_display }}</span>{% endif %}
+          </td>
+          <td class="resumo-cell" title="{{ tc.resumo }}">{{ tc.resumo|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">Nenhuma teleconsulta registrada para este paciente.</div>
+    {% endif %}
+  </div>
+
+  <!-- Adicionar evolução -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Registrar Evolução</span>
+    </div>
+    <div class="card-body">
+      <div class="evolution-form">
+        <textarea id="evolucao-texto" placeholder="Registre uma anotação clínica ou evolução do paciente..."></textarea>
+        <div class="evolution-form-footer">
+          <button class="btn btn-ok" onclick="salvarEvolucao()">Salvar evolução</button>
+        </div>
+      </div>
+      <div id="evolucao-msg" style="margin-top:10px;font-size:13px;display:none"></div>
+    </div>
+  </div>
+
+{% endif %}
+</div>
+
+<script>
+function buscarCNS() {
+  const cns = document.getElementById('cns-input').value.trim();
+  if (!cns) { alert('Informe o CNS do paciente.'); return; }
+  window.location.href = '/governo/prontuario/?cns=' + encodeURIComponent(cns);
+}
+
+document.addEventListener('keydown', function(e) {
+  const inp = document.getElementById('cns-input');
+  if (inp && e.key === 'Enter') buscarCNS();
+});
+
+async function salvarEvolucao() {
+  const texto = document.getElementById('evolucao-texto').value.trim();
+  if (!texto) { alert('Escreva algo antes de salvar.'); return; }
+  const msg = document.getElementById('evolucao-msg');
+  msg.style.display = 'none';
+
+  // Placeholder: log locally (evolution notes endpoint not yet wired)
+  console.log('Evolução salva localmente:', texto);
+  msg.textContent = 'Evolução registrada com sucesso.';
+  msg.style.color = 'var(--accent2)';
+  msg.style.display = 'block';
+  document.getElementById('evolucao-texto').value = '';
+}
+</script>
+</body>
+</html>

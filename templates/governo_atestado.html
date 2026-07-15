@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atestado Médico — SolusCRT</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.logo{font-size:15px;font-weight:800;color:var(--accent)}
+.sep{width:1px;height:24px;background:var(--border)}
+.page-title{font-size:15px;font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.main{max-width:820px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;color:var(--accent)}
+.paciente-info{background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.15);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--muted);margin-bottom:20px}
+.paciente-info strong{color:var(--text);display:block;font-size:15px;font-weight:700;margin-bottom:4px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none;transition:.15s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:rgba(0,194,255,.04)}
+select option{background:#072030}
+textarea{resize:vertical;min-height:80px}
+.actions{display:flex;gap:10px;justify-content:flex-end}
+
+@media print{
+  body{background:#fff;color:#000;font-family:Arial,sans-serif}
+  .topbar,.actions,.no-print{display:none!important}
+  .card{border:1px solid #ccc;break-inside:avoid;background:#fff;color:#000}
+  .card-title{color:#000;border-bottom:1px solid #ccc;padding-bottom:8px;margin-bottom:12px}
+  .paciente-info{background:#f0f8ff;border:1px solid #bbb;color:#000}
+  .paciente-info strong{color:#000}
+  input,select,textarea{border:1px solid #ccc;background:#fff;color:#000}
+  .print-header{display:block!important}
+  .atestado-texto{display:block!important}
+}
+.print-header{display:none;text-align:center;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:12px}
+.print-header h1{font-size:22px;font-weight:700}
+.print-header p{font-size:12px;color:#666;margin-top:4px}
+.atestado-texto{display:none;font-size:14px;line-height:1.8;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo">SolusCRT</span>
+    <span class="sep"></span>
+    <span class="page-title">Atestado Médico</span>
+  </div>
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-ghost no-print" onclick="window.close()">← Fechar</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="print-header">
+    <h1>Atestado Médico</h1>
+    <p>SolusCRT — Sistema Unificado de Saúde</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Paciente</div>
+    <div class="paciente-info">
+      <strong id="paciente-nome">{% if tc %}{{ tc.paciente_nome }}{% else %}—{% endif %}</strong>
+      CNS: <span id="paciente-cns">{% if tc %}{{ tc.cns|default:"não informado" }}{% else %}—{% endif %}</span>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Profissional</label>
+        <input type="text" id="profissional" value="{% if tc %}{{ tc.profissional }}{% endif %}" placeholder="Nome do médico">
+      </div>
+      <div class="form-group">
+        <label>Especialidade</label>
+        <input type="text" id="especialidade" value="{% if tc %}{{ tc.especialidade }}{% endif %}" placeholder="Especialidade">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dados do Atestado</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>CID-10</label>
+        <input type="text" id="cid10" value="{% if tc %}{{ tc.cid10 }}{% endif %}" placeholder="Ex: J06.9">
+      </div>
+      <div class="form-group">
+        <label>Dias de afastamento</label>
+        <input type="number" id="dias-afastamento" min="1" placeholder="Ex: 3">
+      </div>
+      <div class="form-group">
+        <label>Data de início do afastamento</label>
+        <input type="date" id="data-inicio">
+      </div>
+      <div class="form-group">
+        <label>Finalidade</label>
+        <select id="finalidade">
+          <option value="trabalho">Trabalho</option>
+          <option value="escolar">Escolar</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Observações</label>
+        <textarea id="observacoes" placeholder="Informações adicionais, restrições, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="atestado-texto" id="atestado-texto-preview"></div>
+  </div>
+
+  <div class="actions no-print">
+    <button class="btn btn-ghost" onclick="window.close()">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarEImprimir()">Salvar e Imprimir</button>
+  </div>
+</div>
+
+<script>
+const TC_ID = {% if tc %}{{ tc.id }}{% else %}null{% endif %};
+
+function gerarTextoAtestado() {
+  const nome = document.getElementById('paciente-nome').textContent;
+  const profissional = document.getElementById('profissional').value;
+  const cid10 = document.getElementById('cid10').value;
+  const dias = document.getElementById('dias-afastamento').value;
+  const dataInicio = document.getElementById('data-inicio').value;
+  const finalidade = document.getElementById('finalidade').value;
+  const obs = document.getElementById('observacoes').value;
+
+  const dataFmt = dataInicio ? new Date(dataInicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const hoje = new Date().toLocaleDateString('pt-BR');
+
+  return `Atesto para os devidos fins que o(a) paciente <strong>${nome}</strong>` +
+    (cid10 ? `, portador(a) do diagnóstico CID-10 ${cid10},` : '') +
+    ` necessita de afastamento de suas atividades ${finalidade === 'escolar' ? 'escolares' : 'laborais'} pelo período de <strong>${dias || '—'} dia(s)</strong>` +
+    `, a partir de ${dataFmt}.` +
+    (obs ? `<br><br>${obs}` : '') +
+    `<br><br>Data de emissão: ${hoje}.<br>Profissional: ${profissional || '—'}`;
+}
+
+async function salvarEImprimir() {
+  const dias = document.getElementById('dias-afastamento').value;
+  if (!dias) { alert('Informe os dias de afastamento.'); return; }
+
+  const preview = document.getElementById('atestado-texto-preview');
+  preview.innerHTML = gerarTextoAtestado();
+
+  const payload = {
+    teleconsulta_id: TC_ID,
+    paciente_nome: document.getElementById('paciente-nome').textContent,
+    cns: document.getElementById('paciente-cns').textContent,
+    profissional: document.getElementById('profissional').value,
+    especialidade: document.getElementById('especialidade').value,
+    cid10: document.getElementById('cid10').value,
+    dias_afastamento: dias,
+    data_inicio: document.getElementById('data-inicio').value,
+    finalidade: document.getElementById('finalidade').value,
+    observacoes: document.getElementById('observacoes').value,
+  };
+
+  try {
+    const csrf = (document.cookie.split(';').find(c => c.trim().startsWith('csrftoken=')) || '').split('=')[1] || '';
+    const r = await fetch('/api/governo/teleconsulta/atestado/salvar/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf},
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      window.print();
+    } else {
+      alert('Erro ao salvar: ' + (data.erro || 'Tente novamente.'));
+    }
+  } catch(e) {
+    console.error(e);
+    alert('Erro de comunicação com o servidor.');
+  }
+}
+</script>
+</body>
+</html>

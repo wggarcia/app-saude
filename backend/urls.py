@@ -723,6 +723,15 @@ from api.views_governo_teleconsulta import (
     api_teleconsulta_tcle_aceitar,
     api_teleconsulta_encerrar,
 )
+from api.views_governo_clinica import (
+    governo_prescricao_nova,
+    api_governo_prescricao_salvar,
+    governo_atestado_novo,
+    api_governo_atestado_salvar,
+    governo_exame_novo,
+    api_governo_exame_salvar,
+    governo_prontuario_page,
+)
 from api.views_governo_diagnosticos_gov import (
     governo_diagnosticos_panorama_page,
     api_diagnosticos_confirmados,
@@ -1164,6 +1173,13 @@ urlpatterns = [
     path('governo/teleconsulta/', governo_teleconsulta_page),
     path('governo/teleconsulta/<int:tc_id>/sala/', teleconsulta_sala_medico),
     path('teleconsulta/paciente/<str:token>/', teleconsulta_sala_paciente),
+    path('governo/prontuario/', governo_prontuario_page),
+    path('governo/prescricao/nova/', governo_prescricao_nova),
+    path('governo/atestado/novo/', governo_atestado_novo),
+    path('governo/solicitacao-exame/nova/', governo_exame_novo),
+    path('api/governo/teleconsulta/prescricao/salvar/', api_governo_prescricao_salvar),
+    path('api/governo/teleconsulta/atestado/salvar/', api_governo_atestado_salvar),
+    path('api/governo/teleconsulta/exame/salvar/', api_governo_exame_salvar),
     path('governo/epidemiologia/diagnosticos/', governo_diagnosticos_panorama_page),
     path('governo/reuniao/', governo_reuniao_page),
     path('governo/reuniao/<int:reuniao_id>/sala/', governo_reuniao_sala),
