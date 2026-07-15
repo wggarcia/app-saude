@@ -193,8 +193,16 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
     <div style="position:relative;height:calc(100vh - 140px)">
       <div id="jitsi-container"></div>
       <div id="video-loading" class="video-loading">
-        <div class="spinner"></div>
-        <span style="font-size:13px;color:var(--muted)">Conectando ao médico...</span>
+        <div id="vl-spinner" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+          <div class="spinner"></div>
+          <span style="font-size:13px;color:var(--muted)">Conectando...</span>
+        </div>
+        <div id="vl-ready" style="display:none;text-align:center">
+          <p style="font-size:40px;margin-bottom:16px">🏥</p>
+          <p style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px">Médico disponível</p>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:28px">Câmera e microfone serão solicitados</p>
+          <button class="btn btn-accent" onclick="entrarNaConsulta()" style="font-size:15px;padding:14px 36px">Participar da Consulta</button>
+        </div>
       </div>
     </div>
   </div>
@@ -269,6 +277,8 @@ function iniciarPolling() {
 }
 
 // ── Jitsi ──────────────────────────────────────────────────────────────────
+let _jDomain = null, _jOpts = null;
+
 function carregarScriptJitsi(devMode) {
   return new Promise((resolve, reject) => {
     if (window.JitsiMeetExternalAPI) { resolve(); return; }
@@ -290,10 +300,9 @@ async function iniciarJitsi() {
       if (loading) loading.innerHTML = `<p style="color:var(--muted);font-size:14px">${d.erro || 'Erro ao conectar.'}</p>`;
       return;
     }
-
     await carregarScriptJitsi(d.dev_mode);
-
-    const opts = {
+    _jDomain = d.dev_mode ? 'meet.jit.si' : '8x8.vc';
+    _jOpts = {
       roomName: d.room,
       width: '100%',
       height: '100%',
@@ -303,6 +312,7 @@ async function iniciarJitsi() {
         startWithVideoMuted: false,
         disableDeepLinking: true,
         prejoinPageEnabled: false,
+        prejoinConfig: { enabled: false },
         toolbarButtons: ['microphone','camera','hangup','chat','raisehand','tileview'],
       },
       interfaceConfigOverwrite: {
@@ -310,23 +320,24 @@ async function iniciarJitsi() {
         SHOW_WATERMARK_FOR_GUESTS: false,
       },
     };
-    if (d.token && !d.dev_mode) opts.jwt = d.token;
-    const domain = d.dev_mode ? 'meet.jit.si' : '8x8.vc';
-    jitsiApi = new JitsiMeetExternalAPI(domain, opts);
-    if (loading) loading.style.display = 'none';
-    jitsiApi.addEventListener('videoConferenceJoined', () => {
-      if (loading) loading.style.display = 'none';
-    });
-    jitsiApi.addEventListener('readyToClose', () => {
-      jitsiApi.dispose();
-      jitsiApi = null;
-      document.getElementById('waiting-msg').textContent = 'Consulta encerrada pelo médico. Obrigado!';
-      mostrarTela('tela-espera');
-    });
+    if (d.token && !d.dev_mode) _jOpts.jwt = d.token;
+    document.getElementById('vl-spinner').style.display = 'none';
+    document.getElementById('vl-ready').style.display = 'block';
   } catch (err) {
     if (loading) loading.innerHTML = '<p style="color:var(--muted);font-size:14px">Falha ao conectar ao vídeo.</p>';
     console.error(err);
   }
+}
+
+function entrarNaConsulta() {
+  document.getElementById('video-loading').style.display = 'none';
+  jitsiApi = new JitsiMeetExternalAPI(_jDomain, _jOpts);
+  jitsiApi.addEventListener('readyToClose', () => {
+    jitsiApi.dispose();
+    jitsiApi = null;
+    document.getElementById('waiting-msg').textContent = 'Consulta encerrada pelo médico. Obrigado!';
+    mostrarTela('tela-espera');
+  });
 }
 
 // ── Inicialização ─────────────────────────────────────────────────────────
