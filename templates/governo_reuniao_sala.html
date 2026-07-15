@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ reuniao.titulo }} — Sala de Reunião</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;
+  --violet:#a78bfa;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --border:rgba(255,255,255,.07)
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Top bar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:12px;overflow:hidden}
+.logo{font-size:14px;font-weight:800;color:var(--accent);white-space:nowrap}
+.sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.mtitle{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msub{font-size:11px;color:var(--muted);white-space:nowrap}
+.status-pill{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px;flex-shrink:0}
+.pill-agendada{background:rgba(0,194,255,.15);color:var(--accent)}
+.pill-em_andamento{background:rgba(0,229,176,.15);color:var(--accent2)}
+.pill-encerrada{background:rgba(122,155,181,.15);color:var(--muted)}
+.btn{padding:7px 14px;border:none;border-radius:8px;font-family:Manrope,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#e0344d}
+.btn-violet{background:rgba(167,139,250,.2);color:var(--violet);border:1px solid rgba(167,139,250,.3)}
+.btn-violet:hover{background:rgba(167,139,250,.3)}
+.btn-accent{background:var(--accent);color:#041018}
+
+/* ── Layout ── */
+.room{flex:1;display:flex;overflow:hidden}
+.jitsi-pane{flex:1;position:relative;background:#000}
+#jitsi-container{width:100%;height:100%}
+.jitsi-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(4,16,24,.92)}
+.jitsi-overlay.hidden{display:none}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov-msg{font-size:13px;color:var(--muted);font-weight:600}
+
+/* ── Side panel ── */
+.side-panel{width:320px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:12px 0;font-size:12px;font-weight:700;color:var(--muted);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{flex:1;overflow-y:auto;display:none}
+.tab-content.active{display:flex;flex-direction:column}
+
+/* ── Panel sections ── */
+.psec{padding:14px 16px;border-bottom:1px solid var(--border)}
+.psec:last-child{border-bottom:none}
+.psec-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+
+/* ── Participants ── */
+.partic-list{display:flex;flex-direction:column;gap:6px}
+.partic-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.03)}
+.partic-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.partic-name{font-size:12px;font-weight:600}
+.partic-cargo{font-size:11px;color:var(--muted)}
+
+/* ── Pauta checklist ── */
+.pauta-list{display:flex;flex-direction:column;gap:4px}
+.pauta-item{display:flex;align-items:flex-start;gap:8px;padding:6px 4px;cursor:pointer;border-radius:6px;transition:.1s}
+.pauta-item:hover{background:rgba(255,255,255,.03)}
+.pauta-item input[type=checkbox]{width:14px;height:14px;margin-top:1px;flex-shrink:0;accent-color:var(--accent)}
+.pauta-item label{font-size:12px;cursor:pointer;line-height:1.4}
+.pauta-item.done label{text-decoration:line-through;color:var(--muted)}
+.pauta-empty{font-size:12px;color:var(--muted);font-style:italic}
+
+/* ── Notas ── */
+.notas-area{width:100%;flex:1;background:transparent;border:none;border-top:1px solid var(--border);padding:12px 16px;color:var(--text);font-family:Manrope,sans-serif;font-size:12px;resize:none;outline:none;line-height:1.6;min-height:120px}
+.notas-area::placeholder{color:var(--muted)}
+.notas-hint{padding:6px 16px 10px;font-size:10px;color:var(--muted)}
+
+/* ── Epi widget ── */
+.epi-level{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:10px}
+.epi-verde{background:rgba(0,229,176,.08);border:1px solid rgba(0,229,176,.2)}
+.epi-amarelo{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.2)}
+.epi-laranja{background:rgba(255,120,50,.08);border:1px solid rgba(255,120,50,.3)}
+.epi-vermelho{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3)}
+.epi-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-verde{background:var(--ok)}.dot-amarelo{background:var(--warn)}.dot-laranja{background:#ff7832}.dot-vermelho{background:var(--danger)}
+.epi-label{font-size:12px;font-weight:700}
+.epi-sub{font-size:11px;color:var(--muted);margin-left:auto}
+.epi-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.epi-row label{font-size:11px;color:var(--muted)}
+.epi-row span{font-size:12px;font-weight:700}
+.epi-doenca{padding:4px 8px;border-radius:4px;background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.12);font-size:11px;color:var(--accent);margin-bottom:4px;display:inline-block}
+
+/* ── Modal ata ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal-backdrop.hidden{display:none}
+.ata-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:680px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column}
+.ata-modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ata-modal-header h3{font-size:16px;font-weight:800}
+.ata-modal-body{flex:1;overflow-y:auto;padding:20px 24px}
+.ata-text{white-space:pre-wrap;font-size:13px;line-height:1.75;color:#c8dff2}
+.ata-modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0}
+.generating{display:flex;align-items:center;gap:10px;padding:20px;color:var(--muted);font-size:13px}
+.gen-spin{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--violet);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0}
+
+/* ── Encerrar btn area ── */
+.encerrar-area{padding:14px 16px;border-top:1px solid var(--border);flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo">SolusCRT</span>
+    <div class="sep"></div>
+    <div>
+      <div class="mtitle">{{ reuniao.titulo }}</div>
+      <div class="msub" id="data-hora-fmt"></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <span id="status-pill" class="status-pill pill-{{ reuniao.status }}">{{ reuniao.get_status_display }}</span>
+    <button class="btn btn-ghost" onclick="window.location.href='/governo/reuniao/'">← Agenda</button>
+    {% if reuniao.status != 'encerrada' %}
+    <button class="btn btn-danger" onclick="confirmarEncerrar()">Encerrar Reunião</button>
+    {% else %}
+    <button class="btn btn-violet" onclick="verAta()">Ver Ata</button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="room">
+
+  <!-- Jitsi -->
+  <div class="jitsi-pane">
+    <div id="jitsi-container"></div>
+    <div id="overlay" class="jitsi-overlay">
+      <div class="spinner"></div>
+      <div class="ov-msg" id="ov-msg">Iniciando sala de vídeo...</div>
+    </div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="side-panel">
+    <div class="tabs">
+      <div class="tab active" onclick="setTab('pauta',this)">📋 Pauta</div>
+      <div class="tab" onclick="setTab('partic',this)">👥 Participantes</div>
+      <div class="tab" onclick="setTab('epi',this)">🔬 Situação</div>
+    </div>
+
+    <!-- Tab: Pauta + Notas -->
+    <div class="tab-content active" id="tab-pauta">
+      <div class="psec">
+        <div class="psec-title">Itens de Pauta</div>
+        <div class="pauta-list" id="pautaList">
+          <div class="pauta-empty">Pauta não definida.</div>
+        </div>
+      </div>
+      <div class="psec" style="flex:1;display:flex;flex-direction:column;padding-bottom:0">
+        <div class="psec-title">Notas da Reunião</div>
+        <textarea class="notas-area" id="notasArea"
+          placeholder="Digite notas, decisões e encaminhamentos aqui...&#10;Serão usadas pela IA para gerar a ata."
+        >{{ reuniao.notas }}</textarea>
+        <div class="notas-hint">Salvo automaticamente · usado para gerar a ata</div>
+      </div>
+    </div>
+
+    <!-- Tab: Participantes -->
+    <div class="tab-content" id="tab-partic">
+      <div class="psec">
+        <div class="psec-title">Lista de Presença</div>
+        <div class="partic-list" id="particList">
+          <div class="pauta-empty">Sem participantes definidos.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Situação Epi -->
+    <div class="tab-content" id="tab-epi">
+      <div class="psec">
+        <div class="psec-title">Nível Situacional</div>
+        <div id="epiWidget"><div style="font-size:12px;color:var(--muted)">Carregando...</div></div>
+      </div>
+      <div class="psec">
+        <div class="psec-title">Diagnósticos Confirmados — 30 dias</div>
+        <div id="diagWidget"><div style="font-size:12px;color:var(--muted)">Carregando...</div></div>
+      </div>
+    </div>
+
+    <!-- Encerrar -->
+    {% if reuniao.status != 'encerrada' %}
+    <div class="encerrar-area">
+      <button class="btn btn-danger" style="width:100%" onclick="confirmarEncerrar()">Encerrar Reunião + Gerar Ata IA</button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal ata -->
+<div class="modal-backdrop hidden" id="modalAta">
+  <div class="ata-modal">
+    <div class="ata-modal-header">
+      <h3>Ata da Reunião</h3>
+      <button class="btn btn-ghost" onclick="document.getElementById('modalAta').classList.add('hidden')">✕</button>
+    </div>
+    <div class="ata-modal-body" id="ataBody">
+      <div class="generating"><div class="gen-spin"></div>Gerando ata com inteligência artificial...</div>
+    </div>
+    <div class="ata-modal-footer">
+      <button class="btn btn-ghost" onclick="copiarAta()">📋 Copiar</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('modalAta').classList.add('hidden')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://8x8.vc/libs/lib.jitsi.min.js"></script>
+<script>
+const REUNIAO_ID = {{ reuniao.id }};
+const STATUS_INICIAL = "{{ reuniao.status }}";
+let jitsiApi = null;
+let notasSaveTimer = null;
+
+// ── Data/hora ──────────────────────────────────────────────────────────────
+const dh = new Date("{{ reuniao.data_hora|date:'c' }}");
+document.getElementById('data-hora-fmt').textContent =
+  dh.toLocaleDateString('pt-BR') + ' ' + dh.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) +
+  ' · {{ reuniao.duracao_minutos }}min';
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function setTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='epi') carregarEpi();
+}
+
+// ── Pauta checklist ───────────────────────────────────────────────────────
+const PAUTA_RAW = `{{ reuniao.pauta|escapejs }}`;
+function renderPauta() {
+  const el = document.getElementById('pautaList');
+  const items = PAUTA_RAW.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!items.length){el.innerHTML='<div class="pauta-empty">Pauta não definida.</div>';return;}
+  el.innerHTML = items.map((item,i)=>`
+    <label class="pauta-item" id="pi${i}">
+      <input type="checkbox" onchange="togglePauta(${i})">
+      <span>${item}</span>
+    </label>
+  `).join('');
+}
+function togglePauta(i){
+  document.getElementById('pi'+i).classList.toggle('done');
+}
+
+// ── Participantes ──────────────────────────────────────────────────────────
+const PARTIC_RAW = `{{ reuniao.participantes_nomes|escapejs }}`;
+const CORES = ['#00c2ff','#00e5b0','#a78bfa','#ffb347','#ff4d6d','#2dd4bf'];
+function renderPartic(){
+  const el = document.getElementById('particList');
+  const items = PARTIC_RAW.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!items.length){el.innerHTML='<div class="pauta-empty">Sem participantes definidos.</div>';return;}
+  el.innerHTML = items.map((item,i)=>{
+    const parts = item.split('—').map(s=>s.trim());
+    const nome = parts[0]||item;
+    const cargo = parts[1]||'';
+    const cor = CORES[i%CORES.length];
+    const inicial = nome[0]?.toUpperCase()||'?';
+    return `<div class="partic-item">
+      <div class="partic-avatar" style="background:${cor}22;color:${cor}">${inicial}</div>
+      <div><div class="partic-name">${nome}</div>${cargo?`<div class="partic-cargo">${cargo}</div>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Notas auto-save ────────────────────────────────────────────────────────
+document.getElementById('notasArea').addEventListener('input', ()=>{
+  clearTimeout(notasSaveTimer);
+  notasSaveTimer = setTimeout(salvarNotas, 2000);
+});
+async function salvarNotas(){
+  const notas = document.getElementById('notasArea').value;
+  await fetch(`/api/governo/reuniao/${REUNIAO_ID}/notas/`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body:JSON.stringify({notas}),
+    credentials:'include',
+  });
+}
+
+// ── Epi widget ────────────────────────────────────────────────────────────
+async function carregarEpi(){
+  try{
+    const [sala, diag] = await Promise.all([
+      fetch('/api/governo/sala-situacao/',{credentials:'include'}).then(r=>r.json()),
+      fetch('/api/governo/epidemiologia/diagnosticos/?dias=30',{credentials:'include'}).then(r=>r.json()),
+    ]);
+
+    const nivel = sala.nivel_situacional||'verde';
+    const cores = {verde:'ok',amarelo:'warn',laranja:'laranja',vermelho:'danger'};
+    const labels = {verde:'VERDE — Situação Normal',amarelo:'AMARELO — Atenção',laranja:'LARANJA — Alerta',vermelho:'VERMELHO — Emergência'};
+    const dotCls = {verde:'dot-verde',amarelo:'dot-amarelo',laranja:'dot-laranja',vermelho:'dot-vermelho'};
+    document.getElementById('epiWidget').innerHTML = `
+      <div class="epi-level epi-${nivel}">
+        <div class="epi-dot ${dotCls[nivel]}"></div>
+        <div class="epi-label">${labels[nivel]||nivel.toUpperCase()}</div>
+      </div>
+      <div class="epi-row"><label>Surtos ativos</label><span>${sala.surtos?.ativos??'—'}</span></div>
+      <div class="epi-row"><label>Notificações 30d</label><span>${sala.notificacoes?.total_30d??'—'}</span></div>
+      <div class="epi-row"><label>Infestação vetorial</label><span>${sala.endemias?.indice_infestacao_pct??'—'}%</span></div>
+      ${sala.sintomas_populacao?.doenca_dominante?`<div class="epi-row"><label>Doença dominante</label></div><div><span class="epi-doenca">${sala.sintomas_populacao.doenca_dominante}</span></div>`:''}
+    `;
+
+    const topCid = (diag.por_cid10||[]).slice(0,5);
+    document.getElementById('diagWidget').innerHTML = topCid.length
+      ? topCid.map(c=>`<div class="epi-row"><label>${c.label}</label><span>${c.total}</span></div>`).join('')
+      : '<div style="font-size:12px;color:var(--muted)">Nenhum diagnóstico registrado.</div>';
+  }catch(e){
+    document.getElementById('epiWidget').innerHTML='<div style="font-size:12px;color:var(--muted)">Erro ao carregar dados.</div>';
+  }
+}
+
+// ── Jitsi ──────────────────────────────────────────────────────────────────
+async function iniciarJitsi(){
+  const overlay = document.getElementById('overlay');
+  const msg = document.getElementById('ov-msg');
+  try{
+    const r = await fetch(`/api/governo/reuniao/${REUNIAO_ID}/token/`,{credentials:'include'});
+    const d = await r.json();
+    if(!r.ok){msg.textContent=d.erro||'Erro ao gerar token.';return;}
+    atualizarStatusPill('em_andamento','Em andamento');
+    const opts = {
+      roomName: d.room,
+      width:'100%', height:'100%',
+      parentNode: document.getElementById('jitsi-container'),
+      configOverwrite:{
+        startWithAudioMuted:false, startWithVideoMuted:false,
+        disableDeepLinking:true, prejoinPageEnabled:false,
+        toolbarButtons:['microphone','camera','closedcaptions','desktop','fullscreen','hangup','chat','raisehand','participants-pane','tileview'],
+      },
+      interfaceConfigOverwrite:{SHOW_JITSI_WATERMARK:false,SHOW_WATERMARK_FOR_GUESTS:false},
+    };
+    if(d.token && !d.dev_mode) opts.jwt = d.token;
+    const domain = d.dev_mode ? 'meet.jit.si' : '8x8.vc';
+    jitsiApi = new JitsiMeetExternalAPI(domain, opts);
+    jitsiApi.addEventListener('videoConferenceJoined',()=>overlay.classList.add('hidden'));
+    jitsiApi.addEventListener('readyToClose',()=>{
+      jitsiApi.dispose(); jitsiApi=null;
+      overlay.classList.remove('hidden');
+      msg.textContent='Sala de vídeo encerrada.';
+    });
+  }catch(err){
+    msg.textContent='Falha ao conectar ao servidor de vídeo.';
+    console.error(err);
+  }
+}
+
+function atualizarStatusPill(status, label){
+  const pill = document.getElementById('status-pill');
+  pill.className=`status-pill pill-${status}`;
+  pill.textContent=label;
+}
+
+// ── Encerrar + Ata ──────────────────────────────────────────────────────────
+async function confirmarEncerrar(){
+  if(!confirm('Encerrar a reunião e gerar a ata automática com IA?\n\nCertifique-se de que suas notas estão atualizadas.')) return;
+  await salvarNotas();
+  mostrarModalAta(true);
+  const notas = document.getElementById('notasArea').value;
+  const r = await fetch(`/api/governo/reuniao/${REUNIAO_ID}/encerrar/`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body:JSON.stringify({notas}),
+    credentials:'include',
+  });
+  const d = await r.json();
+  if(d.ok){
+    atualizarStatusPill('encerrada','Encerrada');
+    exibirAta(d.ata||'Ata não disponível.');
+    if(jitsiApi){try{jitsiApi.executeCommand('hangup');}catch(_){}}
+  } else {
+    document.getElementById('ataBody').innerHTML=`<p style="color:var(--danger)">${d.erro||'Erro ao encerrar.'}</p>`;
+  }
+}
+
+async function verAta(){
+  mostrarModalAta(false);
+  const r = await fetch(`/api/governo/reuniao/${REUNIAO_ID}/ata/`,{credentials:'include'});
+  const d = await r.json();
+  exibirAta(d.ata||'Ata ainda não gerada.');
+}
+
+function mostrarModalAta(gerando){
+  document.getElementById('modalAta').classList.remove('hidden');
+  if(gerando){
+    document.getElementById('ataBody').innerHTML=
+      '<div class="generating"><div class="gen-spin"></div>Gerando ata com inteligência artificial — aguarde...</div>';
+  }
+}
+
+function exibirAta(texto){
+  const formatted = texto
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^## (.+)$/gm,'<h3 style="font-size:14px;font-weight:800;margin:14px 0 6px;color:var(--text)">$1</h3>')
+    .replace(/^### (.+)$/gm,'<h4 style="font-size:13px;font-weight:700;margin:10px 0 4px;color:var(--accent)">$1</h4>')
+    .replace(/^- (.+)$/gm,'<div style="padding:2px 0 2px 12px;font-size:12px">• $1</div>')
+    .replace(/\n/g,'<br>');
+  document.getElementById('ataBody').innerHTML = `<div class="ata-text">${formatted}</div>`;
+}
+
+function copiarAta(){
+  const el=document.getElementById('ataBody');
+  navigator.clipboard.writeText(el.innerText).then(()=>{
+    const btn=document.querySelector('#modalAta .btn-ghost');
+    btn.textContent='✓ Copiado!';
+    setTimeout(()=>btn.textContent='📋 Copiar',2000);
+  });
+}
+
+function getCsrf(){return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+renderPauta();
+renderPartic();
+if(STATUS_INICIAL==='encerrada'){
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('ov-msg').textContent='Reunião encerrada.';
+}else{
+  iniciarJitsi();
+}
+</script>
+</body>
+</html>

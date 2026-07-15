@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teleconsulta — {% if tc %}{{ tc.paciente_nome }}{% else %}Indisponível{% endif %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --border:rgba(255,255,255,.07)
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{font-size:15px;font-weight:800;color:var(--accent)}
+.logo span{color:var(--muted);font-weight:500}
+.sus-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(0,194,255,.1);color:var(--accent);border:1px solid rgba(0,194,255,.2)}
+
+/* ── Steps ── */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+.step{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:140px}
+.step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:2px solid var(--border);color:var(--muted);transition:.3s}
+.step-lbl{font-size:11px;font-weight:600;color:var(--muted);text-align:center;transition:.3s}
+.step.active .step-num{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,.1)}
+.step.active .step-lbl{color:var(--accent)}
+.step.done .step-num{border-color:var(--accent2);color:var(--accent2);background:rgba(0,229,176,.1)}
+.step.done .step-lbl{color:var(--accent2)}
+.step-connector{flex:1;height:1px;background:var(--border);max-width:60px;margin:0 8px;margin-bottom:16px}
+
+/* ── Main ── */
+.main{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:32px 24px}
+
+/* ── Screen panels ── */
+.screen{display:none;width:100%;max-width:640px}
+.screen.active{display:block}
+
+/* ── TCLE ── */
+.tcle-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.tcle-card-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.tcle-card-header .icon{font-size:24px}
+.tcle-card-header h2{font-size:18px;font-weight:800}
+.tcle-card-header p{font-size:12px;color:var(--muted)}
+.tcle-body{padding:20px 24px;max-height:55vh;overflow-y:auto;font-size:13px;line-height:1.7;color:#c8dff2}
+.tcle-body h3{font-size:13px;font-weight:700;color:var(--text);margin:16px 0 6px}
+.tcle-body p{margin-bottom:10px}
+.tcle-body ul{padding-left:20px;margin-bottom:10px}
+.tcle-body ul li{margin-bottom:4px}
+.tcle-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tcle-checkbox{display:flex;align-items:center;gap:8px;flex:1;font-size:13px;font-weight:600;cursor:pointer}
+.tcle-checkbox input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-family:Manrope,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-accent{background:var(--accent);color:#041018}
+.btn-accent:hover{background:#00a8dc}
+.btn-accent:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Sala de espera ── */
+.waiting-card{text-align:center;padding:48px 32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.pulse-ring{width:88px;height:88px;border-radius:50%;border:3px solid var(--accent);margin:0 auto 24px;position:relative;display:flex;align-items:center;justify-content:center;animation:pulse-ring 2.5s ease-in-out infinite}
+.pulse-ring::before{content:'';position:absolute;inset:-10px;border-radius:50%;border:2px solid rgba(0,194,255,.2);animation:pulse-ring 2.5s ease-in-out infinite .5s}
+.pulse-ring::after{content:'📹';font-size:32px}
+@keyframes pulse-ring{0%,100%{transform:scale(1);border-color:rgba(0,194,255,.8)}50%{transform:scale(1.05);border-color:rgba(0,194,255,.3)}}
+.waiting-title{font-size:20px;font-weight:800;margin-bottom:8px}
+.waiting-sub{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+.waiting-info{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:13px}
+.dot-spin{width:8px;height:8px;border-radius:50%;background:var(--warn);animation:dot-blink 1.2s ease-in-out infinite}
+@keyframes dot-blink{0%,100%{opacity:1}50%{opacity:.2}}
+.waiting-tips{margin-top:28px;text-align:left;background:var(--surface2);border-radius:10px;padding:16px 20px}
+.waiting-tips .tip-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.tip-item{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.tip-item:last-child{margin-bottom:0}
+
+/* ── Vídeo ── */
+.video-screen{width:100%;max-width:100%;height:calc(100vh - 56px - 80px)}
+#jitsi-container{width:100%;height:100%}
+.video-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(4,16,24,.95)}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">SolusCRT <span>/ Teleconsulta</span></div>
+  <span class="sus-badge">CFM 2.314/2022</span>
+</div>
+
+<!-- Steps -->
+<div class="steps" id="steps-bar">
+  <div class="step active" id="step1">
+    <div class="step-num">1</div>
+    <div class="step-lbl">Consentimento</div>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step" id="step2">
+    <div class="step-num">2</div>
+    <div class="step-lbl">Sala de Espera</div>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step" id="step3">
+    <div class="step-num">3</div>
+    <div class="step-lbl">Consulta</div>
+  </div>
+</div>
+
+{% if cancelada %}
+<div class="main">
+  <div style="text-align:center;padding:48px 24px">
+    <div style="font-size:48px;margin-bottom:16px">❌</div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">Consulta Cancelada</h2>
+    <p style="font-size:14px;color:var(--muted)">Esta teleconsulta foi cancelada. Entre em contato com a unidade de saúde para reagendar.</p>
+  </div>
+</div>
+{% else %}
+<div class="main" id="main-content">
+
+  <!-- Tela 1: TCLE -->
+  <div class="screen {% if not tcle_aceito %}active{% endif %}" id="tela-tcle">
+    <div class="tcle-card">
+      <div class="tcle-card-header">
+        <span class="icon">📋</span>
+        <div>
+          <h2>Termo de Consentimento Livre e Esclarecido</h2>
+          <p>Leia com atenção antes de iniciar a teleconsulta</p>
+        </div>
+      </div>
+      <div class="tcle-body">
+        <h3>1. Identificação</h3>
+        <p>Paciente: <strong>{{ tc.paciente_nome }}</strong>{% if tc.cns %} · CNS: {{ tc.cns }}{% endif %}<br>
+        Profissional: <strong>{{ tc.profissional }}</strong>{% if tc.especialidade %} — {{ tc.especialidade }}{% endif %}</p>
+
+        <h3>2. O que é teleconsulta</h3>
+        <p>A teleconsulta é um atendimento médico realizado por videoconferência, conforme regulamentado pela Resolução CFM 2.314/2022 do Conselho Federal de Medicina. Permite avaliação clínica, orientações e emissão de documentos médicos digitais com validade legal.</p>
+
+        <h3>3. Segurança e privacidade</h3>
+        <p>Esta sessão utiliza criptografia de ponta a ponta. Nenhuma gravação é realizada sem consentimento expresso. Seus dados são protegidos pela LGPD (Lei 13.709/2018) e permanecem sob sigilo médico.</p>
+
+        <h3>4. Limitações do atendimento remoto</h3>
+        <ul>
+          <li>Exames físicos presenciais não são realizáveis por teleconsulta</li>
+          <li>Em casos de emergência, dirija-se imediatamente a uma UPA ou ligue 192 (SAMU)</li>
+          <li>O médico poderá, a seu critério, solicitar consulta presencial</li>
+        </ul>
+
+        <h3>5. Prescrição digital</h3>
+        <p>Receitas e atestados emitidos nesta consulta são documentos eletrônicos com validade em todo o território nacional, assinados digitalmente conforme Portaria GM/MS 467/2020.</p>
+
+        <h3>6. Direitos do paciente</h3>
+        <ul>
+          <li>Você pode encerrar a consulta a qualquer momento</li>
+          <li>Você tem direito a cópia do prontuário e documentos emitidos</li>
+          <li>Dúvidas: entre em contato com a unidade de saúde responsável</li>
+        </ul>
+      </div>
+      <div class="tcle-footer">
+        <label class="tcle-checkbox">
+          <input type="checkbox" id="tcle-check" onchange="verificarTcle()">
+          Li e concordo com os termos acima
+        </label>
+        <button class="btn btn-accent" id="btn-aceitar" disabled onclick="aceitarTcle()">Aceitar e Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tela 2: Sala de espera -->
+  <div class="screen {% if tcle_aceito and tc.status == 'agendada' %}active{% endif %}" id="tela-espera">
+    <div class="waiting-card">
+      <div class="pulse-ring"></div>
+      <div class="waiting-title">Sala de Espera</div>
+      <div class="waiting-sub">Olá, <strong>{{ tc.paciente_nome }}</strong>!<br>Seu médico entrará em breve. Por favor, aguarde.</div>
+      <div class="waiting-info">
+        <div class="dot-spin"></div>
+        <span id="waiting-msg">Aguardando o médico...</span>
+      </div>
+      <div class="waiting-tips">
+        <div class="tip-title">Prepare-se para a consulta</div>
+        <div class="tip-item">📷 Verifique se sua câmera e microfone estão funcionando</div>
+        <div class="tip-item">💡 Escolha um ambiente bem iluminado e silencioso</div>
+        <div class="tip-item">📱 Mantenha esta página aberta — você entrará automaticamente</div>
+        <div class="tip-item">🏥 Em emergência, ligue 192 (SAMU) ou 193 (Bombeiros)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tela 3: Vídeo -->
+  <div class="screen {% if tcle_aceito and tc.status == 'em_curso' %}active{% endif %}" id="tela-video" style="position:relative">
+    <div style="position:relative;height:calc(100vh - 140px)">
+      <div id="jitsi-container"></div>
+      <div id="video-loading" class="video-loading">
+        <div class="spinner"></div>
+        <span style="font-size:13px;color:var(--muted)">Conectando ao médico...</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
+<script src="https://8x8.vc/libs/lib.jitsi.min.js"></script>
+<script>
+{% if not cancelada %}
+const TOKEN = "{{ token }}";
+const TCLE_JA_ACEITO = {{ tcle_aceito|yesno:"true,false" }};
+const STATUS_INICIAL = "{{ tc.status }}";
+let jitsiApi = null;
+let pollInterval = null;
+
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById(`step${i}`);
+    if (i < n) { el.className = 'step done'; }
+    else if (i === n) { el.className = 'step active'; }
+    else { el.className = 'step'; }
+  });
+}
+
+function mostrarTela(id) {
+  ['tela-tcle','tela-espera','tela-video'].forEach(t => {
+    document.getElementById(t).classList.remove('active');
+  });
+  document.getElementById(id).classList.add('active');
+  if (id === 'tela-tcle') setStep(1);
+  if (id === 'tela-espera') setStep(2);
+  if (id === 'tela-video') setStep(3);
+}
+
+// ── TCLE ──────────────────────────────────────────────────────────────────
+function verificarTcle() {
+  const check = document.getElementById('tcle-check');
+  document.getElementById('btn-aceitar').disabled = !check.checked;
+}
+
+async function aceitarTcle() {
+  const r = await fetch(`/api/teleconsulta/paciente/${TOKEN}/tcle/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: '{}',
+  });
+  if (r.ok) {
+    mostrarTela('tela-espera');
+    iniciarPolling();
+  }
+}
+
+// ── Polling (sala de espera) ───────────────────────────────────────────────
+function iniciarPolling() {
+  if (pollInterval) return;
+  pollInterval = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/teleconsulta/paciente/${TOKEN}/status/`);
+      const d = await r.json();
+      if (d.status === 'em_curso') {
+        clearInterval(pollInterval);
+        pollInterval = null;
+        document.getElementById('waiting-msg').textContent = 'Médico entrou! Conectando...';
+        mostrarTela('tela-video');
+        await iniciarJitsi();
+      } else if (d.status === 'cancelada' || d.status === 'concluida') {
+        clearInterval(pollInterval);
+        document.getElementById('waiting-msg').textContent = 'Esta consulta foi encerrada.';
+      }
+    } catch (_) {}
+  }, 5000);
+}
+
+// ── Jitsi ──────────────────────────────────────────────────────────────────
+async function iniciarJitsi() {
+  const loading = document.getElementById('video-loading');
+  try {
+    const r = await fetch(`/api/teleconsulta/paciente/${TOKEN}/token/`);
+    const d = await r.json();
+    if (!r.ok) {
+      if (loading) loading.innerHTML = `<p style="color:var(--muted);font-size:14px">${d.erro || 'Erro ao conectar.'}</p>`;
+      return;
+    }
+    const opts = {
+      roomName: d.room,
+      width: '100%',
+      height: '100%',
+      parentNode: document.getElementById('jitsi-container'),
+      configOverwrite: {
+        startWithAudioMuted: false,
+        startWithVideoMuted: false,
+        disableDeepLinking: true,
+        prejoinPageEnabled: false,
+        toolbarButtons: ['microphone','camera','hangup','chat','raisehand','tileview'],
+      },
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_WATERMARK_FOR_GUESTS: false,
+      },
+    };
+    if (d.token && !d.dev_mode) opts.jwt = d.token;
+    const domain = d.dev_mode ? 'meet.jit.si' : '8x8.vc';
+    jitsiApi = new JitsiMeetExternalAPI(domain, opts);
+    jitsiApi.addEventListener('videoConferenceJoined', () => {
+      if (loading) loading.style.display = 'none';
+    });
+    jitsiApi.addEventListener('readyToClose', () => {
+      jitsiApi.dispose();
+      jitsiApi = null;
+      document.getElementById('waiting-msg').textContent = 'Consulta encerrada pelo médico. Obrigado!';
+      mostrarTela('tela-espera');
+    });
+  } catch (err) {
+    if (loading) loading.innerHTML = '<p style="color:var(--muted);font-size:14px">Falha ao conectar ao vídeo.</p>';
+    console.error(err);
+  }
+}
+
+// ── Inicialização ─────────────────────────────────────────────────────────
+if (TCLE_JA_ACEITO) {
+  if (STATUS_INICIAL === 'em_curso') {
+    mostrarTela('tela-video');
+    iniciarJitsi();
+  } else {
+    mostrarTela('tela-espera');
+    iniciarPolling();
+  }
+} else {
+  mostrarTela('tela-tcle');
+}
+{% endif %}
+</script>
+</body>
+</html>

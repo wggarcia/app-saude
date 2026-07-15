@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teleconsulta — Sala do Médico</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --border:rgba(255,255,255,.07);--card:rgba(255,255,255,.04)
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Top bar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:15px;font-weight:800;color:var(--accent)}
+.sep{width:1px;height:24px;background:var(--border)}
+.tc-info{display:flex;flex-direction:column}
+.tc-info strong{font-size:14px;font-weight:700}
+.tc-info span{font-size:11px;color:var(--muted)}
+.status-pill{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.pill-agendada{background:rgba(255,179,71,.15);color:var(--warn)}
+.pill-em_curso{background:rgba(0,229,176,.15);color:var(--accent2)}
+.pill-concluida{background:rgba(122,155,181,.15);color:var(--muted)}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-family:Manrope,sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#e0344d}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-accent{background:var(--accent);color:#041018}
+.btn-accent:hover{background:#00a8dc}
+
+/* ── Main layout ── */
+.room{flex:1;display:flex;overflow:hidden}
+
+/* ── Jitsi pane ── */
+.jitsi-pane{flex:1;position:relative;background:#000}
+#jitsi-container{width:100%;height:100%}
+.jitsi-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(4,16,24,.9)}
+.jitsi-overlay.hidden{display:none}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay-msg{font-size:14px;color:var(--muted);font-weight:600;text-align:center}
+
+/* ── Side panel ── */
+.side-panel{width:340px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.panel-section{padding:16px 20px;border-bottom:1px solid var(--border)}
+.panel-section:last-child{border-bottom:none}
+.section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.patient-name{font-size:17px;font-weight:800;margin-bottom:4px}
+.patient-detail{font-size:12px;color:var(--muted);display:flex;gap:8px;margin-top:2px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:rgba(0,194,255,.12);color:var(--accent)}
+.info-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.info-row label{font-size:12px;color:var(--muted)}
+.info-row span{font-size:13px;font-weight:600}
+.link-copy{display:flex;align-items:center;gap:8px}
+.link-copy input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:monospace;outline:none}
+.link-copy input:focus{border-color:var(--accent)}
+.btn-copy{padding:6px 10px;border:none;border-radius:6px;background:rgba(0,194,255,.12);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer}
+.btn-copy:hover{background:rgba(0,194,255,.2)}
+.tcle-status{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600}
+.tcle-ok{background:rgba(0,229,176,.1);color:var(--accent2)}
+.tcle-wait{background:rgba(255,179,71,.1);color:var(--warn)}
+.actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.act-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;transition:.15s;text-decoration:none;color:var(--text)}
+.act-btn:hover{border-color:var(--accent);background:rgba(0,194,255,.06)}
+.act-btn .icon{font-size:20px}
+.act-btn .lbl{font-size:11px;font-weight:700;color:var(--muted)}
+
+/* ── CID-10 field ── */
+.cid-field{display:flex;flex-direction:column;gap:8px}
+.cid-field label{font-size:12px;color:var(--muted);font-weight:600}
+.cid-field input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;outline:none;font-family:Manrope,sans-serif}
+.cid-field input:focus{border-color:var(--accent)}
+.cid-field textarea{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:80px;font-family:Manrope,sans-serif}
+.cid-field textarea:focus{border-color:var(--accent)}
+
+/* ── Modal ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal-backdrop.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:420px;max-width:90vw}
+.modal h3{font-size:16px;font-weight:800;margin-bottom:4px}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.form-group input,.form-group textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none;font-family:Manrope,sans-serif}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo">SolusCRT Teleconsulta</span>
+    <div class="sep"></div>
+    <div class="tc-info">
+      <strong id="tc-paciente">{{ tc.paciente_nome }}</strong>
+      <span>{{ tc.especialidade }}{% if tc.especialidade and tc.profissional %} · {% endif %}{{ tc.profissional }}</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="status-pill" class="status-pill pill-{{ tc.status }}">{{ tc.get_status_display }}</span>
+    <button class="btn btn-ghost" onclick="window.history.back()">← Voltar</button>
+    <button class="btn btn-danger" id="btn-encerrar" onclick="abrirModalEncerrar()">Encerrar Consulta</button>
+  </div>
+</div>
+
+<!-- Main room -->
+<div class="room">
+
+  <!-- Jitsi -->
+  <div class="jitsi-pane">
+    <div id="jitsi-container"></div>
+    <div class="jitsi-overlay" id="overlay">
+      <div class="spinner"></div>
+      <div class="overlay-msg" id="overlay-msg">Iniciando sala de vídeo...</div>
+    </div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="side-panel">
+
+    <!-- Paciente -->
+    <div class="panel-section">
+      <div class="section-title">Paciente</div>
+      <div class="patient-name">{{ tc.paciente_nome }}</div>
+      <div class="patient-detail">
+        {% if tc.cns %}<span class="badge">CNS {{ tc.cns }}</span>{% endif %}
+        <span>{{ tc.especialidade }}</span>
+      </div>
+      <div style="margin-top:12px">
+        <div class="info-row">
+          <label>Data/hora</label>
+          <span id="data-hora-fmt"></span>
+        </div>
+        <div class="info-row">
+          <label>Profissional</label>
+          <span>{{ tc.profissional }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Link do paciente -->
+    <div class="panel-section">
+      <div class="section-title">Link do Paciente</div>
+      {% if tc.token_paciente %}
+      <div class="link-copy">
+        <input type="text" id="link-paciente" readonly value="{{ request.scheme }}://{{ request.get_host }}/teleconsulta/paciente/{{ tc.token_paciente }}/">
+        <button class="btn-copy" onclick="copiarLink()">Copiar</button>
+      </div>
+      <div id="tcle-status" class="tcle-status tcle-wait" style="margin-top:10px">
+        ⏳ Aguardando TCLE do paciente
+      </div>
+      {% else %}
+      <p style="font-size:12px;color:var(--muted)">Esta consulta foi agendada no formato legado sem link direto.</p>
+      {% endif %}
+    </div>
+
+    <!-- Ações rápidas -->
+    <div class="panel-section">
+      <div class="section-title">Ações Clínicas</div>
+      <div class="actions-grid">
+        <a class="act-btn" href="/governo/prontuario/?cns={{ tc.cns }}" target="_blank">
+          <span class="icon">📋</span>
+          <span class="lbl">Prontuário</span>
+        </a>
+        <a class="act-btn" href="/governo/prescricao/nova/?tc={{ tc.id }}" target="_blank">
+          <span class="icon">💊</span>
+          <span class="lbl">Prescrição</span>
+        </a>
+        <a class="act-btn" href="/governo/atestado/novo/?tc={{ tc.id }}" target="_blank">
+          <span class="icon">📄</span>
+          <span class="lbl">Atestado</span>
+        </a>
+        <a class="act-btn" href="/governo/solicitacao-exame/nova/?tc={{ tc.id }}" target="_blank">
+          <span class="icon">🔬</span>
+          <span class="lbl">Exame</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Encerrar / CID-10 rápido -->
+    <div class="panel-section" style="margin-top:auto">
+      <div class="section-title">Encerramento</div>
+      <div class="cid-field">
+        <label>CID-10 Principal</label>
+        <input type="text" id="cid10-inline" placeholder="Ex: J06.9" maxlength="10">
+        <label style="margin-top:4px">Resumo da consulta</label>
+        <textarea id="resumo-inline" placeholder="Anamnese, conduta..."></textarea>
+        <button class="btn btn-danger" style="margin-top:4px" onclick="encerrarConsulta()">Encerrar e Salvar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal encerrar (alternativo) -->
+<div class="modal-backdrop hidden" id="modal-encerrar">
+  <div class="modal">
+    <h3>Encerrar Teleconsulta</h3>
+    <p>Registre o diagnóstico (CID-10) e o resumo da consulta. Esses dados são salvos no prontuário e alimentam o painel epidemiológico do gestor.</p>
+    <div class="form-group">
+      <label>CID-10 Principal</label>
+      <input type="text" id="modal-cid10" placeholder="Ex: J06.9" maxlength="10" style="text-transform:uppercase">
+    </div>
+    <div class="form-group">
+      <label>Resumo / Conduta</label>
+      <textarea id="modal-resumo" placeholder="Descreva a anamnese, diagnóstico e conduta..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="encerrarConsultaModal()">Confirmar Encerramento</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://8x8.vc/libs/lib.jitsi.min.js"></script>
+<script>
+const TC_ID = {{ tc.id }};
+const TCLE_ACEITO = {{ tc.tcle_aceito_em|yesno:"true,false" }};
+
+// Formatar data/hora
+const dh = new Date("{{ tc.data_hora|date:'c' }}");
+document.getElementById('data-hora-fmt').textContent =
+  dh.toLocaleDateString('pt-BR') + ' ' + dh.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+
+// ── TCLE polling ──────────────────────────────────────────────────────────
+{% if tc.token_paciente %}
+let tcleAceito = TCLE_ACEITO;
+function atualizarTcle(aceito) {
+  const el = document.getElementById('tcle-status');
+  if (aceito) {
+    el.className = 'tcle-status tcle-ok';
+    el.textContent = '✓ TCLE aceito pelo paciente';
+    tcleAceito = true;
+  }
+}
+if (tcleAceito) atualizarTcle(true);
+else {
+  const poll = setInterval(async () => {
+    const r = await fetch('/api/teleconsulta/paciente/{{ tc.token_paciente }}/status/');
+    const d = await r.json();
+    if (d.tcle_aceito) { atualizarTcle(true); clearInterval(poll); }
+  }, 5000);
+}
+{% endif %}
+
+// ── Jitsi JaaS ────────────────────────────────────────────────────────────
+let jitsiApi = null;
+
+async function iniciarJitsi() {
+  const overlay = document.getElementById('overlay');
+  const msg = document.getElementById('overlay-msg');
+  try {
+    const r = await fetch(`/api/governo/teleconsulta/${TC_ID}/sala/token/`);
+    const d = await r.json();
+    if (!r.ok) { msg.textContent = d.erro || 'Erro ao gerar token.'; return; }
+
+    const opts = {
+      roomName: d.room,
+      width: '100%',
+      height: '100%',
+      parentNode: document.getElementById('jitsi-container'),
+      configOverwrite: {
+        startWithAudioMuted: false,
+        startWithVideoMuted: false,
+        disableDeepLinking: true,
+        prejoinPageEnabled: false,
+        toolbarButtons: [
+          'microphone','camera','closedcaptions','desktop','fullscreen',
+          'hangup','chat','raisehand','participants-pane','tileview',
+        ],
+      },
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_WATERMARK_FOR_GUESTS: false,
+        DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
+      },
+    };
+    if (d.token && d.domain !== 'meet.jit.si') {
+      opts.jwt = d.token;
+    }
+    const domain = d.dev_mode ? 'meet.jit.si' : '8x8.vc';
+    jitsiApi = new JitsiMeetExternalAPI(domain, opts);
+    jitsiApi.addEventListener('videoConferenceJoined', () => {
+      overlay.classList.add('hidden');
+      atualizarStatusPill('em_curso', 'Em curso');
+    });
+    jitsiApi.addEventListener('readyToClose', () => {
+      jitsiApi.dispose();
+      jitsiApi = null;
+      overlay.classList.remove('hidden');
+      msg.textContent = 'Sala encerrada. Use o painel lateral para registrar o encerramento.';
+    });
+  } catch (err) {
+    msg.textContent = 'Falha ao conectar ao servidor de vídeo.';
+    console.error(err);
+  }
+}
+
+function atualizarStatusPill(status, label) {
+  const pill = document.getElementById('status-pill');
+  pill.className = `status-pill pill-${status}`;
+  pill.textContent = label;
+}
+
+// ── Encerrar ──────────────────────────────────────────────────────────────
+function abrirModalEncerrar() {
+  document.getElementById('modal-encerrar').classList.remove('hidden');
+}
+function fecharModal() {
+  document.getElementById('modal-encerrar').classList.add('hidden');
+}
+
+async function _encerrar(cid10, resumo) {
+  const r = await fetch(`/api/governo/teleconsulta/${TC_ID}/encerrar/`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body: JSON.stringify({cid10, resumo}),
+  });
+  if (r.ok) {
+    atualizarStatusPill('concluida','Concluída');
+    document.getElementById('btn-encerrar').disabled = true;
+    document.getElementById('btn-encerrar').textContent = 'Consulta encerrada';
+  }
+}
+
+function encerrarConsulta() {
+  const cid10 = document.getElementById('cid10-inline').value.trim().toUpperCase();
+  const resumo = document.getElementById('resumo-inline').value.trim();
+  _encerrar(cid10, resumo).then(() => {
+    if (jitsiApi) { try { jitsiApi.executeCommand('hangup'); } catch(_){} }
+  });
+}
+
+function encerrarConsultaModal() {
+  const cid10 = document.getElementById('modal-cid10').value.trim().toUpperCase();
+  const resumo = document.getElementById('modal-resumo').value.trim();
+  fecharModal();
+  _encerrar(cid10, resumo).then(() => {
+    if (jitsiApi) { try { jitsiApi.executeCommand('hangup'); } catch(_){} }
+  });
+}
+
+// ── Copiar link ───────────────────────────────────────────────────────────
+function copiarLink() {
+  const el = document.getElementById('link-paciente');
+  navigator.clipboard.writeText(el.value).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+
+// ── CSRF ──────────────────────────────────────────────────────────────────
+function getCsrf() {
+  return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';
+}
+
+// Auto-iniciar
+iniciarJitsi();
+</script>
+</body>
+</html>

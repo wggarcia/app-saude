@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reuniões Institucionais — Gestão em Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-agendada{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-em_andamento{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-encerrada{background:rgba(122,155,181,.12);color:var(--muted)}
+.badge-cancelada{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-ata{background:rgba(167,139,250,.12);color:#a78bfa}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-teal{background:rgba(45,212,191,.15);color:#2dd4bf;border:1px solid rgba(45,212,191,.3)}
+.btn-violet{background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:480px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.ata-body{white-space:pre-wrap;font-size:13px;line-height:1.7;color:#c8dff2;background:rgba(0,0,0,.2);border-radius:8px;padding:16px;max-height:60vh;overflow-y:auto;font-family:Manrope,sans-serif}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/sala-situacao/"><span>🚨</span> Sala de Situação</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link active" href="/governo/reuniao/"><span>🎥</span> Reuniões Institucionais</a>
+  <a class="nav-link" href="/governo/epidemiologia/diagnosticos/"><span>🔬</span> Diagnósticos Confirmados</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Reuniões Institucionais</div>
+      <div class="page-sub">Videoconferências para diretores de UBS, hospitais e secretários de saúde — com ata automática por IA</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalCriar()">+ Nova Reunião</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiAgendadas">—</div><div class="kpi-lbl">Agendadas</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiEmAndamento">—</div><div class="kpi-lbl">Em Andamento</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiEncerradas">—</div><div class="kpi-lbl">Encerradas (total)</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiComAta">—</div><div class="kpi-lbl">Com Ata Gerada</div></div>
+  </div>
+
+  <!-- Lista -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Agenda de Reuniões</span>
+      <select id="filtroStatus" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none" onchange="carregarLista()">
+        <option value="">Todos</option>
+        <option value="agendada">Agendadas</option>
+        <option value="em_andamento">Em Andamento</option>
+        <option value="encerrada">Encerradas</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data/Hora</th><th>Título</th><th>Duração</th><th>Status</th><th>Ata</th><th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="6" class="empty">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: criar -->
+<div class="modal-bg" id="modalCriar">
+  <div class="modal">
+    <h3>Nova Reunião Institucional</h3>
+    <div class="form-group"><label>Título *</label><input id="cTitulo" placeholder="Ex: Reunião do Comitê de Vigilância Epidemiológica"></div>
+    <div class="form-group"><label>Descrição / Objetivo</label><textarea id="cDesc" placeholder="Objetivo e contexto da reunião"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Data e Hora *</label><input id="cDataHora" type="datetime-local"></div>
+      <div class="form-group"><label>Duração (minutos)</label><input id="cDuracao" type="number" value="60" min="15" max="480"></div>
+    </div>
+    <div class="form-group"><label>Pauta (um item por linha)</label>
+      <textarea id="cPauta" rows="4" placeholder="1. Análise do panorama epidemiológico&#10;2. Relatório de surtos ativos&#10;3. Encaminhamentos"></textarea>
+    </div>
+    <div class="form-group"><label>Participantes (um por linha: Nome — Cargo)</label>
+      <textarea id="cPartic" rows="4" placeholder="Dr. João Silva — Diretor UBS Central&#10;Dra. Maria Costa — Secretária de Saúde"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCriar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarReuniao()">Criar Reunião</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: ata -->
+<div class="modal-bg" id="modalAta">
+  <div class="modal" style="max-width:720px">
+    <h3 id="ataModalTitulo">Ata da Reunião</h3>
+    <div id="ataConteudo" class="ata-body">Carregando...</div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="copiarAta()">📋 Copiar</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modalAta')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function csrfToken(){const m=document.cookie.match(/csrftoken=([^;]+)/);return m?m[1]:'';}
+async function fj(url,opts={}){
+  const r=await fetch(url,{headers:{'X-CSRFToken':csrfToken(),'Content-Type':'application/json',...opts.headers},credentials:'include',...opts});
+  return r.json();
+}
+
+const STATUS_BADGE = {
+  agendada: '<span class="badge badge-agendada">Agendada</span>',
+  em_andamento: '<span class="badge badge-em_andamento">Em Andamento</span>',
+  encerrada: '<span class="badge badge-encerrada">Encerrada</span>',
+  cancelada: '<span class="badge badge-cancelada">Cancelada</span>',
+};
+
+async function carregarLista(){
+  const status = document.getElementById('filtroStatus').value;
+  const d = await fj('/api/governo/reuniao/' + (status ? '?status='+status : ''));
+  const rows = d.reunioes || [];
+
+  let ag=0,em=0,en=0,ata=0;
+  rows.forEach(r => {
+    if(r.status==='agendada') ag++;
+    if(r.status==='em_andamento') em++;
+    if(r.status==='encerrada') en++;
+    if(r.tem_ata) ata++;
+  });
+  document.getElementById('kpiAgendadas').textContent = ag;
+  document.getElementById('kpiEmAndamento').textContent = em;
+  document.getElementById('kpiEncerradas').textContent = en;
+  document.getElementById('kpiComAta').textContent = ata;
+
+  const tbody = document.getElementById('tbody');
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Nenhuma reunião encontrada.</td></tr>';return;}
+  tbody.innerHTML = rows.map(r=>{
+    const dt = new Date(r.data_hora);
+    const dtStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const ataBadge = r.tem_ata ? '<span class="badge badge-ata">✓ Ata</span>' : '<span style="color:var(--muted);font-size:11px">—</span>';
+    const acoes = [];
+    if(r.status !== 'encerrada' && r.status !== 'cancelada'){
+      acoes.push(`<a href="${r.sala_url}" class="btn btn-teal btn-sm">Entrar na Sala</a>`);
+    }
+    if(r.tem_ata){
+      acoes.push(`<button class="btn btn-violet btn-sm" onclick="verAta(${r.id},'${r.titulo.replace(/'/g,"\\'")}')">Ver Ata</button>`);
+    }
+    return `<tr>
+      <td>${dtStr}</td>
+      <td><strong>${r.titulo}</strong>${r.descricao?`<br><span style="font-size:11px;color:var(--muted)">${r.descricao.substring(0,60)}${r.descricao.length>60?'…':''}</span>`:''}</td>
+      <td>${r.duracao_minutos}min</td>
+      <td>${STATUS_BADGE[r.status]||r.status}</td>
+      <td>${ataBadge}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">${acoes.join('')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirModalCriar(){
+  const now = new Date();
+  now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
+  document.getElementById('cDataHora').value = now.toISOString().slice(0,16);
+  document.getElementById('modalCriar').classList.add('open');
+}
+
+async function criarReuniao(){
+  const titulo = document.getElementById('cTitulo').value.trim();
+  const dh = document.getElementById('cDataHora').value;
+  if(!titulo||!dh){alert('Título e data/hora são obrigatórios.');return;}
+  const d = await fj('/api/governo/reuniao/criar/',{
+    method:'POST',
+    body:JSON.stringify({
+      titulo,
+      descricao: document.getElementById('cDesc').value,
+      data_hora: dh,
+      duracao_minutos: parseInt(document.getElementById('cDuracao').value)||60,
+      pauta: document.getElementById('cPauta').value,
+      participantes_nomes: document.getElementById('cPartic').value,
+    })
+  });
+  if(d.id){
+    fecharModal('modalCriar');
+    carregarLista();
+    if(confirm('Reunião criada! Entrar na sala agora?')) window.location.href=d.sala_url;
+  } else alert(d.erro||'Erro ao criar reunião.');
+}
+
+async function verAta(id, titulo){
+  document.getElementById('ataModalTitulo').textContent = 'Ata — '+titulo;
+  document.getElementById('ataConteudo').textContent = 'Carregando...';
+  document.getElementById('modalAta').classList.add('open');
+  const d = await fj(`/api/governo/reuniao/${id}/ata/`);
+  document.getElementById('ataConteudo').textContent = d.ata || '(Sem ata disponível)';
+}
+
+function copiarAta(){
+  navigator.clipboard.writeText(document.getElementById('ataConteudo').textContent);
+  const btn=document.querySelector('#modalAta .btn-ghost');
+  btn.textContent='✓ Copiado';
+  setTimeout(()=>btn.textContent='📋 Copiar',2000);
+}
+
+function fecharModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+carregarLista();
+</script>
+</body>
+</html>

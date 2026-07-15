@@ -1353,3 +1353,25 @@ def exportar_briefing_governo(request):
     )
     response["Content-Disposition"] = 'attachment; filename="briefing_governo.json"'
     return response
+
+
+# ── Camada 2: diagnósticos confirmados por médico (governo-only) ──────────────
+
+def registrar_diagnostico_confirmado(empresa, cid10, data_hora):
+    """Registra CID-10 anônimo confirmado em teleconsulta no panorama do gestor.
+
+    Nunca exposto no app cidadão — exclusivo do painel governo.
+    Localização extraída da primeira unidade de saúde da empresa (municipal).
+    """
+    from .models import DiagnosticoConfirmadoGov, UnidadeSaude
+    unidade = UnidadeSaude.objects.filter(empresa=empresa).first()
+    estado = unidade.uf if unidade else ""
+    cidade = unidade.municipio if unidade else ""
+    data = data_hora.date() if hasattr(data_hora, "date") else timezone.now().date()
+    DiagnosticoConfirmadoGov.objects.create(
+        empresa=empresa,
+        cid10=cid10.strip().upper(),
+        estado=estado,
+        cidade=cidade,
+        data_registro=data,
+    )

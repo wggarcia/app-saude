@@ -7102,8 +7102,64 @@ class TeleconsultaGoverno(models.Model):
     link_sala = models.URLField(blank=True)
     resumo = models.TextField(blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    # Sala Jitsi
+    sala_jitsi = models.CharField(max_length=80, unique=True, null=True, blank=True)
+    token_paciente = models.CharField(max_length=40, unique=True, null=True, blank=True)
+    encerrado_em = models.DateTimeField(null=True, blank=True)
+    cid10 = models.CharField(max_length=10, blank=True, default="")
+    tcle_aceito_em = models.DateTimeField(null=True, blank=True)
     class Meta:
         ordering = ["-data_hora"]
+
+
+class ReuniaoGoverno(models.Model):
+    """Reunião institucional para gestores de saúde (diretores, secretários).
+    Ambiente B — independente da teleconsulta clínica (Ambiente A)."""
+    STATUS_CHOICES = [
+        ("agendada", "Agendada"),
+        ("em_andamento", "Em andamento"),
+        ("encerrada", "Encerrada"),
+        ("cancelada", "Cancelada"),
+    ]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="reunioes_gov")
+    titulo = models.CharField(max_length=140)
+    descricao = models.TextField(blank=True, default="")
+    data_hora = models.DateTimeField()
+    duracao_minutos = models.PositiveSmallIntegerField(default=60)
+    sala_jitsi = models.CharField(max_length=80, unique=True, default=_codigo_acesso)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="agendada")
+    participantes_nomes = models.TextField(blank=True, default="", help_text="Um por linha: Nome — Cargo")
+    pauta = models.TextField(blank=True, default="", help_text="Itens de pauta, um por linha")
+    notas = models.TextField(blank=True, default="", help_text="Notas coletadas durante a reunião")
+    ata = models.TextField(blank=True, default="")
+    ata_gerada_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_hora"]
+        indexes = [models.Index(fields=["empresa", "status", "data_hora"])]
+
+    def __str__(self):
+        return f"{self.titulo} — {self.get_status_display()}"
+
+
+class DiagnosticoConfirmadoGov(models.Model):
+    """Diagnóstico CID-10 anônimo registrado pelo médico na teleconsulta.
+    Alimenta o panorama epidemiológico exclusivo do gestor — nunca exposto no app cidadão."""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="diagnosticos_confirmados_gov")
+    cid10 = models.CharField(max_length=10)
+    estado = models.CharField(max_length=100, blank=True, default="")
+    cidade = models.CharField(max_length=100, blank=True, default="")
+    data_registro = models.DateField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["empresa", "cid10"]),
+            models.Index(fields=["empresa", "data_registro"]),
+            models.Index(fields=["empresa", "estado", "cidade"]),
+        ]
 
 
 class RelatorioRAG(models.Model):

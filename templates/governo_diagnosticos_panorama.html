@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panorama Epidemiológico — Diagnósticos Confirmados</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5}
+.badge-gov{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.25);margin-top:6px}
+
+/* ── KPI grid ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.trend-up{color:var(--danger);font-size:11px;font-weight:700}
+.trend-dn{color:var(--ok);font-size:11px;font-weight:700}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:20px}
+
+/* ── Row 2: 2 col layout ── */
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ── Bar chart ── */
+.bar-chart{display:flex;flex-direction:column;gap:6px}
+.bar-item{display:flex;align-items:center;gap:10px}
+.bar-label{font-size:12px;font-weight:600;min-width:120px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;color:var(--text)}
+.bar-code{font-size:10px;font-weight:700;color:var(--muted);min-width:48px;font-family:monospace}
+.bar-track{flex:1;height:12px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;background:var(--accent);transition:width .4s ease}
+.bar-count{font-size:12px;font-weight:700;color:var(--text);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── Table ── */
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-uf{background:rgba(0,194,255,.1);color:var(--accent)}
+
+/* ── Trend line (mini canvas) ── */
+.chart-wrap{position:relative;height:160px;margin-top:4px}
+canvas.line-chart{width:100%;height:100%}
+
+/* ── Period selector ── */
+.period-btns{display:flex;gap:6px}
+.period-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:Manrope,sans-serif;transition:.15s}
+.period-btn:hover{border-color:var(--accent);color:var(--accent)}
+.period-btn.active{background:rgba(0,194,255,.12);border-color:var(--accent);color:var(--accent)}
+
+/* ── Empty ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state .icon{font-size:36px;margin-bottom:12px}
+.empty-state p{font-size:13px;line-height:1.6}
+
+/* ── Pill ── */
+.pill-sobe{color:var(--danger);font-size:11px;font-weight:700}
+.pill-cai{color:var(--ok);font-size:11px;font-weight:700}
+.pill-estavel{color:var(--muted);font-size:11px;font-weight:700}
+
+@media(max-width:1024px){.kpi-row{grid-template-columns:repeat(2,1fr)}.row-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/sala-situacao/"><span>🚨</span> Sala de Situação</a>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link active" href="/governo/epidemiologia/diagnosticos/"><span>🔬</span> Diagnósticos Confirmados</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Diagnósticos Confirmados</div>
+      <div class="page-sub">CID-10 registrados por médicos nas teleconsultas — panorama epidemiológico exclusivo do gestor</div>
+      <div class="badge-gov">🔒 Dados restritos ao gestor — não visíveis no app cidadão</div>
+    </div>
+    <div class="period-btns">
+      <button class="period-btn active" onclick="setPeriodo(30,this)">30 dias</button>
+      <button class="period-btn" onclick="setPeriodo(60,this)">60 dias</button>
+      <button class="period-btn" onclick="setPeriodo(90,this)">90 dias</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-val" id="kpiTotal">—</div>
+      <div class="kpi-lbl">Diagnósticos no período</div>
+    </div>
+    <div class="kpi ok">
+      <div class="kpi-val" id="kpiMes">—</div>
+      <div class="kpi-lbl">Neste mês</div>
+      <div class="kpi-sub" id="kpiMesSub"></div>
+    </div>
+    <div class="kpi warn">
+      <div class="kpi-val" id="kpiMunic">—</div>
+      <div class="kpi-lbl">Municípios cobertos</div>
+    </div>
+    <div class="kpi info">
+      <div class="kpi-val" id="kpiTopCid">—</div>
+      <div class="kpi-lbl">CID-10 mais frequente</div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="row-2">
+
+    <!-- CID-10 bar chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Top CID-10 no período</span>
+        <span id="tendencia-badge" class="pill-estavel"></span>
+      </div>
+      <div class="card-body">
+        <div class="bar-chart" id="barChart">
+          <div class="empty-state"><div class="icon">📊</div><p>Carregando...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tendência semanal -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Tendência semanal</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap">
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Por município -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Distribuição por Município</span>
+      <span style="font-size:12px;color:var(--muted)" id="munic-count"></span>
+    </div>
+    <div id="municipio-section">
+      <div class="empty-state"><div class="icon">🗺️</div><p>Carregando...</p></div>
+    </div>
+  </div>
+</main>
+
+<script>
+let periodoAtual = 30;
+
+async function carregarDados(dias) {
+  const r = await fetch(`/api/governo/epidemiologia/diagnosticos/?dias=${dias}`, {credentials:'include'});
+  if (!r.ok) { console.error('Falha ao carregar dados'); return; }
+  return r.json();
+}
+
+function fmtVariacao(pct) {
+  if (pct === null || pct === undefined) return '';
+  const sinal = pct >= 0 ? '+' : '';
+  const cls = pct >= 0 ? 'trend-up' : 'trend-dn';
+  return `<span class="${cls}">${sinal}${pct}% vs mês ant.</span>`;
+}
+
+function renderKpis(d) {
+  document.getElementById('kpiTotal').textContent = d.total ?? '—';
+  document.getElementById('kpiMes').textContent = d.mes_atual ?? '—';
+  document.getElementById('kpiMesSub').innerHTML = fmtVariacao(d.variacao_mensal_pct);
+  document.getElementById('kpiMunic').textContent = d.municipios_cobertos ?? '—';
+  const top = d.por_cid10?.[0];
+  document.getElementById('kpiTopCid').textContent = top ? top.label || top.cid10 : '—';
+}
+
+function renderBars(items, total) {
+  const el = document.getElementById('barChart');
+  if (!items || !items.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Nenhum diagnóstico registrado neste período.<br>Os diagnósticos aparecem aqui após o encerramento das teleconsultas.</p></div>';
+    return;
+  }
+  const max = items[0].total;
+  el.innerHTML = items.slice(0, 15).map(item => `
+    <div class="bar-item">
+      <span class="bar-code">${item.cid10}</span>
+      <span class="bar-label" title="${item.label}">${item.label}</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${Math.round(item.total/max*100)}%"></div>
+      </div>
+      <span class="bar-count">${item.total}</span>
+    </div>
+  `).join('');
+}
+
+function renderTendenciaLabel(crescendo, tendencia) {
+  const el = document.getElementById('tendencia-badge');
+  if (!tendencia.length) { el.textContent = ''; return; }
+  if (crescendo) { el.className = 'pill-sobe'; el.textContent = '↑ Em alta'; }
+  else { el.className = 'pill-cai'; el.textContent = '↓ Em queda / estável'; }
+}
+
+function renderLineChart(tendencia) {
+  const canvas = document.getElementById('lineChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 400;
+  const H = 160;
+  canvas.width = W;
+  canvas.height = H;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (!tendencia || tendencia.length < 2) {
+    ctx.fillStyle = 'rgba(122,155,181,.4)';
+    ctx.font = '13px Manrope,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Dados insuficientes (< 2 semanas)', W/2, H/2);
+    return;
+  }
+
+  const vals = tendencia.map(t => t.total);
+  const maxV = Math.max(...vals, 1);
+  const pad = { t: 16, b: 28, l: 8, r: 8 };
+  const cW = W - pad.l - pad.r;
+  const cH = H - pad.t - pad.b;
+  const step = cW / (vals.length - 1);
+
+  const px = (i) => pad.l + i * step;
+  const py = (v) => pad.t + cH - (v / maxV) * cH;
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + cH);
+  grad.addColorStop(0, 'rgba(0,194,255,.25)');
+  grad.addColorStop(1, 'rgba(0,194,255,0)');
+  ctx.beginPath();
+  ctx.moveTo(px(0), py(vals[0]));
+  for (let i = 1; i < vals.length; i++) {
+    const cpx = (px(i-1) + px(i)) / 2;
+    ctx.bezierCurveTo(cpx, py(vals[i-1]), cpx, py(vals[i]), px(i), py(vals[i]));
+  }
+  ctx.lineTo(px(vals.length-1), py(0));
+  ctx.lineTo(px(0), py(0));
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.moveTo(px(0), py(vals[0]));
+  for (let i = 1; i < vals.length; i++) {
+    const cpx = (px(i-1) + px(i)) / 2;
+    ctx.bezierCurveTo(cpx, py(vals[i-1]), cpx, py(vals[i]), px(i), py(vals[i]));
+  }
+  ctx.strokeStyle = '#00c2ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Dots
+  vals.forEach((v, i) => {
+    ctx.beginPath();
+    ctx.arc(px(i), py(v), 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#00c2ff';
+    ctx.fill();
+  });
+
+  // X-axis labels (semana)
+  ctx.fillStyle = 'rgba(122,155,181,.7)';
+  ctx.font = '10px Manrope,sans-serif';
+  ctx.textAlign = 'center';
+  const step_lbl = Math.max(1, Math.floor(tendencia.length / 6));
+  tendencia.forEach((t, i) => {
+    if (i % step_lbl !== 0 && i !== tendencia.length - 1) return;
+    const d = t.semana ? new Date(t.semana) : null;
+    const lbl = d ? d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) : '';
+    ctx.fillText(lbl, px(i), H - 6);
+  });
+}
+
+function renderMunicipios(items) {
+  const section = document.getElementById('municipio-section');
+  document.getElementById('munic-count').textContent = items.length ? `${items.length} municípios` : '';
+  if (!items.length) {
+    section.innerHTML = '<div class="empty-state"><div class="icon">🗺️</div><p>Nenhum dado por município. Configure as unidades de saúde com município e UF.</p></div>';
+    return;
+  }
+  section.innerHTML = `<table>
+    <thead><tr>
+      <th>Município</th><th>UF</th><th>Diagnósticos</th><th>CID-10 Principal</th>
+    </tr></thead>
+    <tbody>
+      ${items.map(m => `<tr>
+        <td><strong>${m.cidade || '—'}</strong></td>
+        <td><span class="badge badge-uf">${m.estado || '—'}</span></td>
+        <td>${m.total}</td>
+        <td>${m.top_cid10
+          ? `<span style="font-family:monospace;font-size:12px;color:var(--accent)">${m.top_cid10}</span> <span style="color:var(--muted);font-size:11px">${m.top_cid10_label}</span>`
+          : '—'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function setPeriodo(dias, btn) {
+  periodoAtual = dias;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  await recarregar();
+}
+
+async function recarregar() {
+  const d = await carregarDados(periodoAtual);
+  if (!d) return;
+  renderKpis(d);
+  renderBars(d.por_cid10, d.total);
+  renderTendenciaLabel(d.crescendo, d.tendencia_semanal);
+  renderLineChart(d.tendencia_semanal);
+  renderMunicipios(d.por_municipio);
+}
+
+recarregar();
+window.addEventListener('resize', () => {
+  if (window._resizeTimer) clearTimeout(window._resizeTimer);
+  window._resizeTimer = setTimeout(recarregar, 200);
+});
+</script>
+</body>
+</html>
