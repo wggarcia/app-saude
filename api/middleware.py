@@ -211,6 +211,8 @@ class EmpresaMiddleware:
             "/api/corporativo/mobile/",
             "/api/colaborador-mobile/",
             "/api/public/",
+            "/teleconsulta/paciente/",   # sala pública do paciente — acesso via token único
+            "/api/teleconsulta/paciente/",  # APIs da sala do paciente (TCLE, status, token Jitsi)
             "/assinatura/sst/",    # página pública de assinatura SST (link por e-mail)
             "/validar-assinatura/", # página pública de validação de assinatura SST
             "/sst/aso/portal/",    # portal público de visualização de ASO (LGPD — link por e-mail)
