@@ -68,12 +68,8 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
             pacote_codigo="hospital_medio",
             sessao_ativa_chave="sessao-command-ai",
         )
-        self._reset_panorama_cache()
+        epidemiologia.clear_panorama_cache()
         self._seed_sinais()
-
-    def _reset_panorama_cache(self):
-        epidemiologia._PANORAMA_CACHE["created_at"] = 0.0
-        epidemiologia._PANORAMA_CACHE["payload"] = None
 
     def _seed_sinais(self):
         for index in range(8):
@@ -108,7 +104,7 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
         RegistroSintoma.objects.filter(
             id__in=[registro.id for registro in antigos]
         ).update(data_registro=timezone.now() - timedelta(hours=30))
-        self._reset_panorama_cache()
+        epidemiologia.clear_panorama_cache()
 
     def _autenticar(self):
         payload = {
