@@ -3059,12 +3059,12 @@ class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
         self.assertLess(hotspot["total"], hotspot["total_registros_30d"])
 
     def test_panorama_epidemiologico_usa_casos_ativos_temporais(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Panorama",
-            email="decaimento-panorama@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+
+        # O panorama recorta pela empresa pública (populacao@soluscrt.com) via
+        # _scope_public_population_queryset. Dados semeados sob outra empresa
+        # ficam invisíveis ao panorama.
+        empresa = _empresa_app_publico()
         agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
         for _ in range(4):
             registro = RegistroSintoma.objects.create(
@@ -3092,12 +3092,9 @@ class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
         self.assertLess(payload["overview"]["total_cases"], payload["overview"]["raw_total_cases"])
 
     def test_panorama_epidemiologico_ignora_registros_sinteticos_publicos(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Sintetico",
-            email="sintetico-panorama@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+
+        empresa = _empresa_app_publico()
         RegistroSintoma.objects.create(
             empresa=empresa,
             febre=True,
@@ -3130,12 +3127,9 @@ class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
         self.assertEqual(payload["overview"]["raw_total_cases"], 1)
 
     def test_panorama_cache_recalcula_quando_version_global_muda(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Cache",
-            email="cache-panorama@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+
+        empresa = _empresa_app_publico()
         RegistroSintoma.objects.create(
             empresa=empresa,
             febre=True,
@@ -3198,12 +3192,9 @@ class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
         self.assertEqual(response_radar.json()["radar"]["raw_total_cases"], 1)
 
     def test_panorama_epidemiologico_reduz_risco_quando_foco_envelhece(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Risco Temporal",
-            email="risco-temporal@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+
+        empresa = _empresa_app_publico()
         agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
         for _ in range(13):
             registro = RegistroSintoma.objects.create(
