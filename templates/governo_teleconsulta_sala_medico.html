@@ -304,8 +304,8 @@ async function iniciarJitsi() {
     }
     const domain = d.dev_mode ? 'meet.jit.si' : '8x8.vc';
     jitsiApi = new JitsiMeetExternalAPI(domain, opts);
+    overlay.classList.add('hidden');
     jitsiApi.addEventListener('videoConferenceJoined', () => {
-      overlay.classList.add('hidden');
       atualizarStatusPill('em_curso', 'Em curso');
     });
     jitsiApi.addEventListener('readyToClose', () => {

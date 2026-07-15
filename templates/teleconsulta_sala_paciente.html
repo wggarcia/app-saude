@@ -313,6 +313,7 @@ async function iniciarJitsi() {
     if (d.token && !d.dev_mode) opts.jwt = d.token;
     const domain = d.dev_mode ? 'meet.jit.si' : '8x8.vc';
     jitsiApi = new JitsiMeetExternalAPI(domain, opts);
+    if (loading) loading.style.display = 'none';
     jitsiApi.addEventListener('videoConferenceJoined', () => {
       if (loading) loading.style.display = 'none';
     });
