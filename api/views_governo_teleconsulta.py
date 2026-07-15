@@ -137,7 +137,7 @@ def teleconsulta_sala_medico(request, tc_id):
 
 def teleconsulta_sala_paciente(request, token):
     """Sala do paciente — sem autenticação."""
-    tc = get_object_or_404(TeleconsultaGoverno, token_paciente=token)
+    tc = get_object_or_404(TeleconsultaGoverno.objects.using('owner'), token_paciente=token)
     if tc.status == "cancelada":
         return render(request, "teleconsulta_sala_paciente.html", {"cancelada": True})
     return render(request, "teleconsulta_sala_paciente.html", {
@@ -254,7 +254,7 @@ def api_teleconsulta_sala_token(request, tc_id):
 
 @require_http_methods(["GET"])
 def api_teleconsulta_paciente_token(request, token):
-    tc = get_object_or_404(TeleconsultaGoverno, token_paciente=token)
+    tc = get_object_or_404(TeleconsultaGoverno.objects.using('owner'), token_paciente=token)
     if tc.status not in ("em_curso", "agendada"):
         return JsonResponse({"erro": "Consulta não disponível"}, status=400)
     if not tc.tcle_aceito_em:
@@ -274,7 +274,7 @@ def api_teleconsulta_paciente_token(request, token):
 
 @require_http_methods(["GET"])
 def api_teleconsulta_paciente_status(request, token):
-    tc = get_object_or_404(TeleconsultaGoverno, token_paciente=token)
+    tc = get_object_or_404(TeleconsultaGoverno.objects.using('owner'), token_paciente=token)
     return JsonResponse({
         "status": tc.status,
         "tcle_aceito": tc.tcle_aceito_em is not None,
@@ -286,7 +286,7 @@ def api_teleconsulta_paciente_status(request, token):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_teleconsulta_tcle_aceitar(request, token):
-    tc = get_object_or_404(TeleconsultaGoverno, token_paciente=token)
+    tc = get_object_or_404(TeleconsultaGoverno.objects.using('owner'), token_paciente=token)
     if tc.status == "cancelada":
         return JsonResponse({"erro": "Consulta cancelada"}, status=400)
     if not tc.tcle_aceito_em:
