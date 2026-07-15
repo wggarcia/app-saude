@@ -14,6 +14,12 @@ fi
 
 export PATH="$FLUTTER_DIR/bin:$PATH"
 
+# Baixa os artefatos do engine iOS (Flutter.xcframework). Sem isto o
+# post_install hook do Podfile (podhelper.rb) falha com "Flutter.xcframework
+# must exist" e o pod install aborta com exit 1.
+echo "==> flutter precache --ios"
+flutter precache --ios
+
 echo "==> flutter pub get"
 cd "$CI_PRIMARY_REPOSITORY_PATH/app_ocupacional"
 flutter pub get
