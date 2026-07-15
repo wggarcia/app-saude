@@ -33,7 +33,7 @@ def _e(request):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.administrativo")
+@requer_permissao_modulo("governo.administrativo", "governo.secretaria_agendamento")
 def governo_ged_page(request):
     return render(request, "governo_ged.html", contexto_navegacao_setorial(request, "governo"))
 
@@ -42,7 +42,7 @@ def governo_ged_page(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_permissao_modulo("governo.administrativo")
+@api_requer_permissao_modulo("governo.administrativo", "governo.secretaria_agendamento")
 def api_ged_documentos(request):
     e = _e(request)
     if not e:
@@ -106,7 +106,7 @@ def api_ged_documentos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "DELETE"])
-@api_requer_permissao_modulo("governo.administrativo")
+@api_requer_permissao_modulo("governo.administrativo", "governo.secretaria_agendamento")
 def api_ged_documento_detalhe(request, doc_id):
     e = _e(request)
     if not e:

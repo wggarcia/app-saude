@@ -113,7 +113,7 @@ def _gerar_token_jitsi_reuniao(nome, sala_jitsi, moderador=True):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.atencao_clinica")
+@requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def governo_reuniao_page(request):
     return render(request, "governo_reuniao.html", contexto_navegacao_setorial(request, "governo"))
 
@@ -121,7 +121,7 @@ def governo_reuniao_page(request):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.atencao_clinica")
+@requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def governo_reuniao_sala(request, reuniao_id):
     empresa = _e(request)
     if not empresa:

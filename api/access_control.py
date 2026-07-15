@@ -367,6 +367,18 @@ MODULOS_POR_SETOR = {
         {"codigo": "governo.regulacao_urgencia", "label": "Regulação / Urgência",
          "funcao": "Regulador de Leitos, Equipe SAMU",
          "area": "Regulação de leitos, Urgência/SAMU, Produção, Previne Brasil"},
+        {"codigo": "governo.secretaria_agendamento", "label": "Secretaria / Recepção",
+         "funcao": "Secretário(a), Recepcionista, Auxiliar Administrativo",
+         "area": "Agendamento de teleconsultas, painel de senha/chamada, reuniões institucionais, gestão de documentos"},
+        {"codigo": "governo.epidemiologia", "label": "Epidemiologia",
+         "funcao": "Epidemiologista, Analista de Vigilância em Saúde",
+         "area": "Sala de situação, surtos, notificações compulsórias, panorama de diagnósticos, alertas ao cidadão"},
+        {"codigo": "governo.farmacia", "label": "Farmácia",
+         "funcao": "Farmacêutico Responsável",
+         "area": "Farmácia Básica UBS, medicamentos de alto custo, almoxarifado farmacêutico"},
+        {"codigo": "governo.laboratorio", "label": "Laboratório",
+         "funcao": "Técnico de Laboratório, Biomédico",
+         "area": "Solicitações e resultados de exames laboratoriais"},
     ],
     "plano_saude": [
         {"codigo": "plano.autorizacao", "label": "Autorização / Sinistro",
@@ -416,6 +428,15 @@ def principal_tem_modulo(empresa, principal, codigo_modulo):
     return _principal_tem_permissao(empresa, principal, codigo_modulo)
 
 
+def principal_tem_algum_modulo(empresa, principal, codigos_modulo):
+    """Igual a principal_tem_modulo, mas aceita uma lista de códigos (OR) —
+    usado quando uma mesma tela pode ser liberada por mais de um módulo
+    (ex: código amplo legado E código granular novo)."""
+    if principal is None or principal == empresa or principal_e_gerencia_principal(principal):
+        return True
+    return any(_principal_tem_permissao(empresa, principal, codigo) for codigo in codigos_modulo)
+
+
 def principal_e_gerencia_principal(principal):
     """Versão sem request: gerência é EmpresaUsuario com perfil 'admin'/'gestor', ou a própria Empresa."""
     if principal is None:
@@ -426,12 +447,16 @@ def principal_e_gerencia_principal(principal):
     return perfil in ("admin", "gestor") or getattr(principal, "is_admin", False)
 
 
-def requer_permissao_modulo(codigo):
+def requer_permissao_modulo(*codigos):
     """
-    Decorator para views de página: se a sessão atual não tiver a permissão do
-    módulo (e não for gerência), renderiza a tela de credencial em vez do
-    conteúdo — sem fricção quando já autorizado, igual ao padrão de
-    requer_plataforma_ti_page.
+    Decorator para views de página: se a sessão atual não tiver a permissão de
+    NENHUM dos módulos informados (e não for gerência), renderiza a tela de
+    credencial em vez do conteúdo — sem fricção quando já autorizado, igual ao
+    padrão de requer_plataforma_ti_page.
+
+    Aceita múltiplos códigos (OR) para permitir liberar a mesma tela tanto
+    pelo código amplo legado quanto por um código granular mais novo, sem
+    revogar nenhum acesso já concedido.
     """
     def decorator(view_func):
         @wraps(view_func)
@@ -440,12 +465,13 @@ def requer_permissao_modulo(codigo):
             if not empresa:
                 return redirect("/login-empresa/")
             principal = getattr(request, "principal", None) or empresa
-            if principal_tem_modulo(empresa, principal, codigo):
+            if principal_tem_algum_modulo(empresa, principal, codigos):
                 return view_func(request, *args, **kwargs)
-            info = MODULOS_INFO.get(codigo, {})
+            codigo_principal = codigos[0]
+            info = MODULOS_INFO.get(codigo_principal, {})
             return render(request, "modulo_credencial.html", {
-                "codigo_modulo": codigo,
-                "modulo_label": info.get("label", codigo),
+                "codigo_modulo": codigo_principal,
+                "modulo_label": info.get("label", codigo_principal),
                 "modulo_funcao": info.get("funcao", ""),
                 "modulo_area": info.get("area", ""),
                 "return_url": request.path,
@@ -454,8 +480,9 @@ def requer_permissao_modulo(codigo):
     return decorator
 
 
-def api_requer_permissao_modulo(codigo):
-    """Decorator para views de API: 403 JSON em vez de tela de credencial."""
+def api_requer_permissao_modulo(*codigos):
+    """Decorator para views de API: 403 JSON em vez de tela de credencial.
+    Aceita múltiplos códigos (OR) — ver requer_permissao_modulo."""
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -463,11 +490,12 @@ def api_requer_permissao_modulo(codigo):
             if not empresa:
                 return JsonResponse({"erro": "Não autenticado"}, status=401)
             principal = getattr(request, "principal", None) or empresa
-            if not principal_tem_modulo(empresa, principal, codigo):
+            if not principal_tem_algum_modulo(empresa, principal, codigos):
+                codigo_principal = codigos[0]
                 return JsonResponse({
                     "erro": "Acesso restrito a este módulo.",
-                    "codigo_modulo": codigo,
-                    "modulo_label": MODULOS_LABEL.get(codigo, codigo),
+                    "codigo_modulo": codigo_principal,
+                    "modulo_label": MODULOS_LABEL.get(codigo_principal, codigo_principal),
                 }, status=403)
             return view_func(request, *args, **kwargs)
         return wrapper
@@ -685,6 +713,46 @@ def principal_pode_configurar_ti(request):
     return _principal_gestor_ti(request) or principal_e_gerencia(request) or principal_e_ti(request)
 
 
+def modulos_governo_visibilidade(request, setor_resolvido=None):
+    """
+    Flags de visibilidade do menu do setor governo, por módulo (RBAC granular).
+    Sempre True para gerência/conta principal (mesmo comportamento de hoje —
+    ninguém perde acesso). Para sub-usuários com perfil restrito, só fica True
+    o que estiver de fato concedido via RBACAtribuicao — usado para que cada
+    ambiente (médico, secretaria, epidemiologia, farmácia, etc.) veja só o
+    seu próprio menu, ao estilo dos concorrentes (TOTVS/Tasy).
+    """
+    empresa = getattr(request, "empresa", None)
+    setor = setor_resolvido or (get_setor(empresa) if empresa else None)
+    flags = {
+        "gov_ver_administrativo": True,
+        "gov_ver_vigilancia_acs": True,
+        "gov_ver_atencao_clinica": True,
+        "gov_ver_regulacao_urgencia": True,
+        "gov_ver_secretaria": True,
+        "gov_ver_epidemiologia": True,
+        "gov_ver_farmacia": True,
+        "gov_ver_laboratorio": True,
+    }
+    if not empresa or setor != "governo":
+        return flags
+    try:
+        ativos = set(meus_modulos(request))
+        flags = {
+            "gov_ver_administrativo": "governo.administrativo" in ativos,
+            "gov_ver_vigilancia_acs": "governo.vigilancia_acs" in ativos,
+            "gov_ver_atencao_clinica": "governo.atencao_clinica" in ativos,
+            "gov_ver_regulacao_urgencia": "governo.regulacao_urgencia" in ativos,
+            "gov_ver_secretaria": "governo.secretaria_agendamento" in ativos,
+            "gov_ver_epidemiologia": "governo.epidemiologia" in ativos,
+            "gov_ver_farmacia": "governo.farmacia" in ativos,
+            "gov_ver_laboratorio": "governo.laboratorio" in ativos,
+        }
+    except Exception:
+        logger.exception("Falha ao calcular visibilidade de módulos do governo")
+    return flags
+
+
 def contexto_navegacao_setorial(request, setor=None):
     """
     Contexto padrão de navegação por perfil para templates setoriais.
@@ -696,7 +764,7 @@ def contexto_navegacao_setorial(request, setor=None):
     acesso_gerencia = principal_e_gerencia(request)
     acesso_rh = principal_e_rh(request) or acesso_gerencia
 
-    return {
+    ctx = {
         "setor_atual": setor_resolvido,
         "perfil_principal": perfil_principal(request),
         "acesso_ti": acesso_ti,
@@ -710,6 +778,9 @@ def contexto_navegacao_setorial(request, setor=None):
         "gerencia_url": "/gerencia/",
         "rh_url": "/rh/",
     }
+    if setor_resolvido == "governo":
+        ctx.update(modulos_governo_visibilidade(request, setor_resolvido))
+    return ctx
 
 
 def requer_gerencia_page(view_func):

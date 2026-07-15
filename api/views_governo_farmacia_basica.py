@@ -32,7 +32,7 @@ def _e(request):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.atencao_clinica")
+@requer_permissao_modulo("governo.atencao_clinica", "governo.farmacia")
 def governo_farmacia_basica_page(request):
     return render(request, "governo_farmacia_basica.html", contexto_navegacao_setorial(request, "governo"))
 

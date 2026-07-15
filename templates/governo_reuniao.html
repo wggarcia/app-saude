@@ -67,20 +67,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="logo">🏛️ Governo</div>
-  <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
-  <div class="nav-section">Saúde Pública</div>
-  <a class="nav-link" href="/governo/sala-situacao/"><span>🚨</span> Sala de Situação</a>
-  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
-  <a class="nav-link active" href="/governo/reuniao/"><span>🎥</span> Reuniões Institucionais</a>
-  <a class="nav-link" href="/governo/epidemiologia/diagnosticos/"><span>🔬</span> Diagnósticos Confirmados</a>
-  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
-  <div class="sidebar-footer">
-    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
-  </div>
-</aside>
+{% include "_governo_sidebar.html" %}
 
 <main class="main">
   <div class="page-header">

@@ -1,0 +1,72 @@
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link{% if request.path == '/governo/' %} active{% endif %}" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
+  <a class="nav-link{% if request.path == '/governo/gestao/' %} active{% endif %}" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  {% if mostrar_link_ti %}
+  <a class="nav-link" href="{{ portal_ti_url|default:'/governo/plataforma/' }}" target="_blank" rel="noopener"><span>🖥️</span> Plataforma TI</a>
+  {% endif %}
+  {% if mostrar_aba_gerencia %}
+  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
+  {% endif %}
+
+  {% if gov_ver_atencao_clinica %}
+  <div class="nav-section">Atenção Clínica</div>
+  <a class="nav-link{% if request.path == '/governo/pec/' %} active{% endif %}" href="/governo/pec/"><span>📋</span> Prontuário Eletrônico (PEC)</a>
+  <a class="nav-link{% if request.path == '/governo/prontuario/' %} active{% endif %}" href="/governo/prontuario/"><span>🗂️</span> Prontuário da Teleconsulta</a>
+  <a class="nav-link{% if request.path == '/governo/faturamento-sus/' %} active{% endif %}" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link{% if request.path == '/governo/esus/' %} active{% endif %}" href="/governo/esus/"><span>🔗</span> Integração e-SUS / RNDS</a>
+  <a class="nav-link{% if request.path == '/governo/rag/' %} active{% endif %}" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  {% endif %}
+
+  {% if gov_ver_atencao_clinica or gov_ver_secretaria %}
+  <div class="nav-section">Teleconsulta</div>
+  <a class="nav-link{% if request.path == '/governo/teleconsulta/' %} active{% endif %}" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  {% endif %}
+
+  {% if gov_ver_farmacia or gov_ver_atencao_clinica %}
+  <div class="nav-section">Farmácia</div>
+  <a class="nav-link{% if request.path == '/governo/farmacia-basica/' %} active{% endif %}" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica UBS</a>
+  {% endif %}
+
+  {% if gov_ver_laboratorio or gov_ver_atencao_clinica %}
+  <div class="nav-section">Laboratório</div>
+  <a class="nav-link{% if request.path == '/governo/laboratorio/' %} active{% endif %}" href="/governo/laboratorio/"><span>🧪</span> Laboratório</a>
+  {% endif %}
+
+  {% if gov_ver_epidemiologia or gov_ver_vigilancia_acs %}
+  <div class="nav-section">Epidemiologia / Vigilância</div>
+  <a class="nav-link{% if request.path == '/governo/sala-situacao/' %} active{% endif %}" href="/governo/sala-situacao/"><span>🚨</span> Sala de Situação</a>
+  <a class="nav-link{% if request.path == '/governo/epidemiologia/diagnosticos/' %} active{% endif %}" href="/governo/epidemiologia/diagnosticos/"><span>🔬</span> Diagnósticos Confirmados</a>
+  <a class="nav-link{% if request.path == '/governo/app-cidadao/' %} active{% endif %}" href="/governo/app-cidadao/"><span>📱</span> App Cidadão</a>
+  {% endif %}
+
+  {% if gov_ver_secretaria or gov_ver_atencao_clinica or gov_ver_administrativo %}
+  <div class="nav-section">Secretaria / Recepção</div>
+  {% if gov_ver_secretaria or gov_ver_atencao_clinica %}
+  <a class="nav-link{% if request.path == '/governo/painel-chamado/' %} active{% endif %}" href="/governo/painel-chamado/"><span>🔔</span> Painel de Chamado</a>
+  {% endif %}
+  {% if gov_ver_secretaria or gov_ver_atencao_clinica or gov_ver_administrativo %}
+  <a class="nav-link{% if request.path == '/governo/reuniao/' %} active{% endif %}" href="/governo/reuniao/"><span>🎥</span> Reuniões Institucionais</a>
+  {% endif %}
+  {% if gov_ver_secretaria or gov_ver_administrativo %}
+  <a class="nav-link{% if request.path == '/governo/ged/' %} active{% endif %}" href="/governo/ged/"><span>🗂️</span> Gestão de Documentos</a>
+  {% endif %}
+  {% endif %}
+
+  {% if gov_ver_regulacao_urgencia %}
+  <div class="nav-section">Regulação / Urgência</div>
+  <a class="nav-link{% if request.path == '/governo/regulacao/' %} active{% endif %}" href="/governo/regulacao/"><span>🏨</span> Regulação SISREG</a>
+  <a class="nav-link{% if request.path == '/governo/tfd/' %} active{% endif %}" href="/governo/tfd/"><span>🚐</span> TFD / Veículos</a>
+  {% endif %}
+
+  {% if gov_ver_administrativo %}
+  <div class="nav-section">Administrativo</div>
+  <a class="nav-link{% if request.path == '/governo/almoxarifado/' %} active{% endif %}" href="/governo/almoxarifado/"><span>📦</span> Almoxarifado</a>
+  {% endif %}
+
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>

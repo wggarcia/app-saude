@@ -69,23 +69,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </style>
 </head>
 <body>
-<aside class="sidebar">
-  <div class="logo">🏛️ Governo</div>
-  <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
-  <div class="nav-section">Saúde Pública</div>
-  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
-  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
-  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
-  <a class="nav-link" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
-  <a class="nav-link active" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
-  <a class="nav-link" href="/governo/epidemiologia/diagnosticos/"><span>🔬</span> Diagnósticos Confirmados</a>
-  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
-  <a class="nav-link" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
-  <div class="sidebar-footer">
-    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
-  </div>
-</aside>
+{% include "_governo_sidebar.html" %}
 
 <main class="main">
   <div class="page-header">

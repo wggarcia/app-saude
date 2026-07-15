@@ -40,7 +40,7 @@ def _hoje_local():
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.atencao_clinica")
+@requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def governo_painel_chamado_page(request):
     return render(request, "governo_painel_chamado.html", contexto_navegacao_setorial(request, "governo"))
 
@@ -48,7 +48,7 @@ def governo_painel_chamado_page(request):
 # ── Geração de senha ──────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_painel_gerar_senha(request):
     e = _e(request)
     if not e:
@@ -78,7 +78,7 @@ def api_painel_gerar_senha(request):
 # ── Chamar próxima ────────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_painel_chamar_proxima(request):
     e = _e(request)
     if not e:
@@ -104,7 +104,7 @@ def api_painel_chamar_proxima(request):
 
 
 @require_http_methods(["POST"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_painel_finalizar_senha(request, senha_id):
     e = _e(request)
     if not e:
@@ -122,7 +122,7 @@ def api_painel_finalizar_senha(request, senha_id):
 # ── Status / painel ───────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_painel_status(request):
     e = _e(request)
     if not e:

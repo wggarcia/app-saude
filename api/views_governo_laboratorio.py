@@ -43,7 +43,7 @@ def _gerar_protocolo():
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.atencao_clinica")
+@requer_permissao_modulo("governo.atencao_clinica", "governo.laboratorio")
 def governo_laboratorio_page(request):
     return render(request, "governo_laboratorio.html", contexto_navegacao_setorial(request, "governo"))
 
@@ -51,7 +51,7 @@ def governo_laboratorio_page(request):
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.laboratorio")
 def api_lab_kpis(request):
     e = _e(request)
     if not e:
@@ -71,7 +71,7 @@ def api_lab_kpis(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.laboratorio")
 def api_lab_catalogo(request):
     e = _e(request)
     if not e:
@@ -102,7 +102,7 @@ def api_lab_catalogo(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.laboratorio")
 def api_lab_solicitacoes(request):
     e = _e(request)
     if not e:
@@ -154,7 +154,7 @@ def api_lab_solicitacoes(request):
 
 @csrf_exempt
 @require_http_methods(["PATCH"])
-@api_requer_permissao_modulo("governo.atencao_clinica")
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.laboratorio")
 def api_lab_solicitacao_detalhe(request, sol_id):
     e = _e(request)
     if not e:

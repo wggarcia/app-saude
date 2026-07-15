@@ -121,41 +121,67 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <details class="nav-group" data-nav-group data-group-key="governo-operacao" open>
     <summary><div class="nav-section">Operação Governamental</div></summary>
     <div class="nav-group-body">
+      {% if gov_ver_administrativo %}
       <button class="tab-btn-side active" onclick="setTab('programas')"><span>📋</span> Programas</button>
       <button class="tab-btn-side" onclick="setTab('indicadores')"><span>📈</span> Indicadores</button>
       <button class="tab-btn-side" onclick="setTab('planos')"><span>✅</span> Planos de Ação</button>
       <button class="tab-btn-side" onclick="setTab('orcamento')"><span>💰</span> Orçamento</button>
       <button class="tab-btn-side" onclick="setTab('atos')"><span>📜</span> Atos Normativos</button>
       <button class="tab-btn-side" onclick="setTab('rede')"><span>🏥</span> Rede de Saúde</button>
-      <button class="tab-btn-side" onclick="setTab('vigilancia')"><span>🦠</span> Vigilância</button>
+      <button class="tab-btn-side" onclick="setTab('contratos')"><span>📑</span> Contratos</button>
+      {% endif %}
+      {% if gov_ver_vigilancia_acs or gov_ver_epidemiologia %}
+      <button class="tab-btn-side{% if not gov_ver_administrativo %} active{% endif %}" onclick="setTab('vigilancia')"><span>🦠</span> Vigilância</button>
+      {% endif %}
+      {% if gov_ver_vigilancia_acs %}
       <button class="tab-btn-side" onclick="setTab('acs')"><span>🚶</span> ACS / Visitas</button>
-      <button class="tab-btn-side" onclick="setTab('regulacao')"><span>🏨</span> Regulação</button>
+      {% endif %}
+      {% if gov_ver_regulacao_urgencia %}
+      <button class="tab-btn-side{% if not gov_ver_administrativo and not gov_ver_vigilancia_acs and not gov_ver_epidemiologia %} active{% endif %}" onclick="setTab('regulacao')"><span>🏨</span> Regulação</button>
       <button class="tab-btn-side" onclick="setTab('producao')"><span>📋</span> Produção</button>
       <button class="tab-btn-side" onclick="setTab('previne')"><span>🎯</span> Previne Brasil</button>
-      <button class="tab-btn-side" onclick="setTab('contratos')"><span>📑</span> Contratos</button>
       <button class="tab-btn-side" onclick="setTab('urgencia')"><span>🚑</span> Urgência/SAMU</button>
       <button class="tab-btn-side" onclick="setTab('fase2dash')"><span>📊</span> Painel F2</button>
+      {% endif %}
     </div>
   </details>
 
   <details class="nav-group" data-nav-group data-group-key="governo-clinicos">
     <summary><div class="nav-section">Módulos Clínicos SUS</div></summary>
     <div class="nav-group-body">
+      {% if gov_ver_atencao_clinica %}
       <button class="nav-link" onclick="openModulePanel('/governo/pec/','📋 Prontuário Eletrônico (PEC)')"><span>📋</span> Prontuário Eletrônico (PEC)</button>
       <button class="nav-link" onclick="openModulePanel('/governo/esus/','🔗 e-SUS / RNDS')"><span>🔗</span> e-SUS / RNDS</button>
       <button class="nav-link" onclick="openModulePanel('/governo/faturamento-sus/','💰 Faturamento SUS')"><span>💰</span> Faturamento SUS</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/farmacia-basica/','💊 Farmácia Básica UBS')"><span>💊</span> Farmácia Básica UBS</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/rag/','📄 RAG / RDQA / PAS')"><span>📄</span> RAG / RDQA / PAS</button>
+      {% endif %}
+      {% if gov_ver_atencao_clinica or gov_ver_secretaria %}
+      <button class="nav-link" onclick="openModulePanel('/governo/teleconsulta/','📹 Teleconsulta')"><span>📹</span> Teleconsulta</button>
+      {% endif %}
+      {% if gov_ver_regulacao_urgencia %}
       <button class="nav-link" onclick="openModulePanel('/governo/regulacao/','🏨 Regulação SISREG')"><span>🏨</span> Regulação SISREG</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/tfd/','🚐 TFD / Veículos')"><span>🚐</span> TFD / Veículos</button>
+      {% endif %}
+      {% if gov_ver_vigilancia_acs or gov_ver_epidemiologia %}
       <button class="nav-link" onclick="openModulePanel('/governo/sala-situacao/','🚨 Sala de Situação')"><span>🚨</span> Sala de Situação</button>
       <button class="nav-link" onclick="openModulePanel('/governo/app-cidadao/','📱 App Cidadão')"><span>📱</span> App Cidadão</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/teleconsulta/','📹 Teleconsulta')"><span>📹</span> Teleconsulta</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/reuniao/','🎥 Reuniões Institucionais')"><span>🎥</span> Reuniões Institucionais</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/rag/','📄 RAG / RDQA / PAS')"><span>📄</span> RAG / RDQA / PAS</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/painel-chamado/','🔔 Painel de Chamado')"><span>🔔</span> Painel de Chamado</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/ged/','🗂️ Gestão de Documentos')"><span>🗂️</span> Gestão de Documentos</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/tfd/','🚐 TFD / Veículos')"><span>🚐</span> TFD / Veículos</button>
-      <button class="nav-link" onclick="openModulePanel('/governo/almoxarifado/','📦 Almoxarifado')"><span>📦</span> Almoxarifado</button>
+      {% endif %}
+      {% if gov_ver_farmacia or gov_ver_atencao_clinica %}
+      <button class="nav-link" onclick="openModulePanel('/governo/farmacia-basica/','💊 Farmácia Básica UBS')"><span>💊</span> Farmácia Básica UBS</button>
+      {% endif %}
+      {% if gov_ver_laboratorio or gov_ver_atencao_clinica %}
       <button class="nav-link" onclick="openModulePanel('/governo/laboratorio/','🧪 Laboratório')"><span>🧪</span> Laboratório</button>
+      {% endif %}
+      {% if gov_ver_secretaria or gov_ver_atencao_clinica %}
+      <button class="nav-link" onclick="openModulePanel('/governo/reuniao/','🎥 Reuniões Institucionais')"><span>🎥</span> Reuniões Institucionais</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/painel-chamado/','🔔 Painel de Chamado')"><span>🔔</span> Painel de Chamado</button>
+      {% endif %}
+      {% if gov_ver_secretaria or gov_ver_administrativo %}
+      <button class="nav-link" onclick="openModulePanel('/governo/ged/','🗂️ Gestão de Documentos')"><span>🗂️</span> Gestão de Documentos</button>
+      {% endif %}
+      {% if gov_ver_administrativo %}
+      <button class="nav-link" onclick="openModulePanel('/governo/almoxarifado/','📦 Almoxarifado')"><span>📦</span> Almoxarifado</button>
+      {% endif %}
     </div>
   </details>
 

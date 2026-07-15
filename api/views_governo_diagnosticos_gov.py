@@ -42,7 +42,7 @@ def _e(request):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.atencao_clinica")
+@requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def governo_diagnosticos_panorama_page(request):
     return render(request, "governo_diagnosticos_panorama.html", contexto_navegacao_setorial(request, "governo"))
 

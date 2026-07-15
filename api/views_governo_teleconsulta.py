@@ -115,7 +115,7 @@ def _gerar_token_jitsi(nome, email, moderador, sala_jitsi):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.atencao_clinica")
+@requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def governo_teleconsulta_page(request):
     return render(request, "governo_teleconsulta.html", contexto_navegacao_setorial(request, "governo"))
 

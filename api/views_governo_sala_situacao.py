@@ -34,7 +34,7 @@ def _e(request):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
-@requer_permissao_modulo("governo.vigilancia_acs")
+@requer_permissao_modulo("governo.vigilancia_acs", "governo.epidemiologia")
 def governo_sala_situacao_page(request):
     return render(request, "governo_sala_situacao.html", contexto_navegacao_setorial(request, "governo"))
 

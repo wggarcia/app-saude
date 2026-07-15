@@ -58,18 +58,7 @@ td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
 </style>
 </head>
 <body>
-<aside class="sidebar">
-  <div class="logo">🏛️ Governo</div>
-  <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
-  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
-  <div class="nav-section">Vigilância</div>
-  <a class="nav-link active" href="/governo/sala-situacao/"><span>🚨</span> Sala de Situação</a>
-  <a class="nav-link" href="/governo/app-cidadao/"><span>📱</span> App Cidadão</a>
-  <div class="sidebar-footer">
-    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
-  </div>
-</aside>
+{% include "_governo_sidebar.html" %}
 
 <main class="main">
   <div class="page-header">
