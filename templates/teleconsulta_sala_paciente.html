@@ -202,7 +202,6 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 </div>
 {% endif %}
 
-<script src="https://8x8.vc/libs/lib.jitsi.min.js"></script>
 <script>
 {% if not cancelada %}
 const TOKEN = "{{ token }}";
@@ -270,6 +269,18 @@ function iniciarPolling() {
 }
 
 // ── Jitsi ──────────────────────────────────────────────────────────────────
+function carregarScriptJitsi(devMode) {
+  return new Promise((resolve, reject) => {
+    if (window.JitsiMeetExternalAPI) { resolve(); return; }
+    const src = devMode
+      ? 'https://meet.jit.si/external_api.js'
+      : 'https://8x8.vc/libs/lib.jitsi.min.js';
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
 async function iniciarJitsi() {
   const loading = document.getElementById('video-loading');
   try {
@@ -279,6 +290,9 @@ async function iniciarJitsi() {
       if (loading) loading.innerHTML = `<p style="color:var(--muted);font-size:14px">${d.erro || 'Erro ao conectar.'}</p>`;
       return;
     }
+
+    await carregarScriptJitsi(d.dev_mode);
+
     const opts = {
       roomName: d.room,
       width: '100%',

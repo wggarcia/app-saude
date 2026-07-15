@@ -218,7 +218,6 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);heigh
   </div>
 </div>
 
-<script src="https://8x8.vc/libs/lib.jitsi.min.js"></script>
 <script>
 const REUNIAO_ID = {{ reuniao.id }};
 const STATUS_INICIAL = "{{ reuniao.status }}";
@@ -325,6 +324,18 @@ async function carregarEpi(){
 }
 
 // ── Jitsi ──────────────────────────────────────────────────────────────────
+function carregarScriptJitsi(devMode) {
+  return new Promise((resolve, reject) => {
+    if (window.JitsiMeetExternalAPI) { resolve(); return; }
+    const src = devMode
+      ? 'https://meet.jit.si/external_api.js'
+      : 'https://8x8.vc/libs/lib.jitsi.min.js';
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
 async function iniciarJitsi(){
   const overlay = document.getElementById('overlay');
   const msg = document.getElementById('ov-msg');
@@ -332,6 +343,8 @@ async function iniciarJitsi(){
     const r = await fetch(`/api/governo/reuniao/${REUNIAO_ID}/token/`,{credentials:'include'});
     const d = await r.json();
     if(!r.ok){msg.textContent=d.erro||'Erro ao gerar token.';return;}
+
+    await carregarScriptJitsi(d.dev_mode);
     atualizarStatusPill('em_andamento','Em andamento');
     const opts = {
       roomName: d.room,
