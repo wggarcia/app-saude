@@ -68,6 +68,16 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
             pacote_codigo="hospital_medio",
             sessao_ativa_chave="sessao-command-ai",
         )
+        self.empresa_publica = Empresa.objects.create(
+            nome="SolusCRT Populacao",
+            email="populacao@soluscrt.com",
+            senha=make_password("publico_app"),
+            ativo=True,
+            plano="publico",
+            pacote_codigo="governo_estado",
+            max_usuarios=1000,
+            max_dispositivos=1000,
+        )
         epidemiologia.clear_panorama_cache()
         self._seed_sinais()
 
@@ -104,6 +114,24 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
         RegistroSintoma.objects.filter(
             id__in=[registro.id for registro in antigos]
         ).update(data_registro=timezone.now() - timedelta(hours=30))
+
+        # Semeia dados públicos para que build_panorama_payload() retorne layers
+        # não-vazios. Sem a empresa_publica no banco, _scope_public_population_queryset
+        # retorna queryset.none() → candidates = [] → recommendations = [].
+        for bairro in ("Centro", "Pinheiros", "Moema"):
+            RegistroSintoma.objects.create(
+                empresa=self.empresa_publica,
+                febre=True,
+                dor_corpo=True,
+                latitude=-23.5505,
+                longitude=-46.6333,
+                estado="SP",
+                cidade="Sao Paulo",
+                bairro=bairro,
+                confianca=0.92,
+                suspeito=False,
+            )
+
         epidemiologia.clear_panorama_cache()
 
     def _autenticar(self):
