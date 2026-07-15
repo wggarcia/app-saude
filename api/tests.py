@@ -95,23 +95,31 @@ class _OwnerSharesDefaultMixin:
     In production, 'default' and 'owner' are different PostgreSQL roles on the
     same database. In tests, they are separate connections with separate
     transactions, so data written via 'default' is invisible to 'owner' queries
-    (PostgreSQL READ COMMITTED). This mixin aliases 'owner' to 'default's
+    (PostgreSQL READ COMMITTED). This mixin aliases 'owner' to default's
     connection object so both aliases run inside the same transaction.
 
-    The alias must be installed in _pre_setup (before super()._pre_setup opens
-    atomics) so that Django's _enter_atomics and _rollback_atomics see a
-    consistent view of which databases are mirrors. Installing in setUp() would
-    corrupt settings_dict lookups inside _rollback_atomics, causing
-    TransactionManagementError on test teardown.
+    The alias is installed at the CLASS level: in setUpClass before super opens
+    the class-level atomics, and removed only in tearDownClass after super closes
+    them. This keeps connections['owner'] pointing at the SAME connection object
+    for the entire class lifecycle, so Django's _enter_atomics (setUpClass) and
+    _rollback_atomics (tearDownClass) act on a consistent connection.
+
+    Doing this per-test (_pre_setup/_post_teardown) is unsafe: the del in
+    _post_teardown leaves connections['owner'] resolving to a freshly recreated
+    connection that was never entered into cls._cls_atomics. tearDownClass then
+    calls set_rollback on a connection outside any atomic block, raising
+    TransactionManagementError and cascading into every later test class.
     """
-    def _pre_setup(self):
+    @classmethod
+    def setUpClass(cls):
         from django.db import connections
         connections['owner'] = connections['default']
-        super()._pre_setup()
+        super().setUpClass()
 
-    def _post_teardown(self):
+    @classmethod
+    def tearDownClass(cls):
         try:
-            super()._post_teardown()
+            super().tearDownClass()
         finally:
             from django.db import connections
             try:
