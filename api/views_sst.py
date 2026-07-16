@@ -1709,6 +1709,7 @@ def api_convidar_app_funcionario(request, funcionario_id):
 # ── Treinamentos NR ───────────────────────────────────────────────────────────
 
 from .models import TreinamentoNR
+from .normas_regulamentadoras import catalogo_normas_json_ready
 
 
 @requer_permissao_modulo("sst.gestao_conformidade")
@@ -1716,7 +1717,10 @@ def sst_treinamentos_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return redirect("/login-empresa/")
-    return render(request, "sst_treinamentos.html", {"empresa_nome": empresa.nome})
+    return render(request, "sst_treinamentos.html", {
+        "empresa_nome": empresa.nome,
+        "normas_json": json.dumps(catalogo_normas_json_ready()),
+    })
 
 
 def _criar_treinamento(empresa, func, data):
