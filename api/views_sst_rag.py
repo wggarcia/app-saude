@@ -369,7 +369,6 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
         for a in asos_qs:
             asos_map[a.funcionario_id].append(a)
         afastamentos_map = {a.funcionario_id: a for a in afastamentos_qs}
-        from django.db.models import Count, Q
         treinos_vencidos = dict(
             TreinamentoNR.objects.filter(funcionario_id__in=func_ids, data_validade__lt=hoje)
             .values("funcionario_id").annotate(n=Count("id"))
