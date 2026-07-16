@@ -151,6 +151,8 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <button class="tab-btn active" onclick="switchTab('catalogo',this)">🦺 Catálogo de EPIs</button>
       <button class="tab-btn" onclick="switchTab('entregas',this)">📋 Fichas de Entrega</button>
       <button class="tab-btn" onclick="switchTab('vencimentos',this)">⚠️ Vencimentos de CA</button>
+      <button class="tab-btn" onclick="switchTab('inspecoes',this)">🔧 Inspeções Periódicas</button>
+      <button class="tab-btn" onclick="switchTab('instrumentos',this)">📏 Calibração de Instrumentos</button>
     </div>
 
     <!-- TAB 1: Catálogo -->
@@ -214,6 +216,51 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
         </div>
       </div>
     </div>
+
+    <!-- TAB 4: Inspeções Periódicas de EPI -->
+    <div class="tab-panel" id="tab-inspecoes">
+      <div class="toolbar">
+        <div class="search-box"><input id="busca-inspecao" type="text" placeholder="Buscar por funcionário ou EPI..." oninput="renderInspecoesPendentes()"></div>
+        <button class="btn-main" onclick="window.open('/api/sst/epis/inspecoes/pdf','_blank')">🖨️ Imprimir Relatório</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>EPIs com Inspeção Periódica Obrigatória (NR-10, NR-35 etc.)</h3><span id="cnt-inspecoes">carregando...</span></div>
+        <table class="tbl">
+          <thead><tr><th>Funcionário</th><th>EPI</th><th>Norma</th><th>Nº Série</th><th>Última Inspeção</th><th>Próxima Inspeção</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbody-inspecoes">
+            <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap" style="margin-top:20px">
+        <div class="table-header"><h3>Histórico de Inspeções Realizadas</h3><span id="cnt-inspecoes-hist">carregando...</span></div>
+        <table class="tbl">
+          <thead><tr><th>Funcionário</th><th>EPI</th><th>Data</th><th>Resultado</th><th>Responsável Técnico</th><th>Laudo Nº</th><th>Próxima</th></tr></thead>
+          <tbody id="tbody-inspecoes-hist">
+            <tr><td colspan="7"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: Calibração de Instrumentos de Medição -->
+    <div class="tab-panel" id="tab-instrumentos">
+      <div class="toolbar">
+        <div class="search-box"><input id="busca-instrumento" type="text" placeholder="Buscar instrumento por nome ou nº série..." oninput="renderInstrumentos()"></div>
+        <button class="btn-main" onclick="abrirModalInstrumento()">+ Novo Instrumento</button>
+        <button class="btn-main" onclick="window.open('/api/sst/instrumentos/pdf','_blank')">🖨️ Imprimir Relatório</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Instrumentos de Medição — Rastreabilidade INMETRO/NRs</h3><span id="cnt-instrumentos">carregando...</span></div>
+        <table class="tbl">
+          <thead><tr><th>Instrumento</th><th>Tipo</th><th>Nº Série</th><th>Norma</th><th>Última Calibração</th><th>Próxima Calibração</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbody-instrumentos">
+            <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -244,6 +291,14 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <div class="mf"><label>Fornecedor</label><input type="text" id="epi-fornecedor" placeholder="Ex: 3M do Brasil"></div>
     </div>
     <div class="mf"><label>Descrição / Observações</label><textarea id="epi-descricao" placeholder="Modelo, especificações técnicas, aplicações..."></textarea></div>
+    <div class="mf" style="flex-direction:row;align-items:center;gap:8px">
+      <input type="checkbox" id="epi-exige-inspecao" style="width:16px;height:16px;accent-color:var(--teal)" onchange="toggleInspecaoFields('epi')">
+      <label style="margin:0">Exige inspeção periódica técnica (ex: teste dielétrico NR-10, talabarte/cinto NR-35)</label>
+    </div>
+    <div class="mf-row" id="epi-inspecao-fields" style="display:none">
+      <div class="mf"><label>Norma (NR)</label><input type="text" id="epi-norma-inspecao" placeholder="Ex: NR-10"></div>
+      <div class="mf"><label>Periodicidade (dias)</label><input type="number" id="epi-periodicidade" placeholder="Ex: 180" min="1"></div>
+    </div>
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModal('modal-epi')">Cancelar</button>
       <button class="btn-submit" onclick="criarEPI()">Cadastrar EPI</button>
@@ -268,6 +323,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <div class="mf"><label>Data de Entrega</label><input type="date" id="ent-data"></div>
       <div class="mf"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="1"></div>
     </div>
+    <div class="mf"><label>Nº de Série do Item <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem">(para EPIs com inspeção periódica)</span></label><input type="text" id="ent-serie" placeholder="Ex: LUV-2026-0042"></div>
     <div class="mf"><label>Observações</label><textarea id="ent-obs" placeholder="Condições de uso, necessidade de troca, motivo..."></textarea></div>
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModal('modal-entrega')">Cancelar</button>
@@ -304,9 +360,95 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <div class="mf"><label>Fornecedor</label><input type="text" id="edit-epi-fornecedor" placeholder="Ex: 3M do Brasil"></div>
     </div>
     <div class="mf"><label>Descrição / Observações</label><textarea id="edit-epi-descricao" placeholder="Modelo, especificações técnicas, aplicações..."></textarea></div>
+    <div class="mf" style="flex-direction:row;align-items:center;gap:8px">
+      <input type="checkbox" id="edit-epi-exige-inspecao" style="width:16px;height:16px;accent-color:var(--teal)" onchange="toggleInspecaoFields('edit-epi')">
+      <label style="margin:0">Exige inspeção periódica técnica (ex: teste dielétrico NR-10, talabarte/cinto NR-35)</label>
+    </div>
+    <div class="mf-row" id="edit-epi-inspecao-fields" style="display:none">
+      <div class="mf"><label>Norma (NR)</label><input type="text" id="edit-epi-norma-inspecao" placeholder="Ex: NR-10"></div>
+      <div class="mf"><label>Periodicidade (dias)</label><input type="number" id="edit-epi-periodicidade" placeholder="Ex: 180" min="1"></div>
+    </div>
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModal('modal-editar-epi')">Cancelar</button>
       <button class="btn-submit" onclick="salvarEdicaoEPI()">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Registrar Inspeção Periódica de EPI -->
+<div class="modal-bg" id="modal-inspecao">
+  <div class="modal">
+    <h3>Registrar Inspeção Periódica</h3>
+    <div class="modal-sub">Registre o resultado da inspeção técnica periódica do EPI (teste dielétrico, inspeção de talabarte/cinto etc.).</div>
+    <input type="hidden" id="insp-entrega-id">
+    <div class="mf" id="insp-info" style="background:rgba(0,201,167,.06);border-radius:8px;padding:10px 12px;font-size:.82rem"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Data da Inspeção</label><input type="date" id="insp-data"></div>
+      <div class="mf"><label>Resultado</label>
+        <select id="insp-resultado">
+          <option value="aprovado">Aprovado</option>
+          <option value="condicional">Aprovado com ressalva</option>
+          <option value="reprovado">Reprovado — EPI recolhido</option>
+        </select>
+      </div>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>Responsável Técnico</label><input type="text" id="insp-responsavel" placeholder="Nome do técnico/engenheiro"></div>
+      <div class="mf"><label>Nº do Laudo</label><input type="text" id="insp-laudo" placeholder="Ex: LTD-2026-018"></div>
+    </div>
+    <div class="mf"><label>Próxima Inspeção <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem">(preenchida automaticamente pela periodicidade do EPI, se não informada)</span></label><input type="date" id="insp-proxima"></div>
+    <div class="mf"><label>Observações</label><textarea id="insp-obs" placeholder="Detalhes do teste, condição do equipamento..."></textarea></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-inspecao')">Cancelar</button>
+      <button class="btn-submit" onclick="salvarInspecao()">Registrar Inspeção</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cadastrar/Editar Instrumento de Medição -->
+<div class="modal-bg" id="modal-instrumento">
+  <div class="modal">
+    <h3 id="instrumento-titulo">Novo Instrumento de Medição</h3>
+    <div class="modal-sub">Cadastre instrumentos usados em inspeções/avaliações de SST, com rastreabilidade de calibração.</div>
+    <input type="hidden" id="instrumento-id">
+    <div class="mf"><label>Nome do Instrumento</label><input type="text" id="instrumento-nome" placeholder="Ex: Decibelímetro Instrutherm ITDEC-4000"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Tipo</label>
+        <select id="instrumento-tipo">
+          <option value="decibelimetro">Decibelímetro</option>
+          <option value="luximetro">Luxímetro</option>
+          <option value="medidor_campo_eletrico">Medidor de Campo Elétrico/Magnético</option>
+          <option value="termohigrometro">Termo-higrômetro</option>
+          <option value="dosimetro">Dosímetro de Ruído</option>
+          <option value="bomba_amostragem">Bomba de Amostragem de Ar</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="mf"><label>Nº de Série</label><input type="text" id="instrumento-serie" placeholder="Ex: DEC-8842"></div>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>Fabricante</label><input type="text" id="instrumento-fabricante" placeholder="Ex: Instrutherm"></div>
+      <div class="mf"><label>Norma de Referência</label><input type="text" id="instrumento-norma" placeholder="Ex: NR-15"></div>
+    </div>
+    <div class="mf"><label>Laboratório de Calibração</label><input type="text" id="instrumento-laboratorio" placeholder="Ex: Laboratório XYZ (RBC/INMETRO)"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Nº do Certificado</label><input type="text" id="instrumento-certificado" placeholder="Ex: CERT-2026-0091"></div>
+      <div class="mf"><label>Status</label>
+        <select id="instrumento-status">
+          <option value="calibrado">Calibrado</option>
+          <option value="em_calibracao">Em Calibração</option>
+          <option value="vencido">Calibração Vencida</option>
+        </select>
+      </div>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>Última Calibração</label><input type="date" id="instrumento-ultima"></div>
+      <div class="mf"><label>Próxima Calibração</label><input type="date" id="instrumento-proxima"></div>
+    </div>
+    <div class="mf"><label>Observações</label><textarea id="instrumento-obs" placeholder="Faixa de medição, acessórios, histórico..."></textarea></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-instrumento')">Cancelar</button>
+      <button class="btn-submit" onclick="salvarInstrumento()">Salvar Instrumento</button>
     </div>
   </div>
 </div>
@@ -633,6 +775,7 @@ function filtrarEPIs(q) {
 // ── Modais ─────────────────────────────────────────────────────
 function abrirModalEntrega() {
   document.getElementById('ent-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('ent-serie').value = '';
   const busca = document.getElementById('ent-epi-busca');
   if (busca) busca.value = '';
   document.querySelectorAll('#ent-epi-lista .ent-epi-check').forEach(c => c.checked = false);
@@ -660,7 +803,16 @@ function editarEPI(id) {
   document.getElementById('edit-epi-validade-ca').value = epi.validade_ca || '';
   document.getElementById('edit-epi-fornecedor').value = epi.fornecedor || '';
   document.getElementById('edit-epi-descricao').value = epi.descricao || '';
+  document.getElementById('edit-epi-exige-inspecao').checked = !!epi.exige_inspecao_periodica;
+  document.getElementById('edit-epi-norma-inspecao').value = epi.norma_inspecao || '';
+  document.getElementById('edit-epi-periodicidade').value = epi.periodicidade_inspecao_dias || '';
+  document.getElementById('edit-epi-inspecao-fields').style.display = epi.exige_inspecao_periodica ? 'grid' : 'none';
   document.getElementById('modal-editar-epi').classList.add('open');
+}
+
+function toggleInspecaoFields(prefix) {
+  const marcado = document.getElementById(prefix + '-exige-inspecao').checked;
+  document.getElementById(prefix + '-inspecao-fields').style.display = marcado ? 'grid' : 'none';
 }
 
 async function salvarEdicaoEPI() {
@@ -671,7 +823,10 @@ async function salvarEdicaoEPI() {
     ca_numero: document.getElementById('edit-epi-ca').value.trim(),
     validade_ca: document.getElementById('edit-epi-validade-ca').value || null,
     fornecedor: document.getElementById('edit-epi-fornecedor').value.trim(),
-    descricao: document.getElementById('edit-epi-descricao').value.trim()
+    descricao: document.getElementById('edit-epi-descricao').value.trim(),
+    exige_inspecao_periodica: document.getElementById('edit-epi-exige-inspecao').checked,
+    norma_inspecao: document.getElementById('edit-epi-norma-inspecao').value.trim(),
+    periodicidade_inspecao_dias: parseInt(document.getElementById('edit-epi-periodicidade').value) || null
   };
   if (!body.nome) { showToast('Informe o nome do EPI', true); return; }
   try {
@@ -728,7 +883,10 @@ async function criarEPI() {
     ca_numero: document.getElementById('epi-ca').value.trim(),
     validade_ca: document.getElementById('epi-validade-ca').value || null,
     fornecedor: document.getElementById('epi-fornecedor').value.trim(),
-    descricao: document.getElementById('epi-descricao').value.trim()
+    descricao: document.getElementById('epi-descricao').value.trim(),
+    exige_inspecao_periodica: document.getElementById('epi-exige-inspecao').checked,
+    norma_inspecao: document.getElementById('epi-norma-inspecao').value.trim(),
+    periodicidade_inspecao_dias: parseInt(document.getElementById('epi-periodicidade').value) || null
   };
   if (!body.nome) { showToast('Informe o nome do EPI', true); return; }
   try {
@@ -750,6 +908,7 @@ async function criarEntrega() {
   const funcionario_id = parseInt(document.getElementById('ent-funcionario').value, 10);
   const data_entrega = document.getElementById('ent-data').value;
   const quantidade = parseInt(document.getElementById('ent-qtd').value) || 1;
+  const numero_serie_item = document.getElementById('ent-serie').value.trim();
   const observacoes = document.getElementById('ent-obs').value.trim();
   const epiIds = Array.from(document.querySelectorAll('#ent-epi-lista .ent-epi-check:checked')).map(c => parseInt(c.value, 10));
 
@@ -767,7 +926,7 @@ async function criarEntrega() {
       const r = await fetch('/api/sst/epis/entregas/', {
         method: 'POST',
         headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
-        body: JSON.stringify({ funcionario_id, epi_id, data_entrega, quantidade, observacoes })
+        body: JSON.stringify({ funcionario_id, epi_id, data_entrega, quantidade, numero_serie_item, observacoes })
       });
       if (!r.ok) throw new Error('Erro ' + r.status);
       sucesso++;
@@ -836,6 +995,239 @@ async function confirmarDevolucao() {
   }
 }
 
+// ── Inspeções Periódicas de EPI ────────────────────────────────
+let inspecoesPendentes = [];
+let inspecoesHistorico = [];
+const resultadoLabel = { aprovado: 'Aprovado', condicional: 'Aprovado c/ ressalva', reprovado: 'Reprovado' };
+const resultadoBadge = { aprovado: 'b-teal', condicional: 'b-amber', reprovado: 'b-red' };
+
+async function carregarInspecoes() {
+  try {
+    const [rPend, rHist] = await Promise.all([
+      fetch('/api/sst/epis/inspecoes/pendentes'),
+      fetch('/api/sst/epis/inspecoes'),
+    ]);
+    const dPend = await rPend.json();
+    const dHist = await rHist.json();
+    inspecoesPendentes = dPend.pendentes || [];
+    inspecoesHistorico = dHist.inspecoes || [];
+    renderInspecoesPendentes();
+    renderInspecoesHistorico();
+  } catch(e) {
+    document.getElementById('tbody-inspecoes').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Erro ao carregar inspeções</td></tr>`;
+  }
+}
+
+function renderInspecoesPendentes() {
+  const busca = (document.getElementById('busca-inspecao')?.value || '').toLowerCase();
+  let lista = inspecoesPendentes;
+  if (busca) lista = lista.filter(p =>
+    (p.funcionario_nome||'').toLowerCase().includes(busca) || (p.epi_nome||'').toLowerCase().includes(busca)
+  );
+  document.getElementById('cnt-inspecoes').textContent = `${lista.length} item${lista.length !== 1 ? 's' : ''}`;
+  if (!lista.length) {
+    document.getElementById('tbody-inspecoes').innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="ei">🔧</div><h3>Nenhum EPI com inspeção periódica pendente</h3><p>Marque "Exige inspeção periódica" no catálogo para EPIs como luvas isolantes (NR-10) ou talabartes (NR-35)</p></div></td></tr>`;
+    return;
+  }
+  document.getElementById('tbody-inspecoes').innerHTML = lista.map(p => {
+    const statusBadge = p.vencida
+      ? '<span class="badge b-red">Vencida / Nunca inspecionada</span>'
+      : (p.dias_para_vencer !== null && p.dias_para_vencer <= 15 ? `<span class="badge b-amber">Vence em ${p.dias_para_vencer}d</span>` : '<span class="badge b-teal">Em dia</span>');
+    return `<tr>
+      <td>${p.funcionario_nome}</td>
+      <td>${p.epi_nome}</td>
+      <td>${p.norma_inspecao || '—'}</td>
+      <td>${p.numero_serie_item || '—'}</td>
+      <td>${fmtData(p.ultima_inspecao)}</td>
+      <td>${fmtData(p.proxima_inspecao)}</td>
+      <td>${statusBadge}</td>
+      <td><button class="btn-row" onclick="abrirModalInspecao(${p.entrega_id}, '${(p.funcionario_nome||'').replace(/'/g,"\\'")}', '${(p.epi_nome||'').replace(/'/g,"\\'")}')">Registrar Inspeção</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderInspecoesHistorico() {
+  document.getElementById('cnt-inspecoes-hist').textContent = `${inspecoesHistorico.length} registro${inspecoesHistorico.length !== 1 ? 's' : ''}`;
+  if (!inspecoesHistorico.length) {
+    document.getElementById('tbody-inspecoes-hist').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Nenhuma inspeção registrada ainda.</td></tr>`;
+    return;
+  }
+  document.getElementById('tbody-inspecoes-hist').innerHTML = inspecoesHistorico.map(i => `<tr>
+    <td>${i.funcionario_nome}</td>
+    <td>${i.epi_nome}</td>
+    <td>${fmtData(i.data_inspecao)}</td>
+    <td><span class="badge ${resultadoBadge[i.resultado] || 'b-muted'}">${i.resultado_label || resultadoLabel[i.resultado] || i.resultado}</span></td>
+    <td>${i.responsavel_tecnico || '—'}</td>
+    <td>${i.numero_laudo || '—'}</td>
+    <td>${fmtData(i.proxima_inspecao)}</td>
+  </tr>`).join('');
+}
+
+function abrirModalInspecao(entregaId, funcionarioNome, epiNome) {
+  document.getElementById('insp-entrega-id').value = entregaId;
+  document.getElementById('insp-info').textContent = `${funcionarioNome} — ${epiNome}`;
+  document.getElementById('insp-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('insp-resultado').value = 'aprovado';
+  document.getElementById('insp-responsavel').value = '';
+  document.getElementById('insp-laudo').value = '';
+  document.getElementById('insp-proxima').value = '';
+  document.getElementById('insp-obs').value = '';
+  document.getElementById('modal-inspecao').classList.add('open');
+}
+
+async function salvarInspecao() {
+  const entrega_id = parseInt(document.getElementById('insp-entrega-id').value, 10);
+  const data_inspecao = document.getElementById('insp-data').value;
+  if (!data_inspecao) { showToast('Informe a data da inspeção', true); return; }
+  const body = {
+    entrega_id,
+    data_inspecao,
+    resultado: document.getElementById('insp-resultado').value,
+    responsavel_tecnico: document.getElementById('insp-responsavel').value.trim(),
+    numero_laudo: document.getElementById('insp-laudo').value.trim(),
+    proxima_inspecao: document.getElementById('insp-proxima').value || null,
+    observacoes: document.getElementById('insp-obs').value.trim(),
+  };
+  try {
+    const r = await fetch('/api/sst/epis/inspecoes', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    fecharModal('modal-inspecao');
+    showToast('Inspeção registrada com sucesso');
+    await carregarInspecoes();
+  } catch(e) {
+    showToast('Erro ao registrar inspeção: ' + e.message, true);
+  }
+}
+
+// ── Calibração de Instrumentos de Medição ──────────────────────
+let instrumentos = [];
+const instrumentoStatusBadge = { calibrado: 'b-teal', vencido: 'b-red', em_calibracao: 'b-amber' };
+const instrumentoStatusLabel = { calibrado: 'Calibrado', vencido: 'Calibração Vencida', em_calibracao: 'Em Calibração' };
+
+async function carregarInstrumentos() {
+  try {
+    const r = await fetch('/api/sst/instrumentos');
+    const d = await r.json();
+    instrumentos = d.instrumentos || [];
+    renderInstrumentos();
+  } catch(e) {
+    document.getElementById('tbody-instrumentos').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Erro ao carregar instrumentos</td></tr>`;
+  }
+}
+
+function renderInstrumentos() {
+  const busca = (document.getElementById('busca-instrumento')?.value || '').toLowerCase();
+  let lista = instrumentos;
+  if (busca) lista = lista.filter(it =>
+    (it.nome||'').toLowerCase().includes(busca) || (it.numero_serie||'').toLowerCase().includes(busca)
+  );
+  document.getElementById('cnt-instrumentos').textContent = `${lista.length} instrumento${lista.length !== 1 ? 's' : ''}`;
+  if (!lista.length) {
+    document.getElementById('tbody-instrumentos').innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="ei">📏</div><h3>Nenhum instrumento cadastrado</h3><p>Cadastre decibelímetros, luxímetros e outros instrumentos usados em avaliações de SST</p></div></td></tr>`;
+    return;
+  }
+  document.getElementById('tbody-instrumentos').innerHTML = lista.map(it => `<tr>
+    <td>${it.nome}</td>
+    <td>${it.tipo_label}</td>
+    <td>${it.numero_serie || '—'}</td>
+    <td>${it.norma_referencia || '—'}</td>
+    <td>${fmtData(it.data_ultima_calibracao)}</td>
+    <td>${fmtData(it.data_proxima_calibracao)}</td>
+    <td><span class="badge ${instrumentoStatusBadge[it.status] || 'b-muted'}">${instrumentoStatusLabel[it.status] || it.status}</span></td>
+    <td>
+      <button class="btn-row" onclick="editarInstrumento(${it.id})">Editar</button>
+      <button class="btn-row danger" onclick="excluirInstrumento(${it.id})">Remover</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalInstrumento() {
+  document.getElementById('instrumento-titulo').textContent = 'Novo Instrumento de Medição';
+  document.getElementById('instrumento-id').value = '';
+  document.getElementById('instrumento-nome').value = '';
+  document.getElementById('instrumento-tipo').value = 'decibelimetro';
+  document.getElementById('instrumento-serie').value = '';
+  document.getElementById('instrumento-fabricante').value = '';
+  document.getElementById('instrumento-norma').value = '';
+  document.getElementById('instrumento-laboratorio').value = '';
+  document.getElementById('instrumento-certificado').value = '';
+  document.getElementById('instrumento-status').value = 'calibrado';
+  document.getElementById('instrumento-ultima').value = '';
+  document.getElementById('instrumento-proxima').value = '';
+  document.getElementById('instrumento-obs').value = '';
+  document.getElementById('modal-instrumento').classList.add('open');
+}
+
+function editarInstrumento(id) {
+  const it = instrumentos.find(x => x.id === id);
+  if (!it) return;
+  document.getElementById('instrumento-titulo').textContent = 'Editar Instrumento de Medição';
+  document.getElementById('instrumento-id').value = it.id;
+  document.getElementById('instrumento-nome').value = it.nome || '';
+  document.getElementById('instrumento-tipo').value = it.tipo || 'outro';
+  document.getElementById('instrumento-serie').value = it.numero_serie || '';
+  document.getElementById('instrumento-fabricante').value = it.fabricante || '';
+  document.getElementById('instrumento-norma').value = it.norma_referencia || '';
+  document.getElementById('instrumento-laboratorio').value = it.laboratorio_calibracao || '';
+  document.getElementById('instrumento-certificado').value = it.numero_certificado || '';
+  document.getElementById('instrumento-status').value = it.status || 'calibrado';
+  document.getElementById('instrumento-ultima').value = it.data_ultima_calibracao || '';
+  document.getElementById('instrumento-proxima').value = it.data_proxima_calibracao || '';
+  document.getElementById('instrumento-obs').value = it.observacoes || '';
+  document.getElementById('modal-instrumento').classList.add('open');
+}
+
+async function salvarInstrumento() {
+  const id = document.getElementById('instrumento-id').value;
+  const body = {
+    nome: document.getElementById('instrumento-nome').value.trim(),
+    tipo: document.getElementById('instrumento-tipo').value,
+    numero_serie: document.getElementById('instrumento-serie').value.trim(),
+    fabricante: document.getElementById('instrumento-fabricante').value.trim(),
+    norma_referencia: document.getElementById('instrumento-norma').value.trim(),
+    laboratorio_calibracao: document.getElementById('instrumento-laboratorio').value.trim(),
+    numero_certificado: document.getElementById('instrumento-certificado').value.trim(),
+    status: document.getElementById('instrumento-status').value,
+    data_ultima_calibracao: document.getElementById('instrumento-ultima').value || null,
+    data_proxima_calibracao: document.getElementById('instrumento-proxima').value || null,
+    observacoes: document.getElementById('instrumento-obs').value.trim(),
+  };
+  if (!body.nome) { showToast('Informe o nome do instrumento', true); return; }
+  try {
+    const url = id ? `/api/sst/instrumentos/${id}/` : '/api/sst/instrumentos/';
+    const r = await fetch(url, {
+      method: id ? 'PUT' : 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    fecharModal('modal-instrumento');
+    showToast(id ? 'Instrumento atualizado' : 'Instrumento cadastrado');
+    await carregarInstrumentos();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, true);
+  }
+}
+
+async function excluirInstrumento(id) {
+  if (!confirm('Remover este instrumento do cadastro ativo?')) return;
+  try {
+    const r = await fetch(`/api/sst/instrumentos/${id}/`, {
+      method: 'DELETE',
+      headers: {'X-CSRFToken':getCookie('csrftoken')}
+    });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    showToast('Instrumento removido');
+    await carregarInstrumentos();
+  } catch(e) {
+    showToast('Erro ao remover: ' + e.message, true);
+  }
+}
+
 // ── Close modals on backdrop click ────────────────────────────
 document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
@@ -844,6 +1236,8 @@ document.querySelectorAll('.modal-bg').forEach(bg => {
 // ── Init ───────────────────────────────────────────────────────
 carregarCatalogo();
 carregarEntregas();
+carregarInspecoes();
+carregarInstrumentos();
 document.getElementById('ent-data').value = new Date().toISOString().split('T')[0];
 </script>
 </body>

@@ -354,6 +354,45 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       </div>
     </div>
 
+    <!-- CATÁLOGO DE TIPOS DE TREINAMENTO -->
+    <div class="nr-section">
+      <div class="nr-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Catálogo de Tipos de Treinamento — carga horária editável</span>
+        <button class="filtro-btn" onclick="abrirModalTipoTreinamento()">+ Novo Tipo</button>
+      </div>
+      <div class="table-area" style="margin-top:8px">
+        <table class="data-table">
+          <thead><tr><th>NR</th><th>Tipo de Treinamento</th><th>Carga Horária Padrão (h)</th><th>Reciclagem (dias)</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyTiposTreinamento">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RELATÓRIO HOMEM-HORA -->
+    <div class="nr-section">
+      <div class="nr-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Relatório de Homem-Hora — controle interno e auditoria</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="hhDataInicio" style="padding:6px 10px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);font-size:.78rem">
+          <span style="color:var(--muted);font-size:.78rem">até</span>
+          <input type="date" id="hhDataFim" style="padding:6px 10px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);font-size:.78rem">
+          <button class="filtro-btn" onclick="carregarHomemHora()">Filtrar</button>
+          <button class="filtro-btn" onclick="imprimirHomemHora()">🖨️ Imprimir</button>
+        </div>
+      </div>
+      <div class="table-area" style="margin-top:8px">
+        <table class="data-table">
+          <thead><tr><th>NR</th><th>Tipo de Treinamento</th><th>Participantes</th><th>Carga Horária (h)</th><th>Homem-Hora Total</th></tr></thead>
+          <tbody id="tbodyHomemHora">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr>
+          </tbody>
+        </table>
+        <div style="padding:14px 18px;text-align:right;font-weight:800;font-size:.9rem" id="hhTotalGeral"></div>
+      </div>
+    </div>
+
     <!-- TOOLBAR -->
     <div class="toolbar">
       <div class="filtros" id="filtros">
@@ -442,6 +481,13 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       </div>
 
       <div class="mf">
+        <label for="fTipoTreinamento">Tipo de Treinamento (catálogo) <span style="font-weight:400">— opcional, pré-preenche título e carga horária</span></label>
+        <select id="fTipoTreinamento" onchange="aplicarTipoTreinamento()">
+          <option value="">Nenhum — preencher manualmente</option>
+        </select>
+      </div>
+
+      <div class="mf">
         <label for="fTitulo">Título do Treinamento *</label>
         <input type="text" id="fTitulo" placeholder="Ex: Treinamento NR-35 Trabalho em Altura" required>
         <div class="error-msg" id="errTitulo">Informe o título do treinamento.</div>
@@ -484,6 +530,45 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
   </div>
 </div>
 
+<!-- MODAL TIPO DE TREINAMENTO (CATÁLOGO) -->
+<div class="modal-bg" id="modalTipoBg" onclick="if(event.target===this) fecharModalTipo()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTipoTitle">Novo Tipo de Treinamento</div>
+        <div class="modal-sub">Cadastre um tipo de treinamento com carga horária padrão editável — usado para pré-preencher registros e no relatório de homem-hora.</div>
+      </div>
+      <button class="modal-close" onclick="fecharModalTipo()" aria-label="Fechar">✕</button>
+    </div>
+    <form id="formTipoTreinamento" onsubmit="submitTipoTreinamento(event)" novalidate>
+      <input type="hidden" id="tpId">
+      <div class="mf-row">
+        <div class="mf">
+          <label for="tpNr">NR *</label>
+          <select id="tpNr" required><option value="">Selecione a NR</option></select>
+        </div>
+        <div class="mf">
+          <label for="tpCh">Carga Horária Padrão (h) *</label>
+          <input type="number" id="tpCh" placeholder="Ex: 8" min="1" required>
+        </div>
+      </div>
+      <div class="mf">
+        <label for="tpNome">Nome do Tipo *</label>
+        <input type="text" id="tpNome" placeholder="Ex: NR-35 Básico, NR-10 SEP Reciclagem" required>
+      </div>
+      <div class="mf">
+        <label for="tpPeriodicidade">Periodicidade de Reciclagem (dias)</label>
+        <input type="number" id="tpPeriodicidade" placeholder="Ex: 730 (2 anos)" min="1">
+      </div>
+      <div class="error-msg" id="errTipoGeral" style="margin-top:4px;font-size:.75rem"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="fecharModalTipo()">Cancelar</button>
+        <button type="submit" class="btn-primary" id="btnSubmitTipo">Salvar Tipo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script id="nrCatalogoData" type="application/json">{{ normas_json|safe }}</script>
 <script>
 /* ═══════════════════════════════════════════
@@ -503,6 +588,7 @@ function popularSelectsNR() {
   const optsForm = NR_CATALOGO.map(n => `<option value="${n.nr}"${n.revogada ? ' disabled' : ''}>${n.nr} — ${n.tema || n.titulo}${n.revogada ? ' (revogada)' : ''}</option>`).join('');
   document.getElementById('selectNr').insertAdjacentHTML('beforeend', optsFiltro + '<option value="outro">Outro</option>');
   document.getElementById('fNr').insertAdjacentHTML('beforeend', optsForm + '<option value="outro">Outro</option>');
+  document.getElementById('tpNr').insertAdjacentHTML('beforeend', optsForm + '<option value="outro">Outro</option>');
 }
 
 /* ═══════════════════════════════════════════
@@ -862,11 +948,175 @@ function lerQuerystring() {
 }
 
 /* ═══════════════════════════════════════════
+   CATÁLOGO DE TIPOS DE TREINAMENTO
+═══════════════════════════════════════════ */
+let tiposTreinamento = [];
+
+async function carregarTiposTreinamento() {
+  try {
+    const r = await fetch('/api/sst/treinamentos/tipos', { credentials: 'include' });
+    const d = await r.json();
+    tiposTreinamento = d.tipos || [];
+  } catch (e) {
+    tiposTreinamento = [];
+  }
+  renderTiposTreinamento();
+  popularSelectTipoTreinamento();
+}
+
+function renderTiposTreinamento() {
+  const tbody = document.getElementById('tbodyTiposTreinamento');
+  if (!tiposTreinamento.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum tipo cadastrado. Use "+ Novo Tipo" para criar, ex: "NR-35 Básico" com 8h.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = tiposTreinamento.map(t => `<tr>
+    <td>${t.nr_label || t.nr}</td>
+    <td>${t.nome}</td>
+    <td>${t.carga_horaria_padrao}</td>
+    <td>${t.periodicidade_dias || '—'}</td>
+    <td>
+      <button class="filtro-btn" onclick="editarTipoTreinamento(${t.id})">Editar</button>
+      <button class="filtro-btn" onclick="excluirTipoTreinamento(${t.id})">Remover</button>
+    </td>
+  </tr>`).join('');
+}
+
+function popularSelectTipoTreinamento() {
+  const sel = document.getElementById('fTipoTreinamento');
+  sel.innerHTML = '<option value="">Nenhum — preencher manualmente</option>' +
+    tiposTreinamento.map(t => `<option value="${t.id}" data-nr="${t.nr}" data-ch="${t.carga_horaria_padrao}" data-nome="${t.nome}">${t.nr_label || t.nr} — ${t.nome} (${t.carga_horaria_padrao}h)</option>`).join('');
+}
+
+function aplicarTipoTreinamento() {
+  const sel = document.getElementById('fTipoTreinamento');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) return;
+  document.getElementById('fNr').value = opt.dataset.nr;
+  document.getElementById('fCh').value = opt.dataset.ch;
+  if (!document.getElementById('fTitulo').value.trim()) {
+    document.getElementById('fTitulo').value = opt.dataset.nome;
+  }
+}
+
+function abrirModalTipoTreinamento() {
+  document.getElementById('modalTipoTitle').textContent = 'Novo Tipo de Treinamento';
+  document.getElementById('tpId').value = '';
+  document.getElementById('tpNr').value = '';
+  document.getElementById('tpCh').value = '';
+  document.getElementById('tpNome').value = '';
+  document.getElementById('tpPeriodicidade').value = '';
+  document.getElementById('errTipoGeral').textContent = '';
+  document.getElementById('modalTipoBg').classList.add('open');
+}
+
+function fecharModalTipo() {
+  document.getElementById('modalTipoBg').classList.remove('open');
+}
+
+function editarTipoTreinamento(id) {
+  const t = tiposTreinamento.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('modalTipoTitle').textContent = 'Editar Tipo de Treinamento';
+  document.getElementById('tpId').value = t.id;
+  document.getElementById('tpNr').value = t.nr;
+  document.getElementById('tpCh').value = t.carga_horaria_padrao;
+  document.getElementById('tpNome').value = t.nome;
+  document.getElementById('tpPeriodicidade').value = t.periodicidade_dias || '';
+  document.getElementById('modalTipoBg').classList.add('open');
+}
+
+async function submitTipoTreinamento(ev) {
+  ev.preventDefault();
+  const id = document.getElementById('tpId').value;
+  const body = {
+    nr: document.getElementById('tpNr').value,
+    nome: document.getElementById('tpNome').value.trim(),
+    carga_horaria_padrao: parseInt(document.getElementById('tpCh').value) || 0,
+    periodicidade_dias: parseInt(document.getElementById('tpPeriodicidade').value) || null,
+  };
+  if (!body.nr || !body.nome || !body.carga_horaria_padrao) {
+    document.getElementById('errTipoGeral').textContent = 'Preencha NR, nome e carga horária.';
+    return;
+  }
+  try {
+    const url = id ? `/api/sst/treinamentos/tipos/${id}/` : '/api/sst/treinamentos/tipos';
+    const r = await fetch(url, {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erro || ('Erro ' + r.status));
+    fecharModalTipo();
+    await carregarTiposTreinamento();
+  } catch (e) {
+    document.getElementById('errTipoGeral').textContent = e.message;
+  }
+}
+
+async function excluirTipoTreinamento(id) {
+  if (!confirm('Remover este tipo do catálogo?')) return;
+  try {
+    await fetch(`/api/sst/treinamentos/tipos/${id}/`, {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCsrfToken() },
+      credentials: 'include',
+    });
+    await carregarTiposTreinamento();
+  } catch (e) {
+    console.error('Erro ao remover tipo de treinamento:', e);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RELATÓRIO HOMEM-HORA
+═══════════════════════════════════════════ */
+async function carregarHomemHora() {
+  const tbody = document.getElementById('tbodyHomemHora');
+  const dataInicio = document.getElementById('hhDataInicio').value;
+  const dataFim = document.getElementById('hhDataFim').value;
+  const params = new URLSearchParams();
+  if (dataInicio) params.set('data_inicio', dataInicio);
+  if (dataFim) params.set('data_fim', dataFim);
+  try {
+    const r = await fetch('/api/sst/treinamentos/homem-hora?' + params.toString(), { credentials: 'include' });
+    const d = await r.json();
+    const linhas = d.linhas || [];
+    if (!linhas.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum treinamento concluído no período.</td></tr>`;
+      document.getElementById('hhTotalGeral').textContent = '';
+      return;
+    }
+    tbody.innerHTML = linhas.map(l => `<tr>
+      <td>${l.nr}</td>
+      <td>${l.nome_tipo}</td>
+      <td>${l.participantes}</td>
+      <td>${l.carga_horaria}</td>
+      <td><strong>${l.homem_hora}</strong></td>
+    </tr>`).join('');
+    document.getElementById('hhTotalGeral').textContent = `Total geral de homem-hora: ${d.total_geral}`;
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Erro ao carregar relatório.</td></tr>`;
+  }
+}
+
+function imprimirHomemHora() {
+  const dataInicio = document.getElementById('hhDataInicio').value;
+  const dataFim = document.getElementById('hhDataFim').value;
+  const params = new URLSearchParams();
+  if (dataInicio) params.set('data_inicio', dataInicio);
+  if (dataFim) params.set('data_fim', dataFim);
+  window.open('/api/sst/treinamentos/homem-hora/pdf?' + params.toString(), '_blank');
+}
+
+/* ═══════════════════════════════════════════
 INIT
 ═══════════════════════════════════════════ */
 popularSelectsNR();
 lerQuerystring();
-Promise.all([carregarResumo(), carregarTreinamentos()]);
+Promise.all([carregarResumo(), carregarTreinamentos(), carregarTiposTreinamento(), carregarHomemHora()]);
 </script>
 </body>
 </html>

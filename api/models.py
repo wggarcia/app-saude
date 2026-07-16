@@ -1525,6 +1525,10 @@ class TreinamentoNR(models.Model):
 
     empresa     = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="treinamentos_nr")
     funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="treinamentos")
+    tipo_treinamento = models.ForeignKey(
+        "TipoTreinamentoNR", on_delete=models.SET_NULL, null=True, blank=True, related_name="treinamentos_registrados",
+        help_text="Tipo de treinamento do catálogo (opcional) — pré-preenche a carga horária padrão",
+    )
     nr          = models.CharField(max_length=10, choices=NR_CHOICES)
     titulo      = models.CharField(max_length=200, blank=True, default="")
     instrutor   = models.CharField(max_length=120, blank=True, default="")
@@ -1547,6 +1551,26 @@ class TreinamentoNR(models.Model):
 
     def __str__(self):
         return f"{self.nr} — {self.funcionario.nome} ({self.status})"
+
+
+class TipoTreinamentoNR(models.Model):
+    """Catálogo de tipos de treinamento por NR, com carga horária padrão editável —
+    usado para pré-preencher registros e para relatórios de homem-hora (controle interno/auditoria)."""
+    empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="tipos_treinamento_nr")
+    nr                    = models.CharField(max_length=10, choices=TreinamentoNR.NR_CHOICES)
+    nome                  = models.CharField(max_length=200, help_text="Ex: NR-35 Básico, NR-10 SEP Reciclagem")
+    carga_horaria_padrao  = models.PositiveSmallIntegerField(help_text="Horas — editável conforme grade interna")
+    periodicidade_dias    = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Intervalo de reciclagem, em dias")
+    ativo                 = models.BooleanField(default=True)
+    criado_em             = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nr", "nome"]
+        indexes  = [models.Index(fields=["empresa", "nr"])]
+        unique_together = [("empresa", "nr", "nome")]
+
+    def __str__(self):
+        return f"{self.nr} — {self.nome} ({self.carga_horaria_padrao}h)"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1788,6 +1812,12 @@ class EPIItem(models.Model):
     fornecedor   = models.CharField(max_length=120, blank=True, default="")
     descricao    = models.TextField(blank=True, default="")
     ativo        = models.BooleanField(default=True)
+    # Alguns EPIs exigem inspeção periódica técnica (independente da validade do CA),
+    # ex: luvas isolantes de borracha NR-10 (teste dielétrico ~6 em 6 meses),
+    # cinto/talabarte NR-35 (inspeção periódica antes de cada uso e formal periódica).
+    exige_inspecao_periodica     = models.BooleanField(default=False)
+    norma_inspecao               = models.CharField(max_length=20, blank=True, default="", help_text="Ex: NR-10, NR-35")
+    periodicidade_inspecao_dias  = models.PositiveSmallIntegerField(null=True, blank=True)
     criado_em    = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1805,6 +1835,7 @@ class EntregaEPI(models.Model):
     data_entrega = models.DateField()
     quantidade   = models.PositiveSmallIntegerField(default=1)
     data_devolucao = models.DateField(null=True, blank=True)
+    numero_serie_item = models.CharField(max_length=60, blank=True, default="", help_text="Nº de série/identificação do item físico, para EPIs com inspeção periódica")
     observacoes  = models.TextField(blank=True, default="")
     biometria_confirmada = models.BooleanField(default=False)
     foto_entrega_base64  = models.TextField(blank=True, default="", help_text="Foto capturada no momento da entrega")
@@ -1819,6 +1850,91 @@ class EntregaEPI(models.Model):
 
     def __str__(self):
         return f"{self.funcionario.nome} — {self.epi.nome} em {self.data_entrega}"
+
+
+class InspecaoEPI(models.Model):
+    """Inspeção periódica técnica de um EPI entregue (ex: teste dielétrico NR-10,
+    inspeção de talabarte/cinto NR-35) — distinta da validade do CA do modelo."""
+    RESULTADO_CHOICES = [
+        ("aprovado",    "Aprovado"),
+        ("reprovado",   "Reprovado — EPI recolhido"),
+        ("condicional", "Aprovado com ressalva"),
+    ]
+
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="inspecoes_epi")
+    entrega             = models.ForeignKey(EntregaEPI, on_delete=models.CASCADE, related_name="inspecoes")
+    data_inspecao        = models.DateField()
+    resultado            = models.CharField(max_length=20, choices=RESULTADO_CHOICES)
+    responsavel_tecnico  = models.CharField(max_length=120, blank=True, default="")
+    numero_laudo         = models.CharField(max_length=60, blank=True, default="")
+    proxima_inspecao     = models.DateField(null=True, blank=True)
+    observacoes          = models.TextField(blank=True, default="")
+    criado_em            = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_inspecao"]
+        indexes  = [
+            models.Index(fields=["empresa", "entrega"]),
+            models.Index(fields=["empresa", "proxima_inspecao"]),
+        ]
+
+    def __str__(self):
+        return f"Inspeção {self.entrega.epi.nome} — {self.data_inspecao} ({self.resultado})"
+
+
+class InstrumentoMedicaoSST(models.Model):
+    """Instrumentos de medição usados em inspeções/avaliações de SST (decibelímetro,
+    luxímetro, medidor de campo elétrico etc.) — calibração rastreável conforme NRs/INMETRO."""
+    TIPO_CHOICES = [
+        ("decibelimetro",          "Decibelímetro"),
+        ("luximetro",              "Luxímetro"),
+        ("medidor_campo_eletrico", "Medidor de Campo Elétrico/Magnético"),
+        ("termohigrometro",        "Termo-higrômetro"),
+        ("dosimetro",              "Dosímetro de Ruído"),
+        ("bomba_amostragem",       "Bomba de Amostragem de Ar"),
+        ("outro",                  "Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("calibrado",      "Calibrado"),
+        ("vencido",        "Calibração Vencida"),
+        ("em_calibracao",  "Em Calibração"),
+    ]
+
+    empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="instrumentos_medicao")
+    nome                     = models.CharField(max_length=150)
+    tipo                     = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    numero_serie             = models.CharField(max_length=60, blank=True, default="")
+    fabricante               = models.CharField(max_length=120, blank=True, default="")
+    norma_referencia         = models.CharField(max_length=20, blank=True, default="", help_text="Ex: NR-15, NR-09")
+    laboratorio_calibracao   = models.CharField(max_length=150, blank=True, default="")
+    numero_certificado       = models.CharField(max_length=60, blank=True, default="")
+    data_ultima_calibracao   = models.DateField(null=True, blank=True)
+    data_proxima_calibracao  = models.DateField(null=True, blank=True)
+    status                   = models.CharField(max_length=20, choices=STATUS_CHOICES, default="calibrado")
+    ativo                    = models.BooleanField(default=True)
+    observacoes              = models.TextField(blank=True, default="")
+    criado_em                = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["tipo", "nome"]
+        indexes  = [
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["empresa", "data_proxima_calibracao"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} ({self.numero_serie}) — {self.empresa.nome}"
+
+    @property
+    def status_calculado(self):
+        """status explícito, exceto quando a data de próxima calibração já passou
+        (nesse caso força 'vencido' mesmo que ninguém tenha atualizado o campo)."""
+        from datetime import date
+        if self.status == "em_calibracao":
+            return "em_calibracao"
+        if self.data_proxima_calibracao and self.data_proxima_calibracao < date.today():
+            return "vencido"
+        return self.status
 
 
 # ─── SalaChat Groups — membros ────────────────────────────────

@@ -1744,6 +1744,7 @@ def api_treinamentos(request):
                     "cargo": t.funcionario.cargo,
                     "nr": t.nr,
                     "nr_label": t.get_nr_display(),
+                    "tipo_treinamento_id": t.tipo_treinamento_id,
                     "titulo": t.titulo,
                     "instrutor": t.instrutor,
                     "carga_horaria": t.carga_horaria,
@@ -1785,13 +1786,20 @@ def api_treinamentos(request):
             status_auto = "agendado"
         else:
             status_auto = "pendente"
+        tipo_treinamento = None
+        if data.get("tipo_treinamento_id"):
+            tipo_treinamento = TipoTreinamentoNR.objects.filter(id=data["tipo_treinamento_id"], empresa=empresa).first()
+        carga_horaria = data.get("carga_horaria")
+        if carga_horaria in (None, "") and tipo_treinamento:
+            carga_horaria = tipo_treinamento.carga_horaria_padrao
         t = TreinamentoNR.objects.create(
             empresa=empresa,
             funcionario=func,
+            tipo_treinamento=tipo_treinamento,
             nr=nr,
-            titulo=data.get("titulo", ""),
+            titulo=data.get("titulo", "") or (tipo_treinamento.nome if tipo_treinamento else ""),
             instrutor=data.get("instrutor", ""),
-            carga_horaria=int(data.get("carga_horaria") or 0),
+            carga_horaria=int(carga_horaria or 0),
             data_realizacao=dr,
             data_validade=dv,
             status=data.get("status") or status_auto,
@@ -1840,6 +1848,140 @@ def api_treinamentos_resumo(request):
     })
 
 
+# ── Catálogo de Tipos de Treinamento (carga horária editável) ────────────────
+
+@csrf_exempt
+def api_tipos_treinamento(request):
+    """GET lista tipos de treinamento do catálogo | POST cria novo tipo."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    if request.method == "GET":
+        qs = TipoTreinamentoNR.objects.filter(empresa=empresa, ativo=True)
+        return JsonResponse({"tipos": [{
+            "id": t.id,
+            "nr": t.nr,
+            "nr_label": t.get_nr_display(),
+            "nome": t.nome,
+            "carga_horaria_padrao": t.carga_horaria_padrao,
+            "periodicidade_dias": t.periodicidade_dias,
+        } for t in qs]})
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        nome = data.get("nome", "").strip()
+        if not nome:
+            return JsonResponse({"erro": "nome obrigatório"}, status=400)
+        try:
+            carga = int(data.get("carga_horaria_padrao") or 0)
+        except (TypeError, ValueError):
+            return JsonResponse({"erro": "carga_horaria_padrao inválida"}, status=400)
+        if carga <= 0:
+            return JsonResponse({"erro": "carga_horaria_padrao deve ser maior que zero"}, status=400)
+        tipo, criado = TipoTreinamentoNR.objects.update_or_create(
+            empresa=empresa, nr=data.get("nr", "outro"), nome=nome,
+            defaults={
+                "carga_horaria_padrao": carga,
+                "periodicidade_dias": data.get("periodicidade_dias") or None,
+                "ativo": True,
+            },
+        )
+        return JsonResponse({"id": tipo.id, "criado": criado}, status=201 if criado else 200)
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_tipos_treinamento_detail(request, tipo_id):
+    """PUT edita carga horária/periodicidade | DELETE inativa um tipo do catálogo."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    tipo = TipoTreinamentoNR.objects.filter(id=tipo_id, empresa=empresa).first()
+    if not tipo:
+        return JsonResponse({"erro": "não encontrado"}, status=404)
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        if "nome" in data and data["nome"].strip():
+            tipo.nome = data["nome"].strip()
+        if "nr" in data:
+            tipo.nr = data["nr"]
+        if "carga_horaria_padrao" in data:
+            try:
+                carga = int(data["carga_horaria_padrao"])
+            except (TypeError, ValueError):
+                return JsonResponse({"erro": "carga_horaria_padrao inválida"}, status=400)
+            if carga <= 0:
+                return JsonResponse({"erro": "carga_horaria_padrao deve ser maior que zero"}, status=400)
+            tipo.carga_horaria_padrao = carga
+        if "periodicidade_dias" in data:
+            tipo.periodicidade_dias = data["periodicidade_dias"] or None
+        tipo.save()
+        return JsonResponse({"ok": True})
+    if request.method == "DELETE":
+        tipo.ativo = False
+        tipo.save()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── Relatório de Homem-Hora (controle interno / auditoria) ───────────────────
+
+def _homem_hora_linhas(empresa, data_ini=None, data_fim=None):
+    qs = TreinamentoNR.objects.filter(empresa=empresa, status__in=["valido", "vencido"]).select_related("tipo_treinamento")
+    if data_ini:
+        qs = qs.filter(data_realizacao__gte=data_ini)
+    if data_fim:
+        qs = qs.filter(data_realizacao__lte=data_fim)
+    grupos = {}
+    nr_labels = dict(TreinamentoNR.NR_CHOICES)
+    for t in qs:
+        nome_tipo = t.tipo_treinamento.nome if t.tipo_treinamento else (t.titulo or "Sem título")
+        chave = (t.nr, nome_tipo)
+        if chave not in grupos:
+            grupos[chave] = {"nr": nr_labels.get(t.nr, t.nr), "nome_tipo": nome_tipo, "participantes": 0, "carga_horaria": t.carga_horaria, "homem_hora": 0}
+        grupos[chave]["participantes"] += 1
+        grupos[chave]["homem_hora"] += t.carga_horaria
+    linhas = sorted(grupos.values(), key=lambda l: (l["nr"], l["nome_tipo"]))
+    total_geral = sum(l["homem_hora"] for l in linhas)
+    return linhas, total_geral
+
+
+def api_treinamentos_homem_hora(request):
+    """GET — relatório de homem-hora agregado por tipo/NR, para controle interno e auditoria."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    data_ini = request.GET.get("data_inicio") or None
+    data_fim = request.GET.get("data_fim") or None
+    linhas, total_geral = _homem_hora_linhas(empresa, data_ini, data_fim)
+    return JsonResponse({"linhas": linhas, "total_geral": total_geral})
+
+
+def api_treinamentos_homem_hora_pdf(request):
+    """GET — relatório PDF de homem-hora agregado por tipo/NR."""
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_homem_hora_treinamentos
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    data_ini = request.GET.get("data_inicio") or None
+    data_fim = request.GET.get("data_fim") or None
+    linhas, total_geral = _homem_hora_linhas(empresa, data_ini, data_fim)
+    if data_ini and data_fim:
+        periodo_label = f"Período de {data_ini} a {data_fim}"
+    else:
+        periodo_label = "Todos os treinamentos válidos/concluídos"
+    pdf_bytes = gerar_pdf_homem_hora_treinamentos(linhas, total_geral, empresa.nome, periodo_label)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="relatorio_homem_hora_treinamentos.pdf"'
+    return resp
+
+
 @requer_permissao_modulo("sst.gestao_conformidade")
 def sst_normas_page(request):
     empresa = _empresa_autenticada(request)
@@ -1853,7 +1995,7 @@ def sst_normas_page(request):
 # ─────────────────────────────────────────────────────────────────────────────
 #  SST — Configurações
 # ─────────────────────────────────────────────────────────────────────────────
-from .models import ConfiguracaoSST, EPIItem, EntregaEPI
+from .models import ConfiguracaoSST, EPIItem, EntregaEPI, InspecaoEPI, InstrumentoMedicaoSST, TipoTreinamentoNR
 
 @requer_permissao_modulo("sst.administracao")
 def sst_configuracoes_page(request):
@@ -2036,6 +2178,9 @@ def api_epis_catalogo(request):
             "dias_validade_ca": (e.validade_ca - hoje).days if e.validade_ca else None,
             "fornecedor": e.fornecedor,
             "descricao": e.descricao,
+            "exige_inspecao_periodica": e.exige_inspecao_periodica,
+            "norma_inspecao": e.norma_inspecao,
+            "periodicidade_inspecao_dias": e.periodicidade_inspecao_dias,
         } for e in epis]})
     if request.method == "POST":
         try:
@@ -2053,6 +2198,9 @@ def api_epis_catalogo(request):
             validade_ca=data.get("validade_ca") or None,
             fornecedor=data.get("fornecedor",""),
             descricao=data.get("descricao",""),
+            exige_inspecao_periodica=bool(data.get("exige_inspecao_periodica", False)),
+            norma_inspecao=data.get("norma_inspecao",""),
+            periodicidade_inspecao_dias=data.get("periodicidade_inspecao_dias") or None,
         )
         return JsonResponse({"id": epi.id, "nome": epi.nome}, status=201)
     return JsonResponse({"erro": "método não permitido"}, status=405)
@@ -2191,6 +2339,12 @@ def api_epis_catalogo_detail(request, epi_id):
         epi.validade_ca = data.get("validade_ca") or None
         epi.fornecedor = data.get("fornecedor", epi.fornecedor)
         epi.descricao = data.get("descricao", epi.descricao)
+        if "exige_inspecao_periodica" in data:
+            epi.exige_inspecao_periodica = bool(data["exige_inspecao_periodica"])
+        if "norma_inspecao" in data:
+            epi.norma_inspecao = data["norma_inspecao"]
+        if "periodicidade_inspecao_dias" in data:
+            epi.periodicidade_inspecao_dias = data["periodicidade_inspecao_dias"] or None
         epi.save()
         return JsonResponse({"id": epi.id, "nome": epi.nome, "ok": True})
     if request.method == "DELETE":
@@ -2210,20 +2364,39 @@ def api_epis_entregas(request):
         qs = EntregaEPI.objects.filter(empresa=empresa).select_related("funcionario","epi")
         if func_id:
             qs = qs.filter(funcionario_id=func_id)
-        return JsonResponse({"entregas": [{
-            "id": e.id,
-            "funcionario_id": e.funcionario_id,
-            "funcionario_nome": e.funcionario.nome,
-            "epi_id": e.epi_id,
-            "epi_nome": e.epi.nome,
-            "epi_tipo": e.epi.get_tipo_display(),
-            "ca_numero": e.epi.ca_numero,
-            "data_entrega": e.data_entrega.isoformat(),
-            "quantidade": e.quantidade,
-            "data_devolucao": e.data_devolucao.isoformat() if e.data_devolucao else None,
-            "observacoes": e.observacoes,
-            "ativo": e.data_devolucao is None,
-        } for e in qs]})
+        hoje = date.today()
+        ultima_por_entrega = {}
+        for insp in InspecaoEPI.objects.filter(empresa=empresa, entrega_id__in=[e.id for e in qs]).order_by("-data_inspecao"):
+            ultima_por_entrega.setdefault(insp.entrega_id, insp)
+        resultado = []
+        for e in qs:
+            ultima = ultima_por_entrega.get(e.id)
+            proxima_inspecao = ultima.proxima_inspecao if ultima else None
+            resultado.append({
+                "id": e.id,
+                "funcionario_id": e.funcionario_id,
+                "funcionario_nome": e.funcionario.nome,
+                "epi_id": e.epi_id,
+                "epi_nome": e.epi.nome,
+                "epi_tipo": e.epi.get_tipo_display(),
+                "ca_numero": e.epi.ca_numero,
+                "numero_serie_item": e.numero_serie_item,
+                "data_entrega": e.data_entrega.isoformat(),
+                "quantidade": e.quantidade,
+                "data_devolucao": e.data_devolucao.isoformat() if e.data_devolucao else None,
+                "observacoes": e.observacoes,
+                "ativo": e.data_devolucao is None,
+                "exige_inspecao_periodica": e.epi.exige_inspecao_periodica,
+                "norma_inspecao": e.epi.norma_inspecao,
+                "ultima_inspecao": ultima.data_inspecao.isoformat() if ultima else None,
+                "ultima_inspecao_resultado": ultima.resultado if ultima else None,
+                "proxima_inspecao": proxima_inspecao.isoformat() if proxima_inspecao else None,
+                "inspecao_vencida": bool(
+                    e.epi.exige_inspecao_periodica and e.data_devolucao is None and
+                    proxima_inspecao and proxima_inspecao < hoje
+                ),
+            })
+        return JsonResponse({"entregas": resultado})
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -2240,6 +2413,7 @@ def api_epis_entregas(request):
             epi=epi,
             data_entrega=data.get("data_entrega") or date.today().isoformat(),
             quantidade=int(data.get("quantidade", 1)),
+            numero_serie_item=data.get("numero_serie_item",""),
             observacoes=data.get("observacoes",""),
         )
         return JsonResponse({"id": entrega.id}, status=201)
@@ -2275,6 +2449,210 @@ def api_epis_pdf_ficha(request, funcionario_id):
     pdf_bytes = gerar_pdf_ficha_epi(func, entregas, empresa.nome)
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
     resp["Content-Disposition"] = f'inline; filename="ficha_epi_{func.matricula or func.id}.pdf"'
+    return resp
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SST — Inspeção Periódica de EPI (NR-10 teste dielétrico, NR-35 talabarte/cinto etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_epi_inspecoes(request):
+    """GET lista inspeções (todas ou por entrega) | POST registra nova inspeção."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method == "GET":
+        entrega_id = request.GET.get("entrega_id")
+        qs = InspecaoEPI.objects.filter(empresa=empresa).select_related("entrega__funcionario", "entrega__epi")
+        if entrega_id:
+            qs = qs.filter(entrega_id=entrega_id)
+        return JsonResponse({"inspecoes": [{
+            "id": i.id,
+            "entrega_id": i.entrega_id,
+            "funcionario_nome": i.entrega.funcionario.nome,
+            "epi_nome": i.entrega.epi.nome,
+            "numero_serie_item": i.entrega.numero_serie_item,
+            "data_inspecao": i.data_inspecao.isoformat(),
+            "resultado": i.resultado,
+            "resultado_label": i.get_resultado_display(),
+            "responsavel_tecnico": i.responsavel_tecnico,
+            "numero_laudo": i.numero_laudo,
+            "proxima_inspecao": i.proxima_inspecao.isoformat() if i.proxima_inspecao else None,
+            "observacoes": i.observacoes,
+        } for i in qs]})
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        entrega = EntregaEPI.objects.filter(id=data.get("entrega_id"), empresa=empresa).select_related("epi").first()
+        if not entrega:
+            return JsonResponse({"erro": "entrega de EPI não encontrada"}, status=404)
+        data_inspecao = data.get("data_inspecao") or date.today().isoformat()
+        proxima = data.get("proxima_inspecao")
+        if not proxima and entrega.epi.periodicidade_inspecao_dias:
+            from datetime import timedelta, datetime as dt
+            base = dt.fromisoformat(data_inspecao).date() if isinstance(data_inspecao, str) else data_inspecao
+            proxima = (base + timedelta(days=entrega.epi.periodicidade_inspecao_dias)).isoformat()
+        inspecao = InspecaoEPI.objects.create(
+            empresa=empresa,
+            entrega=entrega,
+            data_inspecao=data_inspecao,
+            resultado=data.get("resultado", "aprovado"),
+            responsavel_tecnico=data.get("responsavel_tecnico", ""),
+            numero_laudo=data.get("numero_laudo", ""),
+            proxima_inspecao=proxima or None,
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"id": inspecao.id}, status=201)
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+def api_epi_inspecoes_pendentes(request):
+    """GET — entregas ativas de EPIs que exigem inspeção periódica, com status de vencimento."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    hoje = date.today()
+    qs = EntregaEPI.objects.filter(
+        empresa=empresa, data_devolucao__isnull=True, epi__exige_inspecao_periodica=True,
+    ).select_related("funcionario", "epi")
+    ultima_por_entrega = {}
+    for insp in InspecaoEPI.objects.filter(empresa=empresa, entrega_id__in=[e.id for e in qs]).order_by("-data_inspecao"):
+        ultima_por_entrega.setdefault(insp.entrega_id, insp)
+    resultado = []
+    for e in qs:
+        ultima = ultima_por_entrega.get(e.id)
+        proxima = ultima.proxima_inspecao if ultima else None
+        resultado.append({
+            "entrega_id": e.id,
+            "funcionario_nome": e.funcionario.nome,
+            "epi_nome": e.epi.nome,
+            "norma_inspecao": e.epi.norma_inspecao,
+            "numero_serie_item": e.numero_serie_item,
+            "ultima_inspecao": ultima.data_inspecao.isoformat() if ultima else None,
+            "proxima_inspecao": proxima.isoformat() if proxima else None,
+            "dias_para_vencer": (proxima - hoje).days if proxima else None,
+            "vencida": bool(proxima and proxima < hoje) or ultima is None,
+        })
+    resultado.sort(key=lambda r: (r["dias_para_vencer"] is None, r["dias_para_vencer"] if r["dias_para_vencer"] is not None else 0))
+    return JsonResponse({"pendentes": resultado})
+
+
+def api_epi_inspecoes_pdf(request):
+    """GET — relatório PDF consolidado de inspeções periódicas de EPI."""
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_inspecoes_epi
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    inspecoes = InspecaoEPI.objects.filter(empresa=empresa).select_related(
+        "entrega__funcionario", "entrega__epi"
+    ).order_by("-data_inspecao")
+    pdf_bytes = gerar_pdf_inspecoes_epi(inspecoes, empresa.nome)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="relatorio_inspecoes_epi.pdf"'
+    return resp
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SST — Calibração de Instrumentos de Medição (decibelímetro, luxímetro etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_instrumentos_medicao(request):
+    """GET lista instrumentos | POST cria novo instrumento."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method == "GET":
+        hoje = date.today()
+        qs = InstrumentoMedicaoSST.objects.filter(empresa=empresa, ativo=True)
+        return JsonResponse({"instrumentos": [{
+            "id": it.id,
+            "nome": it.nome,
+            "tipo": it.tipo,
+            "tipo_label": it.get_tipo_display(),
+            "numero_serie": it.numero_serie,
+            "fabricante": it.fabricante,
+            "norma_referencia": it.norma_referencia,
+            "laboratorio_calibracao": it.laboratorio_calibracao,
+            "numero_certificado": it.numero_certificado,
+            "data_ultima_calibracao": it.data_ultima_calibracao.isoformat() if it.data_ultima_calibracao else None,
+            "data_proxima_calibracao": it.data_proxima_calibracao.isoformat() if it.data_proxima_calibracao else None,
+            "dias_para_vencer": (it.data_proxima_calibracao - hoje).days if it.data_proxima_calibracao else None,
+            "status": it.status_calculado,
+            "observacoes": it.observacoes,
+        } for it in qs]})
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        nome = data.get("nome", "").strip()
+        if not nome:
+            return JsonResponse({"erro": "nome obrigatório"}, status=400)
+        it = InstrumentoMedicaoSST.objects.create(
+            empresa=empresa,
+            nome=nome,
+            tipo=data.get("tipo", "outro"),
+            numero_serie=data.get("numero_serie", ""),
+            fabricante=data.get("fabricante", ""),
+            norma_referencia=data.get("norma_referencia", ""),
+            laboratorio_calibracao=data.get("laboratorio_calibracao", ""),
+            numero_certificado=data.get("numero_certificado", ""),
+            data_ultima_calibracao=data.get("data_ultima_calibracao") or None,
+            data_proxima_calibracao=data.get("data_proxima_calibracao") or None,
+            status=data.get("status", "calibrado"),
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"id": it.id}, status=201)
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_instrumentos_medicao_detail(request, instrumento_id):
+    """PUT edita | DELETE inativa um instrumento de medição."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    it = InstrumentoMedicaoSST.objects.filter(id=instrumento_id, empresa=empresa).first()
+    if not it:
+        return JsonResponse({"erro": "não encontrado"}, status=404)
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for campo in ["nome", "tipo", "numero_serie", "fabricante", "norma_referencia",
+                      "laboratorio_calibracao", "numero_certificado", "status", "observacoes"]:
+            if campo in data:
+                setattr(it, campo, data[campo])
+        if "data_ultima_calibracao" in data:
+            it.data_ultima_calibracao = data["data_ultima_calibracao"] or None
+        if "data_proxima_calibracao" in data:
+            it.data_proxima_calibracao = data["data_proxima_calibracao"] or None
+        it.save()
+        return JsonResponse({"ok": True})
+    if request.method == "DELETE":
+        it.ativo = False
+        it.save()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+def api_instrumentos_calibracao_pdf(request):
+    """GET — relatório PDF consolidado de calibração de instrumentos."""
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_calibracao_instrumentos
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    instrumentos = InstrumentoMedicaoSST.objects.filter(empresa=empresa, ativo=True)
+    pdf_bytes = gerar_pdf_calibracao_instrumentos(instrumentos, empresa.nome)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="relatorio_calibracao_instrumentos.pdf"'
     return resp
 
 

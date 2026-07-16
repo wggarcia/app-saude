@@ -485,3 +485,161 @@ def gerar_pdf_ficha_epi(funcionario, entregas, empresa_nome):
     story.append(_footer_text(styles))
     doc.build(story)
     return buf.getvalue()
+
+
+def gerar_pdf_inspecoes_epi(inspecoes, empresa_nome):
+    """Relatório de inspeções periódicas de EPI (teste dielétrico NR-10,
+    talabarte/cinto NR-35 etc.) — lista consolidada para auditoria."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2*cm, bottomMargin=2*cm,
+        title="Relatório de Inspeções Periódicas de EPI",
+    )
+    styles = _styles()
+    story = []
+    _header_empresa(
+        story, empresa_nome,
+        "Relatório de Inspeções Periódicas de EPI",
+        "Inspeção técnica periódica de EPIs especiais (ex: teste dielétrico NR-10, talabarte/cinto NR-35) — distinta da validade do CA",
+        styles,
+    )
+
+    headers = ["Trabalhador", "EPI", "Nº Série", "Data Inspeção", "Resultado", "Responsável Técnico", "Próxima Inspeção"]
+    header_row = [Paragraph(h, ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=WHITE)) for h in headers]
+    rows = [header_row]
+    resultado_label = {"aprovado": "Aprovado", "reprovado": "Reprovado", "condicional": "Aprovado c/ ressalva"}
+    for i in inspecoes:
+        rows.append([
+            Paragraph(i.entrega.funcionario.nome, styles["small"]),
+            Paragraph(i.entrega.epi.nome, styles["small"]),
+            Paragraph(i.entrega.numero_serie_item or "—", styles["small"]),
+            Paragraph(i.data_inspecao.strftime("%d/%m/%Y"), styles["small"]),
+            Paragraph(resultado_label.get(i.resultado, i.resultado), styles["small"]),
+            Paragraph(i.responsavel_tecnico or "—", styles["small"]),
+            Paragraph(i.proxima_inspecao.strftime("%d/%m/%Y") if i.proxima_inspecao else "—", styles["small"]),
+        ])
+    if len(rows) == 1:
+        rows.append([Paragraph("Nenhuma inspeção registrada no período.", styles["small"])] + [Paragraph("", styles["small"])]*6)
+
+    t = Table(rows, colWidths=[3.2*cm, 3*cm, 2*cm, 2.3*cm, 2.6*cm, 3*cm, 2.4*cm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,0), DARK),
+        ("GRID",          (0,0), (-1,-1), 0.5, colors.HexColor("#d0e8e4")),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGREY]),
+        ("TOPPADDING",    (0,0), (-1,-1), 5),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 20))
+    story.append(_footer_text(styles))
+    doc.build(story)
+    return buf.getvalue()
+
+
+def gerar_pdf_calibracao_instrumentos(instrumentos, empresa_nome):
+    """Relatório de calibração rastreável dos instrumentos de medição usados
+    em inspeções/avaliações de SST (decibelímetro, luxímetro etc.)."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2*cm, bottomMargin=2*cm,
+        title="Relatório de Calibração de Instrumentos",
+    )
+    styles = _styles()
+    story = []
+    _header_empresa(
+        story, empresa_nome,
+        "Relatório de Calibração de Instrumentos de Medição",
+        "Rastreabilidade metrológica conforme INMETRO/NRs — decibelímetro, luxímetro, medidor de campo elétrico etc.",
+        styles,
+    )
+
+    status_label = {"calibrado": "Calibrado", "vencido": "Calibração Vencida", "em_calibracao": "Em Calibração"}
+    headers = ["Instrumento", "Tipo", "Nº Série", "Norma", "Últ. Calibração", "Próx. Calibração", "Status"]
+    header_row = [Paragraph(h, ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=WHITE)) for h in headers]
+    rows = [header_row]
+    for it in instrumentos:
+        rows.append([
+            Paragraph(it.nome, styles["small"]),
+            Paragraph(it.get_tipo_display(), styles["small"]),
+            Paragraph(it.numero_serie or "—", styles["small"]),
+            Paragraph(it.norma_referencia or "—", styles["small"]),
+            Paragraph(it.data_ultima_calibracao.strftime("%d/%m/%Y") if it.data_ultima_calibracao else "—", styles["small"]),
+            Paragraph(it.data_proxima_calibracao.strftime("%d/%m/%Y") if it.data_proxima_calibracao else "—", styles["small"]),
+            Paragraph(status_label.get(it.status_calculado, "—"), styles["small"]),
+        ])
+    if len(rows) == 1:
+        rows.append([Paragraph("Nenhum instrumento cadastrado.", styles["small"])] + [Paragraph("", styles["small"])]*6)
+
+    t = Table(rows, colWidths=[3.5*cm, 2.8*cm, 2.2*cm, 2*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,0), DARK),
+        ("GRID",          (0,0), (-1,-1), 0.5, colors.HexColor("#d0e8e4")),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGREY]),
+        ("TOPPADDING",    (0,0), (-1,-1), 5),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 20))
+    story.append(_footer_text(styles))
+    doc.build(story)
+    return buf.getvalue()
+
+
+def gerar_pdf_homem_hora_treinamentos(linhas, total_geral, empresa_nome, periodo_label):
+    """Relatório de homem-hora de treinamentos por tipo/NR — controle interno e auditoria.
+    `linhas` é uma lista de dicts: {nr, nome_tipo, participantes, carga_horaria, homem_hora}."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2*cm, bottomMargin=2*cm,
+        title="Relatório de Homem-Hora — Treinamentos NR",
+    )
+    styles = _styles()
+    story = []
+    _header_empresa(
+        story, empresa_nome,
+        "Relatório de Homem-Hora — Treinamentos NR",
+        f"Controle interno e auditoria — {periodo_label}",
+        styles,
+    )
+
+    headers = ["NR", "Tipo de Treinamento", "Participantes", "Carga Horária (h)", "Homem-Hora Total"]
+    header_row = [Paragraph(h, ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=8, textColor=WHITE)) for h in headers]
+    rows = [header_row]
+    for l in linhas:
+        rows.append([
+            Paragraph(l["nr"], styles["small"]),
+            Paragraph(l["nome_tipo"], styles["small"]),
+            Paragraph(str(l["participantes"]), styles["small"]),
+            Paragraph(str(l["carga_horaria"]), styles["small"]),
+            Paragraph(str(l["homem_hora"]), styles["bold"]),
+        ])
+    if len(rows) == 1:
+        rows.append([Paragraph("Nenhum treinamento registrado no período.", styles["small"])] + [Paragraph("", styles["small"])]*4)
+
+    t = Table(rows, colWidths=[2*cm, 6.5*cm, 3*cm, 3.5*cm, 3.5*cm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,0), DARK),
+        ("GRID",          (0,0), (-1,-1), 0.5, colors.HexColor("#d0e8e4")),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGREY]),
+        ("TOPPADDING",    (0,0), (-1,-1), 5),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(f"TOTAL GERAL DE HOMEM-HORA NO PERÍODO: {total_geral}", styles["h2"]))
+    story.append(Spacer(1, 16))
+    story.append(_footer_text(styles))
+    doc.build(story)
+    return buf.getvalue()
