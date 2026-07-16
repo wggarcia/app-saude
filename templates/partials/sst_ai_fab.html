@@ -41,6 +41,14 @@
     white-space: pre-wrap;
   }
   .ai-msg-bot.loading { color: #94A3B8; font-style: italic; }
+  .ai-grafico-wrap { margin-top: 8px; background: #fff; border-radius: 8px; padding: 8px; }
+  .ai-grafico-toolbar { display: flex; gap: 6px; margin-top: 6px; }
+  .ai-grafico-toolbar button {
+    border: none; background: #E2E8F0; border-radius: 6px; padding: 4px 9px;
+    cursor: pointer; font-size: 13px;
+  }
+  .ai-grafico-toolbar button:hover { background: #CBD5E1; }
+  .ai-grafico-toolbar button:disabled { opacity: .5; cursor: default; }
   #sst-ai-form {
     display: flex; padding: 10px 12px; gap: 8px;
     border-top: 1px solid #E2E8F0;
@@ -76,6 +84,11 @@
 </div>
 
 <script>
+if (typeof Chart === 'undefined') {
+  document.write('<scr' + 'ipt src="https://cdn.jsdelivr.net/npm/chart.js"></scr' + 'ipt>');
+}
+</script>
+<script>
 (function() {
   const fab   = document.getElementById('sst-ai-fab');
   const panel = document.getElementById('sst-ai-panel');
@@ -87,6 +100,8 @@
   fab.addEventListener('click', () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) input.focus(); });
   close.addEventListener('click', () => panel.classList.remove('open'));
 
+  function csrf() { return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || ''; }
+
   function addMsg(text, role) {
     const div = document.createElement('div');
     div.className = role === 'user' ? 'ai-msg-user' : 'ai-msg-bot';
@@ -94,6 +109,106 @@
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
     return div;
+  }
+
+  async function graficoAcao(grafico, respostaTexto, acao, botao, email) {
+    const url = acao === 'email' ? '/api/sst/assistente/grafico-pdf/email/'
+      : (acao === 'baixar' ? '/api/sst/assistente/grafico-pdf/?download=1' : '/api/sst/assistente/grafico-pdf/');
+    const originalLabel = botao.textContent;
+    botao.disabled = true;
+    try {
+      const body = { grafico: grafico, resposta: respostaTexto };
+      if (acao === 'email') body.email = email;
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify(body),
+      });
+      if (acao === 'email') {
+        const d = await r.json();
+        alert(d.mensagem || d.erro || 'Falha ao enviar.');
+        return;
+      }
+      if (!r.ok) { alert('Falha ao gerar o PDF.'); return; }
+      const blob = await r.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      if (acao === 'baixar') {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = 'relatorio-assistente-sst.pdf';
+        a.click();
+      } else {
+        window.open(blobUrl, '_blank');
+      }
+    } catch (e) {
+      alert('Falha de conexão ao gerar o PDF.');
+    } finally {
+      botao.disabled = false;
+      botao.textContent = originalLabel;
+    }
+  }
+
+  function renderGrafico(container, grafico, respostaTexto) {
+    if (typeof Chart === 'undefined' || !grafico || !grafico.labels || !grafico.labels.length) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'ai-grafico-wrap';
+    const canvas = document.createElement('canvas');
+    canvas.height = 180;
+    wrap.appendChild(canvas);
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'ai-grafico-toolbar';
+    const btnVer = document.createElement('button');
+    btnVer.type = 'button'; btnVer.title = 'Imprimir'; btnVer.textContent = '🖨️';
+    const btnBaixar = document.createElement('button');
+    btnBaixar.type = 'button'; btnBaixar.title = 'Baixar PDF'; btnBaixar.textContent = '⬇️';
+    const btnEmail = document.createElement('button');
+    btnEmail.type = 'button'; btnEmail.title = 'Enviar por e-mail'; btnEmail.textContent = '📧';
+    toolbar.append(btnVer, btnBaixar, btnEmail);
+    wrap.appendChild(toolbar);
+    container.appendChild(wrap);
+
+    const cores = ['#2563EB', '#00c9a7', '#f0bf6b', '#f87171', '#7a9fa0', '#8b5cf6', '#0ea5e9'];
+    const tipoChartJs = { barras: 'bar', pizza: 'pie', linha: 'line', pareto: 'bar' }[grafico.tipo] || 'bar';
+    const datasets = [{
+      label: grafico.rotulo_serie || 'Quantidade',
+      data: grafico.valores,
+      backgroundColor: grafico.tipo === 'linha' ? 'rgba(37,99,235,.15)' : cores,
+      borderColor: '#2563EB',
+      borderWidth: grafico.tipo === 'linha' ? 2 : 0,
+      fill: grafico.tipo === 'linha',
+    }];
+    const scales = grafico.tipo === 'pizza' ? {} : { y: { beginAtZero: true } };
+    if (grafico.tipo === 'pareto') {
+      let acumulado = 0;
+      const total = grafico.valores.reduce((a, b) => a + b, 0) || 1;
+      const pct = grafico.valores.map(v => { acumulado += v; return +(acumulado / total * 100).toFixed(1); });
+      datasets.push({
+        type: 'line', label: '% acumulado', data: pct, yAxisID: 'y1',
+        borderColor: '#f87171', borderWidth: 2, fill: false, pointRadius: 2,
+      });
+      scales.y1 = { position: 'right', beginAtZero: true, max: 100, grid: { drawOnChartArea: false } };
+    }
+    new Chart(canvas, {
+      type: tipoChartJs,
+      data: { labels: grafico.labels, datasets: datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          title: { display: !!grafico.titulo, text: grafico.titulo || '' },
+          legend: { display: grafico.tipo === 'pareto' || grafico.tipo === 'pizza' },
+        },
+        scales: scales,
+      },
+    });
+
+    btnVer.addEventListener('click', () => graficoAcao(grafico, respostaTexto, 'ver', btnVer));
+    btnBaixar.addEventListener('click', () => graficoAcao(grafico, respostaTexto, 'baixar', btnBaixar));
+    btnEmail.addEventListener('click', () => {
+      const email = prompt('Enviar relatório para qual e-mail?');
+      if (email && email.includes('@')) graficoAcao(grafico, respostaTexto, 'email', btnEmail, email.trim());
+    });
   }
 
   async function enviar() {
@@ -107,12 +222,14 @@
     try {
       const r = await fetch('/api/sst/assistente/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
         body: JSON.stringify({ pergunta: q }),
       });
       const data = await r.json();
       loading.remove();
-      addMsg(data.resposta || data.erro || 'Erro desconhecido.', 'bot');
+      const bot = addMsg(data.resposta || data.erro || 'Erro desconhecido.', 'bot');
+      if (data.grafico) renderGrafico(bot, data.grafico, data.resposta || '');
+      msgs.scrollTop = msgs.scrollHeight;
     } catch (e) {
       loading.remove();
       addMsg('Falha de conexão. Tente novamente.', 'bot');

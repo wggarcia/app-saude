@@ -284,7 +284,11 @@ from api.views_postos_trabalho import (
     api_posto_funcionarios,
     api_posto_xml_s2240,
 )
-from api.views_sst_rag import assistente_sst
+from api.views_sst_rag import (
+    api_assistente_grafico_pdf,
+    api_assistente_grafico_pdf_email,
+    assistente_sst,
+)
 # ── Módulos SST Expansão ──────────────────────────────────
 from api.views_ppp import (
     api_ppp_lista, api_ppp_criar, api_ppp_detalhe,
@@ -2534,6 +2538,10 @@ urlpatterns = [
     # ── Assistente IA SST (RAG via Claude Tool Use) ───────────────────────────
     path('api/sst/assistente',                                   assistente_sst),
     path('api/sst/assistente/',                                  assistente_sst),
+    path('api/sst/assistente/grafico-pdf',                       api_assistente_grafico_pdf),
+    path('api/sst/assistente/grafico-pdf/',                      api_assistente_grafico_pdf),
+    path('api/sst/assistente/grafico-pdf/email',                 api_assistente_grafico_pdf_email),
+    path('api/sst/assistente/grafico-pdf/email/',                api_assistente_grafico_pdf_email),
 
     # ── Centro Obstétrico / Maternidade ──────────────────────────────────────
     path('api/hospital/obstetrico/kpis',                                      api_obstetrico_kpis),
