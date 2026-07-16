@@ -162,7 +162,7 @@ class Command(BaseCommand):
         try:
             response = client.messages.create(
                 model=MODEL_ID,
-                max_tokens=512,
+                max_tokens=1024,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_msg}],
             )
