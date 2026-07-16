@@ -37,6 +37,8 @@ Analise o título e resumo de uma notícia de saúde e retorne SOMENTE um JSON v
 com a seguinte estrutura (sem markdown, sem texto extra):
 
 {
+  "titulo_pt": "<título traduzido para português do Brasil, natural e claro>",
+  "resumo_pt": "<resumo em português do Brasil, 1-3 frases, mesmo conteúdo do original>",
   "doenca_confirmada": "<nome padronizado ou null>",
   "cid10": "<código CID-10 ou null>",
   "regiao_uf": "<sigla UF brasileira ou null>",
@@ -49,6 +51,11 @@ com a seguinte estrutura (sem markdown, sem texto extra):
   "justificativa": "<1-2 frases explicando o score>",
   "acoes_recomendadas": ["<ação 1>", "<ação 2>"]
 }
+
+Sobre titulo_pt/resumo_pt: se o título ou resumo originais já estiverem em português,
+apenas repita-os (corrigindo pontuação/clareza se necessário, sem mudar o sentido).
+Se estiverem em outro idioma (inglês, hindi, mandarim etc.), traduza integralmente.
+Nunca deixe texto em outro idioma nesses dois campos.
 
 Critérios de score_risco:
   0-3  → informativo (notícia de contexto, sem urgência)
@@ -180,6 +187,13 @@ class Command(BaseCommand):
         if nivel_ia not in ("informativo", "alerta", "critico"):
             nivel_ia = "critico" if score >= 9 else "alerta" if score >= 4 else "informativo"
 
+        titulo_pt = (r.get("titulo_pt") or "").strip()
+        resumo_pt = (r.get("resumo_pt") or "").strip()
+        if titulo_pt:
+            noticia.titulo = titulo_pt[:500]
+        if resumo_pt:
+            noticia.resumo = resumo_pt
+
         noticia.ia_analisado       = True
         noticia.ia_score_risco     = score
         noticia.ia_cid10           = (r.get("cid10") or "")[:10]
@@ -199,6 +213,7 @@ class Command(BaseCommand):
             noticia.doencas_detectadas = list(noticia.doencas_detectadas) + [doenca_ia]
 
         noticia.save(update_fields=[
+            "titulo", "resumo",
             "ia_analisado", "ia_score_risco", "ia_cid10", "ia_regiao_uf",
             "ia_municipio", "ia_casos_estimados", "ia_tendencia", "ia_confianca",
             "ia_justificativa", "ia_acoes", "ia_modelo_usado",

@@ -83,12 +83,19 @@ FONTES_CATALOGO = {
     "healio-id":      ("rss", ("Healio-ID", "https://www.healio.com/rss/infectious-disease")),
 
     # ── Europa ─────────────────────────────────────────────────────────────────
+    # ecdc: DESATIVADA em 2026-07-16 — o site descontinuou o RSS público de notícias
+    # (todas as URLs testadas retornam 404; a página /en/rss-feeds só lista feed de
+    # podcast). Mantido no catálogo por documentação, mas fora de FONTES_INTL.
     "ecdc":           ("rss", ("ECDC",      "https://www.ecdc.europa.eu/en/rss.xml")),
     "bbc-health":     ("rss", ("BBC-Health","https://feeds.bbci.co.uk/news/health/rss.xml")),
 
     # ── África ─────────────────────────────────────────────────────────────────
     "who-africa":     ("rss", ("WHO-Africa","https://www.afro.who.int/rss.xml")),
     "nicd-za":        ("rss", ("NICD-ZA",   "https://www.nicd.ac.za/feed/")),
+    # reliefweb: DESATIVADA em 2026-07-16 — o site passou a exigir passar por um
+    # desafio anti-bot da AWS WAF (header x-amzn-waf-action: challenge); uma
+    # requisição simples de RSS nunca retorna conteúdo. Mantido no catálogo por
+    # documentação, mas fora de FONTES_INTL.
     "reliefweb":      ("rss", ("ReliefWeb", "https://reliefweb.int/updates/rss.xml?primary_country=0&topic=3&format=0")),
 
     # ── Ásia ───────────────────────────────────────────────────────────────────
@@ -96,7 +103,9 @@ FONTES_CATALOGO = {
     "nhc-china":      ("rss", ("NHC-China", "http://en.nhc.gov.cn/rss.xml")),
 
     # ── Global ─────────────────────────────────────────────────────────────────
-    "who":            ("rss", ("WHO",           "https://www.who.int/feeds/entity/csr/don/en/rss.xml")),
+    # who: URL corrigida em 2026-07-16 — a antiga /feeds/entity/csr/don/en/rss.xml
+    # foi descontinuada (404); a WHO migrou o feed de notícias para este endereço.
+    "who":            ("rss", ("WHO",           "https://www.who.int/rss-feeds/news-english.xml")),
     "outbreaknews":   ("rss", ("OutbreakNews",  "https://outbreaknewstoday.com/feed/")),
     "sciencedaily":   ("rss", ("ScienceDaily",  "https://www.sciencedaily.com/rss/top/health.xml")),
 }
@@ -117,7 +126,8 @@ FONTES_CURADAS = {
 FONTES_PADRAO = "gdelt-br,agbrasil,folha,g1,opas,cdc-eid,outbreaknews"
 
 # Cron Internacional — Europa, África, Ásia + global científico
-FONTES_INTL   = "gdelt-intl,who,ecdc,bbc-health,who-africa,nicd-za,reliefweb,india-pib,nhc-china,sciencedaily,healio-id"
+# (ecdc e reliefweb removidas em 2026-07-16 — ver comentários no FONTES_CATALOGO)
+FONTES_INTL   = "gdelt-intl,who,bbc-health,who-africa,nicd-za,india-pib,nhc-china,sciencedaily,healio-id"
 
 
 class Command(BaseCommand):
