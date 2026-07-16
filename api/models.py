@@ -1529,7 +1529,8 @@ class TreinamentoNR(models.Model):
         "TipoTreinamentoNR", on_delete=models.SET_NULL, null=True, blank=True, related_name="treinamentos_registrados",
         help_text="Tipo de treinamento do catálogo (opcional) — pré-preenche a carga horária padrão",
     )
-    nr          = models.CharField(max_length=10, choices=NR_CHOICES)
+    nr          = models.CharField(max_length=10, choices=NR_CHOICES, blank=True, default="")
+    categoria   = models.CharField(max_length=80, blank=True, default="", help_text="Categoria livre quando não é uma NR — ex: Onboarding, Produto, Liderança")
     titulo      = models.CharField(max_length=200, blank=True, default="")
     instrutor   = models.CharField(max_length=120, blank=True, default="")
     carga_horaria = models.PositiveSmallIntegerField(default=0, help_text="em horas")
@@ -1554,23 +1555,33 @@ class TreinamentoNR(models.Model):
 
 
 class TipoTreinamentoNR(models.Model):
-    """Catálogo de tipos de treinamento por NR, com carga horária padrão editável —
-    usado para pré-preencher registros e para relatórios de homem-hora (controle interno/auditoria)."""
+    """Catálogo de tipos de treinamento, com carga horária padrão editável —
+    usado para pré-preencher registros e para relatórios de homem-hora (controle interno/auditoria).
+    Não se restringe a treinamentos regulamentados por NR: `nr` fica em branco e `categoria`
+    é usada como agrupamento livre para treinamentos gerais (onboarding, produto, liderança etc.)."""
     empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="tipos_treinamento_nr")
-    nr                    = models.CharField(max_length=10, choices=TreinamentoNR.NR_CHOICES)
-    nome                  = models.CharField(max_length=200, help_text="Ex: NR-35 Básico, NR-10 SEP Reciclagem")
+    nr                    = models.CharField(max_length=10, choices=TreinamentoNR.NR_CHOICES, blank=True, default="")
+    categoria             = models.CharField(max_length=80, blank=True, default="", help_text="Ex: Onboarding, Produto, Liderança — usado quando não é uma NR")
+    nome                  = models.CharField(max_length=200, help_text="Ex: NR-35 Básico, Integração de Novos Funcionários")
     carga_horaria_padrao  = models.PositiveSmallIntegerField(help_text="Horas — editável conforme grade interna")
     periodicidade_dias    = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Intervalo de reciclagem, em dias")
     ativo                 = models.BooleanField(default=True)
     criado_em             = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["nr", "nome"]
+        ordering = ["nr", "categoria", "nome"]
         indexes  = [models.Index(fields=["empresa", "nr"])]
-        unique_together = [("empresa", "nr", "nome")]
+        unique_together = [("empresa", "nr", "categoria", "nome")]
 
     def __str__(self):
-        return f"{self.nr} — {self.nome} ({self.carga_horaria_padrao}h)"
+        rotulo = self.nr or self.categoria or "Geral"
+        return f"{rotulo} — {self.nome} ({self.carga_horaria_padrao}h)"
+
+    @property
+    def rotulo_agrupamento(self):
+        if self.nr:
+            return dict(TreinamentoNR.NR_CHOICES).get(self.nr, self.nr)
+        return self.categoria or "Treinamento Geral"
 
 
 # ─────────────────────────────────────────────────────────────

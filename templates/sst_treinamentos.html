@@ -362,7 +362,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       </div>
       <div class="table-area" style="margin-top:8px">
         <table class="data-table">
-          <thead><tr><th>NR</th><th>Tipo de Treinamento</th><th>Carga Horária Padrão (h)</th><th>Reciclagem (dias)</th><th>Ações</th></tr></thead>
+          <thead><tr><th>NR / Categoria</th><th>Tipo de Treinamento</th><th>Carga Horária Padrão (h)</th><th>Reciclagem (dias)</th><th>Ações</th></tr></thead>
           <tbody id="tbodyTiposTreinamento">
             <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr>
           </tbody>
@@ -380,11 +380,13 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <input type="date" id="hhDataFim" style="padding:6px 10px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);font-size:.78rem">
           <button class="filtro-btn" onclick="carregarHomemHora()">Filtrar</button>
           <button class="filtro-btn" onclick="imprimirHomemHora()">🖨️ Imprimir</button>
+          <button class="filtro-btn" onclick="baixarHomemHora()">⬇️ Baixar</button>
+          <button class="filtro-btn" onclick="enviarHomemHoraEmail()">📧 Enviar por E-mail</button>
         </div>
       </div>
       <div class="table-area" style="margin-top:8px">
         <table class="data-table">
-          <thead><tr><th>NR</th><th>Tipo de Treinamento</th><th>Participantes</th><th>Carga Horária (h)</th><th>Homem-Hora Total</th></tr></thead>
+          <thead><tr><th>NR / Categoria</th><th>Tipo de Treinamento</th><th>Participantes</th><th>Carga Horária (h)</th><th>Homem-Hora Total</th></tr></thead>
           <tbody id="tbodyHomemHora">
             <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr>
           </tbody>
@@ -405,6 +407,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       <select class="select-nr" id="selectNr" onchange="filtrarTabela()">
         <option value="">Todas as NRs</option>
       </select>
+      <button class="filtro-btn" style="font-weight:800" onclick="abrirModalLote()">+ Registrar Turma (vários funcionários)</button>
     </div>
 
     <!-- TABLE AREA -->
@@ -542,19 +545,36 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     </div>
     <form id="formTipoTreinamento" onsubmit="submitTipoTreinamento(event)" novalidate>
       <input type="hidden" id="tpId">
-      <div class="mf-row">
+      <div class="mf">
+        <label for="tpCategoriaTipo">Este tipo é uma NR (regulatória) ou uma categoria geral?</label>
+        <select id="tpCategoriaTipo" onchange="alternarTipoCategoria()">
+          <option value="nr">É uma NR (Norma Regulamentadora)</option>
+          <option value="geral">Treinamento geral (não é NR — onboarding, produto, liderança etc.)</option>
+        </select>
+      </div>
+      <div class="mf-row" id="tpNrRow">
         <div class="mf">
           <label for="tpNr">NR *</label>
-          <select id="tpNr" required><option value="">Selecione a NR</option></select>
+          <select id="tpNr"><option value="">Selecione a NR</option></select>
         </div>
         <div class="mf">
           <label for="tpCh">Carga Horária Padrão (h) *</label>
           <input type="number" id="tpCh" placeholder="Ex: 8" min="1" required>
         </div>
       </div>
+      <div class="mf-row" id="tpCategoriaRow" style="display:none">
+        <div class="mf">
+          <label for="tpCategoria">Categoria *</label>
+          <input type="text" id="tpCategoria" placeholder="Ex: Onboarding, Produto, Liderança, Compliance">
+        </div>
+        <div class="mf">
+          <label for="tpChGeral">Carga Horária Padrão (h) *</label>
+          <input type="number" id="tpChGeral" placeholder="Ex: 4" min="1">
+        </div>
+      </div>
       <div class="mf">
         <label for="tpNome">Nome do Tipo *</label>
-        <input type="text" id="tpNome" placeholder="Ex: NR-35 Básico, NR-10 SEP Reciclagem" required>
+        <input type="text" id="tpNome" placeholder="Ex: NR-35 Básico, Integração de Novos Funcionários" required>
       </div>
       <div class="mf">
         <label for="tpPeriodicidade">Periodicidade de Reciclagem (dias)</label>
@@ -564,6 +584,67 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       <div class="modal-footer">
         <button type="button" class="btn-cancel" onclick="fecharModalTipo()">Cancelar</button>
         <button type="submit" class="btn-primary" id="btnSubmitTipo">Salvar Tipo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR TURMA (VÁRIOS FUNCIONÁRIOS) -->
+<div class="modal-bg" id="modalLoteBg" onclick="if(event.target===this) fecharModalLote()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Registrar Turma de Treinamento</div>
+        <div class="modal-sub">Registre o mesmo treinamento para vários funcionários de uma vez, em vez de repetir pessoa por pessoa.</div>
+      </div>
+      <button class="modal-close" onclick="fecharModalLote()" aria-label="Fechar">✕</button>
+    </div>
+    <form id="formLote" onsubmit="submitLote(event)" novalidate>
+      <div class="mf">
+        <label for="loteTipoTreinamento">Tipo de Treinamento (catálogo) <span style="font-weight:400">— opcional, pré-preenche NR/categoria e carga horária</span></label>
+        <select id="loteTipoTreinamento" onchange="aplicarTipoTreinamento('loteTipoTreinamento','loteNr','loteCh','loteTitulo')">
+          <option value="">Nenhum — preencher manualmente</option>
+        </select>
+      </div>
+      <div class="mf-row">
+        <div class="mf">
+          <label for="loteNr">NR <span style="font-weight:400">(deixe em branco se não for NR)</span></label>
+          <select id="loteNr"><option value="">Nenhuma / Treinamento geral</option></select>
+        </div>
+        <div class="mf">
+          <label for="loteCh">Carga horária (h) *</label>
+          <input type="number" id="loteCh" placeholder="Ex: 8" min="1" required>
+        </div>
+      </div>
+      <div class="mf">
+        <label for="loteTitulo">Título do Treinamento *</label>
+        <input type="text" id="loteTitulo" placeholder="Ex: Integração de Novos Funcionários" required>
+      </div>
+      <div class="mf-row">
+        <div class="mf">
+          <label for="loteInstrutor">Instrutor</label>
+          <input type="text" id="loteInstrutor" placeholder="Nome do instrutor ou empresa">
+        </div>
+        <div class="mf">
+          <label for="loteDataReal">Data de Realização *</label>
+          <input type="date" id="loteDataReal" required>
+        </div>
+      </div>
+      <div class="mf">
+        <label for="loteDataVal">Data de Validade</label>
+        <input type="date" id="loteDataVal">
+      </div>
+      <div class="mf">
+        <label>Participantes <span style="font-weight:400">(selecione um ou mais)</span></label>
+        <input type="text" id="loteBusca" placeholder="Filtrar funcionários..." autocomplete="off" oninput="filtrarFuncionariosLote(this.value)"
+               style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);font-size:.8rem;outline:none;font-family:inherit;margin-bottom:6px">
+        <div id="loteListaFuncionarios" style="max-height:180px;overflow-y:auto;border:1px solid var(--line2);border-radius:8px;background:rgba(0,0,0,.15)"></div>
+        <div id="loteContagem" style="font-size:.72rem;color:var(--accent);margin-top:5px;font-weight:700">Nenhum funcionário selecionado</div>
+      </div>
+      <div class="error-msg" id="errLoteGeral" style="margin-top:4px;font-size:.75rem"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="fecharModalLote()">Cancelar</button>
+        <button type="submit" class="btn-primary" id="btnSubmitLote">Registrar Turma</button>
       </div>
     </form>
   </div>
@@ -589,6 +670,7 @@ function popularSelectsNR() {
   document.getElementById('selectNr').insertAdjacentHTML('beforeend', optsFiltro + '<option value="outro">Outro</option>');
   document.getElementById('fNr').insertAdjacentHTML('beforeend', optsForm + '<option value="outro">Outro</option>');
   document.getElementById('tpNr').insertAdjacentHTML('beforeend', optsForm + '<option value="outro">Outro</option>');
+  document.getElementById('loteNr').insertAdjacentHTML('beforeend', optsForm);
 }
 
 /* ═══════════════════════════════════════════
@@ -716,7 +798,7 @@ function renderTabela(lista) {
 
   tbody.innerHTML = lista.map(t => {
     const rc  = rowClass(t);
-    const nrLabel = t.nr_label || NR_LABELS[t.nr] || t.nr || '—';
+    const nrLabel = t.nr_label || NR_LABELS[t.nr] || t.nr || t.categoria || '—';
     const prontuarioUrl = t.funcionario_id
       ? `/sst/funcionarios/${t.funcionario_id}/`
       : `/sst/funcionarios/?busca=${encodeURIComponent(t.funcionario || '')}`;
@@ -967,11 +1049,11 @@ async function carregarTiposTreinamento() {
 function renderTiposTreinamento() {
   const tbody = document.getElementById('tbodyTiposTreinamento');
   if (!tiposTreinamento.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum tipo cadastrado. Use "+ Novo Tipo" para criar, ex: "NR-35 Básico" com 8h.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum tipo cadastrado. Use "+ Novo Tipo" para criar, ex: "NR-35 Básico" com 8h, ou "Onboarding" com 4h.</td></tr>`;
     return;
   }
   tbody.innerHTML = tiposTreinamento.map(t => `<tr>
-    <td>${t.nr_label || t.nr}</td>
+    <td>${t.rotulo_agrupamento || t.nr_label || t.nr || t.categoria}</td>
     <td>${t.nome}</td>
     <td>${t.carga_horaria_padrao}</td>
     <td>${t.periodicidade_dias || '—'}</td>
@@ -983,30 +1065,46 @@ function renderTiposTreinamento() {
 }
 
 function popularSelectTipoTreinamento() {
-  const sel = document.getElementById('fTipoTreinamento');
-  sel.innerHTML = '<option value="">Nenhum — preencher manualmente</option>' +
-    tiposTreinamento.map(t => `<option value="${t.id}" data-nr="${t.nr}" data-ch="${t.carga_horaria_padrao}" data-nome="${t.nome}">${t.nr_label || t.nr} — ${t.nome} (${t.carga_horaria_padrao}h)</option>`).join('');
+  const sels = [document.getElementById('fTipoTreinamento'), document.getElementById('loteTipoTreinamento')].filter(Boolean);
+  const optsHtml = '<option value="">Nenhum — preencher manualmente</option>' +
+    tiposTreinamento.map(t => `<option value="${t.id}" data-nr="${t.nr}" data-categoria="${t.categoria}" data-ch="${t.carga_horaria_padrao}" data-nome="${t.nome}">${t.rotulo_agrupamento} — ${t.nome} (${t.carga_horaria_padrao}h)</option>`).join('');
+  sels.forEach(sel => { sel.innerHTML = optsHtml; });
 }
 
-function aplicarTipoTreinamento() {
-  const sel = document.getElementById('fTipoTreinamento');
+function aplicarTipoTreinamento(selectId, nrFieldId, chFieldId, tituloFieldId) {
+  selectId = selectId || 'fTipoTreinamento';
+  nrFieldId = nrFieldId || 'fNr';
+  chFieldId = chFieldId || 'fCh';
+  tituloFieldId = tituloFieldId || 'fTitulo';
+  const sel = document.getElementById(selectId);
   const opt = sel.options[sel.selectedIndex];
   if (!opt || !opt.value) return;
-  document.getElementById('fNr').value = opt.dataset.nr;
-  document.getElementById('fCh').value = opt.dataset.ch;
-  if (!document.getElementById('fTitulo').value.trim()) {
-    document.getElementById('fTitulo').value = opt.dataset.nome;
+  if (opt.dataset.nr) document.getElementById(nrFieldId).value = opt.dataset.nr;
+  document.getElementById(chFieldId).value = opt.dataset.ch;
+  const tituloEl = document.getElementById(tituloFieldId);
+  if (tituloEl && !tituloEl.value.trim()) {
+    tituloEl.value = opt.dataset.nome;
   }
+}
+
+function alternarTipoCategoria() {
+  const ehNr = document.getElementById('tpCategoriaTipo').value === 'nr';
+  document.getElementById('tpNrRow').style.display = ehNr ? 'grid' : 'none';
+  document.getElementById('tpCategoriaRow').style.display = ehNr ? 'none' : 'grid';
 }
 
 function abrirModalTipoTreinamento() {
   document.getElementById('modalTipoTitle').textContent = 'Novo Tipo de Treinamento';
   document.getElementById('tpId').value = '';
+  document.getElementById('tpCategoriaTipo').value = 'nr';
   document.getElementById('tpNr').value = '';
   document.getElementById('tpCh').value = '';
+  document.getElementById('tpCategoria').value = '';
+  document.getElementById('tpChGeral').value = '';
   document.getElementById('tpNome').value = '';
   document.getElementById('tpPeriodicidade').value = '';
   document.getElementById('errTipoGeral').textContent = '';
+  alternarTipoCategoria();
   document.getElementById('modalTipoBg').classList.add('open');
 }
 
@@ -1019,24 +1117,31 @@ function editarTipoTreinamento(id) {
   if (!t) return;
   document.getElementById('modalTipoTitle').textContent = 'Editar Tipo de Treinamento';
   document.getElementById('tpId').value = t.id;
-  document.getElementById('tpNr').value = t.nr;
-  document.getElementById('tpCh').value = t.carga_horaria_padrao;
+  const ehNr = !!t.nr;
+  document.getElementById('tpCategoriaTipo').value = ehNr ? 'nr' : 'geral';
+  document.getElementById('tpNr').value = t.nr || '';
+  document.getElementById('tpCh').value = ehNr ? t.carga_horaria_padrao : '';
+  document.getElementById('tpCategoria').value = t.categoria || '';
+  document.getElementById('tpChGeral').value = ehNr ? '' : t.carga_horaria_padrao;
   document.getElementById('tpNome').value = t.nome;
   document.getElementById('tpPeriodicidade').value = t.periodicidade_dias || '';
+  alternarTipoCategoria();
   document.getElementById('modalTipoBg').classList.add('open');
 }
 
 async function submitTipoTreinamento(ev) {
   ev.preventDefault();
   const id = document.getElementById('tpId').value;
+  const ehNr = document.getElementById('tpCategoriaTipo').value === 'nr';
   const body = {
-    nr: document.getElementById('tpNr').value,
+    nr: ehNr ? document.getElementById('tpNr').value : '',
+    categoria: ehNr ? '' : document.getElementById('tpCategoria').value.trim(),
     nome: document.getElementById('tpNome').value.trim(),
-    carga_horaria_padrao: parseInt(document.getElementById('tpCh').value) || 0,
+    carga_horaria_padrao: parseInt(ehNr ? document.getElementById('tpCh').value : document.getElementById('tpChGeral').value) || 0,
     periodicidade_dias: parseInt(document.getElementById('tpPeriodicidade').value) || null,
   };
-  if (!body.nr || !body.nome || !body.carga_horaria_padrao) {
-    document.getElementById('errTipoGeral').textContent = 'Preencha NR, nome e carga horária.';
+  if ((!body.nr && !body.categoria) || !body.nome || !body.carga_horaria_padrao) {
+    document.getElementById('errTipoGeral').textContent = 'Preencha a NR (ou categoria), o nome e a carga horária.';
     return;
   }
   try {
@@ -1109,6 +1214,148 @@ function imprimirHomemHora() {
   if (dataInicio) params.set('data_inicio', dataInicio);
   if (dataFim) params.set('data_fim', dataFim);
   window.open('/api/sst/treinamentos/homem-hora/pdf?' + params.toString(), '_blank');
+}
+
+function baixarHomemHora() {
+  const dataInicio = document.getElementById('hhDataInicio').value;
+  const dataFim = document.getElementById('hhDataFim').value;
+  const params = new URLSearchParams({ download: '1' });
+  if (dataInicio) params.set('data_inicio', dataInicio);
+  if (dataFim) params.set('data_fim', dataFim);
+  window.location.href = '/api/sst/treinamentos/homem-hora/pdf?' + params.toString();
+}
+
+async function enviarHomemHoraEmail() {
+  const email = prompt('Enviar relatório de homem-hora para qual e-mail?');
+  if (!email) return;
+  const dataInicio = document.getElementById('hhDataInicio').value;
+  const dataFim = document.getElementById('hhDataFim').value;
+  try {
+    const r = await fetch('/api/sst/treinamentos/homem-hora/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      credentials: 'include',
+      body: JSON.stringify({ email, data_inicio: dataInicio || null, data_fim: dataFim || null }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erro || ('Erro ' + r.status));
+    alert('Relatório enviado para ' + email);
+  } catch (e) {
+    alert('Erro ao enviar: ' + e.message);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   REGISTRAR TURMA (VÁRIOS FUNCIONÁRIOS)
+═══════════════════════════════════════════ */
+let funcionariosLote = [];
+let selecionadosLote = new Set();
+
+async function abrirModalLote() {
+  document.getElementById('loteTipoTreinamento').value = '';
+  document.getElementById('loteNr').value = '';
+  document.getElementById('loteCh').value = '';
+  document.getElementById('loteTitulo').value = '';
+  document.getElementById('loteInstrutor').value = '';
+  document.getElementById('loteDataReal').value = new Date().toISOString().split('T')[0];
+  document.getElementById('loteDataVal').value = '';
+  document.getElementById('loteBusca').value = '';
+  document.getElementById('errLoteGeral').textContent = '';
+  selecionadosLote = new Set();
+
+  const lista = document.getElementById('loteListaFuncionarios');
+  lista.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:.8rem">Carregando funcionários...</div>';
+  try {
+    const r = await fetch('/api/sst/funcionarios/?all=1', { credentials: 'include' });
+    const data = await r.json();
+    funcionariosLote = data.funcionarios || data.results || (Array.isArray(data) ? data : []);
+  } catch (e) {
+    funcionariosLote = [];
+  }
+  renderListaFuncionariosLote();
+  atualizarContagemLote();
+  document.getElementById('modalLoteBg').classList.add('open');
+}
+
+function renderListaFuncionariosLote(filtro) {
+  const lista = document.getElementById('loteListaFuncionarios');
+  const q = (filtro || '').toLowerCase();
+  const itens = funcionariosLote.filter(f => !q || (f.nome || f.name || '').toLowerCase().includes(q));
+  if (!itens.length) {
+    lista.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:.8rem">Nenhum funcionário encontrado.</div>';
+    return;
+  }
+  lista.innerHTML = itens.map(f => {
+    const id = f.id;
+    const nome = f.nome || f.name;
+    const checked = selecionadosLote.has(id) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem">
+      <input type="checkbox" class="lote-func-check" value="${id}" ${checked} onchange="toggleFuncionarioLote(${id}, this.checked)" style="accent-color:var(--accent);width:14px;height:14px">
+      ${nome}
+    </label>`;
+  }).join('');
+}
+
+function toggleFuncionarioLote(id, checked) {
+  if (checked) selecionadosLote.add(id); else selecionadosLote.delete(id);
+  atualizarContagemLote();
+}
+
+function filtrarFuncionariosLote(q) {
+  renderListaFuncionariosLote(q);
+}
+
+function atualizarContagemLote() {
+  const n = selecionadosLote.size;
+  document.getElementById('loteContagem').textContent = n ? `${n} funcionário${n !== 1 ? 's' : ''} selecionado${n !== 1 ? 's' : ''}` : 'Nenhum funcionário selecionado';
+}
+
+function fecharModalLote() {
+  document.getElementById('modalLoteBg').classList.remove('open');
+}
+
+async function submitLote(ev) {
+  ev.preventDefault();
+  const funcionario_ids = Array.from(selecionadosLote);
+  if (!funcionario_ids.length) {
+    document.getElementById('errLoteGeral').textContent = 'Selecione ao menos um participante.';
+    return;
+  }
+  const tipoSel = document.getElementById('loteTipoTreinamento');
+  const body = {
+    tipo_treinamento_id: tipoSel.value || null,
+    nr: document.getElementById('loteNr').value,
+    titulo: document.getElementById('loteTitulo').value.trim(),
+    instrutor: document.getElementById('loteInstrutor').value.trim(),
+    carga_horaria: parseInt(document.getElementById('loteCh').value) || 0,
+    data_realizacao: document.getElementById('loteDataReal').value || null,
+    data_validade: document.getElementById('loteDataVal').value || null,
+    funcionario_ids,
+  };
+  if (!body.titulo || !body.carga_horaria || !body.data_realizacao) {
+    document.getElementById('errLoteGeral').textContent = 'Preencha título, carga horária e data de realização.';
+    return;
+  }
+  const btn = document.getElementById('btnSubmitLote');
+  btn.disabled = true;
+  btn.textContent = 'Registrando...';
+  try {
+    const r = await fetch('/api/sst/treinamentos/lote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erro || ('Erro ' + r.status));
+    fecharModalLote();
+    await Promise.all([carregarResumo(), carregarTreinamentos(), carregarHomemHora()]);
+  } catch (e) {
+    document.getElementById('errLoteGeral').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Registrar Turma';
+  }
 }
 
 /* ═══════════════════════════════════════════

@@ -221,6 +221,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
     <div class="tab-panel" id="tab-inspecoes">
       <div class="toolbar">
         <div class="search-box"><input id="busca-inspecao" type="text" placeholder="Buscar por funcionário ou EPI..." oninput="renderInspecoesPendentes()"></div>
+        <button class="btn-main" onclick="abrirModalAdicionarInspecao()">+ Adicionar EPI para Inspeção</button>
         <button class="btn-main" onclick="window.open('/api/sst/epis/inspecoes/pdf','_blank')">🖨️ Imprimir Relatório</button>
       </div>
       <div class="table-wrap">
@@ -371,6 +372,28 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModal('modal-editar-epi')">Cancelar</button>
       <button class="btn-submit" onclick="salvarEdicaoEPI()">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Adicionar EPI para acompanhamento de inspeção -->
+<div class="modal-bg" id="modal-add-inspecao">
+  <div class="modal">
+    <h3>Adicionar EPI para Inspeção</h3>
+    <div class="modal-sub">Selecione o funcionário e o EPI já entregue (ou registre uma nova entrega) para começar a acompanhar a inspeção periódica.</div>
+    <div class="mf"><label>Funcionário</label>
+      <select id="addinsp-funcionario"><option value="">Selecione...</option></select>
+    </div>
+    <div class="mf"><label>EPI <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem">(só aparecem EPIs marcados com inspeção periódica no catálogo)</span></label>
+      <select id="addinsp-epi"><option value="">Selecione...</option></select>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>Data de Entrega</label><input type="date" id="addinsp-data"></div>
+      <div class="mf"><label>Nº de Série do Item</label><input type="text" id="addinsp-serie" placeholder="Ex: LUV-2026-0042"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-add-inspecao')">Cancelar</button>
+      <button class="btn-submit" onclick="confirmarAdicionarInspecao()">Adicionar</button>
     </div>
   </div>
 </div>
@@ -1061,6 +1084,58 @@ function renderInspecoesHistorico() {
     <td>${i.numero_laudo || '—'}</td>
     <td>${fmtData(i.proxima_inspecao)}</td>
   </tr>`).join('');
+}
+
+async function abrirModalAdicionarInspecao() {
+  document.getElementById('addinsp-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('addinsp-serie').value = '';
+
+  const selFunc = document.getElementById('addinsp-funcionario');
+  selFunc.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    const r = await fetch('/api/sst/funcionarios/?all=1');
+    const data = await r.json();
+    const lista = data.funcionarios || data.results || (Array.isArray(data) ? data : []);
+    selFunc.innerHTML = '<option value="">Selecione o funcionário...</option>' +
+      lista.map(f => `<option value="${f.id}">${f.nome || f.name}</option>`).join('');
+  } catch(e) {
+    selFunc.innerHTML = '<option value="">Erro ao carregar funcionários</option>';
+  }
+
+  const selEpi = document.getElementById('addinsp-epi');
+  const episComInspecao = catalogo.filter(e => e.exige_inspecao_periodica);
+  if (!episComInspecao.length) {
+    selEpi.innerHTML = '<option value="">Nenhum EPI marcado com inspeção periódica — marque no Catálogo primeiro</option>';
+  } else {
+    selEpi.innerHTML = '<option value="">Selecione...</option>' +
+      episComInspecao.map(e => `<option value="${e.id}">${e.nome} (${e.norma_inspecao || 'sem norma'})</option>`).join('');
+  }
+
+  document.getElementById('modal-add-inspecao').classList.add('open');
+}
+
+async function confirmarAdicionarInspecao() {
+  const funcionario_id = parseInt(document.getElementById('addinsp-funcionario').value, 10);
+  const epi_id = parseInt(document.getElementById('addinsp-epi').value, 10);
+  const data_entrega = document.getElementById('addinsp-data').value;
+  const numero_serie_item = document.getElementById('addinsp-serie').value.trim();
+  if (!funcionario_id) { showToast('Selecione o funcionário', true); return; }
+  if (!epi_id) { showToast('Selecione o EPI', true); return; }
+  if (!data_entrega) { showToast('Informe a data de entrega', true); return; }
+  try {
+    const r = await fetch('/api/sst/epis/entregas/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({ funcionario_id, epi_id, data_entrega, quantidade: 1, numero_serie_item })
+    });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    fecharModal('modal-add-inspecao');
+    showToast('EPI adicionado ao acompanhamento de inspeção');
+    await carregarEntregas();
+    await carregarInspecoes();
+  } catch(e) {
+    showToast('Erro ao adicionar: ' + e.message, true);
+  }
 }
 
 function abrirModalInspecao(entregaId, funcionarioNome, epiNome) {

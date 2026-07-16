@@ -1719,6 +1719,59 @@ def sst_treinamentos_page(request):
     return render(request, "sst_treinamentos.html", {"empresa_nome": empresa.nome})
 
 
+def _criar_treinamento(empresa, func, data):
+    """Cria um TreinamentoNR a partir do payload — compartilhado entre o registro
+    individual (api_treinamentos) e o registro em lote (api_treinamentos_lote)."""
+    tipo_treinamento = None
+    if data.get("tipo_treinamento_id"):
+        tipo_treinamento = TipoTreinamentoNR.objects.filter(id=data["tipo_treinamento_id"], empresa=empresa).first()
+
+    nr = data.get("nr", "")
+    if not nr and tipo_treinamento:
+        nr = tipo_treinamento.nr
+    categoria = data.get("categoria", "")
+    if not categoria and tipo_treinamento:
+        categoria = tipo_treinamento.categoria
+
+    try:
+        dr = date.fromisoformat(data.get("data_realizacao") or "") if data.get("data_realizacao") else None
+    except ValueError:
+        dr = None
+    try:
+        dv = date.fromisoformat(data.get("data_validade") or "") if data.get("data_validade") else None
+    except ValueError:
+        dv = None
+    hoje = date.today()
+    if dv and dv < hoje:
+        status_auto = "vencido"
+    elif dr and dr <= hoje:
+        status_auto = "valido"
+    elif dr and dr > hoje:
+        status_auto = "agendado"
+    else:
+        status_auto = "pendente"
+
+    carga_horaria = data.get("carga_horaria")
+    if carga_horaria in (None, "") and tipo_treinamento:
+        carga_horaria = tipo_treinamento.carga_horaria_padrao
+
+    return TreinamentoNR.objects.create(
+        empresa=empresa,
+        funcionario=func,
+        tipo_treinamento=tipo_treinamento,
+        nr=nr,
+        categoria=categoria,
+        titulo=data.get("titulo", "") or (tipo_treinamento.nome if tipo_treinamento else ""),
+        instrutor=data.get("instrutor", ""),
+        carga_horaria=int(carga_horaria or 0),
+        data_realizacao=dr,
+        data_validade=dv,
+        status=data.get("status") or status_auto,
+        certificado=data.get("certificado", ""),
+        observacoes=data.get("observacoes", ""),
+    )
+
+
 @csrf_exempt
 def api_treinamentos(request):
     empresa = _empresa_autenticada(request)
@@ -1743,7 +1796,8 @@ def api_treinamentos(request):
                     "funcionario": t.funcionario.nome,
                     "cargo": t.funcionario.cargo,
                     "nr": t.nr,
-                    "nr_label": t.get_nr_display(),
+                    "nr_label": t.get_nr_display() if t.nr else "",
+                    "categoria": t.categoria,
                     "tipo_treinamento_id": t.tipo_treinamento_id,
                     "titulo": t.titulo,
                     "instrutor": t.instrutor,
@@ -1767,48 +1821,48 @@ def api_treinamentos(request):
         func = _buscar_funcionario(empresa, data)
         if not func:
             return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
-        nr = data.get("nr", "outro")
-        try:
-            dr = date.fromisoformat(data.get("data_realizacao") or "") if data.get("data_realizacao") else None
-        except ValueError:
-            dr = None
-        try:
-            dv = date.fromisoformat(data.get("data_validade") or "") if data.get("data_validade") else None
-        except ValueError:
-            dv = None
-        # Status automático
-        hoje = date.today()
-        if dv and dv < hoje:
-            status_auto = "vencido"
-        elif dr and dr <= hoje:
-            status_auto = "valido"
-        elif dr and dr > hoje:
-            status_auto = "agendado"
-        else:
-            status_auto = "pendente"
-        tipo_treinamento = None
-        if data.get("tipo_treinamento_id"):
-            tipo_treinamento = TipoTreinamentoNR.objects.filter(id=data["tipo_treinamento_id"], empresa=empresa).first()
-        carga_horaria = data.get("carga_horaria")
-        if carga_horaria in (None, "") and tipo_treinamento:
-            carga_horaria = tipo_treinamento.carga_horaria_padrao
-        t = TreinamentoNR.objects.create(
-            empresa=empresa,
-            funcionario=func,
-            tipo_treinamento=tipo_treinamento,
-            nr=nr,
-            titulo=data.get("titulo", "") or (tipo_treinamento.nome if tipo_treinamento else ""),
-            instrutor=data.get("instrutor", ""),
-            carga_horaria=int(carga_horaria or 0),
-            data_realizacao=dr,
-            data_validade=dv,
-            status=data.get("status") or status_auto,
-            certificado=data.get("certificado", ""),
-            observacoes=data.get("observacoes", ""),
-        )
+        t = _criar_treinamento(empresa, func, data)
         return JsonResponse({"id": t.id, "ok": True}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_treinamentos_lote(request):
+    """POST — registra o mesmo treinamento (turma/sessão) para uma LISTA de
+    funcionários de uma vez, em vez de repetir o cadastro pessoa por pessoa."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    if request.method != "POST":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    funcionario_ids = data.get("funcionario_ids") or []
+    if not funcionario_ids:
+        return JsonResponse({"erro": "Selecione ao menos um funcionário"}, status=400)
+
+    from .models import FuncionarioSST
+    funcionarios = list(FuncionarioSST.objects.filter(empresa=empresa, id__in=funcionario_ids))
+    encontrados = {f.id for f in funcionarios}
+
+    criados = []
+    erros = []
+    for fid in funcionario_ids:
+        func = next((f for f in funcionarios if f.id == fid), None)
+        if not func:
+            erros.append({"funcionario_id": fid, "erro": "não encontrado"})
+            continue
+        try:
+            t = _criar_treinamento(empresa, func, data)
+            criados.append(t.id)
+        except Exception as exc:
+            erros.append({"funcionario_id": fid, "erro": str(exc)})
+
+    return JsonResponse({"ok": True, "criados": len(criados), "ids": criados, "erros": erros}, status=201)
 
 
 def api_treinamentos_resumo(request):
@@ -1861,7 +1915,9 @@ def api_tipos_treinamento(request):
         return JsonResponse({"tipos": [{
             "id": t.id,
             "nr": t.nr,
-            "nr_label": t.get_nr_display(),
+            "nr_label": t.get_nr_display() if t.nr else "",
+            "categoria": t.categoria,
+            "rotulo_agrupamento": t.rotulo_agrupamento,
             "nome": t.nome,
             "carga_horaria_padrao": t.carga_horaria_padrao,
             "periodicidade_dias": t.periodicidade_dias,
@@ -1880,8 +1936,12 @@ def api_tipos_treinamento(request):
             return JsonResponse({"erro": "carga_horaria_padrao inválida"}, status=400)
         if carga <= 0:
             return JsonResponse({"erro": "carga_horaria_padrao deve ser maior que zero"}, status=400)
+        nr = data.get("nr", "")
+        categoria = data.get("categoria", "").strip()
+        if not nr and not categoria:
+            return JsonResponse({"erro": "Informe a NR ou uma categoria livre (ex: Onboarding, Produto)"}, status=400)
         tipo, criado = TipoTreinamentoNR.objects.update_or_create(
-            empresa=empresa, nr=data.get("nr", "outro"), nome=nome,
+            empresa=empresa, nr=nr, categoria=categoria, nome=nome,
             defaults={
                 "carga_horaria_padrao": carga,
                 "periodicidade_dias": data.get("periodicidade_dias") or None,
@@ -1910,6 +1970,8 @@ def api_tipos_treinamento_detail(request, tipo_id):
             tipo.nome = data["nome"].strip()
         if "nr" in data:
             tipo.nr = data["nr"]
+        if "categoria" in data:
+            tipo.categoria = data["categoria"].strip()
         if "carga_horaria_padrao" in data:
             try:
                 carga = int(data["carga_horaria_padrao"])
@@ -1940,10 +2002,15 @@ def _homem_hora_linhas(empresa, data_ini=None, data_fim=None):
     grupos = {}
     nr_labels = dict(TreinamentoNR.NR_CHOICES)
     for t in qs:
-        nome_tipo = t.tipo_treinamento.nome if t.tipo_treinamento else (t.titulo or "Sem título")
-        chave = (t.nr, nome_tipo)
+        if t.tipo_treinamento:
+            rotulo = t.tipo_treinamento.rotulo_agrupamento
+            nome_tipo = t.tipo_treinamento.nome
+        else:
+            rotulo = nr_labels.get(t.nr, t.nr) if t.nr else (t.categoria or "Treinamento Geral")
+            nome_tipo = t.titulo or "Sem título"
+        chave = (rotulo, nome_tipo)
         if chave not in grupos:
-            grupos[chave] = {"nr": nr_labels.get(t.nr, t.nr), "nome_tipo": nome_tipo, "participantes": 0, "carga_horaria": t.carga_horaria, "homem_hora": 0}
+            grupos[chave] = {"nr": rotulo, "nome_tipo": nome_tipo, "participantes": 0, "carga_horaria": t.carga_horaria, "homem_hora": 0}
         grupos[chave]["participantes"] += 1
         grupos[chave]["homem_hora"] += t.carga_horaria
     linhas = sorted(grupos.values(), key=lambda l: (l["nr"], l["nome_tipo"]))
@@ -1977,9 +2044,58 @@ def api_treinamentos_homem_hora_pdf(request):
     else:
         periodo_label = "Todos os treinamentos válidos/concluídos"
     pdf_bytes = gerar_pdf_homem_hora_treinamentos(linhas, total_geral, empresa.nome, periodo_label)
+    disposicao = "attachment" if request.GET.get("download") else "inline"
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
-    resp["Content-Disposition"] = 'inline; filename="relatorio_homem_hora_treinamentos.pdf"'
+    resp["Content-Disposition"] = f'{disposicao}; filename="relatorio_homem_hora_treinamentos.pdf"'
     return resp
+
+
+@csrf_exempt
+def api_treinamentos_homem_hora_email(request):
+    """POST — envia o relatório de homem-hora em PDF por e-mail (transmissão)."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    destinatario = (data.get("email") or "").strip()
+    if not destinatario or "@" not in destinatario:
+        return JsonResponse({"erro": "Informe um e-mail válido"}, status=400)
+
+    from .pdf_sst import gerar_pdf_homem_hora_treinamentos
+    from django.core.mail import EmailMessage
+
+    data_ini = data.get("data_inicio") or None
+    data_fim = data.get("data_fim") or None
+    linhas, total_geral = _homem_hora_linhas(empresa, data_ini, data_fim)
+    periodo_label = f"Período de {data_ini} a {data_fim}" if (data_ini and data_fim) else "Todos os treinamentos válidos/concluídos"
+    pdf_bytes = gerar_pdf_homem_hora_treinamentos(linhas, total_geral, empresa.nome, periodo_label)
+
+    try:
+        msg = EmailMessage(
+            subject=f"[SolusCRT] Relatório de Homem-Hora — {empresa.nome}",
+            body=(
+                f"Segue em anexo o relatório de homem-hora de treinamentos ({periodo_label}).\n\n"
+                f"Total geral: {total_geral} homem-hora.\n\n"
+                "-- \nSolusCRT · Sistema de Gestão SST"
+            ),
+            from_email=None,
+            to=[destinatario],
+        )
+        msg.attach("relatorio_homem_hora_treinamentos.pdf", pdf_bytes, "application/pdf")
+        enviados = msg.send(fail_silently=False)
+        if enviados < 1:
+            return JsonResponse({"erro": "Servidor de e-mail não confirmou o envio."}, status=502)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error("Erro ao enviar relatório de homem-hora por e-mail: %s", exc)
+        return JsonResponse({"erro": f"Falha ao enviar e-mail: {exc}"}, status=502)
+
+    return JsonResponse({"ok": True})
 
 
 @requer_permissao_modulo("sst.gestao_conformidade")
