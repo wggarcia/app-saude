@@ -94,22 +94,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
   <div class="topbar-user"><span>📋</span> Prontuário</div>
 </header>
 <div class="layout">
-<aside class="sidebar">
-  <div class="nav-section">Clínico</div>
-  <a class="nav-link active" href="/hospital/prontuario/"><div class="nav-link-inner"><span>📋</span><span>Prontuários</span></div></a>
-  <a class="nav-link" href="/hospital/cirurgia/"><div class="nav-link-inner"><span>🔪</span><span>Bloco Cirúrgico</span></div></a>
-  <a class="nav-link" href="/hospital/lis/"><div class="nav-link-inner"><span>🔬</span><span>Laboratório</span></div></a>
-  <a class="nav-link" href="/hospital/imagem/"><div class="nav-link-inner"><span>🩻</span><span>Imagem/PACS</span></div></a>
-  <a class="nav-link" href="/hospital/ia-autorizacao/"><div class="nav-link-inner"><span>🧠</span><span>IA Autorização</span></div></a>
-  <div class="nav-section" style="margin-top:8px">Administrativo</div>
-  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><div class="nav-link-inner"><span>💊</span><span>Farmácia Hosp.</span></div></a>
-  <a class="nav-link" href="/hospital/faturamento-tiss/"><div class="nav-link-inner"><span>🧾</span><span>Faturamento TISS</span></div></a>
-  <div class="nav-section" style="margin-top:8px">Gestão</div>
-  <a class="nav-link" href="/hospital/gestao/"><div class="nav-link-inner"><span>🏠</span><span>Painel</span></div></a>
-  <div class="sidebar-footer">
-    <a class="nav-link nav-link-logout" href="/logout/" style="text-decoration:none"><div class="nav-link-inner"><span>🚪</span><span>Sair</span></div></a>
-  </div>
-</aside>
+{% include "_hospital_sidebar.html" %}
 <main class="main">
 <div class="content">
 

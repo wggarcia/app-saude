@@ -73,24 +73,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="logo">💊 Farmácia</div>
-  <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/farmacia/">📊 Inteligência</a>
-  <a class="nav-link" href="/farmacia/gestao/">🏪 Gestão Operacional</a>
-  <div class="nav-section">Módulos PDV</div>
-  <a class="nav-link" href="/farmacia/pdv/">🖥️ PDV / Caixa</a>
-  <a class="nav-link active" href="/farmacia/pbm/">💳 PBM / Convênios</a>
-  <a class="nav-link" href="/farmacia/financeiro/">📈 Financeiro / DRE</a>
-  <a class="nav-link" href="/farmacia/delivery/">🛵 Delivery</a>
-  <div class="nav-section" style="margin-top:8px">Rede</div>
-  <a class="nav-link" href="/farmacia/magistral/">🧪 Magistral</a>
-  <a class="nav-link" href="/farmacia/sngpc/">📋 SNGPC</a>
-  <a class="nav-link" href="/rede/gestao/">🌐 Rede &amp; Comunicação</a>
-  <div class="sidebar-footer">
-    <a class="nav-link nav-link-logout" href="/logout/">🚪 Sair</a>
-  </div>
-</aside>
+{% include "_farmacia_sidebar.html" %}
 
 <main class="main">
   <div class="page-header">

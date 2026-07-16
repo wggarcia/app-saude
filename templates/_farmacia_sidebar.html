@@ -1,0 +1,41 @@
+<aside class="sidebar">
+  <div class="logo">💊 Farmácia</div>
+
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link{% if request.path == '/farmacia/' %} active{% endif %}" href="/farmacia/"><span>📊</span> Inteligência</a>
+  <a class="nav-link{% if request.path == '/farmacia/gestao/' %} active{% endif %}" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
+  {% if mostrar_link_ti %}
+  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>🖥️</span> Ambiente IT</a>
+  {% endif %}
+  {% if mostrar_aba_gerencia %}
+  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
+  {% endif %}
+
+  {% if farm_ver_pdv %}
+  <div class="nav-section">PDV</div>
+  <a class="nav-link{% if request.path == '/farmacia/pdv/' %} active{% endif %}" href="/farmacia/pdv/"><span>🖥️</span> PDV / Caixa</a>
+  {% endif %}
+
+  {% if farm_ver_gestao %}
+  <div class="nav-section">Gestão</div>
+  <a class="nav-link{% if request.path == '/farmacia/pbm/' %} active{% endif %}" href="/farmacia/pbm/"><span>💳</span> PBM / Convênios</a>
+  <a class="nav-link{% if request.path == '/farmacia/financeiro/' %} active{% endif %}" href="/farmacia/financeiro/"><span>📈</span> Financeiro / DRE</a>
+  <a class="nav-link{% if request.path == '/farmacia/delivery/' %} active{% endif %}" href="/farmacia/delivery/"><span>🛵</span> E-commerce / Delivery</a>
+  <a class="nav-link{% if request.path == '/farmacia/magistral/' %} active{% endif %}" href="/farmacia/magistral/"><span>🧪</span> Farmácia Magistral</a>
+  <a class="nav-link{% if request.path == '/farmacia/sngpc/' %} active{% endif %}" href="/farmacia/sngpc/"><span>📋</span> SNGPC</a>
+  {% endif %}
+
+  {% if farm_ver_rede %}
+  <div class="nav-section">Rede</div>
+  <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
+  {% endif %}
+
+  {% if mostrar_link_rh %}
+  <div class="nav-section">Governança</div>
+  <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>👤</span> Portal RH</a>
+  {% endif %}
+
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>

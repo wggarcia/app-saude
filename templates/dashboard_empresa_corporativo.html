@@ -370,23 +370,33 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   <nav class="tb-nav">
     <a href="/dashboard-empresa/" class="active">Visão Geral</a>
     <a href="/sst/">Central SST</a>
-    <a href="/sst/funcionarios/">Funcionários</a>
+    {% if pf_ver_funcionario %}<a href="/sst/funcionarios/">Funcionários</a>{% endif %}
+    {% if pf_ver_aso %}
     <a href="/sst/asos/">ASO</a>
     <a href="/sst/exames/">Exames</a>
-    <a href="/sst/afastamentos/">Afastamentos</a>
-    <a href="/sst/cats/">CAT / Acidentes</a>
-    <a href="/sst/documentos/">PGR · PCMSO · LTCAT</a>
+    {% endif %}
+    {% if pf_ver_afastamento %}<a href="/sst/afastamentos/">Afastamentos</a>{% endif %}
+    {% if pf_ver_cat %}<a href="/sst/cats/">CAT / Acidentes</a>{% endif %}
+    {% if pf_ver_governanca %}<a href="/sst/documentos/">PGR · PCMSO · LTCAT</a>{% endif %}
+    {% if pf_ver_esocial %}
     <a href="/sst/esocial/">eSocial</a>
+    <a href="/sst/fap/">FAP</a>
+    {% endif %}
+    {% if pf_ver_riscos %}
     <a href="/sst/treinamentos/">Treinamentos NR</a>
     <a href="/sst/epis/">EPI / EPC</a>
-    <a href="/sst/comunicacao/">Comunicação</a>
+    {% endif %}
+    {% if pf_ver_prevencao %}<a href="/sst/comunicacao/">Comunicação</a>{% endif %}
+    {% if pf_ver_governanca %}
     <a href="/sst/relatorios/">Relatórios</a>
-    <a href="/sst/ppp/">PPP</a>
+    {% endif %}
+    {% if pf_ver_postos %}<a href="/sst/ppp/">PPP</a>{% endif %}
+    {% if pf_ver_governanca %}
     <a href="/sst/laudos/">Laudos</a>
-    <a href="/sst/fap/">FAP</a>
     <a href="/sst/laboratorios/">Laboratório</a>
     <a href="/sst/rede-credenciada/">Rede Credenciada</a>
     <a href="/clinica/financeiro/">Financeiro</a>
+    {% endif %}
   </nav>
   <div class="tb-actions">
     <div class="badge-alerta" id="tb-alertas" style="display:none" onclick="scrollToAlertas()">

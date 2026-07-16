@@ -184,6 +184,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     </div>
   </details>
 
+  {% if ps_ver_autorizacao %}
   <details class="nav-group" data-nav-group data-group-key="plano-core" open>
     <summary><div class="nav-section">Core Operacional</div></summary>
     <div class="nav-group-body">
@@ -196,7 +197,9 @@ tr:hover td{background:rgba(255,107,157,.03)}
       <button class="tab-btn" onclick="setTab('fila')"><span>&#9201;</span> Fila Clinica</button>
     </div>
   </details>
+  {% endif %}
 
+  {% if ps_ver_rede_credenciada %}
   <details class="nav-group" data-nav-group data-group-key="plano-rede-fin">
     <summary><div class="nav-section">Rede e Financeiro</div></summary>
     <div class="nav-group-body">
@@ -210,34 +213,53 @@ tr:hover td{background:rgba(255,107,157,.03)}
       <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
     </div>
   </details>
+  {% endif %}
 
+  {% if ps_ver_autorizacao or ps_ver_comercial or ps_ver_compliance_ans %}
   <details class="nav-group" data-nav-group data-group-key="plano-intel-comp">
     <summary><div class="nav-section">IA, Compliance e Relacionamento</div></summary>
     <div class="nav-group-body">
+      {% if ps_ver_autorizacao %}
       <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
       <button class="tab-btn" onclick="setTab('epidemiologia')"><span>&#127757;</span> Radar Epidemiologico</button>
       <button class="tab-btn" onclick="setTab('auditoria')"><span>&#128269;</span> Auditoria Medica</button>
       <button class="tab-btn" onclick="setTab('carencias')"><span>&#8987;</span> Carencias</button>
-      <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
+      {% endif %}
+      {% if ps_ver_compliance_ans %}
       <button class="tab-btn" onclick="setTab('regulatorio')"><span>&#128196;</span> Relatorios ANS</button>
+      {% endif %}
+      {% if ps_ver_comercial %}
+      <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
       <button class="tab-btn" onclick="setTab('comunicacao')"><span>&#128172;</span> Comunicacao</button>
       <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
       <button class="tab-btn" onclick="setTab('telemedicina')"><span>&#128241;</span> Telemedicina</button>
       <button class="tab-btn" onclick="setTab('odontologia')"><span>&#129463;</span> Odontologia</button>
       <button class="tab-btn" onclick="setTab('contratos')"><span>&#128209;</span> Contratos Corp.</button>
+      {% endif %}
     </div>
   </details>
+  {% endif %}
 
+  {% if ps_ver_comercial or ps_ver_rede_credenciada or ps_ver_compliance_ans or ps_ver_autorizacao %}
   <details class="nav-group" data-nav-group data-group-key="plano-dedicados">
     <summary><div class="nav-section">Módulos Dedicados</div></summary>
     <div class="nav-group-body">
+      {% if ps_ver_comercial %}
       <button class="nav-link" onclick="openModulePanel('/plano-saude/corretores/','🤝 Corretoras')"><span>🤝</span> Corretoras</button>
+      {% endif %}
+      {% if ps_ver_rede_credenciada %}
       <button class="nav-link" onclick="openModulePanel('/plano-saude/rede/','🏥 Rede Credenciada')"><span>🏥</span> Rede Credenciada</button>
+      {% endif %}
+      {% if ps_ver_compliance_ans %}
       <button class="nav-link" onclick="openModulePanel('/plano-saude/ans/','📋 ANS / DIOPS / SIB')"><span>📋</span> ANS / DIOPS / SIB</button>
+      {% endif %}
+      {% if ps_ver_autorizacao %}
       <button class="nav-link" onclick="openModulePanel('/plano-saude/ia/','🤖 IA — Autorização')"><span>🤖</span> IA — Autorização</button>
       <button class="nav-link" onclick="openModulePanel('/plano-saude/portal-admin/','👤 Portal Beneficiário')"><span>👤</span> Portal Beneficiário</button>
+      {% endif %}
     </div>
   </details>
+  {% endif %}
 
   <div class="sidebar-footer">
     <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>

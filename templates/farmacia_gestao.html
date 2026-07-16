@@ -105,7 +105,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="nav-group-body">
       <a class="nav-link" href="/farmacia/"><span>📊</span> Inteligência</a>
       <a class="nav-link active" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
+      {% if farm_ver_rede %}
       <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
+      {% endif %}
     </div>
   </details>
 
@@ -133,13 +135,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <details class="nav-group" data-nav-group data-group-key="farmacia-avancado">
     <summary><div class="nav-section">Módulos Avançados</div></summary>
     <div class="nav-group-body">
+      {% if farm_ver_pdv %}
       <button class="nav-link" onclick="openModulePanel('/farmacia/pdv/','🖥️ PDV / Caixa')"><span>🖥️</span> PDV / Caixa</button>
+      {% endif %}
       <button class="nav-link" onclick="openModulePanel('/farmacia/pbm/','💳 PBM / Convênios')"><span>💳</span> PBM / Convênios</button>
       <button class="nav-link" onclick="openModulePanel('/farmacia/financeiro/','📊 DRE / Financeiro')"><span>📊</span> DRE / Financeiro</button>
       <button class="nav-link" onclick="openModulePanel('/farmacia/delivery/','🛵 E-commerce / Delivery')"><span>🛵</span> E-commerce / Delivery</button>
       <button class="nav-link" onclick="openModulePanel('/farmacia/magistral/','⚗️ Farmácia Magistral')"><span>⚗️</span> Farmácia Magistral</button>
       <button class="nav-link" onclick="openModulePanel('/farmacia/sngpc/','📋 SNGPC')"><span>📋</span> SNGPC</button>
+      {% if farm_ver_rede %}
       <a class="nav-link" href="/rede/gestao/" style="text-decoration:none"><span>🌐</span> Rede de Farmácias</a>
+      {% endif %}
     </div>
   </details>
 

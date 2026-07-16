@@ -1,0 +1,48 @@
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link{% if request.path == '/hospital/gestao/' %} active{% endif %}" href="/hospital/gestao/"><span>🏠</span> Painel</a>
+
+  {% if hosp_ver_clinico %}
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link{% if request.path == '/hospital/prontuario/' %} active{% endif %}" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link{% if request.path == '/hospital/cirurgia/' %} active{% endif %}" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link{% if request.path == '/hospital/lis/' %} active{% endif %}" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link{% if request.path == '/hospital/imagem/' %} active{% endif %}" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link{% if request.path == '/hospital/ia-autorizacao/' %} active{% endif %}" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link{% if request.path == '/hospital/assinatura/' %} active{% endif %}" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link{% if request.path == '/hospital/ccih/' %} active{% endif %}" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link{% if request.path == '/hospital/hemoterapia/' %} active{% endif %}" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link{% if request.path == '/hospital/obstetrico/' %} active{% endif %}" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link{% if request.path == '/hospital/oncologia/' %} active{% endif %}" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link{% if request.path == '/hospital/opme/' %} active{% endif %}" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link{% if request.path == '/hospital/rnds/' %} active{% endif %}" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  {% endif %}
+
+  {% if hosp_ver_operacional %}
+  <div class="nav-section">Administrativo</div>
+  <a class="nav-link{% if request.path == '/hospital/farmacia-hospitalar/' %} active{% endif %}" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link{% if request.path == '/hospital/faturamento-tiss/' %} active{% endif %}" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  {% endif %}
+
+  {% if hosp_ver_rede or mostrar_link_ti or mostrar_link_rh or mostrar_aba_gerencia %}
+  <div class="nav-section">Rede e Gestão</div>
+  {% if hosp_ver_rede %}
+  <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede Hospitalar</a>
+  {% endif %}
+  {% if mostrar_link_ti %}
+  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>🖥️</span> Ambiente IT</a>
+  {% endif %}
+  {% if mostrar_link_rh %}
+  <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>👤</span> Portal RH</a>
+  {% endif %}
+  {% if mostrar_aba_gerencia %}
+  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
+  {% endif %}
+  {% endif %}
+
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>

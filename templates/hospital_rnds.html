@@ -64,30 +64,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
 <body>
 <div class="toast" id="toast"></div>
 
-<aside class="sidebar">
-  <div class="logo">🏥 HospitalOS</div>
-  <div class="nav-section">Clínico</div>
-  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
-  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
-  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
-  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
-  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
-  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
-  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
-  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
-  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
-  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
-  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
-  <a class="nav-link active" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
-  <div class="nav-section" style="margin-top:8px">Administrativo</div>
-  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
-  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
-  <div class="nav-section" style="margin-top:8px">Gestão</div>
-  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Painel</a>
-  <div class="sidebar-footer">
-    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
-  </div>
-</aside>
+{% include "_hospital_sidebar.html" %}
 
 <main class="main">
   <div class="page-header">

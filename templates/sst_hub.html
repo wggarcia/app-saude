@@ -146,13 +146,15 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <h1>Central de acesso e prioridade para o operador</h1>
         <p>Organizei o SST por fluxo de trabalho para reduzir cliques, separar o que é urgência do que é governança e deixar as rotinas mais claras para quem opera a plataforma no dia a dia.</p>
         <div class="quick-actions">
-          <a class="chip" href="/sst/funcionarios/">👥 Abrir funcionários</a>
+          {% if pf_ver_funcionario %}<a class="chip" href="/sst/funcionarios/">👥 Abrir funcionários</a>{% endif %}
+          {% if pf_ver_agenda %}
           <a class="chip" href="/sst/solicitacoes/">📨 Novo pedido</a>
           <a class="chip" href="/sst/exames/agendar/">📅 Agendar exame</a>
-          <a class="chip" href="/sst/cats/">⚠️ Registrar CAT</a>
-          <a class="chip" href="/sst/esocial/">🔗 Fila eSocial</a>
-          <a class="chip" href="/sst/documentos/">📁 Ver documentos</a>
-          <a class="chip" href="/sst/comunicacao/">💬 Comunicação SST</a>
+          {% endif %}
+          {% if pf_ver_cat %}<a class="chip" href="/sst/cats/">⚠️ Registrar CAT</a>{% endif %}
+          {% if pf_ver_esocial %}<a class="chip" href="/sst/esocial/">🔗 Fila eSocial</a>{% endif %}
+          {% if pf_ver_governanca %}<a class="chip" href="/sst/documentos/">📁 Ver documentos</a>{% endif %}
+          {% if pf_ver_prevencao %}<a class="chip" href="/sst/comunicacao/">💬 Comunicação SST</a>{% endif %}
           {% if mostrar_aba_gerencia %}
           <a class="chip" href="/gerencia/">🧭 Gerência Executiva</a>
           {% endif %}
@@ -257,12 +259,15 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     </section>
 
     <section class="modules">
+      {% if pf_ver_funcionario %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">👥</div><div class="badge b-ok">Base</div></div>
         <div class="module-title">Funcionários</div>
         <div class="module-copy">Entrada principal para prontuário, cargo, risco, histórico e vínculo com ASOs e exames.</div>
         <a class="module-link" href="/sst/funcionarios/">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_aso %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">📋</div><div class="badge b-warn">Rotina</div></div>
         <div class="module-title">ASO e pedidos</div>
@@ -275,12 +280,16 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <div class="module-copy">Execução da agenda ocupacional com foco em vencidos, faltas e reagendamentos.</div>
         <a class="module-link" href="/sst/exames/">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_cat %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">⚠️</div><div class="badge b-danger">Crítico</div></div>
         <div class="module-title">CAT e afastamentos</div>
         <div class="module-copy">Tratamento de ocorrências, afastamentos e eventos que exigem resposta formal imediata.</div>
         <a class="module-link" href="/sst/cats/">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_riscos %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">🦺</div><div class="badge b-ok">Prevenção</div></div>
         <div class="module-title">EPI, riscos e postos</div>
@@ -293,24 +302,31 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <div class="module-copy">Gestão dos vencimentos de capacitação e das obrigações por norma regulamentadora.</div>
         <a class="module-link" href="/sst/treinamentos/">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_governanca %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">📁</div><div class="badge b-warn">Governança</div></div>
         <div class="module-title">Documentos e normas</div>
         <div class="module-copy">PGR, PCMSO, LTCAT, PPP, CIPA e a biblioteca de NRs com acesso mais claro.</div>
         <a class="module-link" href="/sst/documentos/">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_prevencao %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">💬</div><div class="badge b-ok">Engajamento</div></div>
         <div class="module-title">Saúde & comunicação</div>
         <div class="module-copy">Mensagens, grupos, conteúdos e alinhamento com o colaborador em um fluxo único dentro do SST.</div>
         <a class="module-link" href="/sst/comunicacao/">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_esocial %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">🔗</div><div class="badge b-muted">Integração</div></div>
         <div class="module-title">eSocial e conformidade</div>
         <div class="module-copy">Consolidação da fila de eventos, histórico de transmissões e checagem de aderência.</div>
         <a class="module-link" href="/sst/esocial/">Abrir módulo</a>
       </article>
+      {% endif %}
       {% if mostrar_aba_gerencia %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">🧭</div><div class="badge b-warn">Executivo</div></div>
@@ -329,24 +345,31 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       {% endif %}
 
       <!-- ── Módulos SST Expansão ────────────────────────────── -->
+      {% if pf_ver_postos %}
       <article class="module-card" style="border-color:rgba(90,240,211,.22)">
         <div class="module-top"><div class="module-icon" style="background:rgba(90,240,211,.12)">📜</div><div class="badge b-ok">Legal</div></div>
         <div class="module-title">PPP — Perfil Profissiográfico</div>
         <div class="module-copy">Geração automática do PPP por IN INSS 128/2022. Agentes nocivos, monitoração biológica e histórico de cargos.</div>
         <a class="module-link" href="/sst/ppp/" id="linkPPP">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_governanca %}
       <article class="module-card" style="border-color:rgba(111,180,255,.22)">
         <div class="module-top"><div class="module-icon" style="background:rgba(111,180,255,.12)">📑</div><div class="badge b-warn">Validade</div></div>
         <div class="module-title">Laudos Técnicos</div>
         <div class="module-copy">LTCAT, LIP, LTIP, PGR e PCMSO com controle de vigência, assinatura e alertas de vencimento (≤ 60 dias).</div>
         <a class="module-link" href="/sst/laudos/" id="linkLaudos">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_esocial %}
       <article class="module-card" style="border-color:rgba(255,176,32,.22)">
         <div class="module-top"><div class="module-icon" style="background:rgba(255,176,32,.12)">📊</div><div class="badge b-danger">FAP</div></div>
         <div class="module-title">Gestão FAP</div>
         <div class="module-copy">Fator Acidentário de Prevenção: monitore o multiplicador RAT, simule economia/custo e gerencie prazo de contestação.</div>
         <a class="module-link" href="/sst/fap/" id="linkFAP">Abrir módulo</a>
       </article>
+      {% endif %}
+      {% if pf_ver_governanca %}
       <article class="module-card" style="border-color:rgba(6,214,160,.22)">
         <div class="module-top"><div class="module-icon" style="background:rgba(6,214,160,.12)">🧪</div><div class="badge b-ok">Lab</div></div>
         <div class="module-title">Laboratório</div>
@@ -365,6 +388,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <div class="module-copy">Faturamento de serviços SST, DRE, fluxo de caixa, glosas e contas a pagar/receber para clínicas ocupacionais.</div>
         <a class="module-link" href="/gerencia/" id="linkFinClinica">Abrir via Gerência Executiva</a>
       </article>
+      {% endif %}
     </section>
   </main>
 </div>

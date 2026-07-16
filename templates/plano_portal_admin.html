@@ -70,23 +70,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="logo">Plano de Saude</div>
-  <details class="nav-group" data-nav-group data-group-key="planoportal-principal" open>
-    <summary><div class="nav-section">Navegação</div></summary>
-    <div class="nav-group-body">
-      <a class="nav-link" href="/plano-saude/gestao/"><span>&#127968;</span> Gestao Operacional</a>
-      <a class="nav-link" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
-      <a class="nav-link" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
-      <a class="nav-link" href="/plano-saude/ans/"><span>&#128196;</span> Obrigacoes ANS</a>
-      <a class="nav-link" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorizacao</a>
-      <a class="nav-link active" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiario</a>
-    </div>
-  </details>
-  <div class="sidebar-footer">
-    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
-  </div>
-</aside>
+{% include "_plano_saude_sidebar.html" %}
 
 <main class="main">
   <div class="page-header">

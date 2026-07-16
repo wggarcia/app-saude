@@ -1,0 +1,26 @@
+<aside class="sidebar">
+  <div class="logo">Plano de Saúde</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link{% if request.path == '/plano-saude/gestao/' %} active{% endif %}" href="/plano-saude/gestao/"><span>&#127968;</span> Gestão Operacional</a>
+  {% if ps_ver_comercial %}
+  <div class="nav-section">Comercial</div>
+  <a class="nav-link{% if request.path == '/plano-saude/corretores/' %} active{% endif %}" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
+  {% endif %}
+  {% if ps_ver_rede_credenciada %}
+  <div class="nav-section">Rede</div>
+  <a class="nav-link{% if request.path == '/plano-saude/rede/' %} active{% endif %}" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+  {% endif %}
+  {% if ps_ver_compliance_ans %}
+  <div class="nav-section">Regulatório</div>
+  <a class="nav-link{% if request.path == '/plano-saude/ans/' %} active{% endif %}" href="/plano-saude/ans/"><span>&#128196;</span> Obrigações ANS</a>
+  {% endif %}
+  {% if ps_ver_autorizacao %}
+  <div class="nav-section">IA</div>
+  <a class="nav-link{% if request.path == '/plano-saude/ia/' %} active{% endif %}" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorização</a>
+  <div class="nav-section">Beneficiários</div>
+  <a class="nav-link{% if request.path == '/plano-saude/portal-admin/' %} active{% endif %}" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiário</a>
+  {% endif %}
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
+  </div>
+</aside>

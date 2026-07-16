@@ -286,6 +286,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
   <details class="nav-group" data-nav-group data-group-key="hospital-clinicos">
     <summary><div class="nav-section">Módulos Clínicos</div></summary>
     <div class="nav-group-body">
+      {% if hosp_ver_clinico %}
       <button class="nav-link" onclick="openModulePanel('/hospital/prontuario/','📋 Prontuário (EMR)')">
         <div class="nav-link-inner"><span>📋</span><span>Prontuário (EMR)</span></div>
       </button>
@@ -298,12 +299,16 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <button class="nav-link" onclick="openModulePanel('/hospital/cirurgia/','🔪 Bloco Cirúrgico')">
         <div class="nav-link-inner"><span>🔪</span><span>Bloco Cirúrgico</span></div>
       </button>
+      {% endif %}
+      {% if hosp_ver_operacional %}
       <button class="nav-link" onclick="openModulePanel('/hospital/farmacia-hospitalar/','💊 Farmácia Hospitalar')">
         <div class="nav-link-inner"><span>💊</span><span>Farmácia Hosp.</span></div>
       </button>
       <button class="nav-link" onclick="openModulePanel('/hospital/faturamento-tiss/','💰 Faturamento TISS')">
         <div class="nav-link-inner"><span>💰</span><span>Faturamento TISS</span></div>
       </button>
+      {% endif %}
+      {% if hosp_ver_clinico %}
       <button class="nav-link" onclick="openModulePanel('/hospital/assinatura/','✍️ Assinatura Eletrônica')">
         <div class="nav-link-inner"><span>✍️</span><span>Assinatura Eletrônica</span></div>
       </button>
@@ -325,15 +330,18 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <button class="nav-link" onclick="openModulePanel('/hospital/rnds/','🔗 RNDS / e-SUS')">
         <div class="nav-link-inner"><span>🔗</span><span>RNDS / e-SUS</span></div>
       </button>
+      {% endif %}
     </div>
   </details>
 
   <details class="nav-group" data-nav-group data-group-key="hospital-gestao">
     <summary><div class="nav-section">Rede e Gestão</div></summary>
     <div class="nav-group-body">
+      {% if hosp_ver_rede %}
       <a class="nav-link" href="/rede/gestao/" style="text-decoration:none">
         <div class="nav-link-inner"><span>🌐</span><span>Rede Hospitalar</span></div>
       </a>
+      {% endif %}
       {% if mostrar_link_ti %}
       <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener" style="text-decoration:none">
         <div class="nav-link-inner"><span>🖥️</span><span>Ambiente IT</span></div>

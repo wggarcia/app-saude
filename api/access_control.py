@@ -753,6 +753,80 @@ def modulos_governo_visibilidade(request, setor_resolvido=None):
     return flags
 
 
+def modulos_hospital_visibilidade(request, setor_resolvido=None):
+    """Flags de visibilidade do menu do setor hospital, por módulo (RBAC granular).
+    Mesmo padrão de modulos_governo_visibilidade — ver docstring lá."""
+    empresa = getattr(request, "empresa", None)
+    setor = setor_resolvido or (get_setor(empresa) if empresa else None)
+    flags = {
+        "hosp_ver_operacional": True,
+        "hosp_ver_clinico": True,
+        "hosp_ver_rede": True,
+    }
+    if not empresa or setor != "hospital":
+        return flags
+    try:
+        ativos = set(meus_modulos(request))
+        flags = {
+            "hosp_ver_operacional": "hospital.operacional" in ativos,
+            "hosp_ver_clinico": "hospital.clinico" in ativos,
+            "hosp_ver_rede": "hospital.rede" in ativos,
+        }
+    except Exception:
+        logger.exception("Falha ao calcular visibilidade de módulos do hospital")
+    return flags
+
+
+def modulos_farmacia_visibilidade(request, setor_resolvido=None):
+    """Flags de visibilidade do menu do setor farmácia, por módulo (RBAC granular).
+    Mesmo padrão de modulos_governo_visibilidade — ver docstring lá."""
+    empresa = getattr(request, "empresa", None)
+    setor = setor_resolvido or (get_setor(empresa) if empresa else None)
+    flags = {
+        "farm_ver_pdv": True,
+        "farm_ver_gestao": True,
+        "farm_ver_rede": True,
+    }
+    if not empresa or setor != "farmacia":
+        return flags
+    try:
+        ativos = set(meus_modulos(request))
+        flags = {
+            "farm_ver_pdv": "farmacia.pdv" in ativos,
+            "farm_ver_gestao": "farmacia.gestao" in ativos,
+            "farm_ver_rede": "farmacia.rede" in ativos,
+        }
+    except Exception:
+        logger.exception("Falha ao calcular visibilidade de módulos da farmácia")
+    return flags
+
+
+def modulos_plano_saude_visibilidade(request, setor_resolvido=None):
+    """Flags de visibilidade do menu do setor plano_saude, por módulo (RBAC granular).
+    Mesmo padrão de modulos_governo_visibilidade — ver docstring lá."""
+    empresa = getattr(request, "empresa", None)
+    setor = setor_resolvido or (get_setor(empresa) if empresa else None)
+    flags = {
+        "ps_ver_autorizacao": True,
+        "ps_ver_rede_credenciada": True,
+        "ps_ver_comercial": True,
+        "ps_ver_compliance_ans": True,
+    }
+    if not empresa or setor != "plano_saude":
+        return flags
+    try:
+        ativos = set(meus_modulos(request))
+        flags = {
+            "ps_ver_autorizacao": "plano.autorizacao" in ativos,
+            "ps_ver_rede_credenciada": "plano.rede_credenciada" in ativos,
+            "ps_ver_comercial": "plano.comercial" in ativos,
+            "ps_ver_compliance_ans": "plano.compliance_ans" in ativos,
+        }
+    except Exception:
+        logger.exception("Falha ao calcular visibilidade de módulos do plano de saúde")
+    return flags
+
+
 def contexto_navegacao_setorial(request, setor=None):
     """
     Contexto padrão de navegação por perfil para templates setoriais.
@@ -780,6 +854,12 @@ def contexto_navegacao_setorial(request, setor=None):
     }
     if setor_resolvido == "governo":
         ctx.update(modulos_governo_visibilidade(request, setor_resolvido))
+    elif setor_resolvido == "hospital":
+        ctx.update(modulos_hospital_visibilidade(request, setor_resolvido))
+    elif setor_resolvido == "farmacia":
+        ctx.update(modulos_farmacia_visibilidade(request, setor_resolvido))
+    elif setor_resolvido == "plano_saude":
+        ctx.update(modulos_plano_saude_visibilidade(request, setor_resolvido))
     return ctx
 
 
