@@ -384,6 +384,9 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <button class="filtro-btn" onclick="enviarHomemHoraEmail()">📧 Enviar por E-mail</button>
         </div>
       </div>
+      <div class="table-area" style="margin-top:8px;padding:14px 18px">
+        <canvas id="chartHomemHora" height="90"></canvas>
+      </div>
       <div class="table-area" style="margin-top:8px">
         <table class="data-table">
           <thead><tr><th>NR / Categoria</th><th>Tipo de Treinamento</th><th>Participantes</th><th>Carga Horária (h)</th><th>Homem-Hora Total</th></tr></thead>
@@ -651,6 +654,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 </div>
 
 <script id="nrCatalogoData" type="application/json">{{ normas_json|safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 /* ═══════════════════════════════════════════
    DADOS E ESTADO
@@ -1189,6 +1193,7 @@ async function carregarHomemHora() {
     const r = await fetch('/api/sst/treinamentos/homem-hora?' + params.toString(), { credentials: 'include' });
     const d = await r.json();
     const linhas = d.linhas || [];
+    renderGraficoHomemHora(linhas);
     if (!linhas.length) {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum treinamento concluído no período.</td></tr>`;
       document.getElementById('hhTotalGeral').textContent = '';
@@ -1205,6 +1210,20 @@ async function carregarHomemHora() {
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Erro ao carregar relatório.</td></tr>`;
   }
+}
+
+let _chartHomemHora = null;
+function renderGraficoHomemHora(linhas) {
+  if (typeof Chart === 'undefined') return;
+  const porGrupo = {};
+  linhas.forEach(l => { porGrupo[l.nr] = (porGrupo[l.nr] || 0) + l.homem_hora; });
+  const top = Object.entries(porGrupo).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (_chartHomemHora) _chartHomemHora.destroy();
+  _chartHomemHora = new Chart(document.getElementById('chartHomemHora'), {
+    type: 'bar',
+    data: { labels: top.map(([k]) => k), datasets: [{ label: 'Homem-Hora', data: top.map(([, v]) => v), backgroundColor: '#2563EB' }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
 }
 
 function imprimirHomemHora() {

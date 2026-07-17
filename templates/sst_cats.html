@@ -117,6 +117,16 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Com Afastamento</div><div class="kpi-val" id="k-afas">—</div><div class="kpi-sub">geraram afastamento</div></div>
       <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">S-2210 Gerados</div><div class="kpi-val" id="k-trans">—</div><div class="kpi-sub">eventos criados no eSocial</div></div>
     </div>
+    <div class="graficos-row" style="display:flex;gap:14px;margin:14px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px">
+        <div style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Causas mais frequentes (Pareto)</div>
+        <canvas id="chartCatCausas" height="150"></canvas>
+      </div>
+      <div style="flex:1;min-width:260px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px">
+        <div style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Gravidade dos acidentes</div>
+        <canvas id="chartCatGravidade" height="150"></canvas>
+      </div>
+    </div>
     <div class="toolbar">
       <div class="search-box"><input id="busca" type="text" placeholder="Buscar por funcionário ou CID..." oninput="renderTabela()"></div>
       <div class="filter-tabs">
@@ -184,8 +194,36 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 let _todos=[];let _filtro='todos';let _xmlEventoId=null;let _cidsSst=[];let _funcionarios=[];
+let _chartCatCausas=null,_chartCatGravidade=null;
+const agenteLabel={'0001':'Animais e insetos','0002':'Choque elétrico','0003':'Esforço excessivo / repetitivo','0004':'Explosão / implosão','0005':'Incêndio','0006':'Queda','0007':'Substâncias químicas','0008':'Temperatura extrema','0009':'Máquinas e equipamentos','0010':'Material cortante/perfurante','0011':'Impacto por objeto','0012':'Acidente de trânsito','0099':'Outros agentes'};
+function renderGraficosCat(){
+  if(typeof Chart==='undefined')return;
+  const porCausa={};
+  _todos.forEach(c=>{const l=agenteLabel[c.cod_agente_causador]||'Outros agentes';porCausa[l]=(porCausa[l]||0)+1;});
+  const top=Object.entries(porCausa).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  let acumulado=0;const totalCausas=top.reduce((s,[,v])=>s+v,0)||1;
+  const pct=top.map(([,v])=>{acumulado+=v;return +(acumulado/totalCausas*100).toFixed(1);});
+  if(_chartCatCausas)_chartCatCausas.destroy();
+  _chartCatCausas=new Chart(document.getElementById('chartCatCausas'),{
+    type:'bar',
+    data:{labels:top.map(([k])=>k),datasets:[
+      {label:'Ocorrências',data:top.map(([,v])=>v),backgroundColor:'#f87171'},
+      {type:'line',label:'% acumulado',data:pct,yAxisID:'y1',borderColor:'#2563EB',borderWidth:2,pointRadius:2,fill:false},
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}},scales:{y:{beginAtZero:true},y1:{position:'right',beginAtZero:true,max:100,grid:{drawOnChartArea:false}}}},
+  });
+  const porGrav={};
+  _todos.forEach(c=>{const l=gravLabel[c.gravidade]||c.gravidade;porGrav[l]=(porGrav[l]||0)+1;});
+  if(_chartCatGravidade)_chartCatGravidade.destroy();
+  _chartCatGravidade=new Chart(document.getElementById('chartCatGravidade'),{
+    type:'pie',
+    data:{labels:Object.keys(porGrav),datasets:[{data:Object.values(porGrav),backgroundColor:['#4ade80','#f0bf6b','#f87171','#7f1d1d']}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}},
+  });
+}
 const esocialLabel={nao_enviado:'Pendente',pendente:'Pendente',transmitido:'Gerado',erro:'Erro',retificado:'Retificado'};
 const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verde',erro:'b-vermelho',retificado:'b-azul'};
 const tipoLabel={tipico:'Típico',trajeto:'Trajeto',doenca:'Doença Ocup.'};
@@ -324,6 +362,7 @@ function renderTabela(){
   document.getElementById("k-pendentes").textContent=_todos.filter(c=>["nao_enviado","pendente"].includes(c.status_esocial)).length;
   document.getElementById("k-afas").textContent=_todos.filter(c=>c.houve_afastamento).length;
   document.getElementById("k-trans").textContent=_todos.filter(c=>c.status_esocial==="transmitido").length;
+  renderGraficosCat();
   document.getElementById("contagem").textContent=`${lista.length} CAT(s)`;
   const tbody=document.getElementById("tbody");
   if(!lista.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ei">⚠️</div><h3>Nenhuma CAT registrada</h3><p>Registre comunicações de acidente do trabalho para manter a conformidade legal.</p></div></td></tr>`;return;}

@@ -553,6 +553,62 @@ def gerar_pdf_relatorio_sst_consolidado(empresa, dados):
         tbl = Table(rows, colWidths=[5.5*cm, 4.5*cm, 3.5*cm, 4.2*cm], repeatRows=1)
         tbl.setStyle(_table_style())
         story.append(tbl)
+        story.append(Spacer(1, 16))
+
+    treinamentos = dados.get("treinamentos_nr", [])
+    if treinamentos:
+        story.append(Paragraph("7. Treinamentos NR Vencidos ou a Vencer", s["section"]))
+        rows = [["Funcionário", "NR/Categoria", "Validade", "Situação"]]
+        for item in treinamentos[:40]:
+            rows.append([
+                item.get("funcionario_nome", "-")[:30],
+                item.get("nr_display", "-")[:30],
+                item.get("data_validade", "-"),
+                item.get("situacao", "-"),
+            ])
+        tbl = Table(rows, colWidths=[5.5*cm, 5.5*cm, 3.2*cm, 3.5*cm], repeatRows=1)
+        tbl.setStyle(_table_style())
+        story.append(tbl)
+        story.append(Spacer(1, 16))
+
+    inspecoes = dados.get("inspecoes_epi", [])
+    if inspecoes:
+        story.append(Paragraph("8. Inspeções Periódicas de EPI Pendentes ou Vencidas", s["section"]))
+        rows = [["Funcionário", "EPI", "Norma", "Próxima Inspeção", "Situação"]]
+        for item in inspecoes[:40]:
+            rows.append([
+                item.get("funcionario_nome", "-")[:25],
+                item.get("epi_nome", "-")[:25],
+                item.get("norma", "-"),
+                item.get("proxima_inspecao", "-"),
+                item.get("situacao", "-"),
+            ])
+        tbl = Table(rows, colWidths=[4.5*cm, 4.5*cm, 2.5*cm, 3*cm, 3.2*cm], repeatRows=1)
+        tbl.setStyle(_table_style())
+        story.append(tbl)
+        story.append(Spacer(1, 16))
+
+    documentos = dados.get("documentos_sst", [])
+    if documentos:
+        story.append(Paragraph("9. Documentação Legal (PGR / PCMSO / LTCAT e outros)", s["section"]))
+        rows = [["Documento", "Título", "Responsável Técnico", "Validade", "Status"]]
+        for item in documentos[:30]:
+            rows.append([
+                item.get("tipo_display", "-"),
+                item.get("titulo", "-")[:30],
+                item.get("responsavel_tecnico", "-")[:25] or "—",
+                item.get("data_validade", "-"),
+                item.get("status_display", "-"),
+            ])
+        tbl = Table(rows, colWidths=[3.2*cm, 5*cm, 4*cm, 2.8*cm, 2.7*cm], repeatRows=1)
+        style = _table_style()
+        for row_idx, item in enumerate(documentos[:30], 1):
+            if item.get("status") in ("vencido", "nao_cadastrado"):
+                style.add("TEXTCOLOR", (4, row_idx), (4, row_idx), DANGER)
+            elif item.get("status") == "em_revisao":
+                style.add("TEXTCOLOR", (4, row_idx), (4, row_idx), WARN)
+        tbl.setStyle(style)
+        story.append(tbl)
 
     doc.build(story)
     buf.seek(0)

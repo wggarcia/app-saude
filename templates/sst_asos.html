@@ -190,6 +190,16 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
         <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Aptos</div><div class="kpi-val" id="k-aptos">—</div><div class="kpi-sub">resultado apto</div></div>
         <div class="kpi-card" style="--kc:#8b5cf6"><div class="kpi-label">S-2220 Enviados</div><div class="kpi-val" id="k-s2220">—</div><div class="kpi-sub">transmitidos ao eSocial</div></div>
       </div>
+      <div class="graficos-row" style="display:flex;gap:14px;margin:14px 0;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px;background:var(--card,rgba(255,255,255,.04));border:1px solid var(--border,rgba(126,225,195,.12));border-radius:12px;padding:14px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--muted,#7a9fa0);margin-bottom:8px">Resultado dos ASOs</div>
+          <canvas id="chartAsoResultado" height="140"></canvas>
+        </div>
+        <div style="flex:1;min-width:260px;background:var(--card,rgba(255,255,255,.04));border:1px solid var(--border,rgba(126,225,195,.12));border-radius:12px;padding:14px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--muted,#7a9fa0);margin-bottom:8px">Situação de Validade</div>
+          <canvas id="chartAsoValidade" height="140"></canvas>
+        </div>
+      </div>
       <div class="toolbar">
         <div class="search-box"><input id="busca" type="text" placeholder="Buscar por funcionário, cargo ou médico..." oninput="renderTabelaAso()"></div>
         <div class="filter-tabs">
@@ -518,11 +528,40 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
 // State
 // ══════════════════════════════════════════════════════════════════════════════
 let _asos = [], _pedidos = [], _catalogo = [], _perfis = [], _clinicas = [], _funcionarios = [];
+let _chartAsoResultado = null, _chartAsoValidade = null;
+
+function renderGraficosAso() {
+  if (typeof Chart === 'undefined') return;
+  const porResultado = {};
+  _asos.forEach(a => { porResultado[a.resultado || '—'] = (porResultado[a.resultado || '—'] || 0) + 1; });
+  const vencendo30 = a => { const dr = diasRestantes(a.data_validade); return dr !== null && dr >= 0 && dr <= 30; };
+  const vencido = a => { const dr = diasRestantes(a.data_validade); return dr !== null && dr < 0; };
+  const emDia = _asos.filter(a => !vencendo30(a) && !vencido(a)).length;
+  const cores = ['#2563EB', '#00c9a7', '#f0bf6b', '#f87171', '#8b5cf6'];
+
+  if (_chartAsoResultado) _chartAsoResultado.destroy();
+  _chartAsoResultado = new Chart(document.getElementById('chartAsoResultado'), {
+    type: 'pie',
+    data: { labels: Object.keys(porResultado), datasets: [{ data: Object.values(porResultado), backgroundColor: cores }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } },
+  });
+
+  if (_chartAsoValidade) _chartAsoValidade.destroy();
+  _chartAsoValidade = new Chart(document.getElementById('chartAsoValidade'), {
+    type: 'bar',
+    data: {
+      labels: ['Em dia', 'Vencendo em 30d', 'Vencidos'],
+      datasets: [{ data: [emDia, _asos.filter(vencendo30).length, _asos.filter(vencido).length], backgroundColor: ['#00c9a7', '#f0bf6b', '#f87171'] }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+}
 let _filtroAso = 'todos', _filtroPed = '';
 let _modo = 'sistema';
 let _selecionados = new Set();
@@ -625,6 +664,7 @@ function renderTabelaAso(){
   document.getElementById('k-vencidos').textContent=_asos.filter(vencido).length;
   document.getElementById('k-aptos').textContent=_asos.filter(a=>a.resultado==='Apto').length;
   document.getElementById('k-s2220').textContent=_asos.filter(a=>a.status_esocial==='transmitido').length;
+  renderGraficosAso();
   document.getElementById('contagem-aso').textContent=`${lista.length} ASO(s)`;
   const tbody=document.getElementById('tbody-aso');
   if(!lista.length){

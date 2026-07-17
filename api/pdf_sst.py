@@ -506,10 +506,18 @@ def gerar_pdf_inspecoes_epi(inspecoes, empresa_nome):
         styles,
     )
 
+    resultado_label = {"aprovado": "Aprovado", "reprovado": "Reprovado", "condicional": "Aprovado c/ ressalva"}
+    contagem_resultado = {}
+    for i in inspecoes:
+        rotulo = resultado_label.get(i.resultado, i.resultado)
+        contagem_resultado[rotulo] = contagem_resultado.get(rotulo, 0) + 1
+    if contagem_resultado:
+        story.append(_desenhar_grafico("pizza", list(contagem_resultado.keys()), list(contagem_resultado.values()), W - 3*cm))
+        story.append(Spacer(1, 12))
+
     headers = ["Trabalhador", "EPI", "Nº Série", "Data Inspeção", "Resultado", "Responsável Técnico", "Próxima Inspeção"]
     header_row = [Paragraph(h, ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=WHITE)) for h in headers]
     rows = [header_row]
-    resultado_label = {"aprovado": "Aprovado", "reprovado": "Reprovado", "condicional": "Aprovado c/ ressalva"}
     for i in inspecoes:
         rows.append([
             Paragraph(i.entrega.funcionario.nome, styles["small"]),
@@ -560,6 +568,14 @@ def gerar_pdf_calibracao_instrumentos(instrumentos, empresa_nome):
     )
 
     status_label = {"calibrado": "Calibrado", "vencido": "Calibração Vencida", "em_calibracao": "Em Calibração"}
+    contagem_status = {}
+    for it in instrumentos:
+        rotulo = status_label.get(it.status_calculado, it.status_calculado)
+        contagem_status[rotulo] = contagem_status.get(rotulo, 0) + 1
+    if contagem_status:
+        story.append(_desenhar_grafico("pizza", list(contagem_status.keys()), list(contagem_status.values()), W - 3*cm))
+        story.append(Spacer(1, 12))
+
     headers = ["Instrumento", "Tipo", "Nº Série", "Norma", "Últ. Calibração", "Próx. Calibração", "Status"]
     header_row = [Paragraph(h, ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=WHITE)) for h in headers]
     rows = [header_row]
@@ -611,6 +627,14 @@ def gerar_pdf_homem_hora_treinamentos(linhas, total_geral, empresa_nome, periodo
         f"Controle interno e auditoria — {periodo_label}",
         styles,
     )
+
+    homem_hora_por_grupo = {}
+    for l in linhas:
+        homem_hora_por_grupo[l["nr"]] = homem_hora_por_grupo.get(l["nr"], 0) + l["homem_hora"]
+    if homem_hora_por_grupo:
+        top = sorted(homem_hora_por_grupo.items(), key=lambda x: -x[1])[:10]
+        story.append(_desenhar_grafico("barras", [k for k, _ in top], [v for _, v in top], W - 3*cm))
+        story.append(Spacer(1, 12))
 
     headers = ["NR", "Tipo de Treinamento", "Participantes", "Carga Horária (h)", "Homem-Hora Total"]
     header_row = [Paragraph(h, ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=8, textColor=WHITE)) for h in headers]

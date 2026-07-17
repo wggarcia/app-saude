@@ -224,6 +224,10 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
         <button class="btn-main" onclick="abrirModalAdicionarInspecao()">+ Adicionar EPI para Inspeção</button>
         <button class="btn-main" onclick="window.open('/api/sst/epis/inspecoes/pdf','_blank')">🖨️ Imprimir Relatório</button>
       </div>
+      <div class="table-wrap" style="padding:14px">
+        <div class="table-header"><h3>Resultado das Inspeções</h3></div>
+        <canvas id="chartInspecoesResultado" height="90"></canvas>
+      </div>
       <div class="table-wrap">
         <div class="table-header"><h3>EPIs com Inspeção Periódica Obrigatória (NR-10, NR-35 etc.)</h3><span id="cnt-inspecoes">carregando...</span></div>
         <table class="tbl">
@@ -251,6 +255,10 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
         <div class="search-box"><input id="busca-instrumento" type="text" placeholder="Buscar instrumento por nome ou nº série..." oninput="renderInstrumentos()"></div>
         <button class="btn-main" onclick="abrirModalInstrumento()">+ Novo Instrumento</button>
         <button class="btn-main" onclick="window.open('/api/sst/instrumentos/pdf','_blank')">🖨️ Imprimir Relatório</button>
+      </div>
+      <div class="table-wrap" style="padding:14px">
+        <div class="table-header"><h3>Status de Calibração</h3></div>
+        <canvas id="chartInstrumentosStatus" height="90"></canvas>
       </div>
       <div class="table-wrap">
         <div class="table-header"><h3>Instrumentos de Medição — Rastreabilidade INMETRO/NRs</h3><span id="cnt-instrumentos">carregando...</span></div>
@@ -504,6 +512,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 let catalogo = [];
 let entregas = [];
@@ -1036,6 +1045,7 @@ async function carregarInspecoes() {
     inspecoesHistorico = dHist.inspecoes || [];
     renderInspecoesPendentes();
     renderInspecoesHistorico();
+    renderGraficoInspecoes();
   } catch(e) {
     document.getElementById('tbody-inspecoes').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Erro ao carregar inspeções</td></tr>`;
   }
@@ -1084,6 +1094,22 @@ function renderInspecoesHistorico() {
     <td>${i.numero_laudo || '—'}</td>
     <td>${fmtData(i.proxima_inspecao)}</td>
   </tr>`).join('');
+}
+
+let _chartInspecoesResultado = null;
+function renderGraficoInspecoes() {
+  if (typeof Chart === 'undefined') return;
+  const porResultado = {};
+  inspecoesHistorico.forEach(i => {
+    const l = resultadoLabel[i.resultado] || i.resultado;
+    porResultado[l] = (porResultado[l] || 0) + 1;
+  });
+  if (_chartInspecoesResultado) _chartInspecoesResultado.destroy();
+  _chartInspecoesResultado = new Chart(document.getElementById('chartInspecoesResultado'), {
+    type: 'bar',
+    data: { labels: Object.keys(porResultado), datasets: [{ data: Object.values(porResultado), backgroundColor: ['#00c9a7', '#f0bf6b', '#f87171'] }] },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
+  });
 }
 
 async function abrirModalAdicionarInspecao() {
@@ -1189,6 +1215,7 @@ async function carregarInstrumentos() {
     const d = await r.json();
     instrumentos = d.instrumentos || [];
     renderInstrumentos();
+    renderGraficoInstrumentos();
   } catch(e) {
     document.getElementById('tbody-instrumentos').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Erro ao carregar instrumentos</td></tr>`;
   }
@@ -1218,6 +1245,22 @@ function renderInstrumentos() {
       <button class="btn-row danger" onclick="excluirInstrumento(${it.id})">Remover</button>
     </td>
   </tr>`).join('');
+}
+
+let _chartInstrumentosStatus = null;
+function renderGraficoInstrumentos() {
+  if (typeof Chart === 'undefined') return;
+  const porStatus = {};
+  instrumentos.forEach(it => {
+    const l = instrumentoStatusLabel[it.status] || it.status;
+    porStatus[l] = (porStatus[l] || 0) + 1;
+  });
+  if (_chartInstrumentosStatus) _chartInstrumentosStatus.destroy();
+  _chartInstrumentosStatus = new Chart(document.getElementById('chartInstrumentosStatus'), {
+    type: 'pie',
+    data: { labels: Object.keys(porStatus), datasets: [{ data: Object.values(porStatus), backgroundColor: ['#00c9a7', '#f87171', '#f0bf6b'] }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } },
+  });
 }
 
 function abrirModalInstrumento() {

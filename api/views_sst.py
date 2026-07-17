@@ -3052,9 +3052,11 @@ def api_sst_relatorio_consolidado_pdf(request):
         CATRegistro,
         AfastamentoSST,
         AgendamentoSST,
+        DocumentoSST,
         EntregaEPI,
         ExameMedico,
         FuncionarioSST,
+        InspecaoEPI,
         TreinamentoNR,
     )
     from .pdf_ops import gerar_pdf_relatorio_sst_consolidado
@@ -3168,6 +3170,58 @@ def api_sst_relatorio_consolidado_pdf(request):
         data_hora__date__lt=hoje,
     ).select_related("funcionario").order_by("data_hora")[:30]
 
+    treinamentos_lista = []
+    for t in TreinamentoNR.objects.filter(
+        empresa=empresa,
+        funcionario__empresa=empresa,
+        funcionario__ativo=True,
+        data_validade__lte=hoje + timedelta(days=alerta_dias),
+    ).select_related("funcionario", "tipo_treinamento").order_by("data_validade"):
+        vencido = bool(t.data_validade and t.data_validade < hoje)
+        nome_tipo = t.tipo_treinamento.rotulo_agrupamento if t.tipo_treinamento else (
+            dict(TreinamentoNR.NR_CHOICES).get(t.nr, t.nr) if t.nr else (t.categoria or "Treinamento Geral")
+        )
+        treinamentos_lista.append({
+            "funcionario_nome": t.funcionario.nome,
+            "nr_display": nome_tipo,
+            "data_validade": str(t.data_validade) if t.data_validade else "—",
+            "situacao": "Vencido" if vencido else "Vencendo",
+        })
+
+    entregas_com_inspecao = EntregaEPI.objects.filter(
+        empresa=empresa, data_devolucao__isnull=True, epi__exige_inspecao_periodica=True,
+    ).select_related("funcionario", "epi")
+    ultima_por_entrega = {}
+    for insp in InspecaoEPI.objects.filter(
+        empresa=empresa, entrega_id__in=[e.id for e in entregas_com_inspecao]
+    ).order_by("-data_inspecao"):
+        ultima_por_entrega.setdefault(insp.entrega_id, insp)
+    inspecoes_lista = []
+    for e in entregas_com_inspecao:
+        ultima = ultima_por_entrega.get(e.id)
+        proxima = ultima.proxima_inspecao if ultima else None
+        vencida = bool(proxima and proxima < hoje) or ultima is None
+        if not vencida:
+            continue
+        inspecoes_lista.append({
+            "funcionario_nome": e.funcionario.nome,
+            "epi_nome": e.epi.nome,
+            "norma": e.epi.norma_inspecao or "—",
+            "proxima_inspecao": str(proxima) if proxima else "Nunca inspecionado",
+            "situacao": "Vencida" if (proxima and proxima < hoje) else "Sem inspeção",
+        })
+
+    documentos_lista = []
+    for d in DocumentoSST.objects.filter(empresa=empresa).order_by("tipo"):
+        documentos_lista.append({
+            "tipo_display": d.get_tipo_display(),
+            "titulo": d.titulo,
+            "responsavel_tecnico": d.responsavel_tecnico,
+            "data_validade": str(d.data_validade) if d.data_validade else "—",
+            "status": d.status,
+            "status_display": d.get_status_display(),
+        })
+
     dados = {
         "resumo": {
             "total": total,
@@ -3182,6 +3236,9 @@ def api_sst_relatorio_consolidado_pdf(request):
         "afastamentos": afastamentos_lista,
         "cats": cats_lista,
         "agendamentos_atrasados": [_agenda_to_dict(item) for item in agendamentos],
+        "treinamentos_nr": treinamentos_lista,
+        "inspecoes_epi": inspecoes_lista,
+        "documentos_sst": documentos_lista,
     }
 
     buffer = gerar_pdf_relatorio_sst_consolidado(empresa, dados)

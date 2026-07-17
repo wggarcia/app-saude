@@ -14,7 +14,8 @@ import json
 from datetime import date, timedelta
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.db.models import Count, Sum
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -153,6 +154,69 @@ TOOLS = [
             "type": "object",
             "properties": {},
             "required": [],
+        },
+    },
+    {
+        "name": "estatisticas_acidentes",
+        "description": (
+            "Retorna estatísticas agregadas de acidentes de trabalho (CAT) prontas para gráfico: "
+            "total de acidentes, dias de afastamento somados, e contagens por setor, por mês, "
+            "por gravidade, por parte do corpo atingida e por agente causador (esta última é a "
+            "base de um gráfico de Pareto — mostra as causas mais frequentes). "
+            "Use antes de gerar um gráfico sobre acidentes, causas, setores de risco ou tendência."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "meses": {
+                    "type": "integer",
+                    "description": "Janela de tempo em meses para trás (padrão 12).",
+                    "default": 12,
+                }
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "gerar_grafico",
+        "description": (
+            "Anexa um gráfico visual à resposta, usando dados que você já obteve de outras tools "
+            "(ex: estatisticas_acidentes, resumo_conformidade, listar_treinamentos_vencidos). "
+            "Use sempre que o usuário pedir 'gráfico', 'visual', 'painel', 'dashboard', "
+            "'evolução', 'proporção', 'comparativo', 'pareto' ou um relatório gráfico. "
+            "Não busca dados novos — apenas formata números que você já tem em um gráfico. "
+            "Continue respondendo em texto normalmente além de chamar esta tool."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "titulo": {"type": "string", "description": "Título curto do gráfico."},
+                "tipo": {
+                    "type": "string",
+                    "enum": ["barras", "pizza", "linha", "pareto"],
+                    "description": (
+                        "barras: comparar categorias (ex: acidentes por setor). "
+                        "pizza: proporção de um total (ex: ASOs em dia vs atrasados). "
+                        "linha: evolução ao longo do tempo (ex: acidentes por mês). "
+                        "pareto: causas ordenadas da mais para a menos frequente, com % acumulado."
+                    ),
+                },
+                "labels": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Rótulos das categorias, na ordem dos valores.",
+                },
+                "valores": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "description": "Valores numéricos, na mesma ordem dos labels.",
+                },
+                "rotulo_serie": {
+                    "type": "string",
+                    "description": "Nome da série de dados (ex: 'Quantidade', 'Dias de afastamento'). Padrão: 'Quantidade'.",
+                },
+            },
+            "required": ["titulo", "tipo", "labels", "valores"],
         },
     },
 ]
@@ -305,7 +369,6 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
         for a in asos_qs:
             asos_map[a.funcionario_id].append(a)
         afastamentos_map = {a.funcionario_id: a for a in afastamentos_qs}
-        from django.db.models import Count, Q
         treinos_vencidos = dict(
             TreinamentoNR.objects.filter(funcionario_id__in=func_ids, data_validade__lt=hoje)
             .values("funcionario_id").annotate(n=Count("id"))
@@ -351,6 +414,53 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
                     "data_aso": a.data_emissao.isoformat(),
                 })
         return {"total": len(resultado), "funcionarios": resultado}
+
+    if nome == "estatisticas_acidentes":
+        meses = int(inputs.get("meses", 12) or 12)
+        limite = hoje - timedelta(days=meses * 30)
+        qs = CATOcupacional.objects.filter(empresa=empresa, data_acidente__gte=limite)
+        total = qs.count()
+        dias_afastamento_total = qs.aggregate(total=Sum("dias_afastamento"))["total"] or 0
+
+        por_setor_raw = dict(qs.values("funcionario__setor").annotate(n=Count("id")).values_list("funcionario__setor", "n"))
+        por_setor = {(k or "Não informado"): v for k, v in por_setor_raw.items()}
+
+        gravidade_labels = dict(CATOcupacional.GRAVIDADE)
+        por_gravidade_raw = dict(qs.values("gravidade").annotate(n=Count("id")).values_list("gravidade", "n"))
+        por_gravidade = {gravidade_labels.get(k, k): v for k, v in por_gravidade_raw.items()}
+
+        parte_labels = dict(CATOcupacional.COD_PARTE_CORPO)
+        por_parte_raw = dict(qs.values("cod_parte_corpo").annotate(n=Count("id")).values_list("cod_parte_corpo", "n"))
+        por_parte_corpo = {parte_labels.get(k, k): v for k, v in por_parte_raw.items()}
+
+        agente_labels = dict(CATOcupacional.COD_AGENTE)
+        por_agente_raw = dict(qs.values("cod_agente_causador").annotate(n=Count("id")).values_list("cod_agente_causador", "n"))
+        por_agente_causador = {agente_labels.get(k, k): v for k, v in por_agente_raw.items()}
+
+        por_mes = {}
+        for d in qs.values_list("data_acidente", flat=True):
+            chave = d.strftime("%m/%Y")
+            por_mes[chave] = por_mes.get(chave, 0) + 1
+
+        return {
+            "periodo": f"últimos {meses} meses",
+            "total_acidentes": total,
+            "dias_afastamento_total": dias_afastamento_total,
+            "por_setor": por_setor,
+            "por_mes": por_mes,
+            "por_gravidade": por_gravidade,
+            "por_parte_corpo": por_parte_corpo,
+            "por_agente_causador": por_agente_causador,
+        }
+
+    if nome == "gerar_grafico":
+        labels = inputs.get("labels") or []
+        valores = inputs.get("valores") or []
+        if len(labels) != len(valores):
+            return {"erro": "labels e valores devem ter o mesmo tamanho."}
+        if not labels:
+            return {"erro": "Informe ao menos uma categoria."}
+        return {"ok": True, "mensagem": "Gráfico anexado à resposta final."}
 
     return {"erro": f"Tool desconhecida: {nome}"}
 
@@ -400,10 +510,15 @@ def assistente_sst(request):
             f"Responda sempre em português, de forma objetiva e profissional. "
             f"Use os dados retornados pelas ferramentas — nunca invente informações. "
             f"Quando listar funcionários, use bullet points. "
-            f"Se não houver ocorrências, diga isso claramente."
+            f"Se não houver ocorrências, diga isso claramente. "
+            f"Quando o usuário pedir um gráfico, visão visual, painel, evolução, proporção, "
+            f"comparativo ou pareto, busque os dados com as tools apropriadas (ex: "
+            f"estatisticas_acidentes) e depois chame a tool gerar_grafico com os números — "
+            f"além de continuar respondendo em texto normalmente."
         )
 
         messages = [{"role": "user", "content": pergunta}]
+        grafico_anexado = None
 
         for _ in range(_MAX_TOOL_ROUNDS):
             response = client.messages.create(
@@ -419,7 +534,7 @@ def assistente_sst(request):
                     (b.text for b in response.content if hasattr(b, "text")),
                     "Não foi possível gerar uma resposta.",
                 )
-                return JsonResponse({"resposta": texto})
+                return JsonResponse({"resposta": texto, "grafico": grafico_anexado})
 
             if response.stop_reason != "tool_use":
                 break
@@ -433,6 +548,8 @@ def assistente_sst(request):
             tool_results = []
             for tu in tool_uses:
                 resultado = _executar_tool(tu.name, tu.input, empresa)
+                if tu.name == "gerar_grafico" and not resultado.get("erro"):
+                    grafico_anexado = tu.input
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": tu.id,
@@ -440,10 +557,91 @@ def assistente_sst(request):
                 })
             messages.append({"role": "user", "content": tool_results})
 
-        return JsonResponse({"resposta": "Não consegui processar a pergunta. Tente novamente."})
+        return JsonResponse({"resposta": "Não consegui processar a pergunta. Tente novamente.", "grafico": grafico_anexado})
 
     except Exception as exc:
         return JsonResponse(
             {"erro": "Erro ao processar. Tente novamente em instantes."},
             status=500,
         )
+
+
+def _validar_grafico_payload(body):
+    grafico = body.get("grafico") or {}
+    if not grafico.get("labels") or not grafico.get("valores"):
+        return None, JsonResponse({"erro": "Gráfico inválido."}, status=400)
+    return grafico, None
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_assistente_grafico_pdf(request):
+    """POST — gera o PDF de um gráfico anexado pelo Assistente IA SST (visualização ou download)."""
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        body = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    grafico, erro = _validar_grafico_payload(body)
+    if erro:
+        return erro
+    resposta = body.get("resposta") or ""
+
+    from .pdf_sst import gerar_pdf_grafico_assistente
+    pdf_bytes = gerar_pdf_grafico_assistente(grafico, resposta, empresa.nome)
+
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    disposition = "attachment" if request.GET.get("download") else "inline"
+    resp["Content-Disposition"] = f'{disposition}; filename="relatorio-assistente-sst.pdf"'
+    return resp
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_assistente_grafico_pdf_email(request):
+    """POST — envia o PDF de um gráfico do Assistente IA SST por e-mail."""
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        body = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    destinatario = (body.get("email") or "").strip()
+    if not destinatario or "@" not in destinatario:
+        return JsonResponse({"erro": "Informe um e-mail válido."}, status=400)
+
+    grafico, erro = _validar_grafico_payload(body)
+    if erro:
+        return erro
+    resposta = body.get("resposta") or ""
+
+    from .pdf_sst import gerar_pdf_grafico_assistente
+    from django.core.mail import EmailMessage
+
+    pdf_bytes = gerar_pdf_grafico_assistente(grafico, resposta, empresa.nome)
+
+    try:
+        msg = EmailMessage(
+            subject=f"[SolusCRT] {grafico.get('titulo') or 'Relatório do Assistente IA SST'}",
+            body=(
+                f"Segue em anexo o relatório gerado pelo Assistente IA SST — {empresa.nome}.\n\n"
+                "-- \nSolusCRT · Sistema de Gestão SST"
+            ),
+            from_email=None,
+            to=[destinatario],
+        )
+        msg.attach("relatorio-assistente-sst.pdf", pdf_bytes, "application/pdf")
+        enviados = msg.send(fail_silently=False)
+        if enviados < 1:
+            return JsonResponse({"erro": "Servidor de e-mail não confirmou o envio."}, status=502)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error("Erro ao enviar gráfico do Assistente IA SST por e-mail: %s", exc)
+        return JsonResponse({"erro": f"Falha ao enviar e-mail: {exc}"}, status=502)
+
+    return JsonResponse({"ok": True, "mensagem": f"Relatório enviado para {destinatario}."})
