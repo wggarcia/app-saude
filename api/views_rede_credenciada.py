@@ -65,12 +65,12 @@ def _clinica_dict(c):
         "horario_atendimento": c.horario_atendimento,
         "aceita_agendamento_online": c.aceita_agendamento_online,
         "tempo_medio_laudo_dias": c.tempo_medio_laudo_dias,
-        "avaliacao_media": c.avaliacao_media,
+        "avaliacao_media": float(c.avaliacao_media),
         "total_avaliacoes": c.total_avaliacoes,
         "status_credenciamento": c.status_credenciamento,
         "ativa": c.ativa,
-        "lat": c.lat,
-        "lng": c.lng,
+        "lat": float(c.lat) if c.lat is not None else None,
+        "lng": float(c.lng) if c.lng is not None else None,
     }
 
 
