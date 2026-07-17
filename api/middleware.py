@@ -228,6 +228,8 @@ class EmpresaMiddleware:
             "/colaborador-mobile/c/",
             "/static/",
             "/media/",
+            "/curso-interno/",       # acesso do funcionário ao curso interno via token — sem login
+            "/certificado/verificar/",  # verificação pública do certificado via QR code
         )
 
         # Rate limiting apenas nas rotas de login
