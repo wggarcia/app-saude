@@ -262,6 +262,7 @@ body{min-height:100vh;overflow-x:hidden}
       </div>
       <div class="ph-right">
         <button class="btn-primary" onclick="abrirModalNovo()">+ Registrar Afastamento</button>
+        <a class="btn-primary" style="background:var(--surface2,#0d2233);color:var(--text,#fff)" href="/api/sst/afastamentos/pdf" target="_blank" rel="noopener">🖨️ Relatório em PDF</a>
       </div>
     </div>
 
@@ -271,6 +272,18 @@ body{min-height:100vh;overflow-x:hidden}
       <div class="kpi-card skel skel-kpi" style="--kc:var(--green)"></div>
       <div class="kpi-card skel skel-kpi" style="--kc:var(--amber)"></div>
       <div class="kpi-card skel skel-kpi" style="--kc:var(--blue)"></div>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div style="display:flex;gap:14px;margin:14px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px;background:var(--surface);border:1px solid var(--line,rgba(126,225,195,.12));border-radius:10px;padding:14px">
+        <div style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Motivo dos afastamentos</div>
+        <canvas id="chartAfastMotivo" height="140"></canvas>
+      </div>
+      <div style="flex:1;min-width:260px;background:var(--surface);border:1px solid var(--line,rgba(126,225,195,.12));border-radius:10px;padding:14px">
+        <div style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Afastamentos ativos por tempo em curso</div>
+        <canvas id="chartAfastAging" height="140"></canvas>
+      </div>
     </div>
 
     <!-- TOOLBAR -->
@@ -381,6 +394,7 @@ body{min-height:100vh;overflow-x:hidden}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 let todosAfastamentos = [];
 let filtroAtivo = '';
@@ -459,6 +473,39 @@ function renderKPIs(afastamentos) {
       <div class="kpi-sub">acidentes de trabalho</div>
     </div>
   `;
+  renderGraficosAfastamento(afastamentos);
+}
+
+let _chartAfastMotivo = null, _chartAfastAging = null;
+function renderGraficosAfastamento(afastamentos) {
+  if (typeof Chart === 'undefined') return;
+
+  const porMotivo = {};
+  afastamentos.forEach(a => {
+    const l = (motivoLabels[a.motivo] || [null, a.motivo])[1];
+    porMotivo[l] = (porMotivo[l] || 0) + 1;
+  });
+  if (_chartAfastMotivo) _chartAfastMotivo.destroy();
+  _chartAfastMotivo = new Chart(document.getElementById('chartAfastMotivo'), {
+    type: 'pie',
+    data: { labels: Object.keys(porMotivo), datasets: [{ data: Object.values(porMotivo), backgroundColor: ['#f87171', '#f0bf6b', '#2563EB', '#8b5cf6', '#00c9a7', '#7a9fa0'] }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } },
+  });
+
+  const faixas = { '0-15 dias': 0, '16-30 dias': 0, '31-90 dias': 0, '90+ dias': 0 };
+  afastamentos.filter(a => a.status === 'ativo').forEach(a => {
+    const dias = calcularDias(a.data_inicio, null);
+    if (dias <= 15) faixas['0-15 dias']++;
+    else if (dias <= 30) faixas['16-30 dias']++;
+    else if (dias <= 90) faixas['31-90 dias']++;
+    else faixas['90+ dias']++;
+  });
+  if (_chartAfastAging) _chartAfastAging.destroy();
+  _chartAfastAging = new Chart(document.getElementById('chartAfastAging'), {
+    type: 'bar',
+    data: { labels: Object.keys(faixas), datasets: [{ data: Object.values(faixas), backgroundColor: ['#00c9a7', '#f0bf6b', '#f97316', '#f87171'] }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
 }
 
 function renderTabela(lista) {

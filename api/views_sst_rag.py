@@ -219,7 +219,47 @@ TOOLS = [
             "required": ["titulo", "tipo", "labels", "valores"],
         },
     },
+    {
+        "name": "abrir_relatorio_pdf",
+        "description": (
+            "Anexa um link para abrir/baixar um relatório em PDF já existente no sistema. "
+            "Use quando o usuário pedir para 'imprimir', 'baixar', 'gerar PDF', 'exportar' ou "
+            "'preparar para auditoria/fiscalização' de uma dessas áreas específicas. "
+            "Não gera o PDF você mesmo — apenas aponta para o relatório certo, que o usuário abre com um clique."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tipo": {
+                    "type": "string",
+                    "enum": [
+                        "conformidade", "consolidado_auditoria", "asos", "cats",
+                        "epi_inspecoes", "instrumentos_calibracao", "homem_hora_treinamentos", "afastamentos",
+                    ],
+                    "description": (
+                        "conformidade: índice de conformidade por funcionário. "
+                        "consolidado_auditoria: dossiê completo para fiscalização (conformidade+ASOs+afastamentos+CATs+treinamentos+EPI+documentos legais). "
+                        "asos: ficha de exames ocupacionais. cats: comunicações de acidente. "
+                        "epi_inspecoes: inspeções periódicas de EPI. instrumentos_calibracao: calibração de instrumentos de medição. "
+                        "homem_hora_treinamentos: relatório de homem-hora de treinamentos. afastamentos: relatório de afastamentos."
+                    ),
+                },
+            },
+            "required": ["tipo"],
+        },
+    },
 ]
+
+_RELATORIOS_PDF = {
+    "conformidade": {"url": "/api/sst/conformidade/pdf/", "titulo": "Conformidade SST"},
+    "consolidado_auditoria": {"url": "/api/sst/relatorio/consolidado/pdf/", "titulo": "Dossiê Consolidado de Auditoria"},
+    "asos": {"url": "/sst/asos/", "titulo": "ASOs (abra a ficha do funcionário desejado)"},
+    "cats": {"url": "/sst/cats/", "titulo": "CATs (abra o registro do acidente desejado)"},
+    "epi_inspecoes": {"url": "/api/sst/epis/inspecoes/pdf", "titulo": "Inspeções Periódicas de EPI"},
+    "instrumentos_calibracao": {"url": "/api/sst/instrumentos/pdf", "titulo": "Calibração de Instrumentos"},
+    "homem_hora_treinamentos": {"url": "/api/sst/treinamentos/homem-hora/pdf", "titulo": "Homem-Hora de Treinamentos"},
+    "afastamentos": {"url": "/api/sst/afastamentos/pdf", "titulo": "Afastamentos"},
+}
 
 
 # ── Execução das tools ────────────────────────────────────────────────────────
@@ -462,6 +502,17 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
             return {"erro": "Informe ao menos uma categoria."}
         return {"ok": True, "mensagem": "Gráfico anexado à resposta final."}
 
+    if nome == "abrir_relatorio_pdf":
+        tipo = inputs.get("tipo")
+        relatorio = _RELATORIOS_PDF.get(tipo)
+        if not relatorio:
+            return {"erro": f"Tipo de relatório desconhecido: {tipo}"}
+        if tipo == "consolidado_auditoria":
+            from .access_control import empresa_tem_feature
+            if not empresa_tem_feature(empresa, "sst.relatorio_consolidado"):
+                return {"erro": "O Dossiê Consolidado de Auditoria está disponível a partir de um plano superior."}
+        return {"ok": True, "mensagem": f"Relatório '{relatorio['titulo']}' anexado à resposta final."}
+
     return {"erro": f"Tool desconhecida: {nome}"}
 
 
@@ -514,11 +565,15 @@ def assistente_sst(request):
             f"Quando o usuário pedir um gráfico, visão visual, painel, evolução, proporção, "
             f"comparativo ou pareto, busque os dados com as tools apropriadas (ex: "
             f"estatisticas_acidentes) e depois chame a tool gerar_grafico com os números — "
-            f"além de continuar respondendo em texto normalmente."
+            f"além de continuar respondendo em texto normalmente. "
+            f"Quando o usuário pedir para imprimir, baixar, exportar ou preparar um relatório "
+            f"em PDF de uma área específica (conformidade, auditoria/fiscalização, ASOs, CATs, "
+            f"EPI, instrumentos, treinamentos, afastamentos), chame a tool abrir_relatorio_pdf."
         )
 
         messages = [{"role": "user", "content": pergunta}]
         grafico_anexado = None
+        relatorio_anexado = None
 
         for _ in range(_MAX_TOOL_ROUNDS):
             response = client.messages.create(
@@ -534,7 +589,7 @@ def assistente_sst(request):
                     (b.text for b in response.content if hasattr(b, "text")),
                     "Não foi possível gerar uma resposta.",
                 )
-                return JsonResponse({"resposta": texto, "grafico": grafico_anexado})
+                return JsonResponse({"resposta": texto, "grafico": grafico_anexado, "relatorio": relatorio_anexado})
 
             if response.stop_reason != "tool_use":
                 break
@@ -550,6 +605,8 @@ def assistente_sst(request):
                 resultado = _executar_tool(tu.name, tu.input, empresa)
                 if tu.name == "gerar_grafico" and not resultado.get("erro"):
                     grafico_anexado = tu.input
+                if tu.name == "abrir_relatorio_pdf" and not resultado.get("erro"):
+                    relatorio_anexado = _RELATORIOS_PDF.get(tu.input.get("tipo"))
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": tu.id,
@@ -557,7 +614,11 @@ def assistente_sst(request):
                 })
             messages.append({"role": "user", "content": tool_results})
 
-        return JsonResponse({"resposta": "Não consegui processar a pergunta. Tente novamente.", "grafico": grafico_anexado})
+        return JsonResponse({
+            "resposta": "Não consegui processar a pergunta. Tente novamente.",
+            "grafico": grafico_anexado,
+            "relatorio": relatorio_anexado,
+        })
 
     except Exception as exc:
         return JsonResponse(

@@ -148,6 +148,22 @@ if (typeof Chart === 'undefined') {
     }
   }
 
+  function renderLinkRelatorio(container, relatorio) {
+    if (!relatorio || !relatorio.url) return;
+    const link = document.createElement('a');
+    link.href = relatorio.url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.className = 'ai-grafico-wrap';
+    link.style.display = 'block';
+    link.style.textDecoration = 'none';
+    link.style.color = 'inherit';
+    link.style.fontWeight = '700';
+    link.style.fontSize = '.85rem';
+    link.textContent = `📄 Abrir relatório: ${relatorio.titulo}`;
+    container.appendChild(link);
+  }
+
   function renderGrafico(container, grafico, respostaTexto) {
     if (typeof Chart === 'undefined' || !grafico || !grafico.labels || !grafico.labels.length) return;
 
@@ -229,6 +245,7 @@ if (typeof Chart === 'undefined') {
       loading.remove();
       const bot = addMsg(data.resposta || data.erro || 'Erro desconhecido.', 'bot');
       if (data.grafico) renderGrafico(bot, data.grafico, data.resposta || '');
+      if (data.relatorio) renderLinkRelatorio(bot, data.relatorio);
       msgs.scrollTop = msgs.scrollHeight;
     } catch (e) {
       loading.remove();

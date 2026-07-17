@@ -674,6 +674,74 @@ def gerar_pdf_homem_hora_treinamentos(linhas, total_geral, empresa_nome, periodo
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Afastamentos
+# ─────────────────────────────────────────────────────────────────────────────
+
+def gerar_pdf_afastamentos(afastamentos, empresa_nome):
+    """Relatório de afastamentos — `afastamentos` é uma lista de dicts:
+    {funcionario_nome, motivo_label, cid, data_inicio, data_retorno, status_label, dias}."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2*cm, bottomMargin=2*cm,
+        title="Relatório de Afastamentos",
+    )
+    styles = _styles()
+    story = []
+    _header_empresa(
+        story, empresa_nome,
+        "Relatório de Afastamentos",
+        "Controle de afastamentos por acidente de trabalho, doença ocupacional, doença comum e licenças",
+        styles,
+    )
+
+    por_motivo = {}
+    for a in afastamentos:
+        rotulo = a.get("motivo_label", "—")
+        por_motivo[rotulo] = por_motivo.get(rotulo, 0) + 1
+    if por_motivo:
+        story.append(_desenhar_grafico("barras", list(por_motivo.keys()), list(por_motivo.values()), W - 3*cm))
+        story.append(Spacer(1, 12))
+
+    headers = ["Funcionário", "Motivo", "CID", "Início", "Retorno", "Dias", "Status"]
+    header_row = [Paragraph(h, ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=WHITE)) for h in headers]
+    rows = [header_row]
+    for a in afastamentos:
+        rows.append([
+            Paragraph(a.get("funcionario_nome", "—"), styles["small"]),
+            Paragraph(a.get("motivo_label", "—"), styles["small"]),
+            Paragraph(a.get("cid") or "—", styles["small"]),
+            Paragraph(a.get("data_inicio") or "—", styles["small"]),
+            Paragraph(a.get("data_retorno") or "Em curso", styles["small"]),
+            Paragraph(str(a.get("dias", "—")), styles["small"]),
+            Paragraph(a.get("status_label", "—"), styles["small"]),
+        ])
+    if len(rows) == 1:
+        rows.append([Paragraph("Nenhum afastamento registrado.", styles["small"])] + [Paragraph("", styles["small"])]*6)
+
+    t = Table(rows, colWidths=[3.5*cm, 3.2*cm, 1.8*cm, 2.3*cm, 2.3*cm, 1.5*cm, 2.9*cm])
+    style = TableStyle([
+        ("BACKGROUND",    (0,0), (-1,0), DARK),
+        ("GRID",          (0,0), (-1,-1), 0.5, colors.HexColor("#d0e8e4")),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGREY]),
+        ("TOPPADDING",    (0,0), (-1,-1), 5),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+    ])
+    for row_idx, a in enumerate(afastamentos, 1):
+        if a.get("status_raw") == "ativo":
+            style.add("TEXTCOLOR", (6, row_idx), (6, row_idx), RED)
+    t.setStyle(style)
+    story.append(t)
+    story.append(Spacer(1, 16))
+    story.append(_footer_text(styles))
+    doc.build(story)
+    return buf.getvalue()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  Assistente IA SST — gráfico anexado à resposta
 # ─────────────────────────────────────────────────────────────────────────────
 

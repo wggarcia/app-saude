@@ -1102,6 +1102,44 @@ def api_afastamento_retorno(request, afastamento_id):
     return JsonResponse({"erro": "método não permitido"}, status=405)
 
 
+def api_afastamentos_pdf(request):
+    """GET — relatório PDF de afastamentos, com gráfico por motivo."""
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_afastamentos
+
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    hoje = date.today()
+    status_label = {"ativo": "Ativo", "encerrado": "Encerrado", "retorno_programado": "Retorno Programado"}
+    linhas = []
+    for a in (
+        AfastamentoSST.objects
+        .filter(empresa=empresa)
+        .select_related("funcionario")
+        .order_by("-data_inicio")
+    ):
+        retorno = a.data_retorno_real or a.data_prevista_retorno
+        fim_calculo = a.data_retorno_real or hoje
+        dias = (fim_calculo - a.data_inicio).days if a.data_inicio else 0
+        linhas.append({
+            "funcionario_nome": a.funcionario.nome,
+            "motivo_label": a.get_motivo_display(),
+            "cid": a.cid,
+            "data_inicio": a.data_inicio.strftime("%d/%m/%Y") if a.data_inicio else None,
+            "data_retorno": retorno.strftime("%d/%m/%Y") if retorno else None,
+            "dias": max(dias, 0),
+            "status_raw": a.status,
+            "status_label": status_label.get(a.status, a.status),
+        })
+
+    pdf_bytes = gerar_pdf_afastamentos(linhas, empresa.nome)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="relatorio_afastamentos.pdf"'
+    return resp
+
+
 # ── Páginas SST ───────────────────────────────────────────────────────────────
 
 def _sst_redirect(request):
