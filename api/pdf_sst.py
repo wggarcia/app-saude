@@ -4,6 +4,10 @@ Geração de PDF para o módulo SST — usa ReportLab (já instalado).
 import io
 from datetime import date
 
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.charts.linecharts import HorizontalLineChart
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -663,6 +667,98 @@ def gerar_pdf_homem_hora_treinamentos(linhas, total_geral, empresa_nome, periodo
     story.append(t)
     story.append(Spacer(1, 12))
     story.append(Paragraph(f"TOTAL GERAL DE HOMEM-HORA NO PERÍODO: {total_geral}", styles["h2"]))
+    story.append(Spacer(1, 16))
+    story.append(_footer_text(styles))
+    doc.build(story)
+    return buf.getvalue()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Assistente IA SST — gráfico anexado à resposta
+# ─────────────────────────────────────────────────────────────────────────────
+
+_PALETA_GRAFICO = [TEAL, AMBER, RED, MUTED, DARK, colors.HexColor("#6ba3f5"), colors.HexColor("#c084fc")]
+
+
+def _desenhar_grafico(tipo, labels, valores, largura):
+    """Monta um reportlab.graphics.shapes.Drawing para o tipo pedido.
+    'pareto' é desenhado como barras ordenadas (a % acumulado só aparece no chat/Chart.js —
+    combinar barra+linha com eixo duplo no reportlab exigiria mais código do que vale aqui)."""
+    altura = 230
+    drawing = Drawing(largura, altura)
+    max_val = max(valores) if valores else 1
+
+    if tipo == "pizza":
+        pie = Pie()
+        pie.x = largura / 2 - 90
+        pie.y = 20
+        pie.width = 180
+        pie.height = 180
+        pie.data = valores
+        pie.labels = [f"{l} ({v:g})" for l, v in zip(labels, valores)]
+        pie.slices.strokeWidth = 0.5
+        pie.slices.strokeColor = WHITE
+        for i in range(len(valores)):
+            pie.slices[i].fillColor = _PALETA_GRAFICO[i % len(_PALETA_GRAFICO)]
+        drawing.add(pie)
+        return drawing
+
+    if tipo == "linha":
+        chart = HorizontalLineChart()
+    else:  # barras, pareto
+        chart = VerticalBarChart()
+
+    chart.x = 45
+    chart.y = 45
+    chart.width = largura - 90
+    chart.height = altura - 70
+    chart.data = [valores]
+    chart.categoryAxis.categoryNames = labels
+    chart.categoryAxis.labels.fontSize = 7
+    chart.categoryAxis.labels.angle = 30
+    chart.categoryAxis.labels.dy = -12
+    chart.categoryAxis.labels.dx = -6
+    chart.valueAxis.valueMin = 0
+    chart.valueAxis.valueMax = max_val * 1.2 if max_val else 1
+    if tipo == "linha":
+        chart.lines[0].strokeColor = TEAL
+        chart.lines[0].strokeWidth = 2
+    else:
+        chart.bars[0].fillColor = TEAL
+    drawing.add(chart)
+    return drawing
+
+
+def gerar_pdf_grafico_assistente(grafico, resposta_texto, empresa_nome):
+    """PDF de um gráfico anexado pelo Assistente IA SST.
+    `grafico`: {titulo, tipo (barras/pizza/linha/pareto), labels, valores, rotulo_serie}."""
+    buf = io.BytesIO()
+    titulo = grafico.get("titulo") or "Relatório do Assistente IA SST"
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2*cm, bottomMargin=2*cm,
+        title=titulo,
+    )
+    styles = _styles()
+    story = []
+    _header_empresa(story, empresa_nome, titulo, "Gerado pelo Assistente IA — SolusCRT SST", styles)
+
+    labels = [str(l) for l in (grafico.get("labels") or [])]
+    valores = [float(v) for v in (grafico.get("valores") or [])]
+    tipo = grafico.get("tipo") or "barras"
+    rotulo_serie = grafico.get("rotulo_serie") or "Quantidade"
+
+    if labels and valores:
+        story.append(_desenhar_grafico(tipo, labels, valores, W - 3*cm))
+        story.append(Spacer(1, 10))
+        story.append(Paragraph(rotulo_serie, styles["label"]))
+        story.append(Spacer(1, 12))
+
+    if resposta_texto:
+        texto_html = resposta_texto.replace("\n", "<br/>")
+        story.append(Paragraph(texto_html, styles["value"]))
+
     story.append(Spacer(1, 16))
     story.append(_footer_text(styles))
     doc.build(story)
