@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>{{ curso.titulo }} · {{ empresa_nome }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.14);--text:#e8f4f1;--muted:#7a9fa0;--teal:#00c9a7;--blue:#1f6ff2;--amber:#f0bf6b}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;min-height:100vh;display:flex;justify-content:center;padding:24px 14px}
+.card{width:100%;max-width:720px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:1.3rem;font-weight:800;line-height:1.3}
+.descricao{font-size:.88rem;color:var(--muted);line-height:1.6}
+.video-wrap{position:relative;width:100%;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000}
+.video-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video-link{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;font-weight:800;text-decoration:none;font-size:.86rem;width:fit-content}
+.material{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:.86rem;line-height:1.7;white-space:pre-wrap}
+.material-link{display:inline-flex;align-items:center;gap:8px;color:var(--teal);text-decoration:none;font-weight:700;font-size:.84rem}
+.status-box{border-radius:10px;padding:16px;font-size:.86rem;display:flex;flex-direction:column;gap:10px}
+.status-pendente{background:rgba(240,191,107,.08);border:1px solid rgba(240,191,107,.2)}
+.status-concluido{background:rgba(0,201,167,.08);border:1px solid rgba(0,201,167,.2)}
+.btn-concluir{padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;font-weight:800;font-size:.9rem;cursor:pointer;font-family:'Manrope',sans-serif}
+.btn-concluir:disabled{opacity:.5;cursor:not-allowed}
+.btn-certificado{padding:13px;border-radius:10px;border:1px solid var(--teal);color:var(--teal);background:none;font-weight:800;font-size:.9rem;cursor:pointer;font-family:'Manrope',sans-serif;text-decoration:none;text-align:center;display:block}
+.footer-nota{font-size:.7rem;color:var(--muted);text-align:center}
+.err-msg{color:#f87171;font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="card">
+  <div>
+    <div class="eyebrow">{{ empresa_nome }} · Treinamento Interno</div>
+    <h1>{{ curso.titulo }}</h1>
+  </div>
+
+  {% if curso.descricao %}<div class="descricao">{{ curso.descricao }}</div>{% endif %}
+
+  {% if curso.video_url %}
+  <div id="videoContainer"></div>
+  {% endif %}
+
+  {% if curso.material_texto or curso.material_arquivo %}
+  <div>
+    {% if curso.material_texto %}<div class="material">{{ curso.material_texto }}</div>{% endif %}
+    {% if curso.material_arquivo %}
+    <div style="margin-top:10px">
+      <a class="material-link" href="/curso-interno/{{ token }}/material" target="_blank">📄 Baixar material de apoio</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div id="statusBox"></div>
+
+  <div class="footer-nota">Carga horária: {{ curso.carga_horaria }}h · Acesso pessoal — não compartilhe este link.</div>
+</div>
+
+<script>
+const token = "{{ token|escapejs }}";
+const videoUrl = "{{ curso.video_url|escapejs }}";
+const statusInicial = "{{ matricula.status|escapejs }}";
+const numeroCertificado = "{{ matricula.numero_certificado|escapejs }}";
+
+function embedUrl(url) {
+  if (!url) return null;
+  let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}`;
+  m = url.match(/vimeo\.com\/(\d+)/);
+  if (m) return `https://player.vimeo.com/video/${m[1]}`;
+  return null;
+}
+
+if (videoUrl) {
+  const container = document.getElementById('videoContainer');
+  const emb = embedUrl(videoUrl);
+  if (emb) {
+    container.innerHTML = `<div class="video-wrap"><iframe src="${emb}" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>`;
+  } else {
+    container.innerHTML = `<a class="video-link" href="${videoUrl}" target="_blank" rel="noopener">▶️ Assistir vídeo-aula</a>`;
+  }
+}
+
+function renderStatus(status, numero) {
+  const box = document.getElementById('statusBox');
+  if (status === 'concluido') {
+    box.innerHTML = `
+      <div class="status-box status-concluido">
+        <div><strong>✅ Curso concluído!</strong></div>
+        <div style="color:var(--muted)">Certificado nº ${numero}</div>
+      </div>
+      <a class="btn-certificado" href="/curso-interno/${token}/certificado.pdf" target="_blank">🖨️ Ver / baixar certificado</a>
+    `;
+  } else {
+    box.innerHTML = `
+      <div class="status-box status-pendente">
+        <div>Assista o conteúdo acima e, quando terminar, marque como concluído para gerar seu certificado.</div>
+      </div>
+      <button class="btn-concluir" id="btnConcluir" onclick="marcarConcluido()">Marcar como Concluído</button>
+      <div class="err-msg" id="errConcluir"></div>
+    `;
+  }
+}
+renderStatus(statusInicial, numeroCertificado);
+
+async function marcarConcluido() {
+  const btn = document.getElementById('btnConcluir');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    const r = await fetch(`/curso-interno/${token}/concluir`, { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok) {
+      document.getElementById('errConcluir').textContent = d.erro || 'Erro ao concluir.';
+      btn.disabled = false;
+      btn.textContent = 'Marcar como Concluído';
+      return;
+    }
+    renderStatus('concluido', d.numero_certificado);
+  } catch (e) {
+    document.getElementById('errConcluir').textContent = 'Falha de conexão. Tente novamente.';
+    btn.disabled = false;
+    btn.textContent = 'Marcar como Concluído';
+  }
+}
+</script>
+</body>
+</html>

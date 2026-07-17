@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>Verificar Certificado · SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.14);--text:#e8f4f1;--muted:#7a9fa0;--teal:#00c9a7;--red:#f87171}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:24px}
+.card{width:100%;max-width:480px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center;display:flex;flex-direction:column;gap:14px}
+.icone{font-size:2.6rem}
+h1{font-size:1.1rem;font-weight:800}
+.sub{font-size:.82rem;color:var(--muted);line-height:1.6}
+.detalhes{margin-top:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left;font-size:.84rem;display:flex;flex-direction:column;gap:8px}
+.detalhes .rotulo{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.valido{color:var(--teal)}
+.invalido{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="card">
+  {% if valido %}
+    <div class="icone">✅</div>
+    <h1 class="valido">Certificado autêntico</h1>
+    <div class="sub">Este certificado foi emitido pela SolusCRT e é válido.</div>
+    <div class="detalhes">
+      <div><span class="rotulo">Nº do certificado</span><br>{{ numero_certificado }}</div>
+      <div><span class="rotulo">Emitido para</span><br>{{ matricula.funcionario.nome }}</div>
+      <div><span class="rotulo">Curso</span><br>{{ matricula.curso.titulo }}</div>
+      <div><span class="rotulo">Empresa</span><br>{{ matricula.empresa.nome }}</div>
+      <div><span class="rotulo">Concluído em</span><br>{{ matricula.data_conclusao|date:"d/m/Y" }}</div>
+    </div>
+  {% else %}
+    <div class="icone">⚠️</div>
+    <h1 class="invalido">Certificado não encontrado</h1>
+    <div class="sub">Não encontramos um certificado válido com o número <strong>{{ numero_certificado }}</strong>. Verifique se o código está correto.</div>
+  {% endif %}
+</div>
+</body>
+</html>

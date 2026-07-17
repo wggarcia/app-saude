@@ -289,6 +289,28 @@ from api.views_sst_rag import (
     api_assistente_grafico_pdf_email,
     assistente_sst,
 )
+# ── Treinamento interno / e-learning (cursos próprios + certificados) ──────
+from api.views_treinamento_interno import (
+    api_assinatura_treinador_arquivo,
+    api_assinatura_treinador_detalhe,
+    api_assinaturas_treinador,
+    api_curso_interno_detalhe,
+    api_curso_interno_matricular,
+    api_curso_interno_matriculas,
+    api_curso_interno_material,
+    api_curso_interno_publico_certificado_pdf,
+    api_curso_interno_publico_concluir,
+    api_curso_interno_publico_material,
+    api_cursos_internos,
+    api_matricula_certificado_email,
+    api_matricula_certificado_pdf,
+    api_matricula_concluir_manual,
+    api_modelo_certificado_detalhe,
+    api_modelos_certificado,
+    certificado_verificar_page,
+    curso_interno_publico_page,
+    sst_curso_interno_page,
+)
 # ── Módulos SST Expansão ──────────────────────────────────
 from api.views_ppp import (
     api_ppp_lista, api_ppp_criar, api_ppp_detalhe,
@@ -1430,6 +1452,35 @@ urlpatterns = [
     path('api/sst/treinamentos/homem-hora/pdf/', api_treinamentos_homem_hora_pdf),
     path('api/sst/treinamentos/homem-hora/email', api_treinamentos_homem_hora_email),
     path('api/sst/treinamentos/homem-hora/email/', api_treinamentos_homem_hora_email),
+
+    # ── Treinamento interno / e-learning ──────────────────────────────────
+    path('sst/curso-interno/', sst_curso_interno_page),
+    path('api/sst/assinaturas-treinador', api_assinaturas_treinador),
+    path('api/sst/assinaturas-treinador/', api_assinaturas_treinador),
+    path('api/sst/assinaturas-treinador/<int:assinatura_id>/', api_assinatura_treinador_detalhe),
+    path('api/sst/assinaturas-treinador/<int:assinatura_id>/arquivo', api_assinatura_treinador_arquivo),
+    path('api/sst/assinaturas-treinador/<int:assinatura_id>/arquivo/', api_assinatura_treinador_arquivo),
+    path('api/sst/modelos-certificado', api_modelos_certificado),
+    path('api/sst/modelos-certificado/', api_modelos_certificado),
+    path('api/sst/modelos-certificado/<int:modelo_id>/', api_modelo_certificado_detalhe),
+    path('api/sst/cursos-internos', api_cursos_internos),
+    path('api/sst/cursos-internos/', api_cursos_internos),
+    path('api/sst/cursos-internos/<int:curso_id>/', api_curso_interno_detalhe),
+    path('api/sst/cursos-internos/<int:curso_id>/material', api_curso_interno_material),
+    path('api/sst/cursos-internos/<int:curso_id>/material/', api_curso_interno_material),
+    path('api/sst/cursos-internos/<int:curso_id>/matricular', api_curso_interno_matricular),
+    path('api/sst/cursos-internos/<int:curso_id>/matriculas', api_curso_interno_matriculas),
+    path('api/sst/matriculas/<int:matricula_id>/concluir', api_matricula_concluir_manual),
+    path('api/sst/matriculas/<int:matricula_id>/certificado/pdf', api_matricula_certificado_pdf),
+    path('api/sst/matriculas/<int:matricula_id>/certificado/email', api_matricula_certificado_email),
+
+    # Público — funcionário acessa o curso via link com token, sem login
+    path('curso-interno/<str:token>/', curso_interno_publico_page),
+    path('curso-interno/<str:token>/material', api_curso_interno_publico_material),
+    path('curso-interno/<str:token>/concluir', api_curso_interno_publico_concluir),
+    path('curso-interno/<str:token>/certificado.pdf', api_curso_interno_publico_certificado_pdf),
+    path('certificado/verificar/<str:numero_certificado>/', certificado_verificar_page),
+
     path('api/sst/conformidade/', api_sst_conformidade),
     path('api/sst/conformidade', api_sst_conformidade),
     path('api/sst/conformidade/pdf', api_sst_conformidade_pdf),
