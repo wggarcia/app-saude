@@ -1585,6 +1585,110 @@ class TipoTreinamentoNR(models.Model):
 
 
 # ─────────────────────────────────────────────────────────────
+#  TREINAMENTO INTERNO / E-LEARNING — cursos próprios, certificados
+# ─────────────────────────────────────────────────────────────
+
+class AssinaturaTreinador(models.Model):
+    """Assinatura de um instrutor/técnico responsável, reaproveitável em vários
+    certificados — cadastra uma vez, usa em quantos cursos precisar."""
+    empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="assinaturas_treinador")
+    nome                  = models.CharField(max_length=200)
+    cargo                 = models.CharField(max_length=120, blank=True, default="", help_text="Ex: Técnico em Segurança do Trabalho, Engenheiro de Segurança")
+    registro_profissional = models.CharField(max_length=60, blank=True, default="", help_text="Ex: CREA 123456, Registro MTE 78910")
+    imagem_assinatura     = models.FileField(upload_to="assinaturas_treinador/", null=True, blank=True, help_text="Imagem da assinatura (PNG/JPG)")
+    ativo                 = models.BooleanField(default=True)
+    criado_em             = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.nome} — {self.cargo or 'Treinador'}"
+
+
+class ModeloCertificado(models.Model):
+    """Modelo visual de certificado — a empresa escolhe qual layout usar
+    por tipo de treinamento (ou um modelo padrão para todos)."""
+    ESTILO_CLASSICO = "classico"
+    ESTILO_MODERNO  = "moderno"
+    ESTILO_COMPACTO = "compacto"
+    ESTILOS = [
+        (ESTILO_CLASSICO, "Clássico — moldura formal, tons neutros"),
+        (ESTILO_MODERNO, "Moderno — geométrico, cor de destaque"),
+        (ESTILO_COMPACTO, "Compacto — direto ao ponto, uma página enxuta"),
+    ]
+
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="modelos_certificado")
+    nome          = models.CharField(max_length=120, help_text="Ex: Modelo Padrão NR, Certificado Onboarding")
+    estilo        = models.CharField(max_length=20, choices=ESTILOS, default=ESTILO_CLASSICO)
+    cor_destaque  = models.CharField(max_length=7, blank=True, default="", help_text="Hex opcional — se vazio, usa a cor da marca da empresa")
+    texto_rodape  = models.CharField(max_length=300, blank=True, default="", help_text="Texto adicional no rodapé do certificado, ex: base legal ou observação")
+    padrao        = models.BooleanField(default=False, help_text="Usado quando o curso não tiver modelo específico definido")
+    ativo         = models.BooleanField(default=True)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-padrao", "nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class CursoInterno(models.Model):
+    """Curso de e-learning ministrado pela própria empresa — vídeo-aula (link
+    externo) + material de apoio, com emissão de certificado ao concluir."""
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cursos_internos")
+    tipo_treinamento    = models.ForeignKey(TipoTreinamentoNR, on_delete=models.SET_NULL, null=True, blank=True, related_name="cursos_internos")
+    titulo              = models.CharField(max_length=200)
+    descricao           = models.TextField(blank=True, default="")
+    video_url           = models.URLField(blank=True, default="", help_text="Link do vídeo já hospedado (YouTube não-listado, Vimeo, Google Drive etc.)")
+    material_texto      = models.TextField(blank=True, default="", help_text="Conteúdo de apoio em texto — apostila, roteiro, instruções")
+    material_arquivo     = models.FileField(upload_to="material_curso_interno/", null=True, blank=True, help_text="Apostila em PDF ou similar, opcional")
+    carga_horaria        = models.PositiveSmallIntegerField(default=1, help_text="Horas — usada no certificado e no relatório de homem-hora")
+    modelo_certificado   = models.ForeignKey(ModeloCertificado, on_delete=models.SET_NULL, null=True, blank=True, related_name="cursos_internos")
+    assinatura_treinador = models.ForeignKey(AssinaturaTreinador, on_delete=models.SET_NULL, null=True, blank=True, related_name="cursos_internos")
+    ativo                = models.BooleanField(default=True)
+    criado_em            = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return self.titulo
+
+
+class MatriculaCursoInterno(models.Model):
+    """Vínculo de um funcionário com um curso interno — progresso e,
+    quando concluído, o treinamento vira um TreinamentoNR de verdade
+    (aparece em conformidade, homem-hora e no assistente IA) e gera certificado."""
+    STATUS_MATRICULADO   = "matriculado"
+    STATUS_EM_ANDAMENTO  = "em_andamento"
+    STATUS_CONCLUIDO     = "concluido"
+    STATUS = [
+        (STATUS_MATRICULADO, "Matriculado"),
+        (STATUS_EM_ANDAMENTO, "Em andamento"),
+        (STATUS_CONCLUIDO, "Concluído"),
+    ]
+
+    empresa        = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="matriculas_curso_interno")
+    curso          = models.ForeignKey(CursoInterno, on_delete=models.CASCADE, related_name="matriculas")
+    funcionario    = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="matriculas_curso_interno")
+    status         = models.CharField(max_length=20, choices=STATUS, default=STATUS_MATRICULADO)
+    token_acesso   = models.CharField(max_length=40, unique=True, default=_codigo_acesso, help_text="Token público para o funcionário acessar o curso sem login")
+    data_matricula = models.DateTimeField(auto_now_add=True)
+    data_conclusao = models.DateTimeField(null=True, blank=True)
+    treinamento_nr = models.ForeignKey(TreinamentoNR, on_delete=models.SET_NULL, null=True, blank=True, related_name="matricula_curso_interno")
+    numero_certificado = models.CharField(max_length=40, blank=True, default="")
+
+    class Meta:
+        ordering = ["-data_matricula"]
+        unique_together = [("curso", "funcionario")]
+
+    def __str__(self):
+        return f"{self.funcionario.nome} — {self.curso.titulo} ({self.status})"
+
+
+# ─────────────────────────────────────────────────────────────
 #  COMUNICAÇÃO — Chat + Vídeo (Teams-like)
 # ─────────────────────────────────────────────────────────────
 

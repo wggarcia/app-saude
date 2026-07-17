@@ -4,17 +4,20 @@ Geração de PDF para o módulo SST — usa ReportLab (já instalado).
 import io
 from datetime import date
 
+from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.linecharts import HorizontalLineChart
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     HRFlowable,
+    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -738,6 +741,165 @@ def gerar_pdf_afastamentos(afastamentos, empresa_nome):
     story.append(Spacer(1, 16))
     story.append(_footer_text(styles))
     doc.build(story)
+    return buf.getvalue()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Certificados de treinamento interno / e-learning
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _qr_certificado(url, tamanho=65):
+    qr = QrCodeWidget(url)
+    b = qr.getBounds()
+    largura_nativa = b[2] - b[0]
+    altura_nativa = b[3] - b[1]
+    d = Drawing(tamanho, tamanho, transform=[tamanho / largura_nativa, 0, 0, tamanho / altura_nativa, 0, 0])
+    d.add(qr)
+    return d
+
+
+def _logo_certificado(logo_url, largura_max, altura_max):
+    """Baixa o logo da marca (ConfiguracaoMarca.logo_url) para embutir no certificado.
+    Retorna None silenciosamente se não houver logo ou o download falhar — o
+    certificado ainda é gerado, só sem o logo."""
+    if not logo_url:
+        return None
+    try:
+        import requests
+        r = requests.get(logo_url, timeout=5)
+        r.raise_for_status()
+        leitor = ImageReader(io.BytesIO(r.content))
+        largura_nativa, altura_nativa = leitor.getSize()
+        escala = min(largura_max / largura_nativa, altura_max / altura_nativa, 1)
+        return Image(io.BytesIO(r.content), width=largura_nativa * escala, height=altura_nativa * escala)
+    except Exception:
+        return None
+
+
+def gerar_certificado_treinamento(dados):
+    """Gera o PDF de um certificado de conclusão de curso interno.
+
+    `dados`: dict com funcionario_nome, funcionario_cpf, curso_titulo, carga_horaria,
+    data_conclusao (str), treinador_nome, treinador_cargo, treinador_registro,
+    treinador_assinatura_path (caminho local ou None), empresa_nome, empresa_logo_url,
+    estilo ('classico'/'moderno'/'compacto'), cor_destaque (hex ou None),
+    texto_rodape, numero_certificado, url_verificacao."""
+    estilo = dados.get("estilo") or "classico"
+    cor = colors.HexColor(dados["cor_destaque"]) if dados.get("cor_destaque") else TEAL
+
+    pagesize = landscape(A4)
+    largura_pagina = pagesize[0]
+    margem_h = 2.2 * cm if estilo != "compacto" else 1.5 * cm
+    margem_v = 1.6 * cm if estilo != "compacto" else 1.1 * cm
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=pagesize,
+        leftMargin=margem_h, rightMargin=margem_h, topMargin=margem_v, bottomMargin=margem_v,
+        title=f"Certificado — {dados.get('curso_titulo', '')}",
+    )
+    largura_util = largura_pagina - 2 * margem_h
+    story = []
+
+    if estilo == "moderno":
+        faixa = Table([[""]], colWidths=[largura_util], rowHeights=[0.5 * cm])
+        faixa.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), cor)]))
+        story.append(faixa)
+        story.append(Spacer(1, 14))
+
+    logo = _logo_certificado(dados.get("empresa_logo_url"), largura_max=3.6 * cm, altura_max=1.8 * cm)
+    if logo and estilo != "compacto":
+        logo.hAlign = "CENTER"
+        story.append(logo)
+        story.append(Spacer(1, 8))
+
+    tam_titulo = {"classico": 25, "moderno": 27, "compacto": 17}[estilo]
+    titulo_style = ParagraphStyle(
+        "cert_titulo", fontName="Helvetica-Bold", fontSize=tam_titulo,
+        textColor=cor if estilo != "moderno" else DARK, alignment=TA_CENTER, spaceAfter=4,
+    )
+    story.append(Paragraph("CERTIFICADO DE CONCLUSÃO", titulo_style))
+    if estilo != "compacto":
+        story.append(HRFlowable(width="55%", thickness=1.4, color=cor, spaceBefore=6, spaceAfter=16, hAlign="CENTER"))
+    else:
+        story.append(Spacer(1, 8))
+
+    tam_corpo = 11.5 if estilo != "compacto" else 10
+    corpo_style = ParagraphStyle("cert_corpo", fontName="Helvetica", fontSize=tam_corpo, leading=tam_corpo + 7, alignment=TA_CENTER, textColor=DARK)
+    nome_style = ParagraphStyle(
+        "cert_nome", fontName="Helvetica-Bold", fontSize=19 if estilo != "compacto" else 15,
+        alignment=TA_CENTER, textColor=cor if estilo == "moderno" else DARK, spaceBefore=8, spaceAfter=8,
+    )
+
+    cpf = dados.get("funcionario_cpf") or ""
+    cpf_txt = f", portador do CPF {cpf},".strip()
+    if estilo != "compacto":
+        story.append(Paragraph("Certificamos que", corpo_style))
+    story.append(Paragraph(dados.get("funcionario_nome", ""), nome_style))
+    story.append(Paragraph(
+        f"concluiu com aproveitamento o curso <b>{dados.get('curso_titulo', '')}</b>{cpf_txt if cpf else ''} "
+        f"com carga horária de <b>{dados.get('carga_horaria', '—')} hora(s)</b>, "
+        f"realizado em {dados.get('data_conclusao', '—')}, promovido por <b>{dados.get('empresa_nome', '')}</b>.",
+        corpo_style,
+    ))
+    story.append(Spacer(1, 30 if estilo != "compacto" else 16))
+
+    assinatura_path = dados.get("treinador_assinatura_path")
+    ass_img = None
+    if assinatura_path:
+        try:
+            ass_img = Image(assinatura_path, width=3.8 * cm, height=1.5 * cm)
+        except Exception:
+            ass_img = None
+
+    linha_style = ParagraphStyle("linha_ass", fontName="Helvetica-Bold", fontSize=9.5, alignment=TA_CENTER, textColor=DARK)
+    sub_style = ParagraphStyle("sub_ass", fontName="Helvetica", fontSize=8, alignment=TA_CENTER, textColor=MUTED)
+
+    bloco_assinatura = [ass_img] if ass_img else [Spacer(1, 1.5 * cm)]
+    bloco_assinatura.append(HRFlowable(width="80%", thickness=0.75, color=MUTED, hAlign="CENTER", spaceBefore=2))
+    bloco_assinatura.append(Paragraph(dados.get("treinador_nome", "—"), linha_style))
+    sub = " · ".join(x for x in [dados.get("treinador_cargo"), dados.get("treinador_registro")] if x)
+    if sub:
+        bloco_assinatura.append(Paragraph(sub, sub_style))
+
+    url_verificacao = dados.get("url_verificacao")
+    qr = _qr_certificado(url_verificacao, tamanho=60) if url_verificacao else None
+    bloco_qr = []
+    if qr:
+        bloco_qr.append(qr)
+        bloco_qr.append(Paragraph(f"Nº {dados.get('numero_certificado', '')}", sub_style))
+        bloco_qr.append(Paragraph("Verifique a autenticidade", sub_style))
+
+    if qr:
+        linhas_rodape = [[bloco_assinatura, bloco_qr]]
+        larguras_rodape = [largura_util - 4.2 * cm, 4.2 * cm]
+    else:
+        linhas_rodape = [[bloco_assinatura]]
+        larguras_rodape = [largura_util]
+    tabela_rodape = Table(linhas_rodape, colWidths=larguras_rodape)
+    estilo_rodape = [("VALIGN", (0, 0), (-1, -1), "BOTTOM"), ("ALIGN", (0, 0), (0, 0), "CENTER")]
+    if qr:
+        estilo_rodape.append(("ALIGN", (1, 0), (1, 0), "CENTER"))
+    tabela_rodape.setStyle(TableStyle(estilo_rodape))
+    story.append(tabela_rodape)
+
+    if dados.get("texto_rodape"):
+        story.append(Spacer(1, 12))
+        story.append(Paragraph(dados["texto_rodape"], sub_style))
+
+    def _borda_classica(canvas, doc_):
+        if estilo != "classico":
+            return
+        canvas.saveState()
+        canvas.setStrokeColor(cor)
+        canvas.setLineWidth(1.6)
+        m = 0.8 * cm
+        canvas.rect(m, m, largura_pagina - 2 * m, pagesize[1] - 2 * m)
+        canvas.setLineWidth(0.6)
+        canvas.rect(m + 0.15 * cm, m + 0.15 * cm, largura_pagina - 2 * m - 0.3 * cm, pagesize[1] - 2 * m - 0.3 * cm)
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=_borda_classica)
     return buf.getvalue()
 
 
