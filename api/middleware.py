@@ -585,8 +585,18 @@ class FetchAuthInterceptorMiddleware:
         if request.path in _PAGINAS_PUBLICAS_SEM_INTERCEPTOR:
             return response
         ct = response.get("Content-Type", "")
-        if "text/html" in ct and hasattr(response, "content") and b"</body>" in response.content:
-            response.content = response.content.replace(b"</body>", _FETCH_INTERCEPTOR + b"</body>", 1)
+        if "text/html" in ct and hasattr(response, "content"):
+            # Usa a ÚLTIMA ocorrência de </body>, não a primeira: páginas que
+            # montam HTML de impressão/relatório dentro de uma string JS (ex.
+            # `const html = \`...</body></html>\`;`) têm um </body> "falso"
+            # embutido antes do real — injetar ali quebra o <script> da página
+            # (o </body> falso vira parte do texto e nunca fecha nada, mas o
+            # HTML tokenizer não sabe que está dentro de uma string JS).
+            idx = response.content.rfind(b"</body>")
+            if idx != -1:
+                response.content = (
+                    response.content[:idx] + _FETCH_INTERCEPTOR + response.content[idx:]
+                )
         return response
 
 
