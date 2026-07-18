@@ -351,12 +351,13 @@ def _gerar_bundle_ips_br(internacao, empresa):
     except Exception:
         pass
 
-    paciente_nome  = getattr(internacao, "paciente_nome", "Paciente")
-    cns            = getattr(internacao, "cns", "") or ""
-    cpf            = getattr(internacao, "cpf", "") or ""
-    data_entrada   = getattr(internacao, "data_entrada", date.today())
-    data_alta      = getattr(internacao, "data_alta", date.today()) or date.today()
-    cid_principal  = getattr(internacao, "cid_principal", "") or ""
+    paciente       = internacao.paciente
+    paciente_nome  = getattr(paciente, "nome", None) or "Paciente"
+    cns            = ""  # PacienteHospital não modela CNS ainda
+    cpf            = getattr(paciente, "cpf", "") or ""
+    data_entrada   = getattr(internacao, "data_entrada", None) or date.today()
+    data_alta      = getattr(internacao, "data_saida", None) or date.today()
+    cid_principal  = ""  # não modelado em InternacaoHospital/PacienteHospital ainda
 
     bundle_id = f"ips-br-{empresa.id}-{internacao.id}"
 

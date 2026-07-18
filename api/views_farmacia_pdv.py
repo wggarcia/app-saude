@@ -21,7 +21,7 @@ from .models import (
     MedicamentoFarmacia,
     EstoqueMovimento,
 )
-from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
+from .access_control import api_requer_operacao_ou_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 
 def _proximo_lote_fefo(empresa, medicamento):
@@ -114,7 +114,7 @@ def farmacia_pdv_page(request):
 # ─── Sessão atual ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
-@api_requer_gerencia
+@api_requer_operacao_ou_gerencia
 @api_requer_feature("farmacia.pdv")
 def api_pdv_sessao_atual(request):
     """GET — retorna a sessão PDV ativa para a empresa."""
@@ -133,7 +133,7 @@ def api_pdv_sessao_atual(request):
 # ─── Abrir sessão ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
-@api_requer_gerencia
+@api_requer_operacao_ou_gerencia
 @api_requer_feature("farmacia.pdv")
 def api_pdv_abrir_sessao(request):
     """POST — abre nova sessão PDV (caixa)."""
@@ -176,7 +176,7 @@ def api_pdv_abrir_sessao(request):
 # ─── Fechar sessão ────────────────────────────────────────────────────────────
 
 @csrf_exempt
-@api_requer_gerencia
+@api_requer_operacao_ou_gerencia
 @api_requer_feature("farmacia.pdv")
 def api_pdv_fechar_sessao(request, sessao_id):
     """POST — fecha uma sessão PDV calculando os totais."""
@@ -215,7 +215,7 @@ def api_pdv_fechar_sessao(request, sessao_id):
 # ─── Registrar venda ─────────────────────────────────────────────────────────
 
 @csrf_exempt
-@api_requer_gerencia
+@api_requer_operacao_ou_gerencia
 @api_requer_feature("farmacia.pdv")
 def api_pdv_registrar_venda(request, sessao_id):
     """POST — registra uma venda na sessão PDV e desconta estoque."""
@@ -359,7 +359,7 @@ def api_pdv_registrar_venda(request, sessao_id):
 # ─── Histórico de vendas ──────────────────────────────────────────────────────
 
 @csrf_exempt
-@api_requer_gerencia
+@api_requer_operacao_ou_gerencia
 @api_requer_feature("farmacia.pdv")
 def api_pdv_historico(request):
     """GET — últimas 30 vendas da empresa."""

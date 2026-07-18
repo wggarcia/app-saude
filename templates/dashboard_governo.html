@@ -2134,7 +2134,7 @@
       const lido = n.status === "lido";
       const arquivado = n.status === "arquivado";
       const diseases = Array.isArray(n.doencas_detectadas) ? n.doencas_detectadas.filter(Boolean) : [];
-      const diseaseTags = diseases.map(d => `<span class="tag">${d}</span>`).join("");
+      const diseaseTags = diseases.map(d => `<span class="tag">${escapeHtml(d)}</span>`).join("");
       const dotHtml = n.status === "novo" ? '<span class="news-novo-dot"></span>' : "";
       const btnLido = !lido && !arquivado
         ? `<button class="ni-btn" onclick="atualizarStatusNoticia(${n.id},'lido')">Marcar lido</button>`
@@ -2142,8 +2142,10 @@
       const btnArq = !arquivado
         ? `<button class="ni-btn" onclick="atualizarStatusNoticia(${n.id},'arquivado')">Arquivar</button>`
         : `<button class="ni-btn ativo" disabled>Arquivado</button>`;
-      const linkBtn = n.url
-        ? `<a class="ni-btn" href="${n.url}" target="_blank" rel="noopener noreferrer">Ver fonte ↗</a>`
+      // Só linka se for http(s) de verdade — evita esquema javascript:/data: em conteúdo externo (RSS/GDELT)
+      const urlSegura = /^https?:\/\//i.test(n.url || "") ? n.url : "";
+      const linkBtn = urlSegura
+        ? `<a class="ni-btn" href="${escapeHtml(urlSegura)}" target="_blank" rel="noopener noreferrer">Ver fonte ↗</a>`
         : "";
       // Show translate button when title/resumo lack Portuguese diacritics (foreign language)
       const textoParaDeteccao = ((n.titulo || "") + " " + (n.resumo || "")).toLowerCase();
@@ -2153,15 +2155,15 @@
       const nivelClass = n.nivel_alerta === "critico" ? " news-item-critico" : n.nivel_alerta === "alerta" ? " news-item-alerta" : "";
       return `<div class="news-item${nivelClass}" id="newsItem${n.id}" ${arquivado || lido ? 'style="opacity:.65"' : ""}>
   <div class="ni-head">
-    <span class="ni-title">${n.titulo || "(sem título)"}</span>
+    <span class="ni-title">${escapeHtml(n.titulo || "(sem título)")}</span>
     ${_nivelBadgeHtml(n.nivel_alerta)}
   </div>
   <div class="ni-meta">
-    <span class="mini" style="font-size:.72rem">${n.fonte || ""}</span>
+    <span class="mini" style="font-size:.72rem">${escapeHtml(n.fonte || "")}</span>
     <span class="mini" style="font-size:.7rem;color:var(--muted)">${_fmtNotDate(n.publicado_em)}</span>
     ${dotHtml}
   </div>
-  ${n.resumo ? `<div class="ni-resumo">${n.resumo}</div>` : ""}
+  ${n.resumo ? `<div class="ni-resumo">${escapeHtml(n.resumo)}</div>` : ""}
   ${diseases.length ? `<div class="ni-diseases">${diseaseTags}</div>` : ""}
   <div class="ni-actions">${btnLido}${btnArq}${linkBtn}${btnTranslate}</div>
 </div>`;

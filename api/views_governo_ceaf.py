@@ -169,7 +169,7 @@ def api_ceaf_solicitacoes(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"erro": "JSON inválido"}, status=400)
     try:
-        med = MedicamentoCEAF.objects.get(id=data["medicamento_id"], empresa=empresa)
+        med = MedicamentoCEAF.objects.get(id=data["medicamento_id"])
     except MedicamentoCEAF.DoesNotExist:
         return JsonResponse({"erro": "Medicamento não encontrado no RENAME CEAF"}, status=404)
 

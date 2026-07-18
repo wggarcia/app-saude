@@ -422,10 +422,28 @@ def _garantir_permissao_modulo(codigo):
         return None
 
 
+def _modulo_sem_rbac_configurado(empresa, codigo_modulo):
+    """Mesma lógica de graceful-degrade do meus_modulos(): se a empresa ainda
+    não configurou NENHUMA atribuição granular pro setor desse código, trata
+    como "RBAC ainda não configurado" e libera, em vez de bloquear a tela real
+    de quem nunca recebeu (nem precisava receber) uma RBACAtribuicao explícita."""
+    setor = None
+    for setor_key, modulos in MODULOS_POR_SETOR.items():
+        if any(m["codigo"] == codigo_modulo for m in modulos):
+            setor = setor_key
+            break
+    if setor is None:
+        return False
+    codigos_setor = [m["codigo"] for m in MODULOS_POR_SETOR.get(setor, [])]
+    return not _setor_tem_rbac_configurado(empresa, codigos_setor)
+
+
 def principal_tem_modulo(empresa, principal, codigo_modulo):
     if principal is None or principal == empresa or principal_e_gerencia_principal(principal):
         return True
-    return _principal_tem_permissao(empresa, principal, codigo_modulo)
+    if _principal_tem_permissao(empresa, principal, codigo_modulo):
+        return True
+    return _modulo_sem_rbac_configurado(empresa, codigo_modulo)
 
 
 def principal_tem_algum_modulo(empresa, principal, codigos_modulo):
@@ -434,7 +452,9 @@ def principal_tem_algum_modulo(empresa, principal, codigos_modulo):
     (ex: código amplo legado E código granular novo)."""
     if principal is None or principal == empresa or principal_e_gerencia_principal(principal):
         return True
-    return any(_principal_tem_permissao(empresa, principal, codigo) for codigo in codigos_modulo)
+    if any(_principal_tem_permissao(empresa, principal, codigo) for codigo in codigos_modulo):
+        return True
+    return any(_modulo_sem_rbac_configurado(empresa, codigo) for codigo in codigos_modulo)
 
 
 def principal_e_gerencia_principal(principal):
