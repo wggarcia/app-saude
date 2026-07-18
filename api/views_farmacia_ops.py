@@ -121,6 +121,12 @@ def api_itens_farmacia(request):
             return JsonResponse({"erro": "JSON inválido"}, status=400)
     except json.JSONDecodeError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
+    categoria = data.get("categoria", "material")
+    if categoria == "medicamento":
+        return JsonResponse({
+            "erro": "Medicamento não é cadastrado aqui. Use a tela de Estoque de Medicamentos "
+                    "(controle ANVISA, preço e substâncias controladas).",
+        }, status=400)
     forn = None
     if data.get("fornecedor_id"):
         try:
@@ -137,7 +143,7 @@ def api_itens_farmacia(request):
         empresa=e,
         nome=data.get("nome", ""),
         codigo=data.get("codigo", ""),
-        categoria=data.get("categoria", "medicamento"),
+        categoria=categoria,
         descricao=data.get("descricao", ""),
         unidade_medida=data.get("unidade_medida", "unidade"),
         estoque_minimo=int(data.get("estoque_minimo", 0)),
@@ -169,6 +175,11 @@ def api_item_farmacia_detalhe(request, item_id):
             return JsonResponse({"erro": "JSON inválido"}, status=400)
     except json.JSONDecodeError:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
+    if data.get("categoria") == "medicamento":
+        return JsonResponse({
+            "erro": "Medicamento não é cadastrado aqui. Use a tela de Estoque de Medicamentos "
+                    "(controle ANVISA, preço e substâncias controladas).",
+        }, status=400)
     for campo in ["nome", "codigo", "categoria", "descricao", "unidade_medida", "estoque_minimo", "ativo"]:
         if campo in data:
             setattr(item, campo, data[campo])

@@ -2084,16 +2084,19 @@ class FornecedorFarmacia(models.Model):
 
 
 class ItemFarmacia(models.Model):
+    """Estoque genérico da farmácia — material, insumo e outros itens que NÃO
+    são medicamento. Medicamento tem cadastro, precificação e rastreabilidade
+    regulatória (ANVISA, Portaria 344) próprios em MedicamentoFarmacia — não
+    deve ser cadastrado aqui. Ver CATEGORIA_CHOICES."""
     CATEGORIA_CHOICES = [
-        ("medicamento", "Medicamento"), ("material", "Material"),
-        ("insumo", "Insumo"), ("outro", "Outro"),
+        ("material", "Material"), ("insumo", "Insumo"), ("outro", "Outro"),
     ]
     empresa         = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="itens_farmacia")
     fornecedor      = models.ForeignKey(FornecedorFarmacia, on_delete=models.SET_NULL, null=True, blank=True, related_name="itens")
     unidade_fisica  = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="itens_farmacia")
     nome            = models.CharField(max_length=200)
     codigo          = models.CharField(max_length=50, blank=True, default="")
-    categoria       = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default="medicamento")
+    categoria       = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default="material")
     descricao       = models.TextField(blank=True, default="")
     unidade_medida  = models.CharField(max_length=30, default="unidade")
     estoque_minimo  = models.PositiveIntegerField(default=0)
