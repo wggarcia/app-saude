@@ -3803,11 +3803,41 @@ class GuiaAutorizacao(models.Model):
     solicitada_em = models.DateTimeField(auto_now_add=True)
     atualizada_em = models.DateTimeField(auto_now=True)
 
+    # ── Guia Express (sugestão de aprovação por IA) ──────────────────────────
+    SUGESTAO_APROVAR = "aprovar"
+    SUGESTAO_REVISAR = "revisar"
+    SUGESTAO_CHOICES = [
+        (SUGESTAO_APROVAR, "IA sugere aprovar"),
+        (SUGESTAO_REVISAR, "IA sugere revisão manual"),
+    ]
+    score_confianca_ia = models.FloatField(null=True, blank=True)
+    sugestao_ia = models.CharField(max_length=20, choices=SUGESTAO_CHOICES, blank=True, default="")
+    sugestao_motivo = models.TextField(blank=True, default="")
+    # True = auditor seguiu a sugestão de aprovar; False = auditor negou apesar da sugestão;
+    # null = ainda sem decisão humana, ou guia sem sugestão de IA.
+    sugestao_seguida = models.BooleanField(null=True, blank=True)
+
     class Meta:
         ordering = ["-solicitada_em"]
 
     def __str__(self):
         return f"Guia #{self.numero_guia or self.id} — {self.beneficiario.nome}"
+
+
+class RegraAutorizacaoAutomatica(models.Model):
+    """Configuração da operadora pra que tipos/valores o Guia Express calcula sugestão de IA.
+    Modo sugestão: nunca muda status sozinho, só recomenda pro auditor humano decidir."""
+    empresa = models.OneToOneField("Empresa", on_delete=models.CASCADE, related_name="regra_autorizacao_automatica")
+    tipos_elegiveis = models.JSONField(default=list, blank=True,
+                                        help_text="Lista de GuiaAutorizacao.TIPO_CHOICES elegíveis pra sugestão")
+    valor_maximo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    score_minimo = models.FloatField(default=85)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Regra Guia Express — {self.empresa.nome}"
 
 
 class Sinistro(models.Model):

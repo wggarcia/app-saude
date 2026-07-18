@@ -474,6 +474,19 @@ tr:hover td{background:rgba(255,107,157,.03)}
 
   <!-- FILA CLINICA -->
   <div class="tab-panel" id="tab-fila" style="margin-top:4px">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <span class="card-title">&#9889; Guia Express — sugestão de aprovação por IA</span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalGuiaExpress()">Configurar</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:8px 20px 16px">
+        <div class="kpi"><div class="kpi-val" id="geAvaliadas">&#8212;</div><div class="kpi-lbl">Avaliadas (30d)</div></div>
+        <div class="kpi ok"><div class="kpi-val" id="geSugeridas" style="color:var(--ok)">&#8212;</div><div class="kpi-lbl">IA sugeriu aprovar</div></div>
+        <div class="kpi"><div class="kpi-val" id="geSeguidas">&#8212;</div><div class="kpi-lbl">Auditor seguiu</div></div>
+        <div class="kpi info"><div class="kpi-val" id="geTaxaAcerto">&#8212;</div><div class="kpi-lbl">Taxa de acerto</div></div>
+        <div class="kpi ok"><div class="kpi-val" id="geHoras" style="color:var(--ok)">&#8212;</div><div class="kpi-lbl">Horas economizadas (est.)</div></div>
+      </div>
+    </div>
     <div class="summary-grid" style="margin-bottom:16px">
       <div class="summary-box">
         <div class="summary-box-title">Triagem</div>
@@ -520,8 +533,8 @@ tr:hover td{background:rgba(255,107,157,.03)}
         </div>
       </div>
       <table>
-        <thead><tr><th>Guia</th><th>Beneficiario</th><th>Prestador</th><th>Prioridade</th><th>Fila</th><th>SLA</th><th>Auditor</th><th>Acoes</th></tr></thead>
-        <tbody id="tbodyFilaClinica"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+        <thead><tr><th>Guia</th><th>Beneficiario</th><th>Prestador</th><th>Prioridade</th><th>Fila</th><th>IA</th><th>SLA</th><th>Auditor</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyFilaClinica"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1738,6 +1751,36 @@ tr:hover td{background:rgba(255,107,157,.03)}
   </div>
 </div>
 
+<!-- MODAL: Guia Express (config) -->
+<div class="modal-bg" id="modalGuiaExpress">
+  <div class="modal" style="max-width:520px">
+    <h3>&#9889; Configurar Guia Express</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+      A IA sugere aprovação pro auditor — o auditor sempre decide com um clique.
+      Internação, urgência/emergência e alta complexidade nunca recebem sugestão automática.
+    </p>
+    <div class="form-group">
+      <label>Tipos elegíveis pra sugestão</label>
+      <div id="geTiposBox" style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor máximo (R$)</label>
+        <input id="geValorMaximo" type="number" min="0" step="0.01" placeholder="sem teto">
+      </div>
+      <div class="form-group"><label>Score mínimo de confiança (0-100)</label>
+        <input id="geScoreMinimo" type="number" min="0" max="100" step="1" value="85">
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="geAtivo" checked> Guia Express ativo</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalGuiaExpress')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarGuiaExpressRegra()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Novo Sinistro -->
 <div class="modal-bg" id="modalSinistro">
   <div class="modal" style="max-width:640px">
@@ -2475,23 +2518,72 @@ async function carregarFilaClinica() {
   var guias = d.guias || [];
   var tb = document.getElementById('tbodyFilaClinica');
   if (!tb) return;
-  if (!guias.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Fila clinica sem itens no filtro atual</td></tr>'; return; }
+  if (!guias.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Fila clinica sem itens no filtro atual</td></tr>'; return; }
   tb.innerHTML = guias.map(function(g){
     var acoes = [];
+    if (g.sugestao_ia === 'aprovar' && g.sugestao_seguida == null && ['triagem','auditoria_clinica','auditoria_medica','solicitada','em_analise'].indexOf(g.fila_status) >= 0) {
+      acoes.push('<button class="btn btn-ok btn-sm" title="'+(g.sugestao_motivo||'')+'" onclick="acaoFilaClinica('+g.id+',\'autorizar\')">&#9889; Aprovar com IA</button>');
+    }
     if (g.fila_status === 'triagem') acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'auditoria_clinica\')">Auditar</button>');
     if (g.fila_status === 'auditoria_clinica') acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'auditoria_medica\')">Aud. Medica</button>');
     if (['triagem','auditoria_clinica','auditoria_medica'].indexOf(g.fila_status) >= 0) acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'pendencia_documental\')">Pend. Doc</button>');
     if (['pendencia_documental','devolvida_prestador'].indexOf(g.fila_status) >= 0) acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'triagem\')">Reabrir</button>');
-    if (['triagem','auditoria_clinica','auditoria_medica','pendencia_documental','devolvida_prestador','solicitada','em_analise'].indexOf(g.fila_status) >= 0) acoes.push('<button class="btn btn-ok btn-sm" onclick="acaoFilaClinica('+g.id+',\'autorizar\')">Autorizar</button>');
+    if (['triagem','auditoria_clinica','auditoria_medica','pendencia_documental','devolvida_prestador','solicitada','em_analise'].indexOf(g.fila_status) >= 0) acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'autorizar\')">Autorizar</button>');
     if (['autorizada','negada'].indexOf(g.fila_status) < 0) acoes.push('<button class="btn btn-danger btn-sm" onclick="acaoFilaClinica('+g.id+',\'negar\')">Negar</button>');
     var sla = g.sla_vencido ? '<span class="badge badge-danger">'+fmtHoras(g.horas_restantes)+'</span>' : '<span class="badge badge-ok">'+fmtHoras(g.horas_restantes)+'</span>';
+    var ia = '<span style="font-size:11px;color:var(--muted)">&#8212;</span>';
+    if (g.sugestao_ia === 'aprovar') {
+      ia = '<span class="badge badge-ok" title="'+(g.sugestao_motivo||'')+'">Aprovar ('+g.score_confianca_ia+'%)</span>';
+    } else if (g.sugestao_ia === 'revisar') {
+      ia = '<span class="badge badge-gray" title="'+(g.sugestao_motivo||'')+'">Revisar</span>';
+    }
     return '<tr><td><strong>'+(g.numero_guia||('#'+g.id))+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(g.cid||'CID nao informado')+'</span></td>'+
       '<td>'+(g.beneficiario_nome||'--')+'</td><td>'+(g.prestador_nome||'Sem prestador')+'</td>'+
       '<td><span class="badge '+badgePrioridade(g.prioridade_clinica)+'">'+(g.prioridade_clinica_label||g.prioridade_clinica||'--')+'</span></td>'+
       '<td><span class="badge '+badgeFila(g.fila_status)+'">'+(g.fila_status_label||g.fila_status||'--')+'</span></td>'+
+      '<td>'+ia+'</td>'+
       '<td>'+sla+'<br><span style="font-size:11px;color:var(--muted)">'+(g.prazo_sla_em_fmt||'--')+'</span></td>'+
       '<td>'+(g.auditor_responsavel||'--')+'</td><td style="white-space:nowrap">'+acoes.join(' ')+'</td></tr>';
   }).join('');
+  carregarGuiaExpressMetricas();
+}
+
+async function carregarGuiaExpressMetricas() {
+  var m = await api('/api/plano-saude/guia-express/metricas');
+  setText('geAvaliadas', m.total_avaliadas != null ? m.total_avaliadas : '--');
+  setText('geSugeridas', m.sugeridas_aprovar != null ? m.sugeridas_aprovar : '--');
+  setText('geSeguidas', m.seguidas_pelo_auditor != null ? m.seguidas_pelo_auditor : '--');
+  setText('geTaxaAcerto', m.taxa_acerto_pct != null ? m.taxa_acerto_pct+'%' : '&#8212;');
+  setText('geHoras', m.horas_economizadas_estimadas != null ? m.horas_economizadas_estimadas+'h' : '--');
+}
+
+async function abrirModalGuiaExpress() {
+  var d = await api('/api/plano-saude/guia-express/regra');
+  var regra = d.regra || {};
+  var tipos = d.tipos_disponiveis || [];
+  var box = document.getElementById('geTiposBox');
+  box.innerHTML = tipos.map(function(t){
+    var checked = (regra.tipos_elegiveis||[]).indexOf(t[0]) >= 0 ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:6px">'+
+      '<input type="checkbox" value="'+t[0]+'" class="geTipoCheck" '+checked+'> '+t[1]+'</label>';
+  }).join('');
+  document.getElementById('geValorMaximo').value = regra.valor_maximo != null ? regra.valor_maximo : '';
+  document.getElementById('geScoreMinimo').value = regra.score_minimo != null ? regra.score_minimo : 85;
+  document.getElementById('geAtivo').checked = regra.ativo !== false;
+  abrirModal('modalGuiaExpress');
+}
+
+async function salvarGuiaExpressRegra() {
+  var tipos = Array.prototype.slice.call(document.querySelectorAll('.geTipoCheck:checked')).map(function(c){return c.value;});
+  var body = {
+    tipos_elegiveis: tipos,
+    valor_maximo: v('geValorMaximo') ? parseFloat(v('geValorMaximo')) : null,
+    score_minimo: v('geScoreMinimo') ? parseFloat(v('geScoreMinimo')) : 85,
+    ativo: document.getElementById('geAtivo').checked,
+  };
+  await api('/api/plano-saude/guia-express/regra', {method:'PUT', body:JSON.stringify(body)});
+  fecharModal('modalGuiaExpress');
+  showToastPS('Configuração do Guia Express salva.', 'ok');
 }
 
 async function acaoFilaClinica(id, acao) {

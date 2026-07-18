@@ -21,7 +21,7 @@ from .models import (
     ProgramaSaude, InscricaoPrograma,
     ContratoGrupo, TeleconsultaAutorizacao,
     BeneficiarioOdonto, GuiaOdonto, MensagemPlano,
-    CarenciaBeneficiario,
+    CarenciaBeneficiario, RegraAutorizacaoAutomatica,
 )
 from .views_dashboard import _empresa_autenticada
 from .email_service import (
@@ -199,6 +199,84 @@ def _fila_status_from_status(status):
     }.get(status or GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.FILA_TRIAGEM)
 
 
+TIPOS_ELEGIVEIS_PADRAO = [GuiaAutorizacao.TIPO_CONSULTA, GuiaAutorizacao.TIPO_EXAME]
+PRIORIDADES_SEMPRE_MANUAL = {
+    GuiaAutorizacao.PRIORIDADE_URGENTE,
+    GuiaAutorizacao.PRIORIDADE_ALTA_COMPLEXIDADE,
+    GuiaAutorizacao.PRIORIDADE_INTERNACAO,
+}
+
+
+def _regra_autorizacao_automatica(empresa):
+    regra, _ = RegraAutorizacaoAutomatica.objects.get_or_create(
+        empresa=empresa,
+        defaults={"tipos_elegiveis": list(TIPOS_ELEGIVEIS_PADRAO), "score_minimo": 85},
+    )
+    return regra
+
+
+def _score_confianca_ia(guia, regra):
+    """
+    Guia Express — modo sugestão: calcula confiança (0-100) de que essa guia
+    pode ser aprovada sem revisão manual aprofundada. NUNCA muda o status da
+    guia sozinho; só popula score_confianca_ia/sugestao_ia/sugestao_motivo
+    pro auditor decidir com um clique a mais de informação.
+
+    Regras de bloqueio (sempre sugere revisão manual, independente do score):
+    internação, urgência/emergência e alta complexidade nunca são sugeridas
+    pra aprovação automática — só tipos/valores que a operadora liberou.
+    """
+    tipos_ok = regra.tipos_elegiveis or TIPOS_ELEGIVEIS_PADRAO
+    if guia.prioridade_clinica in PRIORIDADES_SEMPRE_MANUAL:
+        return 0, GuiaAutorizacao.SUGESTAO_REVISAR, "Prioridade clínica exige revisão manual (urgência, alta complexidade ou internação)."
+    if guia.tipo not in tipos_ok:
+        return 0, GuiaAutorizacao.SUGESTAO_REVISAR, f"Tipo '{guia.get_tipo_display()}' fora da lista de tipos elegíveis pra sugestão automática."
+    if regra.valor_maximo is not None and guia.valor_estimado and guia.valor_estimado > regra.valor_maximo:
+        return 0, GuiaAutorizacao.SUGESTAO_REVISAR, f"Valor estimado (R$ {guia.valor_estimado}) acima do teto configurado (R$ {regra.valor_maximo})."
+
+    score = 0.0
+    motivos = []
+
+    # Tipo de procedimento (0–35)
+    if guia.tipo in (GuiaAutorizacao.TIPO_CONSULTA, GuiaAutorizacao.TIPO_EXAME):
+        score += 35
+    else:
+        score += 15
+
+    # Histórico recente do beneficiário (0–25) — poucos sinistros nos últimos 12 meses
+    ha_12_meses = timezone.now() - timedelta(days=365)
+    sinistros_recentes = Sinistro.objects.filter(
+        beneficiario=guia.beneficiario, data_abertura__gte=ha_12_meses
+    ).count()
+    pontos_historico = max(0, 25 - sinistros_recentes * 5)
+    score += pontos_historico
+    if sinistros_recentes:
+        motivos.append(f"{sinistros_recentes} sinistro(s) do beneficiário nos últimos 12 meses")
+
+    # Qualidade do prestador (0–20)
+    if guia.prestador and guia.prestador.score_qualidade is not None:
+        score += round(guia.prestador.score_qualidade * 0.2, 1)
+        if guia.prestador.score_qualidade < 70:
+            motivos.append(f"prestador com score de qualidade baixo ({guia.prestador.score_qualidade})")
+    else:
+        score += 10  # neutro, sem prestador informado
+
+    # Valor dentro do teto configurado (0–20)
+    if regra.valor_maximo is not None and guia.valor_estimado is not None:
+        score += 20
+    else:
+        score += 10  # neutro, sem teto configurado ou sem valor informado
+
+    score = round(min(100, score), 1)
+    if score >= regra.score_minimo:
+        sugestao = GuiaAutorizacao.SUGESTAO_APROVAR
+        motivo = "Baixo risco: " + ("; ".join(motivos) if motivos else "sem sinistros recentes, prestador com bom histórico, dentro do valor de referência.")
+    else:
+        sugestao = GuiaAutorizacao.SUGESTAO_REVISAR
+        motivo = "Confiança abaixo do limiar configurado" + (f" ({'; '.join(motivos)})" if motivos else ".")
+    return score, sugestao, motivo
+
+
 def _guia_sla_info(g):
     prazo = g.prazo_sla_em
     if not prazo:
@@ -334,6 +412,11 @@ def _guia_dict(g):
         "numero_autorizacao": g.numero_autorizacao,
         "validade_autorizacao": g.validade_autorizacao.isoformat() if g.validade_autorizacao else None,
         "justificativa_negativa": g.justificativa_negativa,
+        "score_confianca_ia": g.score_confianca_ia,
+        "sugestao_ia": g.sugestao_ia,
+        "sugestao_ia_label": g.get_sugestao_ia_display() if g.sugestao_ia else "",
+        "sugestao_motivo": g.sugestao_motivo,
+        "sugestao_seguida": g.sugestao_seguida,
         "solicitada_em": g.solicitada_em.strftime("%d/%m/%Y %H:%M"),
         "atualizada_em": g.atualizada_em.strftime("%d/%m/%Y %H:%M"),
     }
@@ -970,10 +1053,14 @@ def api_ps_fila_clinica_acao(request, guia_id):
                 pass
         elif not guia.validade_autorizacao:
             guia.validade_autorizacao = timezone.localdate() + timedelta(days=30)
+        if guia.sugestao_ia == GuiaAutorizacao.SUGESTAO_APROVAR:
+            guia.sugestao_seguida = True
     elif acao == "negar":
         guia.status = GuiaAutorizacao.STATUS_NEGADA
         guia.fila_status = GuiaAutorizacao.FILA_NEGADA
         guia.justificativa_negativa = data.get("justificativa_negativa", guia.justificativa_negativa)
+        if guia.sugestao_ia == GuiaAutorizacao.SUGESTAO_APROVAR:
+            guia.sugestao_seguida = False
 
     if "status" in data:
         guia.status = data["status"]
@@ -983,6 +1070,89 @@ def api_ps_fila_clinica_acao(request, guia_id):
         guia.fila_status = data["fila_status"]
     guia.save()
     return JsonResponse({"guia": _guia_dict(guia)})
+
+
+def _regra_dict(r):
+    return {
+        "id": r.id,
+        "tipos_elegiveis": r.tipos_elegiveis,
+        "valor_maximo": float(r.valor_maximo) if r.valor_maximo is not None else None,
+        "score_minimo": r.score_minimo,
+        "ativo": r.ativo,
+    }
+
+
+@csrf_exempt
+def api_ps_guia_express_regra(request):
+    """GET/PUT — configuração do Guia Express (quais tipos/valor/score a IA usa pra sugerir aprovação)."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    regra = _regra_autorizacao_automatica(empresa)
+
+    if request.method == "GET":
+        return JsonResponse({"regra": _regra_dict(regra), "tipos_disponiveis": GuiaAutorizacao.TIPO_CHOICES})
+
+    if request.method in ("POST", "PUT", "PATCH"):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        if "tipos_elegiveis" in data:
+            tipos_validos = {c[0] for c in GuiaAutorizacao.TIPO_CHOICES}
+            regra.tipos_elegiveis = [t for t in (data.get("tipos_elegiveis") or []) if t in tipos_validos]
+        if "valor_maximo" in data:
+            valor = data.get("valor_maximo")
+            regra.valor_maximo = Decimal(str(valor)) if valor not in (None, "") else None
+        if "score_minimo" in data:
+            try:
+                regra.score_minimo = max(0, min(100, float(data["score_minimo"])))
+            except (TypeError, ValueError):
+                pass
+        if "ativo" in data:
+            regra.ativo = bool(data["ativo"])
+        regra.save()
+        return JsonResponse({"regra": _regra_dict(regra)})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_guia_express_metricas(request):
+    """Painel do Guia Express: quantas guias a IA sugeriu, quantas o auditor seguiu,
+    e uma estimativa de horas de análise economizadas nos últimos 30 dias."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    ha_30_dias = timezone.now() - timedelta(days=30)
+    qs = GuiaAutorizacao.objects.filter(
+        plano__empresa=empresa, solicitada_em__gte=ha_30_dias
+    ).exclude(sugestao_ia="")
+
+    total_avaliadas = qs.count()
+    sugeridas_aprovar = qs.filter(sugestao_ia=GuiaAutorizacao.SUGESTAO_APROVAR).count()
+    seguidas = qs.filter(sugestao_ia=GuiaAutorizacao.SUGESTAO_APROVAR, sugestao_seguida=True).count()
+    divergentes = qs.filter(sugestao_ia=GuiaAutorizacao.SUGESTAO_APROVAR, sugestao_seguida=False).count()
+    pendentes_decisao = qs.filter(sugestao_ia=GuiaAutorizacao.SUGESTAO_APROVAR, sugestao_seguida__isnull=True).count()
+
+    decididas = seguidas + divergentes
+    taxa_acerto = round((seguidas / decididas * 100), 1) if decididas else None
+
+    # Estimativa simples: cada guia seguida economiza ~12 min de análise manual (consulta/exame de rotina).
+    minutos_por_guia = 12
+    horas_economizadas = round((seguidas * minutos_por_guia) / 60, 1)
+
+    return JsonResponse({
+        "janela_dias": 30,
+        "total_avaliadas": total_avaliadas,
+        "sugeridas_aprovar": sugeridas_aprovar,
+        "seguidas_pelo_auditor": seguidas,
+        "divergentes": divergentes,
+        "pendentes_decisao": pendentes_decisao,
+        "taxa_acerto_pct": taxa_acerto,
+        "horas_economizadas_estimadas": horas_economizadas,
+    })
 
 @csrf_exempt
 def api_ps_guias(request):
@@ -1063,6 +1233,13 @@ def api_ps_guias(request):
             observacao_auditoria=data.get("observacao_auditoria", ""),
             prazo_sla_em=_calcular_prazo_sla(prioridade, prestador),
         )
+        regra = _regra_autorizacao_automatica(empresa)
+        if regra.ativo:
+            score, sugestao, motivo = _score_confianca_ia(g, regra)
+            g.score_confianca_ia = score
+            g.sugestao_ia = sugestao
+            g.sugestao_motivo = motivo
+            g.save(update_fields=["score_confianca_ia", "sugestao_ia", "sugestao_motivo"])
         return JsonResponse({"guia": _guia_dict(g)}, status=201)
 
     return JsonResponse({"erro": "Método não suportado"}, status=405)
