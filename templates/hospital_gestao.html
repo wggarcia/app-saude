@@ -2715,9 +2715,19 @@ async function salvarDep() {
 // ══════════════════════════════════════════════════════════════
 // PRESCRIÇÕES
 // ══════════════════════════════════════════════════════════════
+
+// Lista de pacientes internados — fonte única pra qualquer dropdown de
+// "paciente internado" (Cirurgia, Alta, Fatura). Esses 3 fluxos gravam
+// contra PacienteInternado (modelo moderno), não contra o PacienteHospital/
+// InternacaoHospital legado usado pela tela de Prescrições.
+async function pacientesInternadosOptions() {
+  const d = await api('/api/hospital/pacientes-internados/');
+  return d?.pacientes || [];
+}
+
 async function carregarPrescricoes() {
   try {
-    const di = await api('/api/hospital/internacoes/?status=ativo');
+    const di = await api('/api/hospital/internacoes/?status=ativa');
     _internacoesList = di.internacoes || [];
     const status = document.getElementById('filtroPrescStatus')?.value || '';
     const tb = document.getElementById('tbodyPresc');
@@ -3113,10 +3123,9 @@ async function carregarCirurgias() {
 async function abrirModalCirurgia() {
   // Popular select de pacientes internados
   const sel = document.getElementById('ccPaciente');
-  if (_pacientes?.length) {
-    sel.innerHTML = '<option value="">— sem paciente vinculado —</option>' +
-      _pacientes.filter(p => p.status === 'internado').map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-  }
+  const internados = await pacientesInternadosOptions();
+  sel.innerHTML = '<option value="">— sem paciente vinculado —</option>' +
+    internados.map(p => `<option value="${p.id}">${p.nome}${p.leito?' — Leito '+p.leito:''}</option>`).join('');
   ['ccProcedimento','ccTUSS','ccSala','ccDataHora','ccCirurgiao','ccCRM','ccAnestesio','ccAnestesia','ccCID'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -3158,9 +3167,9 @@ async function concluirCirurgia(id) {
 async function carregarAltaTab() {
   // Popular select de pacientes internados
   const sel = document.getElementById('altaPacienteSelect');
-  if (!_pacientes?.length) await carregarPacientes();
+  const internados = await pacientesInternadosOptions();
   sel.innerHTML = '<option value="">— selecione o paciente —</option>' +
-    (_pacientes || []).filter(p => p.status === 'internado').map(p => `<option value="${p.id}">${p.nome} — Leito ${p.leito || '?'}</option>`).join('');
+    internados.map(p => `<option value="${p.id}">${p.nome} — Leito ${p.leito || '?'}</option>`).join('');
 }
 
 function abrirModalAlta() {
@@ -3276,9 +3285,9 @@ async function carregarFaturamento() {
 async function abrirModalFatura() {
   const sel = document.getElementById('fatPaciente');
   if (sel) {
-    const lista = _internacoesList.length ? _internacoesList : (await api('/api/hospital/internacoes/?status=internado'))?.internacoes || [];
+    const internados = await pacientesInternadosOptions();
     sel.innerHTML = '<option value="">Selecione o paciente</option>' +
-      lista.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+      internados.map(p => `<option value="${p.id}">${p.nome}${p.leito?' — Leito '+p.leito:''}</option>`).join('');
   }
   abrirModal('modalFatura');
 }

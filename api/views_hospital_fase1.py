@@ -44,6 +44,23 @@ def _pac_or_404(empresa, pac_id):
         return None
 
 
+@require_http_methods(["GET"])
+def api_pacientes_internados_listar(request):
+    """Lista pacientes com status='internado' em PacienteInternado — fonte
+    correta pros dropdowns de Cirurgia, Alta e Fatura, que gravam contra este
+    modelo (não o PacienteHospital/InternacaoHospital legado)."""
+    empresa = _empresa_autenticada(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+    qs = PacienteInternado.objects.filter(
+        empresa=empresa, status="internado"
+    ).select_related("leito")
+    return JsonResponse({"pacientes": [
+        {"id": p.id, "nome": p.nome, "leito": p.leito.numero if p.leito else ""}
+        for p in qs
+    ]})
+
+
 def _evo_to_dict(e):
     return {
         "id": e.id,

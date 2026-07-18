@@ -563,7 +563,7 @@ from api.views_hospital_fase2 import (
 from api.views_hospital_fase1 import (
     api_evolucoes_paciente,
     api_monitoramento_uti,
-    api_sumario_alta,
+    api_sumario_alta, api_pacientes_internados_listar,
     api_centro_cirurgico,
     api_centro_cirurgico_detalhe,
     api_hospital_uti_dashboard,
@@ -1808,6 +1808,7 @@ urlpatterns = [
     path('api/hospital/limpeza/<int:registro_id>/status/', api_limpeza_status),
     path('api/hospital/rouparia/', api_rouparia),
     path('api/hospital/pacientes/<int:pac_id>/sumario-alta/', api_sumario_alta),
+    path('api/hospital/pacientes-internados/', api_pacientes_internados_listar),
     path('api/hospital/pacientes/<int:pac_id>/isolamento/', api_isolamento_paciente),
     path('api/hospital/centro-cirurgico/', api_centro_cirurgico),
     path('api/hospital/centro-cirurgico/<int:cc_id>/', api_centro_cirurgico_detalhe),
