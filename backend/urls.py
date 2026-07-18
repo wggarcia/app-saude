@@ -668,6 +668,8 @@ from api.views_governo_fase2 import (
     api_governo_fase2_dashboard,
     api_governo_plataforma_integracoes, api_governo_plataforma_chaves,
     api_governo_plataforma_webhooks, api_governo_plataforma_seguranca,
+    api_governo_plataforma_webhook_remover, api_governo_plataforma_webhook_testar,
+    api_governo_plataforma_sessao_revogar,
     api_governo_plataforma_logs,
 )
 from api.views_governo_pec import (
@@ -1981,7 +1983,10 @@ urlpatterns = [
     path('api/governo/plataforma/integracoes/', api_governo_plataforma_integracoes),
     path('api/governo/plataforma/chaves/', api_governo_plataforma_chaves),
     path('api/governo/plataforma/webhooks/', api_governo_plataforma_webhooks),
+    path('api/governo/plataforma/webhooks/<int:webhook_id>/remover/', api_governo_plataforma_webhook_remover),
+    path('api/governo/plataforma/webhooks/<int:webhook_id>/testar/', api_governo_plataforma_webhook_testar),
     path('api/governo/plataforma/seguranca/', api_governo_plataforma_seguranca),
+    path('api/governo/plataforma/sessao/revogar/', api_governo_plataforma_sessao_revogar),
     path('api/governo/plataforma/logs/', api_governo_plataforma_logs),
     # ── Governo Paridade Competitiva: PEC, UBS, SISREG, SUS, teleconsulta, RAG/RDQA, e-SUS ──
     path('api/governo/pec/kpis/', api_pec_kpis),

@@ -1211,6 +1211,58 @@ def api_governo_plataforma_webhooks(request):
 
 
 @api_requer_plataforma_ti
+def api_governo_plataforma_webhook_remover(request, webhook_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method != "DELETE":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    sub = SubscricaoEvento.objects.filter(id=webhook_id, empresa=empresa).first()
+    if not sub:
+        return JsonResponse({"erro": "Webhook não encontrado"}, status=404)
+    sub.delete()
+    AuditoriaInstitucional.objects.create(
+        empresa=empresa, acao="webhook_removido",
+        objeto_tipo="SubscricaoEvento", objeto_id=str(webhook_id), detalhes={},
+    )
+    return JsonResponse({"removido": True})
+
+
+@api_requer_plataforma_ti
+def api_governo_plataforma_webhook_testar(request, webhook_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    sub = SubscricaoEvento.objects.filter(id=webhook_id, empresa=empresa).first()
+    if not sub:
+        return JsonResponse({"erro": "Webhook não encontrado"}, status=404)
+
+    import requests as _requests
+    payload = {
+        "evento": "teste.webhook",
+        "empresa_id": empresa.id,
+        "mensagem": "Payload de teste disparado manualmente pela Plataforma TI do SolusCRT.",
+        "disparado_em": timezone.now().isoformat(),
+    }
+    try:
+        resp = _requests.post(sub.url_destino, json=payload, timeout=8)
+        sucesso = 200 <= resp.status_code < 300
+        return JsonResponse({
+            "sucesso": sucesso,
+            "status_code": resp.status_code,
+            "mensagem": f"Recebido HTTP {resp.status_code} do destino." if sucesso
+                        else f"Destino respondeu HTTP {resp.status_code} (esperado 2xx).",
+        })
+    except _requests.RequestException as ex:
+        return JsonResponse({
+            "sucesso": False,
+            "mensagem": f"Falha ao conectar no destino: {str(ex)[:200]}",
+        })
+
+
+@api_requer_plataforma_ti
 def api_governo_plataforma_seguranca(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1253,10 +1305,10 @@ def api_governo_plataforma_seguranca(request):
             ],
             "sessoes_ativas": [
                 {
-                    "usuario_id": s["id"],
-                    "nome": s["nome"],
-                    "email": s["email"],
-                    "ativo_desde": s["sessao_ativa_em"].isoformat() if s["sessao_ativa_em"] else None,
+                    "id": s["id"],
+                    "dispositivo": s["nome"] or s["email"],
+                    "ip": "",
+                    "ultimo_acesso": s["sessao_ativa_em"].strftime("%d/%m/%Y %H:%M") if s["sessao_ativa_em"] else "—",
                 }
                 for s in sessoes
             ],
@@ -1265,6 +1317,46 @@ def api_governo_plataforma_seguranca(request):
         })
     except Exception as ex:
         return JsonResponse({"disponivel": False, "erro": str(ex)[:200]}, status=500)
+
+
+@api_requer_plataforma_ti
+def api_governo_plataforma_sessao_revogar(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    try:
+        dados = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    from api.middleware import _encerrar_sessao_principal
+
+    if dados.get("todas"):
+        usuarios = EmpresaUsuario.objects.filter(empresa=empresa, ativo=True, sessao_ativa_em__isnull=False)
+        total = 0
+        for u in usuarios:
+            _encerrar_sessao_principal(u)
+            total += 1
+        AuditoriaInstitucional.objects.create(
+            empresa=empresa, acao="sessoes_revogadas_todas", objeto_tipo="EmpresaUsuario",
+            objeto_id="*", detalhes={"total": total},
+        )
+        return JsonResponse({"revogado": True, "total": total})
+
+    sessao_id = dados.get("sessao_id")
+    if not sessao_id:
+        return JsonResponse({"erro": "sessao_id é obrigatório"}, status=400)
+    usuario = EmpresaUsuario.objects.filter(id=sessao_id, empresa=empresa).first()
+    if not usuario:
+        return JsonResponse({"erro": "Sessão/usuário não encontrado"}, status=404)
+    _encerrar_sessao_principal(usuario)
+    AuditoriaInstitucional.objects.create(
+        empresa=empresa, acao="sessao_revogada", objeto_tipo="EmpresaUsuario",
+        objeto_id=str(usuario.id), detalhes={"email": usuario.email},
+    )
+    return JsonResponse({"revogado": True})
 
 
 @api_requer_plataforma_ti

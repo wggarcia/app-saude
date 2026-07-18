@@ -229,6 +229,8 @@ select option{background:#0b1822}
 </head>
 <body>
 
+<div class="toast" id="toast-main"></div>
+
 <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════════ -->
 <aside class="sidebar">
   <div class="logo">🖥️ Plataforma TI Gov</div>
@@ -1140,22 +1142,28 @@ select option{background:#0b1822}
 
     <div class="three-col" id="conformidadeGrid">
 
+      <div class="comp-card glass" style="grid-column:1/-1">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">Avaliação de conformidade ainda não configurada</div>
+            <div class="comp-law">Nenhuma auditoria automatizada foi executada pra este ambiente ainda</div>
+          </div>
+          <span class="badge badge-warn">Não avaliado</span>
+        </div>
+        <p style="font-size:.82rem;color:var(--muted);margin:10px 0 0">
+          Os frameworks abaixo (LGPD, IN SGD/ME, ISO 27001, Decreto 8.771/2016, Portaria GM/MS 1.434/2020, CFM)
+          são os que a plataforma acompanha — mas nenhum score de aderência é calculado automaticamente
+          ainda. Fale com o time SolusCRT pra habilitar a auditoria de conformidade real deste ambiente.
+        </p>
+      </div>
+
       <div class="comp-card glass">
         <div class="comp-card-top">
           <div>
             <div class="comp-name">LGPD</div>
             <div class="comp-law">Lei 13.709/2018 — Proteção de Dados Pessoais</div>
           </div>
-          <span class="badge badge-warn">Em adequação</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="comp-score">42%</div>
-          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
-        </div>
-        <div class="prog-bar"><div class="prog-fill warn" style="width:42%"></div></div>
-        <div class="comp-meta">
-          <span>Próx. revisão: <strong style="color:var(--text)">Jun/2026</strong></span>
-          <span>ANPD Setor Público</span>
+          <span class="badge">Não avaliado</span>
         </div>
       </div>
 
@@ -1165,16 +1173,7 @@ select option{background:#0b1822}
             <div class="comp-name">IN SGD/ME 01/2020</div>
             <div class="comp-law">Política de Segurança da Informação</div>
           </div>
-          <span class="badge badge-warn">Em adequação</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="comp-score">61%</div>
-          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
-        </div>
-        <div class="prog-bar"><div class="prog-fill warn" style="width:61%"></div></div>
-        <div class="comp-meta">
-          <span>Próx. revisão: <strong style="color:var(--text)">Jul/2026</strong></span>
-          <span>DSIC/GSI-PR</span>
+          <span class="badge">Não avaliado</span>
         </div>
       </div>
 
@@ -1184,16 +1183,7 @@ select option{background:#0b1822}
             <div class="comp-name">ISO 27001</div>
             <div class="comp-law">Gestão de Segurança da Informação</div>
           </div>
-          <span class="badge badge-info">Avaliação</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="comp-score">78%</div>
-          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
-        </div>
-        <div class="prog-bar"><div class="prog-fill" style="width:78%"></div></div>
-        <div class="comp-meta">
-          <span>Próx. revisão: <strong style="color:var(--text)">Ago/2026</strong></span>
-          <span>ABNT/INMETRO</span>
+          <span class="badge">Não avaliado</span>
         </div>
       </div>
 
@@ -1203,16 +1193,7 @@ select option{background:#0b1822}
             <div class="comp-name">Decreto 8.771/2016</div>
             <div class="comp-law">Regulamentação do Marco Civil da Internet</div>
           </div>
-          <span class="badge badge-ok">Conforme</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="comp-score">91%</div>
-          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
-        </div>
-        <div class="prog-bar"><div class="prog-fill" style="width:91%"></div></div>
-        <div class="comp-meta">
-          <span>Próx. revisão: <strong style="color:var(--text)">Dez/2026</strong></span>
-          <span>MCom / ANATEL</span>
+          <span class="badge">Não avaliado</span>
         </div>
       </div>
 
@@ -1222,16 +1203,7 @@ select option{background:#0b1822}
             <div class="comp-name">Portaria GM/MS 1.434/2020</div>
             <div class="comp-law">Regulamentação do uso da RNDS</div>
           </div>
-          <span class="badge badge-warn">Em adequação</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="comp-score">55%</div>
-          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
-        </div>
-        <div class="prog-bar"><div class="prog-fill warn" style="width:55%"></div></div>
-        <div class="comp-meta">
-          <span>Próx. revisão: <strong style="color:var(--text)">Jun/2026</strong></span>
-          <span>DATASUS / MS</span>
+          <span class="badge">Não avaliado</span>
         </div>
       </div>
 
@@ -1241,16 +1213,7 @@ select option{background:#0b1822}
             <div class="comp-name">Resolução CFM 1.821/2007</div>
             <div class="comp-law">Digitalização de Prontuários Médicos</div>
           </div>
-          <span class="badge badge-ok">Conforme</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="comp-score">88%</div>
-          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
-        </div>
-        <div class="prog-bar"><div class="prog-fill" style="width:88%"></div></div>
-        <div class="comp-meta">
-          <span>Próx. revisão: <strong style="color:var(--text)">Nov/2026</strong></span>
-          <span>CFM / SBIS</span>
+          <span class="badge">Não avaliado</span>
         </div>
       </div>
 
@@ -1716,19 +1679,11 @@ function fecharConfigurar(){
 
 async function salvarIntegracao(e){
   e.preventDefault();
-  const fd=new FormData(e.target);
-  const dados=Object.fromEntries(fd.entries());
-  showToast('toastIntegracao','💾 Configuração salva! Testando conexão...','ok');
-  setTimeout(()=>{
-    showToast('toastIntegracao','✅ Configuração registrada. Aguardando validação do certificado digital.','ok');
-  },1200);
+  showToast('toastIntegracao','⚠️ Esta integração ainda não está disponível na plataforma. Fale com o time SolusCRT para priorizá-la.','err');
 }
 
 async function testarConexao(){
-  showToast('toastIntegracao','🔌 Testando conexão com o sistema federal...','ok');
-  setTimeout(()=>{
-    showToast('toastIntegracao','⚠️ Conexão em homologação — configure o certificado A1/A3 para produção.','err');
-  },1500);
+  showToast('toastIntegracao','⚠️ Esta integração ainda não está disponível na plataforma. Fale com o time SolusCRT para priorizá-la.','err');
 }
 
 // ── API KEYS ──────────────────────────────────────────────────────────
@@ -1823,10 +1778,18 @@ async function criarWebhook(e){
 
 async function testarWebhook(id){
   showToast('toastWebhook','📡 Disparando payload de teste...','ok');
+  const d = await api('/api/governo/plataforma/webhooks/'+id+'/testar/', {method:'POST'});
+  showToast('toastWebhook', (d.sucesso?'✅ ':'⚠️ ')+(d.mensagem||'Sem resposta do destino.'), d.sucesso?'ok':'err');
 }
 
 async function removerWebhook(id){
   if(!confirm('Remover este webhook?')) return;
+  const d = await api('/api/governo/plataforma/webhooks/'+id+'/remover/', {method:'DELETE'});
+  if(d.removido){
+    showToast('toastWebhook','🗑️ Webhook removido.','ok');
+  } else {
+    showToast('toastWebhook',d.erro||'Erro ao remover webhook.','err');
+  }
   loadWebhooks();
 }
 
@@ -1863,21 +1826,8 @@ async function loadSeguranca(){
 
   // Populate audit log
   const auditEl=document.getElementById('auditLog');
-  const exemplos=[
-    {tipo:'ok',msg:'Login realizado',detalhe:'via Gov.br · IP 192.168.1.1',ts:'Hoje 14:32'},
-    {tipo:'info',msg:'Consulta CNES',detalhe:'Listagem de equipes atualizada',ts:'Hoje 13:15'},
-    {tipo:'warn',msg:'Tentativa de acesso negada',detalhe:'Credencial inválida · IP 10.0.0.1',ts:'Hoje 11:42'},
-  ];
   if(!d.auditoria||d.auditoria.length===0){
-    auditEl.innerHTML=exemplos.map(ex=>`
-      <div class="log-row">
-        <div class="log-dot ${ex.tipo}"></div>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:.85rem">${ex.msg}</div>
-          <div style="font-size:.75rem;color:var(--muted)">${ex.detalhe}</div>
-        </div>
-        <div style="font-size:.74rem;color:var(--muted);white-space:nowrap">${ex.ts}</div>
-      </div>`).join('');
+    auditEl.innerHTML='<div style="text-align:center;color:var(--muted);padding:24px;font-size:.85rem">Nenhum registro de auditoria ainda neste ambiente.</div>';
   }
 }
 
