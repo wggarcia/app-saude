@@ -438,13 +438,21 @@ def principal_tem_algum_modulo(empresa, principal, codigos_modulo):
 
 
 def principal_e_gerencia_principal(principal):
-    """Versão sem request: gerência é EmpresaUsuario com perfil 'admin'/'gestor', ou a própria Empresa."""
+    """Versão sem request: gerência é EmpresaUsuario com perfil 'admin'/'gestor',
+    is_admin, ou (quando o perfil granular não está definido) inferência pelo
+    cargo — mesmo fallback usado por principal_e_gerencia(request)."""
     if principal is None:
         return False
     if principal.__class__.__name__ != "EmpresaUsuario":
         return True  # é a conta principal da Empresa
+    if getattr(principal, "is_admin", False):
+        return True
     perfil = _perfil_usuario(principal)
-    return perfil in ("admin", "gestor") or getattr(principal, "is_admin", False)
+    if perfil in ("admin", "gestor"):
+        return True
+    if perfil is not None:
+        return False  # perfil definido explicitamente e não é gerência
+    return _cargo_indica_gerencia(getattr(principal, "cargo", ""))
 
 
 def requer_permissao_modulo(*codigos):
@@ -508,13 +516,31 @@ def meus_modulos(request):
     if not empresa:
         return []
     setor = get_setor(empresa)
+    codigos_setor = [m["codigo"] for m in MODULOS_POR_SETOR.get(setor, [])]
     principal = getattr(request, "principal", None) or empresa
     if principal_e_gerencia_principal(principal):
-        return [m["codigo"] for m in MODULOS_POR_SETOR.get(setor, [])]
+        return codigos_setor
+    if codigos_setor and not _setor_tem_rbac_configurado(empresa, codigos_setor):
+        # Ninguém na empresa recebeu ainda nenhuma atribuição granular pra esse
+        # setor — trata como "RBAC granular ainda não configurado" e libera
+        # tudo, em vez de esconder o menu inteiro por engano.
+        return codigos_setor
     return [
-        m["codigo"] for m in MODULOS_POR_SETOR.get(setor, [])
-        if _principal_tem_permissao(empresa, principal, m["codigo"])
+        codigo for codigo in codigos_setor
+        if _principal_tem_permissao(empresa, principal, codigo)
     ]
+
+
+def _setor_tem_rbac_configurado(empresa, codigos_setor):
+    try:
+        from .models import RBACAtribuicao
+        return RBACAtribuicao.objects.filter(
+            empresa=empresa,
+            permissao__codigo__in=codigos_setor,
+            ativo=True,
+        ).exists()
+    except Exception:
+        return False
 
 
 def api_meus_modulos(request):
@@ -538,6 +564,28 @@ def _principal_gestor_ti(request):
         return True
 
     return _cargo_tem_marcador_rh(getattr(principal, "cargo", ""))
+
+
+def _cargo_indica_gerencia(cargo):
+    """Inferência de gerência pelo cargo (texto livre) — fallback quando o
+    perfil granular do EmpresaUsuario não está definido. Compartilhada por
+    principal_e_gerencia_principal() e principal_e_gerencia() para que as
+    duas nunca divirjam sobre quem é gerência."""
+    texto = _texto_normalizado(cargo)
+    if not texto:
+        return False
+    palavras = set(texto.replace("/", " ").replace("-", " ").split())
+    marcadores = {
+        "gerencia", "gerente", "gestor", "coordenador", "supervisor",
+        "diretor", "diretoria", "lider", "lideranca", "administrador",
+    }
+    if palavras & marcadores:
+        return True
+    return any(
+        trecho in texto
+        for trecho in ("gerente", "gestor", "diretor", "lider de", "head",
+                       "chief", "coordenacao", "supervisao")
+    )
 
 
 def _perfil_usuario(principal) -> str | None:
@@ -572,21 +620,7 @@ def principal_e_gerencia(request):
         return False  # perfil definido explicitamente e não é gerência
 
     # Fallback legacy: inferência pelo cargo (texto livre)
-    cargo = _texto_normalizado(getattr(principal, "cargo", ""))
-    if not cargo:
-        return False
-    palavras = set(cargo.replace("/", " ").replace("-", " ").split())
-    marcadores = {
-        "gerencia", "gerente", "gestor", "coordenador", "supervisor",
-        "diretor", "diretoria", "lider", "lideranca", "administrador",
-    }
-    if palavras & marcadores:
-        return True
-    return any(
-        trecho in cargo
-        for trecho in ("gerente", "gestor", "diretor", "lider de", "head",
-                       "chief", "coordenacao", "supervisao")
-    )
+    return _cargo_indica_gerencia(getattr(principal, "cargo", ""))
 
 
 def principal_e_rh(request):

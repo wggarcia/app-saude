@@ -2963,7 +2963,7 @@ class Command(BaseCommand):
         self.out("│  Farmácia           demo.farmacia@soluscrt.com  Demo@Farm2026│")
         self.out("│  Hospital           demo.hospital@soluscrt.com  Demo@Hosp2026│")
         self.out("│  Governo            demo.governo@soluscrt.com   Demo@Gov2026 │")
-        self.out("│  Plano de Saúde     demo.plano@soluscrt.com     Demo@Plano26 │")
+        self.out("│  Plano de Saúde     demo.plano@soluscrt.com     Demo@Plano2026│")
         self.out("│  DonoSaaS           owner@soluscrt.com          Owner@...    │")
         self.out("├──────────────────────────────────────────────────────────────┤")
         self.out("│  APP TRABALHADOR (SST)                                       │")
