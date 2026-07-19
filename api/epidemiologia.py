@@ -213,6 +213,20 @@ def _scope_public_population_queryset(queryset):
     # "owner" lacks table privileges on this server — use "default" instead.
     # This works when DATABASE_URL uses a superuser (no RLS enforcement).
     return queryset.filter(empresa=empresa)
+
+
+def _rs_base_qs():
+    """Base queryset for RegistroSintoma using the correct DB connection.
+
+    Uses "owner" when that connection has table privileges; falls back to
+    "default" when "owner" is restricted (e.g. VPS app user without GRANT).
+    Must be called after _public_population_empresa() has populated the cache.
+    """
+    if _PUBLIC_EMPRESA_CACHE.get("use_owner", True):
+        return RegistroSintoma.objects.using("owner")
+    return RegistroSintoma.objects
+
+
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
 FOCUS_DECAY_WINDOW_DAYS = 30
@@ -1051,7 +1065,7 @@ def _build_state_layer(municipios, risco_oficial_map=None, risco_oficial_doenca_
 def _build_timeline(empresa_pub=None):
     now = timezone.now()
     start = (now - timedelta(days=13)).replace(hour=0, minute=0, second=0, microsecond=0)
-    qs = RegistroSintoma.objects.using("owner").filter(data_registro__gte=start)
+    qs = _rs_base_qs().filter(data_registro__gte=start)
     if empresa_pub:
         qs = qs.filter(empresa=empresa_pub)
     rows = (
@@ -1085,7 +1099,7 @@ def _build_timeline(empresa_pub=None):
 
 
 def _build_data_quality(empresa_pub=None):
-    qs = RegistroSintoma.objects.using("owner")
+    qs = _rs_base_qs()
     if empresa_pub:
         qs = qs.filter(empresa=empresa_pub)
     summary = qs.aggregate(
@@ -1107,7 +1121,7 @@ def _build_data_quality(empresa_pub=None):
 
 
 def _top_value_counts(field_name, label, limit=5, empresa_pub=None):
-    qs = RegistroSintoma.objects.using("owner")
+    qs = _rs_base_qs()
     if empresa_pub:
         qs = qs.filter(empresa=empresa_pub)
     rows = (
