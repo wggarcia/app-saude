@@ -190,11 +190,12 @@ def bi_cronicas(request):
         cid10__startswith="I10",
     )
     total_has = qs_has.count()
-    # Campo 'situacao' não existe em AtendimentoUBS. Controle de crônico requer
-    # modelo de acompanhamento (PA, HbA1c) ainda não implementado.
-    # Retorna 0 até que o campo/model correto seja definido e migrado.
-    controlados_has = 0
-    pct_has = 0.0
+    # PAS < 140 = hipertensão controlada (referência SBC 2020)
+    controlados_has = qs_has.filter(
+        ultima_pa_sistolica__isnull=False,
+        ultima_pa_sistolica__lt=140,
+    ).count()
+    pct_has = round(controlados_has / total_has * 100, 1) if total_has else 0.0
 
     resultado_has = {
         "total": total_has,
@@ -207,9 +208,9 @@ def bi_cronicas(request):
         cid10__startswith="E11",
     )
     total_dm = qs_dm.count()
-    # Mesmo motivo: campo 'situacao' não existe.
-    controlados_dm = 0
-    pct_dm = 0.0
+    # DM controlada: situacao_pressao 'controlado' (preenchida pelo profissional)
+    controlados_dm = qs_dm.filter(situacao_pressao="controlado").count()
+    pct_dm = round(controlados_dm / total_dm * 100, 1) if total_dm else 0.0
 
     resultado_dm = {
         "total": total_dm,
@@ -271,18 +272,26 @@ def bi_fila_espera(request):
     if AgendamentoUBS is None:
         return JsonResponse({"especialidades": especialidades})
 
-    # especialidade é CharField (não FK) e tempo_espera_dias não existe no model
+    from django.db.models import Avg, F, ExpressionWrapper, DurationField
     qs = (
-        AgendamentoUBS.objects.filter(empresa=emp)
+        AgendamentoUBS.objects.filter(empresa=emp, data_solicitacao__isnull=False)
+        .annotate(
+            espera=ExpressionWrapper(
+                F("data_consulta") - F("data_solicitacao"),
+                output_field=DurationField(),
+            )
+        )
         .values("especialidade")
-        .annotate(agendados=Count("id"))
+        .annotate(agendados=Count("id"), media_espera=Avg("espera"))
         .order_by("especialidade")
     )
 
     for item in qs:
+        media_espera = item.get("media_espera")
+        media_dias = round(media_espera.days, 1) if media_espera else 0
         especialidades.append({
             "nome": item.get("especialidade") or "Sem especialidade",
-            "media_dias": 0,  # campo tempo_espera_dias não existe no model atual
+            "media_dias": media_dias,
             "agendados": item.get("agendados", 0),
         })
 

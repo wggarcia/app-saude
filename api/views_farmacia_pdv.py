@@ -346,6 +346,28 @@ def api_pdv_registrar_venda(request, sessao_id):
         total_item = (quantidade * preco_unitario) - desconto_item
         subtotal += total_item
 
+        item_ctrl = bool(item.get("controlado", False))
+        item_receita = (item.get("receita_numero") or "").strip()
+
+        # Portaria 344/98 — bloqueia venda de controlado sem número de receita.
+        # Valida contra o banco para evitar bypass via payload.
+        if item_ctrl and not item_receita:
+            _med_check = None
+            if med_id:
+                _med_check = MedicamentoFarmacia.objects.filter(pk=med_id, empresa=empresa).first()
+            elif codigo_barras:
+                _med_check = MedicamentoFarmacia.objects.filter(
+                    empresa=empresa, codigo_barras=codigo_barras, ativo=True,
+                ).first()
+            if _med_check and _med_check.controlado and _med_check.lista_portaria_344:
+                return JsonResponse({
+                    "erro": (
+                        f"Medicamento controlado '{_med_check.nome}' exige número de receita "
+                        f"(Portaria 344/98). Preencha o campo receita_numero para este item."
+                    ),
+                    "codigo_barras": codigo_barras,
+                }, status=400)
+
         itens_validados.append({
             "codigo_barras": codigo_barras,
             "descricao": (item.get("descricao") or "").strip() or "Produto",
@@ -354,8 +376,8 @@ def api_pdv_registrar_venda(request, sessao_id):
             "preco_unitario": preco_unitario,
             "desconto_item": desconto_item,
             "total_item": total_item,
-            "controlado": bool(item.get("controlado", False)),
-            "receita_numero": (item.get("receita_numero") or "").strip(),
+            "controlado": item_ctrl,
+            "receita_numero": item_receita,
             "medicamento_id": med_id,
         })
 

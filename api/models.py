@@ -40,6 +40,12 @@ class Empresa(models.Model):
     cortesia_expira_em = models.DateTimeField(null=True, blank=True)
     codigo_acesso_corporativo = models.CharField(max_length=32, unique=True, default=_codigo_acesso)
     email_verificado = models.BooleanField(default=False)
+    logradouro = models.CharField(max_length=200, blank=True, default="")
+    numero = models.CharField(max_length=20, blank=True, default="")
+    bairro = models.CharField(max_length=100, blank=True, default="")
+    cep = models.CharField(max_length=9, blank=True, default="")
+    cidade = models.CharField(max_length=100, blank=True, default="")
+    uf = models.CharField(max_length=2, blank=True, default="")
 
     def __str__(self):
         return self.nome
@@ -982,6 +988,7 @@ class FuncionarioSST(models.Model):
     data_demissao = models.DateField(null=True, blank=True)
     classe_risco = models.CharField(max_length=4, choices=CLASSE_RISCO, default="II")
     ativo = models.BooleanField(default=True)
+    token_acesso = models.UUIDField(default=uuid.uuid4, unique=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
@@ -2563,6 +2570,7 @@ class LoteMedicamento(models.Model):
     """Rastreabilidade de lote de medicamento em estoque (FEFO)."""
     empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="lotes_medicamento")
     item             = models.ForeignKey("ItemFarmacia", on_delete=models.CASCADE, related_name="lotes")
+    medicamento      = models.ForeignKey("MedicamentoFarmacia", on_delete=models.SET_NULL, null=True, blank=True, related_name="lotes")
     numero_lote      = models.CharField(max_length=100)
     fabricante       = models.CharField(max_length=200, blank=True, default="")
     data_fabricacao  = models.DateField(null=True, blank=True)
@@ -5743,10 +5751,12 @@ class ContratoGrupo(models.Model):
     STATUS_ATIVO = "ativo"
     STATUS_SUSPENSO = "suspenso"
     STATUS_ENCERRADO = "encerrado"
+    STATUS_PROPOSTA_RENOVACAO = "proposta_renovacao"
     STATUS_CHOICES = [
         (STATUS_ATIVO, "Ativo"),
         (STATUS_SUSPENSO, "Suspenso"),
         (STATUS_ENCERRADO, "Encerrado"),
+        (STATUS_PROPOSTA_RENOVACAO, "Proposta de Renovação"),
     ]
 
     empresa_operadora = models.ForeignKey(
@@ -5767,7 +5777,7 @@ class ContratoGrupo(models.Model):
     mensalidade_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     data_inicio = models.DateField()
     data_renovacao = models.DateField()
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_ATIVO)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ATIVO)
     logo_emoji = models.CharField(max_length=10, blank=True, default="🏢")
     observacoes = models.TextField(blank=True, default="")
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -7286,6 +7296,8 @@ class AtendimentoUBS(models.Model):
     data_atendimento = models.DateField()
     texto_evolucao = models.TextField(blank=True)
     enviado_esus = models.BooleanField(default=False)
+    situacao_pressao = models.CharField(max_length=20, blank=True, default="")
+    ultima_pa_sistolica = models.IntegerField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["-data_atendimento"]
@@ -11391,6 +11403,7 @@ class AgendamentoUBS(models.Model):
     data_confirmacao_whatsapp     = models.DateTimeField(null=True, blank=True)
     lembrete_enviado              = models.BooleanField(default=False)
     observacoes                   = models.TextField(blank=True, default="")
+    data_solicitacao              = models.DateField(null=True, blank=True)
     criado_em                     = models.DateTimeField(auto_now_add=True)
 
     class Meta:
