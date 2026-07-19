@@ -208,8 +208,9 @@ def api_lavanderia_ciclos(request):
             if data_gte:
                 qs = qs.filter(data_registro__date__gte=data_gte)
 
+            total = qs.count()
             qs = qs[:200]
-            return JsonResponse({"total": qs.count(), "ciclos": [_ciclo_to_dict(c) for c in qs]})
+            return JsonResponse({"total": total, "ciclos": [_ciclo_to_dict(c) for c in qs]})
         except Exception as exc:
             logger.exception("Erro ao listar ciclos de lavanderia: %s", exc)
             return JsonResponse({"erro": "Erro ao listar ciclos."}, status=500)

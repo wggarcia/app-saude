@@ -11,10 +11,12 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import (
+    api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .models import RelatorioRAG
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
-from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 def _e(request):
@@ -39,6 +41,7 @@ def governo_rag_page(request):
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_rag_kpis(request):
     e = _e(request)
     if not e:
@@ -57,6 +60,7 @@ def api_rag_kpis(request):
 # ── Lista ─────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_rag_lista(request):
     e = _e(request)
     if not e:
@@ -71,6 +75,7 @@ def api_rag_lista(request):
 # ── Criar ─────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_rag_criar(request):
     e = _e(request)
     if not e:
@@ -90,6 +95,7 @@ def api_rag_criar(request):
 # ── Atualizar ─────────────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_rag_atualizar(request, rag_id):
     e = _e(request)
     if not e:

@@ -78,6 +78,9 @@ def api_declaracoes_obito(request, pac_id):
         qs = pac.declaracoes_obito.all()[:50]
         return JsonResponse({"declaracoes": [_do_to_dict(d) for d in qs]})
 
+    if not principal_pode_operacao_setorial(request):
+        return JsonResponse({"erro": "Sem permissão para emitir Declaração de Óbito"}, status=403)
+
     try:
         data = json.loads(request.body)
     except ValueError:
@@ -115,5 +118,17 @@ def api_declaracoes_obito(request, pac_id):
 
     pac.status = "obito"
     pac.save(update_fields=["status"])
+
+    # Bug 1 — Sincroniza de volta para InternacaoHospital (model legado).
+    # Sem este update o paciente ficava para sempre como "ativa" no legado,
+    # causando inconsistência nos relatórios e no RNDS.
+    from .models import InternacaoHospital
+    InternacaoHospital.objects.filter(
+        paciente_interno_sync=pac,
+        status="ativa",
+    ).update(
+        status="obito",
+        data_saida=data_obito,
+    )
 
     return JsonResponse({"ok": True, "declaracao": _do_to_dict(declaracao)}, status=201)

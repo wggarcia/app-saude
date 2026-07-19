@@ -210,20 +210,40 @@ def api_lab_solicitacao_detalhe(request, sol_id):
 
 # ── Protocolo de acesso do paciente ao resultado ──────────────────────────────
 
+_LAB_RATE_LIMIT_MAX = 10
+_LAB_RATE_LIMIT_KEY = "lab_resultado_tentativas"
+
+
 @require_http_methods(["GET"])
 def api_lab_resultado_paciente(request):
     """Consulta pública do resultado por protocolo + CPF — não exige login de operador."""
+    # Rate-limit: máx 10 tentativas por sessão para dificultar força bruta no protocolo
+    tentativas = request.session.get(_LAB_RATE_LIMIT_KEY, 0)
+    if tentativas >= _LAB_RATE_LIMIT_MAX:
+        return JsonResponse(
+            {"erro": "Muitas tentativas. Aguarde ou contacte a unidade de saúde."},
+            status=429,
+        )
+
     protocolo = request.GET.get("protocolo", "").strip()
     cpf = request.GET.get("cpf", "").strip()
     if not protocolo or not cpf:
         return JsonResponse({"erro": "protocolo e cpf são obrigatórios"}, status=400)
+
     try:
         sol = SolicitacaoExameLab.objects.get(protocolo=protocolo, paciente_cpf=cpf)
     except SolicitacaoExameLab.DoesNotExist:
+        # Incrementa contador apenas em falha (protocolo/CPF incorretos)
+        request.session[_LAB_RATE_LIMIT_KEY] = tentativas + 1
+        request.session.modified = True
         return JsonResponse({"erro": "Protocolo não encontrado para o CPF informado"}, status=404)
+
     if sol.status != "liberado":
         return JsonResponse({"status": sol.status, "status_display": sol.get_status_display(),
                               "mensagem": "Resultado ainda não liberado."})
+    # Sucesso: zera o contador
+    request.session[_LAB_RATE_LIMIT_KEY] = 0
+    request.session.modified = True
     return JsonResponse(_solicitacao_dict(sol))
 
 

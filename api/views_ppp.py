@@ -18,6 +18,11 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Q
 import json
+import logging
+
+from .access_control import api_requer_permissao_modulo
+
+logger = logging.getLogger(__name__)
 
 
 def _empresa(request):
@@ -359,6 +364,7 @@ def api_ppp_lista(request):
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_criar(request):
     """
     Gera PPP automaticamente a partir dos postos de trabalho vinculados
@@ -439,6 +445,9 @@ def api_ppp_detalhe(request, ppp_id):
         from .models import PPPFuncionario
         ppp = PPPFuncionario.objects.get(id=ppp_id, empresa=empresa)
         if request.method == "PATCH":
+            from .access_control import principal_pode_operacao_setorial
+            if not principal_pode_operacao_setorial(request):
+                return JsonResponse({"erro": "Sem permissão de escrita para PPP"}, status=403)
             data = _json(request)
             for campo in ["nit_pis", "cbo", "responsavel_tecnico", "conselho_registro",
                           "resultado_conclusao", "agentes_nocivos", "monitoracao_biologica"]:
@@ -451,6 +460,7 @@ def api_ppp_detalhe(request, ppp_id):
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_finalizar(request, ppp_id):
     """Marca PPP como finalizado — pronto para entrega ao trabalhador."""
     empresa = _empresa(request)
@@ -472,6 +482,7 @@ def api_ppp_finalizar(request, ppp_id):
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_transmitir_esocial(request, ppp_id):
     """
     Transmite os eventos S-2240 referentes aos postos de trabalho do funcionário

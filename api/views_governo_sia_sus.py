@@ -145,6 +145,7 @@ def _competencia_para_yyyymm(comp: str) -> str:
 # ── GET /api/governo/sia-sus/status ──────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sia_sus_status(request):
     """
     Status das credenciais SISAB e informação da última transmissão BPA.
@@ -195,6 +196,7 @@ def api_sia_sus_status(request):
 # ── GET /api/governo/sia-sus/competencia/<comp> ───────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sia_sus_competencia(request, comp):
     """
     Resumo de produção para a competência YYYY-MM.
@@ -256,6 +258,7 @@ def api_sia_sus_competencia(request, comp):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sia_sus_validar(request):
     """
     Valida lista de procedimentos antes de transmitir ao SISAB.
@@ -376,6 +379,7 @@ def api_sia_sus_validar(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sia_sus_transmitir(request):
     """
     Transmite BPA da competência ao SISAB.
@@ -554,6 +558,7 @@ def _salvar_lote_pendente(lote):
 # ── GET /api/governo/sia-sus/historico ───────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sia_sus_historico(request):
     """
     Histórico de FaturamentoSUSLote com status e erros.
@@ -621,6 +626,7 @@ def api_sia_sus_historico(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_sia_sus_reprocessar(request, lote_id):
     """
     Tenta retransmitir lote com erro ou pendente.

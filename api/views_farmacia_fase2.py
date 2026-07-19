@@ -10,6 +10,7 @@ from datetime import date, timedelta
 
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Case, F, IntegerField, Q, Sum, Count, Value, When
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -130,9 +131,19 @@ def api_rede_farmacia_estoque(request):
             .values("empresa_id").annotate(n=Count("id"))
     }
 
+    # Uma única query para os medicamentos de todas as unidades da rede,
+    # agrupados em memória por empresa_id — evita 1 query (list) + 1 query
+    # (count) por unidade dentro do loop abaixo (N+1).
+    meds_detalhe_por_empresa = {}
+    for m in (MedicamentoFarmacia.objects
+              .filter(empresa_id__in=empresa_ids, ativo=True)
+              .only("id", "nome", "forma_farmaceutica", "quantidade_atual",
+                    "quantidade_minima", "controlado", "lista_portaria_344", "empresa_id")):
+        meds_detalhe_por_empresa.setdefault(m.empresa_id, []).append(m)
+
     resultado = []
     for u in unidades_rede:
-        meds = MedicamentoFarmacia.objects.filter(empresa=u.empresa, ativo=True)
+        meds = meds_detalhe_por_empresa.get(u.empresa_id, [])
         _m = meds_por_empresa.get(u.empresa_id, {})
         criticos = _m.get("criticos", 0)
         baixos = _m.get("baixos", 0)
@@ -147,7 +158,7 @@ def api_rede_farmacia_estoque(request):
             "cidade": u.cidade,
             "estado": u.estado,
             "eh_minha": u.empresa_id == empresa.id,
-            "total_medicamentos": meds.count(),
+            "total_medicamentos": len(meds),
             "criticos": criticos,
             "baixos": baixos,
             "lotes_vencendo": vencendo,
@@ -360,25 +371,27 @@ def api_rede_farmacia_transferencia_acao(request, transf_id):
         t.aprovado_por = data.get("aprovado_por", "")
 
     if acao == "receber":
-        # Dar entrada no estoque do solicitante
-        med_sol = MedicamentoFarmacia.objects.filter(
-            empresa=t.empresa_solicitante, nome=t.medicamento.nome
-        ).first()
         qtd_recebida = t.quantidade_aprovada or t.quantidade_solicitada
+        with transaction.atomic():
+            # Dar entrada no estoque do solicitante
+            med_sol = MedicamentoFarmacia.objects.select_for_update().filter(
+                empresa=t.empresa_solicitante, nome=t.medicamento.nome
+            ).first()
+            if med_sol:
+                med_sol.quantidade_atual += qtd_recebida
+                med_sol.save(update_fields=["quantidade_atual", "atualizado_em"])
 
-        if med_sol:
-            med_sol.quantidade_atual += qtd_recebida
-            med_sol.save(update_fields=["quantidade_atual", "atualizado_em"])
+            # Baixar estoque do fornecedor
+            med_forn = MedicamentoFarmacia.objects.select_for_update().filter(
+                empresa=t.empresa_fornecedora, pk=t.medicamento_id
+            ).first()
+            if med_forn and med_forn.quantidade_atual >= qtd_recebida:
+                med_forn.quantidade_atual -= qtd_recebida
+                med_forn.save(update_fields=["quantidade_atual", "atualizado_em"])
 
-        # Baixar estoque do fornecedor
-        med_forn = MedicamentoFarmacia.objects.filter(
-            empresa=t.empresa_fornecedora, pk=t.medicamento_id
-        ).first()
-        if med_forn and med_forn.quantidade_atual >= qtd_recebida:
-            med_forn.quantidade_atual -= qtd_recebida
-            med_forn.save(update_fields=["quantidade_atual", "atualizado_em"])
-
-    t.save()
+            t.save()
+    else:
+        t.save()
 
     return JsonResponse({"ok": True, "transferencia": _transf_to_dict(t)})
 
@@ -403,10 +416,25 @@ def api_rede_farmacia_kpis(request):
     em_30 = hoje + timedelta(days=30)
 
     total_meds = MedicamentoFarmacia.objects.filter(empresa_id__in=empresas_ids, ativo=True).count()
-    criticos = sum(
-        1 for m in MedicamentoFarmacia.objects.filter(empresa_id__in=empresas_ids, ativo=True)
-        if m.status_estoque == "critico"
-    )
+    # Antes: carregava todos os MedicamentoFarmacia da rede em memória e
+    # recalculava status_estoque em Python (linha por linha). Substituído
+    # por um Case/When + Sum no próprio banco — mesma regra de "crítico"
+    # usada em MedicamentoFarmacia.status_estoque (quantidade_atual <= 0,
+    # ou <= quantidade_minima * 1.10).
+    _CRITICO = Decimal("1.10")
+    criticos = MedicamentoFarmacia.objects.filter(
+        empresa_id__in=empresas_ids, ativo=True
+    ).aggregate(
+        n=Sum(
+            Case(
+                When(quantidade_atual__lte=0, then=Value(1)),
+                When(quantidade_minima__gt=0,
+                     quantidade_atual__lte=F("quantidade_minima") * _CRITICO,
+                     then=Value(1)),
+                default=Value(0), output_field=IntegerField(),
+            )
+        )
+    )["n"] or 0
     vencendo = LoteMedicamento.objects.filter(
         empresa_id__in=empresas_ids, data_validade__range=(hoje, em_30), quantidade_atual__gt=0
     ).count()

@@ -249,7 +249,7 @@ def api_funcionario_reunioes(request):
                 payload = {
                     "iss": "chat", "aud": "jitsi",
                     "iat": agora, "nbf": agora - 10, "exp": agora + 7200,
-                    "sub": app_id, "room": "*",
+                    "sub": app_id, "room": r.sala_jitsi,
                     "context": {
                         "user": {
                             "name": func.nome,
@@ -331,7 +331,7 @@ def api_funcionario_reuniao_token(request, reuniao_id):
         "nbf": agora - 10,
         "exp": agora + 7200,
         "sub": app_id,
-        "room": "*",
+        "room": sala,
         "context": {
             "user": {
                 "name": func.nome,
@@ -423,7 +423,7 @@ def api_reuniao_token(request, reuniao_id):
         "nbf": agora - 10,
         "exp": agora + 7200,
         "sub": app_id,
-        "room": "*",  # wildcard — token válido para qualquer sala do app
+        "room": sala,  # sala específica — token válido apenas para esta reunião
         "context": {
             "user": {
                 "name": empresa.nome,

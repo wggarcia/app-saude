@@ -12,10 +12,12 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import (
+    api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .models import FarmaciaBasicaItem, DispensacaoFarmaciaBasica
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
-from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 def _e(request):
@@ -40,6 +42,7 @@ def governo_farmacia_basica_page(request):
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.farmacia")
 def api_farmacia_basica_kpis(request):
     e = _e(request)
     if not e:
@@ -62,6 +65,7 @@ def api_farmacia_basica_kpis(request):
 # ── Itens (estoque) ───────────────────────────────────────────────────────────
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.farmacia")
 def api_farmacia_basica_itens(request):
     e = _e(request)
     if not e:
@@ -85,6 +89,7 @@ def api_farmacia_basica_itens(request):
 # ── Dispensação ───────────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.farmacia")
 def api_farmacia_basica_dispensar(request):
     e = _e(request)
     if not e:
@@ -120,6 +125,7 @@ def api_farmacia_basica_dispensar(request):
 # ── Dispensações recentes ─────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.farmacia")
 def api_farmacia_basica_dispensacoes(request):
     e = _e(request)
     if not e:

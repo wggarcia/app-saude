@@ -48,8 +48,10 @@ from .models import (
     AssinaturaDocumentoSST,
     DocumentoSST,
     Empresa,
+    EntregaEPI,
     ExameOcupacional,
     FuncionarioSST,
+    TreinamentoNR,
     eSocialEventoSST,
 )
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base

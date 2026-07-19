@@ -7,6 +7,7 @@ import uuid
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -15,6 +16,8 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
 from .models import (
+    Empresa,
+    LivroRegistroControlado,
     PDVSessao,
     PDVVenda,
     PDVItemVenda,
@@ -111,6 +114,60 @@ def farmacia_pdv_page(request):
     return render(request, "farmacia_pdv.html")
 
 
+# ─── Busca de produto (barcode ou nome) ───────────────────────────────────────
+
+@csrf_exempt
+@require_GET
+@api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.pdv")
+def api_pdv_buscar_produto(request):
+    """GET — busca medicamento por código de barras, ID ou nome para uso no PDV.
+
+    Parâmetros (ao menos um obrigatório):
+      ?q=<barcode_ou_nome>   pesquisa em codigo_barras e nome (icontains)
+      ?id=<medicamento_id>   busca direta por PK
+
+    Retorna a lista de produtos com preço de venda já preenchido, pronto para
+    ser adicionado ao carrinho sem digitação manual de preço.
+    """
+    empresa = request.empresa
+
+    busca_id = request.GET.get("id", "").strip()
+    q = request.GET.get("q", "").strip()
+
+    if not busca_id and not q:
+        return JsonResponse({"erro": "Informe ?q=<busca> ou ?id=<medicamento_id>"}, status=400)
+
+    qs = MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True)
+
+    if busca_id:
+        qs = qs.filter(pk=busca_id)
+    elif q:
+        qs = qs.filter(
+            Q(codigo_barras=q) |           # barcode exato primeiro
+            Q(nome__icontains=q) |
+            Q(principio_ativo__icontains=q)
+        )[:20]
+
+    produtos = []
+    for med in qs:
+        produtos.append({
+            "id": med.id,
+            "nome": med.nome,
+            "principio_ativo": med.principio_ativo,
+            "concentracao": med.concentracao,
+            "forma_farmaceutica": med.forma_farmaceutica,
+            "codigo_barras": med.codigo_barras,
+            "preco_venda": float(med.preco_venda),
+            "quantidade_atual": float(med.quantidade_atual),
+            "controlado": med.controlado,
+            "lista_portaria_344": med.lista_portaria_344,
+            "em_estoque": med.quantidade_atual > 0,
+        })
+
+    return JsonResponse({"ok": True, "produtos": produtos})
+
+
 # ─── Sessão atual ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
@@ -136,19 +193,17 @@ def api_pdv_sessao_atual(request):
 @api_requer_operacao_ou_gerencia
 @api_requer_feature("farmacia.pdv")
 def api_pdv_abrir_sessao(request):
-    """POST — abre nova sessão PDV (caixa)."""
+    """POST — abre nova sessão PDV (caixa).
+
+    A verificação de sessão ativa é feita dentro de um bloco atômico com
+    select_for_update() na linha da empresa, eliminando a race condition em
+    que duas requisições simultâneas passariam ambas pela checagem e abrissem
+    dois caixas para a mesma empresa.
+    """
     empresa = request.empresa
 
     if request.method != "POST":
         return JsonResponse({"erro": "Método não permitido"}, status=405)
-
-    # Verificar se já existe sessão ativa
-    sessao_ativa = PDVSessao.objects.filter(empresa=empresa, ativa=True).first()
-    if sessao_ativa:
-        return JsonResponse({
-            "erro": "Já existe uma sessão ativa. Feche o caixa atual antes de abrir um novo.",
-            "sessao_id": sessao_ativa.id,
-        }, status=400)
 
     try:
         data = json.loads(request.body or "{}")
@@ -162,13 +217,28 @@ def api_pdv_abrir_sessao(request):
     fundo_caixa = _decimal(data.get("fundo_caixa", 0))
     caixa_numero = int(data.get("caixa_numero", 1))
 
-    sessao = PDVSessao.objects.create(
-        empresa=empresa,
-        operador=operador,
-        caixa_numero=caixa_numero,
-        fundo_caixa=fundo_caixa,
-        ativa=True,
-    )
+    # Bug 3 fix — race condition: lock da linha da empresa garante serialização.
+    # Sem o lock, duas requisições simultâneas podem ambas passar pelo filtro
+    # "nenhuma sessão ativa" e criar dois caixas abertos.
+    with transaction.atomic():
+        # select_for_update() bloqueia a linha da empresa até o fim da transação,
+        # impedindo outra requisição de criar sessão para a mesma empresa ao mesmo tempo.
+        _emp_lock = Empresa.objects.select_for_update().get(pk=empresa.pk)
+
+        sessao_ativa = PDVSessao.objects.filter(empresa=_emp_lock, ativa=True).first()
+        if sessao_ativa:
+            return JsonResponse({
+                "erro": "Já existe uma sessão ativa. Feche o caixa atual antes de abrir um novo.",
+                "sessao_id": sessao_ativa.id,
+            }, status=400)
+
+        sessao = PDVSessao.objects.create(
+            empresa=_emp_lock,
+            operador=operador,
+            caixa_numero=caixa_numero,
+            fundo_caixa=fundo_caixa,
+            ativa=True,
+        )
 
     return JsonResponse({"ok": True, "sessao": _sessao_to_dict(sessao)}, status=201)
 
@@ -255,11 +325,29 @@ def api_pdv_registrar_venda(request, sessao_id):
         quantidade = _decimal(item.get("quantidade", 1))
         preco_unitario = _decimal(item.get("preco_unitario", 0))
         desconto_item = _decimal(item.get("desconto_item", 0))
+        codigo_barras = (item.get("codigo_barras") or "").strip()
+        med_id = item.get("medicamento_id")
+
+        # Bug 1 fix — preço R$0: se o frontend não enviou preco_unitario (ou
+        # enviou zero), busca MedicamentoFarmacia.preco_venda no banco.
+        # Isso elimina a dependência de o cliente conhecer o preço e impede
+        # manipulação de preço via payload.
+        if preco_unitario <= Decimal("0"):
+            _med_lookup = None
+            if med_id:
+                _med_lookup = MedicamentoFarmacia.objects.filter(pk=med_id, empresa=empresa).first()
+            elif codigo_barras:
+                _med_lookup = MedicamentoFarmacia.objects.filter(
+                    empresa=empresa, codigo_barras=codigo_barras, ativo=True,
+                ).first()
+            if _med_lookup and _med_lookup.preco_venda > Decimal("0"):
+                preco_unitario = _med_lookup.preco_venda
+
         total_item = (quantidade * preco_unitario) - desconto_item
         subtotal += total_item
 
         itens_validados.append({
-            "codigo_barras": (item.get("codigo_barras") or "").strip(),
+            "codigo_barras": codigo_barras,
             "descricao": (item.get("descricao") or "").strip() or "Produto",
             "lote": (item.get("lote") or "").strip(),
             "quantidade": quantidade,
@@ -268,7 +356,7 @@ def api_pdv_registrar_venda(request, sessao_id):
             "total_item": total_item,
             "controlado": bool(item.get("controlado", False)),
             "receita_numero": (item.get("receita_numero") or "").strip(),
-            "medicamento_id": item.get("medicamento_id"),
+            "medicamento_id": med_id,
         })
 
     # PBM: desconto do convênio é calculado pelo sistema, não digitado pelo operador
@@ -351,6 +439,32 @@ def api_pdv_registrar_venda(request, sessao_id):
                     quantidade=item["quantidade"], lote=lote_usado,
                     data_validade=data_validade_usada,
                     motivo=f"Venda PDV — cupom {numero_cupom}",
+                )
+
+            # Bug 2 fix — Livro de Registro Controlado: obrigação ANVISA
+            # Portaria 344/98. Toda dispensação de medicamento controlado DEVE
+            # gerar um registro no livro para alimentar o SNGPC posteriormente.
+            # Anteriormente o PDV nunca criava esse registro — o livro ficava
+            # vazio para qualquer venda feita via caixa.
+            if med.controlado and med.lista_portaria_344:
+                LivroRegistroControlado.objects.create(
+                    empresa=empresa,
+                    medicamento=med,
+                    lote=None,           # lote via LoteMedicamento não é rastreado no PDV; FK opcional
+                    dispensacao=None,    # dispensação formal não existe no fluxo PDV
+                    tipo="dispensacao",
+                    quantidade=item["quantidade"],
+                    saldo_apos=med.quantidade_atual,
+                    # Em venda de balcão o nome do paciente não é coletado na
+                    # maioria dos casos; o CPF do cliente (se informado) é o que
+                    # temos. Para controlados com necessidade de receita, o
+                    # operador deve ter preenchido receita_numero no item.
+                    paciente_nome="",
+                    paciente_cpf=(venda.cpf_cliente or ""),
+                    prescricao_numero=item["receita_numero"],
+                    medico_crm="",
+                    responsavel=(sessao.operador or ""),
+                    observacao=f"Venda PDV — cupom {numero_cupom}",
                 )
 
     return JsonResponse({"ok": True, "venda": _venda_to_dict(venda), "desconto_pbm_aplicado": float(desconto_pbm)}, status=201)

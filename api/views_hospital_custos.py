@@ -2,6 +2,8 @@
 Custos Hospitalares — Centros de Responsabilidade, DRG, custo por paciente.
 """
 import json
+import logging
+import os
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -16,6 +18,8 @@ try:
     from .models import CentroResponsabilidade, CustoAssistencial, ClassificacaoDRG, PacienteInternado
 except ImportError:
     CentroResponsabilidade = CustoAssistencial = ClassificacaoDRG = PacienteInternado = None
+
+logger = logging.getLogger(__name__)
 
 
 # ─── Auth helper ──────────────────────────────────────────────────────────────
@@ -226,26 +230,58 @@ def api_custos_drg_enviar(request, pk):
     except ClassificacaoDRG.DoesNotExist:
         return JsonResponse({"erro": "Classificação não encontrada"}, status=404)
 
-    # Verifica credencial
-    try:
-        from .models import CredenciaisIntegracoes
-        cred = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="drg").first()
-    except Exception:
-        cred = None
-
-    if not cred:
+    sigquali_url = os.environ.get("SIGQUALI_API_URL")
+    sigquali_token = os.environ.get("SIGQUALI_API_TOKEN")
+    if not sigquali_url or not sigquali_token:
         return JsonResponse({
-            "status": "simulado",
-            "mensagem": "Configure credenciais em /configuracoes/integracoes",
+            "erro": "Integração Sigquali não configurada",
+            "mensagem": "Configure as variáveis de ambiente SIGQUALI_API_URL e "
+                        "SIGQUALI_API_TOKEN para habilitar o envio ao Valor Saúde Brasil.",
             "drg_id": drg.id,
-        })
+        }, status=503)
 
-    # Envio real (placeholder para integração futura)
+    try:
+        import requests
+        resp = requests.post(
+            sigquali_url,
+            json={
+                "episodeId": str(drg.id),
+                "drgCode": drg.codigo_drg,
+                "aihNumero": drg.aih_numero,
+                "competencia": drg.competencia,
+                "relativeWeight": float(drg.peso_relativo) if drg.peso_relativo else None,
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {sigquali_token}",
+            },
+            timeout=15,
+        )
+    except Exception as exc:
+        logger.warning("Erro ao enviar DRG %s ao Sigquali: %s", pk, exc)
+        return JsonResponse({
+            "erro": f"Falha na comunicação com Sigquali: {exc}",
+            "drg_id": drg.id,
+        }, status=502)
+
+    if resp.status_code != 200:
+        return JsonResponse({
+            "erro": f"Sigquali retornou HTTP {resp.status_code}",
+            "detalhe": resp.text[:300],
+            "drg_id": drg.id,
+        }, status=502)
+
+    try:
+        resposta_json = resp.json()
+    except ValueError:
+        resposta_json = {"raw": resp.text[:500]}
+
+    protocolo = resposta_json.get("protocolo") or resposta_json.get("id") or f"VSB-{drg.id}"
     drg.enviado_valor_saude = True
     drg.data_envio = timezone.now()
-    drg.resposta_api = {"status": "ok", "protocolo": f"VSB-{drg.id}"}
+    drg.resposta_api = resposta_json
     drg.save()
-    return JsonResponse({"status": "enviado", "protocolo": f"VSB-{drg.id}"})
+    return JsonResponse({"status": "enviado", "protocolo": protocolo})
 
 
 # ─── KPIs ─────────────────────────────────────────────────────────────────────

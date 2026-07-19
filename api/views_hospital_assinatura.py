@@ -417,6 +417,12 @@ def _assinar_icp_brasil(evolucao, cred, crm_coren, senha_override):
 
     except ImportError:
         # Fallback para hash simples se cryptography não disponível
+        logger.warning(
+            "Biblioteca 'cryptography' não instalada — evolução id=%s assinada "
+            "via SHA-256 simples (SEM validade jurídica ICP-Brasil / CFM Res. "
+            "2.299/2021). Instale 'cryptography' para habilitar assinatura digital real.",
+            getattr(evolucao, "id", "?"),
+        )
         return _assinar_hash_simples(evolucao, crm_coren)
     except Exception as e:
         logger.exception("Erro ao assinar com ICP-Brasil: %s", e)

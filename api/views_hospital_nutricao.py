@@ -46,7 +46,8 @@ def _get_avaliacao_model():
     try:
         from .models import AvaliacaoNutricional
         return AvaliacaoNutricional
-    except ImportError:
+    except ImportError as exc:
+        logger.error("Falha ao importar model AvaliacaoNutricional: %s", exc)
         return None
 
 

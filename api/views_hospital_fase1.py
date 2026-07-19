@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from django.db import transaction
 from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     PacienteInternado, LeitoHospitalar,
@@ -275,6 +276,7 @@ def api_monitoramento_uti(request, pac_id):
 @csrf_exempt
 @require_http_methods(["GET", "POST", "PUT"])
 @api_requer_feature("hospital.uti_centro_cirurgico")
+@transaction.atomic
 def api_sumario_alta(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -290,6 +292,9 @@ def api_sumario_alta(request, pac_id):
             return JsonResponse({"sumario": _alta_to_dict(alta)})
         except SumarioAlta.DoesNotExist:
             return JsonResponse({"sumario": None})
+
+    if not principal_pode_operacao_setorial(request):
+        return JsonResponse({"erro": "Sem permissão para emitir alta hospitalar"}, status=403)
 
     try:
         data = json.loads(request.body)
@@ -345,7 +350,7 @@ def api_sumario_alta(request, pac_id):
         alta, _ = SumarioAlta.objects.update_or_create(paciente=pac, defaults=fields)
 
     # Dar alta no paciente se tipo_alta não for transferência em andamento
-    if data.get("dar_alta", True):
+    if data.get("dar_alta", False):
         pac.status = "obito" if fields["tipo_alta"] == "obito" else ("transferido" if fields["tipo_alta"] == "transferencia" else "alta")
         pac.save(update_fields=["status", "atualizado_em"])
         if pac.leito:
@@ -353,6 +358,22 @@ def api_sumario_alta(request, pac_id):
             pac.leito.paciente_nome = None
             pac.leito.data_internacao = None
             pac.leito.save(update_fields=["status", "paciente_nome", "data_internacao", "atualizado_em"])
+
+        # Bug 1 — Sincroniza de volta para InternacaoHospital (model legado).
+        # Sem este update o paciente ficava para sempre como "ativa" no model
+        # legado, tornando prescrições e RNDS inconsistentes.
+        from .models import InternacaoHospital
+        _status_legado = {
+            "obito": "obito",
+            "transferido": "transferido",
+        }.get(pac.status, "alta")
+        InternacaoHospital.objects.filter(
+            paciente_interno_sync=pac,
+            status="ativa",
+        ).update(
+            status=_status_legado,
+            data_saida=data_alta,
+        )
 
     return JsonResponse({"ok": True, "sumario": _alta_to_dict(alta)}, status=201)
 
@@ -399,6 +420,54 @@ def api_centro_cirurgico(request):
             data_hora = timezone.make_aware(data_hora)
     except (ValueError, TypeError):
         return JsonResponse({"erro": "data_hora_prevista inválida"}, status=400)
+
+    # Bug 4 — verificar conflito de sala antes de criar o agendamento.
+    # CentroCirurgico e BlocoCirurgico são dois sistemas paralelos; sem esta
+    # checagem é possível dupla marcação no mesmo horário/sala.
+    from datetime import timedelta
+    _sala = (data.get("sala") or "").strip()
+    if _sala:
+        # Conflito dentro de CentroCirurgico
+        for _c in CentroCirurgico.objects.filter(
+            empresa=empresa,
+            sala=_sala,
+            status__in=["agendado", "em_andamento"],
+            data_hora_prevista__date=data_hora.date(),
+        ):
+            # Usa margem de 120 min (CentroCirurgico não tem campo de duração)
+            _c_fim = _c.data_hora_prevista + timedelta(minutes=120)
+            _nova_fim = data_hora + timedelta(minutes=120)
+            if _c.data_hora_prevista < _nova_fim and data_hora < _c_fim:
+                return JsonResponse({
+                    "erro": (
+                        f"Conflito de agenda: sala '{_sala}' já está reservada "
+                        f"a partir das {_c.data_hora_prevista.strftime('%H:%M')} "
+                        f"(CentroCirurgico #{_c.id} — {_c.procedimento})."
+                    ),
+                    "conflito": True,
+                    "centro_cirurgico_id": _c.id,
+                }, status=409)
+
+        # Conflito cruzado com BlocoCirurgico (modelo legado)
+        from .models import BlocoCirurgico as _BlocoCirurgico
+        _nova_fim_bloco = data_hora + timedelta(minutes=120)
+        for _b in _BlocoCirurgico.objects.filter(
+            empresa=empresa,
+            sala=_sala,
+            situacao__in=["agendada", "em_andamento"],
+            data_hora__date=data_hora.date(),
+        ):
+            _b_fim = _b.data_hora + timedelta(minutes=_b.duracao_prevista_min or 60)
+            if _b.data_hora < _nova_fim_bloco and data_hora < _b_fim:
+                return JsonResponse({
+                    "erro": (
+                        f"Conflito de agenda: sala '{_sala}' já está ocupada das "
+                        f"{_b.data_hora.strftime('%H:%M')} às {_b_fim.strftime('%H:%M')} "
+                        f"(BlocoCirurgico #{_b.id} — {_b.tipo_cirurgia})."
+                    ),
+                    "conflito": True,
+                    "bloco_cirurgico_id": _b.id,
+                }, status=409)
 
     pac = None
     pac_id = data.get("paciente_id")

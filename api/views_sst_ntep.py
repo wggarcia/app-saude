@@ -8,6 +8,7 @@ import json
 import logging
 from datetime import date, timedelta
 
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
@@ -51,9 +52,15 @@ def _get_ntep_models():
 
 
 def _seed_ntep():
-    """Popula tabela NTEP com os pares canônicos se vazia."""
+    """Popula tabela NTEP com os pares canônicos se vazia. Usa cache para evitar query por request."""
+    _CACHE_KEY = "ntep_seed_count"
+    cached = cache.get(_CACHE_KEY)
+    if cached is not None:
+        return cached
+
     TabelaNTEP, _ = _get_ntep_models()
-    if TabelaNTEP.objects.count() == 0:
+    count = TabelaNTEP.objects.count()
+    if count == 0:
         objs = [
             TabelaNTEP(
                 cid10=cid,
@@ -67,7 +74,10 @@ def _seed_ntep():
             for cid, cnae, dcid, dcnae in _NTEP_SEEDS
         ]
         TabelaNTEP.objects.bulk_create(objs, ignore_conflicts=True)
-    return TabelaNTEP.objects.count()
+        count = TabelaNTEP.objects.count()
+
+    cache.set(_CACHE_KEY, count, timeout=3600)
+    return count
 
 
 # ── tabela NTEP ───────────────────────────────────────────────────────────────
@@ -305,18 +315,18 @@ def api_ntep_scan_cats(request):
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    from .models import CATRegistro
+    from .models import CATOcupacional
     TabelaNTEP, AlertaNTEP = _get_ntep_models()
     _seed_ntep()
 
     # Busca CATs dos últimos 90 dias sem alerta NTEP
     dias = int(request.GET.get("dias", 90))
     desde = date.today() - timedelta(days=dias)
-    cats = CATRegistro.objects.filter(
+    cats = CATOcupacional.objects.filter(
         empresa=empresa,
         data_acidente__gte=desde,
     ).exclude(
-        cid10=""
+        cid=""
     )
 
     cnae_empresa = getattr(empresa, "cnae", "") or ""
@@ -325,7 +335,7 @@ def api_ntep_scan_cats(request):
 
     for cat in cats:
         verificados += 1
-        cid = cat.cid10.upper().strip()
+        cid = cat.cid.upper().strip()
 
         # Já tem alerta?
         if AlertaNTEP.objects.filter(empresa=empresa, origem="cat", origem_id=cat.id).exists():

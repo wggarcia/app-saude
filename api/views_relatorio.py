@@ -3,9 +3,13 @@ Relatório Executivo — relatório consolidado de saúde e segurança do perío
 Endpoint: GET /api/relatorio/executivo?periodo=mes|trimestre|semana|custom&desde=&ate=
 Page:     GET /relatorio-executivo/
 """
+import logging
 from datetime import date, timedelta
 from django.http import JsonResponse
+from django.db.models import Q, F, Sum, Count, Avg
 from .views_dashboard import _empresa_autenticada
+
+logger = logging.getLogger(__name__)
 
 
 def _periodo_datas(periodo, desde_str=None, ate_str=None):
@@ -104,13 +108,13 @@ def _relatorio_sst(empresa, ini, fim):
             "score_sst": score,
         }
     except Exception:
+        logger.error("Erro ao gerar relatório SST no relatório executivo", exc_info=True)
         return {"disponivel": False}
 
 
 def _relatorio_empresa(empresa, ini, fim):
     try:
         from .models import CheckinDiarioCorporativo, CheckinSemanalCorporativo, PedidoApoioCorporativo
-        from django.db.models import Avg, Count
 
         checkins = CheckinDiarioCorporativo.objects.filter(
             empresa=empresa,
@@ -123,7 +127,7 @@ def _relatorio_empresa(empresa, ini, fim):
         avgs = checkins.aggregate(
             humor=Avg("humor"), energia=Avg("energia"),
             estresse=Avg("estresse"), sono=Avg("sono"),
-            apoio=Count("id", filter=__import__("django.db.models", fromlist=["Q"]).Q(apoio_solicitado=True)),
+            apoio=Count("id", filter=Q(apoio_solicitado=True)),
         )
 
         semanais = CheckinSemanalCorporativo.objects.filter(
@@ -163,18 +167,18 @@ def _relatorio_empresa(empresa, ini, fim):
             "apoios_resolvidos": apoios_resolvidos,
         }
     except Exception:
+        logger.error("Erro ao gerar relatório de empresa/corporativo no relatório executivo", exc_info=True)
         return {"disponivel": False}
 
 
 def _relatorio_farmacia(empresa, ini, fim):
     try:
         from .models import LoteMedicamento, MovimentoEstoque, ItemFarmacia
-        from django.db.models import Sum, Count
 
         lotes = LoteMedicamento.objects.filter(empresa=empresa)
         vencidos = lotes.filter(data_validade__lt=fim, quantidade_atual__gt=0).count()
         vencendo_30 = lotes.filter(
-            data_validade__gte=fim, data_validade__lte=fim + __import__("datetime").timedelta(days=30),
+            data_validade__gte=fim, data_validade__lte=fim + timedelta(days=30),
             quantidade_atual__gt=0
         ).count()
         total_lotes = lotes.filter(quantidade_atual__gt=0).count()
@@ -188,7 +192,7 @@ def _relatorio_farmacia(empresa, ini, fim):
 
         itens_criticos = ItemFarmacia.objects.filter(
             empresa=empresa, ativo=True,
-            estoque_atual__lte=__import__("django.db.models", fromlist=["F"]).F("estoque_minimo")
+            estoque_atual__lte=F("estoque_minimo")
         ).count()
 
         return {
@@ -201,13 +205,13 @@ def _relatorio_farmacia(empresa, ini, fim):
             "itens_estoque_critico": itens_criticos,
         }
     except Exception:
+        logger.error("Erro ao gerar relatório de farmácia no relatório executivo", exc_info=True)
         return {"disponivel": False}
 
 
 def _relatorio_hospital(empresa, ini, fim):
     try:
         from .models import LeitoHospitalar, InternacaoHospital
-        from django.db.models import Avg, Count
 
         leitos = LeitoHospitalar.objects.filter(empresa=empresa)
         ocupados = leitos.filter(status="ocupado").count()
@@ -231,13 +235,13 @@ def _relatorio_hospital(empresa, ini, fim):
             "altas_periodo": altas,
         }
     except Exception:
+        logger.error("Erro ao gerar relatório hospitalar no relatório executivo", exc_info=True)
         return {"disponivel": False}
 
 
 def _relatorio_compliance(empresa, ini, fim):
     try:
-        from .models import AuditoriaInstitucional, DispositivoAutorizado
-        from django.db.models import Count
+        from .models import AuditoriaInstitucional, DispositivoAutorizado, BiometriaFuncionario
 
         eventos = AuditoriaInstitucional.objects.filter(
             empresa=empresa,
@@ -246,13 +250,43 @@ def _relatorio_compliance(empresa, ini, fim):
 
         devs_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).count()
 
+        # Consentimento LGPD (Art. 11) para coleta de dado biométrico de funcionários
+        # (BiometriaFuncionario.consentimento_confirmado_em) é, hoje, o único sinal de
+        # conformidade LGPD que já existe de fato no sistema por empresa — por isso é
+        # a única base real usada abaixo para status_lgpd.
+        biometrias_ativas_qs = BiometriaFuncionario.objects.filter(
+            funcionario__empresa=empresa, ativo=True
+        )
+        biometrias_ativas = biometrias_ativas_qs.count()
+        consentimentos_biometricos_pendentes = biometrias_ativas_qs.filter(
+            consentimento_confirmado_em__isnull=True
+        ).count()
+
+        # TODO: não existem hoje em api/models.py: (1) campo/relação indicando o DPO
+        # (encarregado de dados) cadastrado por empresa; (2) registro de aceite/versão
+        # de política de privacidade vigente por empresa; (3) um model genérico de
+        # "ConsentimentoLGPD" cobrindo outras bases de tratamento além da biometria
+        # facial. Sem isso, o cálculo de status_lgpd abaixo é parcial: cobre apenas a
+        # pendência de consentimento biométrico já existente no sistema. Um cálculo
+        # completo exigiria adicionar esses campos/models (decisão de schema fora do
+        # escopo desta correção).
+        if consentimentos_biometricos_pendentes > 0:
+            status_lgpd = "pendente"
+        elif biometrias_ativas > 0:
+            status_lgpd = "conforme_parcial"
+        else:
+            status_lgpd = "sem_dados_para_avaliar"
+
         return {
             "disponivel": True,
             "eventos_auditoria_periodo": eventos,
             "dispositivos_ativos": devs_ativos,
-            "status_lgpd": "conforme",
+            "biometrias_ativas": biometrias_ativas,
+            "consentimentos_biometricos_pendentes": consentimentos_biometricos_pendentes,
+            "status_lgpd": status_lgpd,
         }
     except Exception:
+        logger.error("Erro ao gerar relatório de compliance no relatório executivo", exc_info=True)
         return {"disponivel": False}
 
 

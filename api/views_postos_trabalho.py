@@ -5,6 +5,7 @@ químicos ou biológicos). Os funcionários são vinculados a postos para compor
 inventário de riscos exigido pelo S-2240.
 """
 import json
+import logging
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -15,7 +16,26 @@ from .models import (
     FuncionarioSST, ConfiguracaoSST,
 )
 from .views_dashboard import _empresa_autenticada
-from .access_control import requer_setor, requer_permissao_modulo
+from .access_control import api_requer_permissao_modulo, requer_setor, requer_permissao_modulo
+
+logger = logging.getLogger(__name__)
+
+
+def _checar_permissao_postos(request):
+    """Retorna JsonResponse 403 se o principal não tem permissão de escrita em Postos de Trabalho.
+    Postos/Agentes Nocivos são cobertos por sst.gestao_conformidade (incluindo S-2240/eSocial).
+    Retorna None se ok."""
+    from .access_control import principal_tem_algum_modulo
+    empresa, err = _empresa(request)
+    if err:
+        return err
+    principal = getattr(request, "principal", None) or empresa
+    if not principal_tem_algum_modulo(empresa, principal, ("sst.gestao_conformidade",)):
+        return JsonResponse({
+            "erro": "Acesso restrito. Requer permissão de Gestão / Conformidade SST para alterar postos de trabalho.",
+            "codigo_modulo": "sst.gestao_conformidade",
+        }, status=403)
+    return None
 
 
 def _empresa(request):
@@ -103,6 +123,9 @@ def api_postos_trabalho(request):
         return JsonResponse({"postos": [_posto_dict(p) for p in qs]})
 
     if request.method == "POST":
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         try:
             data = json.loads(request.body)
         except Exception:
@@ -148,6 +171,9 @@ def api_posto_detalhe(request, posto_id):
         return JsonResponse(_posto_dict(posto, incluir_agentes=True, incluir_func=True))
 
     if request.method in ("PUT", "PATCH"):
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         try:
             data = json.loads(request.body)
         except Exception:
@@ -170,6 +196,9 @@ def api_posto_detalhe(request, posto_id):
         return JsonResponse(_posto_dict(posto, incluir_agentes=True))
 
     if request.method == "DELETE":
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         posto.delete()
         return JsonResponse({"ok": True})
 
@@ -192,6 +221,9 @@ def api_agentes_nocivos(request, posto_id):
         return JsonResponse({"agentes": [_agente_dict(a) for a in posto.agentes_nocivos.all()]})
 
     if request.method == "POST":
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         try:
             data = json.loads(request.body)
         except Exception:
@@ -231,10 +263,16 @@ def api_agente_detalhe(request, posto_id, agente_id):
         return JsonResponse({"erro": "Agente não encontrado"}, status=404)
 
     if request.method == "DELETE":
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         agente.delete()
         return JsonResponse({"ok": True})
 
     if request.method in ("PUT", "PATCH"):
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         try:
             data = json.loads(request.body)
         except Exception:
@@ -267,6 +305,9 @@ def api_posto_funcionarios(request, posto_id):
         return JsonResponse({"erro": "Posto não encontrado"}, status=404)
 
     if request.method == "POST":
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         try:
             data = json.loads(request.body)
         except Exception:
@@ -291,6 +332,9 @@ def api_posto_funcionarios(request, posto_id):
         return JsonResponse({"id": vinculo.id, "criado": criado}, status=201 if criado else 200)
 
     if request.method == "DELETE":
+        erro_perm = _checar_permissao_postos(request)
+        if erro_perm:
+            return erro_perm
         try:
             data = json.loads(request.body)
         except Exception:

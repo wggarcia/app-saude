@@ -7,8 +7,8 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Avg, Count, Q, Sum
-from django.db.models.functions import TruncMonth
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum
+from django.db.models.functions import Now, TruncDate, TruncMonth, TruncWeek
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -1023,6 +1023,24 @@ def api_ps_fila_clinica_acao(request, guia_id):
     if "prioridade_clinica" in data:
         guia.prioridade_clinica = data.get("prioridade_clinica") or guia.prioridade_clinica
         guia.prazo_sla_em = _calcular_prazo_sla(guia.prioridade_clinica, guia.prestador)
+        # BUG FIX: invalidar/recalcular score IA quando prioridade muda.
+        # Urgente/alta complexidade/internação NUNCA recebem sugestão de aprovação automática.
+        if guia.prioridade_clinica in PRIORIDADES_SEMPRE_MANUAL:
+            guia.score_confianca_ia = 0
+            guia.sugestao_ia = GuiaAutorizacao.SUGESTAO_REVISAR
+            guia.sugestao_motivo = (
+                f"Score invalidado: guia reclassificada para "
+                f"{guia.get_prioridade_clinica_display()} — exige revisão manual."
+            )
+            guia.sugestao_seguida = None
+        elif guia.score_confianca_ia is not None:
+            # Recalcula para refletir a nova prioridade (eletiva/exame etc.)
+            _regra = _regra_autorizacao_automatica(guia.plano.empresa)
+            _score, _sug, _mot = _score_confianca_ia(guia, _regra)
+            guia.score_confianca_ia = _score
+            guia.sugestao_ia = _sug
+            guia.sugestao_motivo = f"[Recalculado após reclassificação] {_mot}"
+            guia.sugestao_seguida = None  # auditor precisa confirmar nova sugestão
 
     if acao == "triagem":
         guia.status = GuiaAutorizacao.STATUS_SOLICITADA
@@ -1295,6 +1313,23 @@ def api_ps_guia_detalhe(request, guia_id):
                 pass
         elif "prioridade_clinica" in data or "prestador_id" in data:
             g.prazo_sla_em = _calcular_prazo_sla(g.prioridade_clinica, g.prestador)
+        # BUG FIX: recalcular/invalidar score IA quando prioridade_clinica muda via PUT/PATCH.
+        if "prioridade_clinica" in data:
+            if g.prioridade_clinica in PRIORIDADES_SEMPRE_MANUAL:
+                g.score_confianca_ia = 0
+                g.sugestao_ia = GuiaAutorizacao.SUGESTAO_REVISAR
+                g.sugestao_motivo = (
+                    f"Score invalidado: guia reclassificada para "
+                    f"{g.get_prioridade_clinica_display()} — exige revisão manual."
+                )
+                g.sugestao_seguida = None
+            elif g.score_confianca_ia is not None:
+                _regra = _regra_autorizacao_automatica(g.plano.empresa)
+                _score, _sug, _mot = _score_confianca_ia(g, _regra)
+                g.score_confianca_ia = _score
+                g.sugestao_ia = _sug
+                g.sugestao_motivo = f"[Recalculado após reclassificação] {_mot}"
+                g.sugestao_seguida = None
         if "status" in data and "fila_status" not in data:
             g.fila_status = _fila_status_from_status(g.status)
         g.save()
@@ -2500,7 +2535,16 @@ def api_ps_dashboard_exec(request):
         "mlr": mlr,
         "pmpm": pmpm,
         "mrr": mrr,
-        "nps": 0,  # requer coleta ativa — retorna 0 se não configurado
+        # TODO(NPS real): não existe, hoje, nenhum model de avaliação/NPS
+        # (ex: AvaliacaoNPS) em api/models.py. O único campo próximo é
+        # TeleconsultaAutorizacao.nota_satisfacao (escala 1-5, só cobre
+        # teleconsultas) — escala e cobertura diferentes de um NPS real
+        # (0-10, % promotores - % detratores, base completa de beneficiários),
+        # então não foi reaproveitado para não fabricar um número. Mantido em
+        # 0 até existir um model dedicado de pesquisa de satisfação/NPS;
+        # reportado ao usuário para decidir se cria esse model.
+        "nps": 0,
+        "nps_fonte": "indisponivel_sem_model",
         "crescimento_beneficiarios": crescimento,
         "mlr_por_plano": mlr_por_plano,
         "mlr_mensal": mlr_mensal,
@@ -2535,24 +2579,36 @@ def api_ps_sla(request):
     if err:
         return err
 
-    agora = timezone.now()
-    guias_pendentes = GuiaAutorizacao.objects.filter(
-        plano__empresa=empresa, status__in=["solicitada", "em_analise"]
-    ).select_related("beneficiario")
+    # Única query: traz todas as guias pendentes já com prestador/beneficiário
+    # pré-carregados (evita N+1 em g.prestador.nome_fantasia) e com o tempo em
+    # aberto calculado pelo próprio banco (ExpressionWrapper/F/DurationField),
+    # em vez de iterar em Python subtraindo datetimes guia a guia.
+    guias_pendentes = list(
+        GuiaAutorizacao.objects.filter(
+            plano__empresa=empresa, status__in=["solicitada", "em_analise"]
+        )
+        .select_related("beneficiario", "prestador")
+        .annotate(
+            tempo_aberto=ExpressionWrapper(
+                Now() - F("solicitada_em"), output_field=DurationField()
+            )
+        )
+    )
 
     por_tipo = []
     breaches = []
 
     for tipo_key, meta in _SLA_MAP.items():
-        guias_tipo = guias_pendentes.filter(tipo__icontains=tipo_key.replace("_", " "))
+        tipo_alvo = tipo_key.replace("_", " ")
+        guias_tipo = [g for g in guias_pendentes if tipo_alvo in (g.tipo or "").lower()]
         # fallback: também pega pelo campo tipo exato
-        if not guias_tipo.exists() and tipo_key == "consulta":
-            guias_tipo = guias_pendentes.filter(tipo__in=["consulta", "Consulta Eletiva"])
+        if not guias_tipo and tipo_key == "consulta":
+            guias_tipo = [g for g in guias_pendentes if (g.tipo or "") in ("consulta", "Consulta Eletiva")]
 
-        total = guias_tipo.count()
+        total = len(guias_tipo)
         no_prazo = 0
         for g in guias_tipo:
-            horas_abertas = (agora - g.solicitada_em).total_seconds() / 3600
+            horas_abertas = g.tempo_aberto.total_seconds() / 3600
             if horas_abertas <= meta["horas"]:
                 no_prazo += 1
             else:
@@ -2699,11 +2755,50 @@ def api_ps_auditoria(request):
             "custo_total": custo,
         })
 
+    # Padrões de fraude/abuso — queries reais sobre GuiaAutorizacao (Guia Express),
+    # não mais fórmulas derivadas de critico_count/alto_count.
+    guias_periodo = GuiaAutorizacao.objects.filter(
+        plano__empresa=empresa, solicitada_em__date__gte=inicio,
+    )
+
+    # 1) Fracionamento: mesmo beneficiário + mesmo procedimento, 3+ guias na mesma semana
+    fracionamento_count = (
+        guias_periodo.exclude(codigo_procedimento="")
+        .annotate(semana=TruncWeek("solicitada_em"))
+        .values("beneficiario_id", "codigo_procedimento", "semana")
+        .annotate(qtd=Count("id"))
+        .filter(qtd__gte=3)
+        .count()
+    )
+
+    # 2) Guias sem CID correspondente
+    guias_sem_cid_count = guias_periodo.filter(Q(cid="") | Q(cid__isnull=True)).count()
+
+    # 3) Duplicidade: mesmo beneficiário + mesmo procedimento, 2+ guias no mesmo dia
+    duplicidade_count = (
+        guias_periodo.exclude(codigo_procedimento="")
+        .annotate(dia=TruncDate("solicitada_em"))
+        .values("beneficiario_id", "codigo_procedimento", "dia")
+        .annotate(qtd=Count("id"))
+        .filter(qtd__gte=2)
+        .count()
+    )
+
+    # 4) Mesmo beneficiário atendido por 2+ prestadores distintos na mesma semana
+    multiplos_prestadores_count = (
+        guias_periodo.filter(prestador__isnull=False)
+        .annotate(semana=TruncWeek("solicitada_em"))
+        .values("beneficiario_id", "semana")
+        .annotate(qtd_prestadores=Count("prestador_id", distinct=True))
+        .filter(qtd_prestadores__gte=2)
+        .count()
+    )
+
     padroes = [
-        {"nome": "Fracionamento de procedimentos", "count": max(0, critico_count * 2), "impacto": "Alto"},
-        {"nome": "Guias sem CID correspondente", "count": max(0, alto_count * 3), "impacto": "Médio"},
-        {"nome": "Duplicidade de cobranças", "count": max(0, critico_count), "impacto": "Alto"},
-        {"nome": "Múltiplos prestadores mesmo período", "count": max(0, alto_count), "impacto": "Médio"},
+        {"nome": "Fracionamento de procedimentos", "count": fracionamento_count, "impacto": "Alto"},
+        {"nome": "Guias sem CID correspondente", "count": guias_sem_cid_count, "impacto": "Médio"},
+        {"nome": "Duplicidade de cobranças", "count": duplicidade_count, "impacto": "Alto"},
+        {"nome": "Múltiplos prestadores mesmo período", "count": multiplos_prestadores_count, "impacto": "Médio"},
     ]
     padroes = [p for p in padroes if p["count"] > 0]
 
@@ -3056,6 +3151,12 @@ def api_ps_telemedicina_autorizar(request, tele_id):
 #  ODONTOLOGIA — beneficiários e guias odontológicas
 # ════════════════════════════════════════════════════════════════════════════════
 
+# TODO: valor estimado — não há hoje um model de contrato/mensalidade
+# odontológica vinculado a BeneficiarioOdonto (ver TODO em api_ps_odontologia).
+# Assim que existir um model real com valor_mensal por vida/contrato,
+# substituir esta constante pela agregação real.
+_MENSALIDADE_ODONTO_ESTIMADA = 80.0
+
 @csrf_exempt
 def api_ps_odontologia(request):
     """GET /api/plano-saude/odontologia/?aba=beneficiarios|rede|guias|sinistros|analise
@@ -3089,10 +3190,18 @@ def api_ps_odontologia(request):
     vidas = BeneficiarioOdonto.objects.filter(empresa=empresa, status="ativo").count()
     guias_pend = GuiaOdonto.objects.filter(empresa=empresa, status="pendente").count()
 
-    # MLR odonto (custo guias executadas / mensalidade estimada simples)
+    # MLR odonto (custo guias executadas / receita de mensalidades)
     custo_odonto = float(GuiaOdonto.objects.filter(empresa=empresa, status="executado")
                         .aggregate(s=Sum("valor_pago"))["s"] or 0)
-    receita_odonto = vidas * 80.0  # mensalidade odonto estimada
+    # TODO: não existe, hoje, um model de contrato/mensalidade odontológica
+    # (BeneficiarioOdonto não tem FK para um contrato com valor_mensal, e
+    # ContratoGrupo é vinculado a PlanoSaude/beneficiários médicos, não a
+    # BeneficiarioOdonto). Sem essa base, a receita não pode ser calculada
+    # a partir de dados reais — mantém-se a estimativa de R$80/vida
+    # (_MENSALIDADE_ODONTO_ESTIMADA), sinalizada como estimativa no retorno.
+    # Para tornar isso real: criar um model tipo ContratoOdontoGrupo (ou
+    # campo valor_mensal em BeneficiarioOdonto) e reportar ao usuário.
+    receita_odonto = vidas * _MENSALIDADE_ODONTO_ESTIMADA
     mlr_odonto = round(custo_odonto / max(receita_odonto, 1) * 100, 1)
 
     dados = []
@@ -3127,10 +3236,11 @@ def api_ps_odontologia(request):
             empresa=empresa, status="credenciado",
             especialidades__icontains="odonto",
         )[:30]
-        dados = [{"nome": p.nome_fantasia, "cnes": p.cnes, "cidade": p.cidade, "uf": p.estado} for p in qs]
+        dados = [{"nome": p.nome_fantasia, "cnes": p.registro_cnes, "cidade": p.cidade, "uf": p.estado} for p in qs]
 
     return JsonResponse({
         "vidas": vidas,
+        "mlr_fonte": "estimado",  # receita odonto usa mensalidade estimada — ver TODO acima
         "dentistas": PrestadorPlanoSaude.objects.filter(empresa=empresa, especialidades__icontains="odonto").count(),
         "guias_pendentes": guias_pend,
         "mlr": mlr_odonto,

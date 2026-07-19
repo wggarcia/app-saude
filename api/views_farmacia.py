@@ -1,6 +1,10 @@
+from datetime import date, timedelta
+
+from django.db.models import Sum
 from django.http import JsonResponse
 from .epidemiologia import build_panorama_payload
 from .access_control import api_requer_feature, api_requer_operacao_ou_gerencia, api_requer_setor
+from .models import EstoqueMovimento
 
 
 @api_requer_setor("farmacia")
@@ -45,17 +49,21 @@ def api_farmacia_painel(request):
     market_signal = _market_signal(dominant_disease, dominant_symptom, global_stock_pressure)
     restock_window = _restock_window(growth_percent, risk_level)
 
-    medicamentos_alta = []
-    if dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela"}:
-        medicamentos_alta = ["Dipirona", "Paracetamol", "Soro de reidratação", "Repelente", "Vitamina C"]
-    elif dominant_disease in {"COVID", "Gripe"}:
-        medicamentos_alta = ["Antigripal", "Ibuprofeno", "Azitromicina", "Paracetamol", "Máscara PFF2"]
-    elif dominant_disease in {"Leptospirose", "Malaria"}:
-        medicamentos_alta = ["Doxiciclina", "Penicilina", "Antitérmico", "Soro", "Amoxicilina"]
-    elif dominant_disease in {"Sarampo", "Meningite"}:
-        medicamentos_alta = ["Paracetamol", "Máscara cirúrgica", "Ibuprofen", "Vitamina A", "Soro"]
-    else:
-        medicamentos_alta = ["Antitérmico", "Analgésico", "Soro", "Vitamina C", "Antigripal"]
+    # Antes: lista fixa de medicamentos por doença dominante (hardcoded,
+    # sem relação com o estoque real da empresa). Agora: ranking real dos
+    # medicamentos com maior saída de estoque (saída/descarte) desta
+    # empresa nos últimos 90 dias, via EstoqueMovimento — reflete demanda
+    # real ao invés de uma tabela estática por doença.
+    empresa = request.empresa
+    desde = date.today() - timedelta(days=90)
+    ranking_saida = (
+        EstoqueMovimento.objects
+        .filter(empresa=empresa, tipo__in=("saida", "descarte"), criado_em__date__gte=desde)
+        .values("medicamento__nome")
+        .annotate(total_saida=Sum("quantidade"))
+        .order_by("-total_saida")[:5]
+    )
+    medicamentos_alta = [r["medicamento__nome"] for r in ranking_saida if r["medicamento__nome"]]
 
     zonas_criticas = [
         {
@@ -67,7 +75,6 @@ def api_farmacia_painel(request):
         for z in priority_zones[:5]
     ]
 
-    from datetime import date, timedelta
     today = date.today()
     series = (overview.get("timeline") or {}).get("series", [])
     previsao_7d = []

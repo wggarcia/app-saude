@@ -1170,6 +1170,20 @@ def api_governo_plataforma_webhooks(request):
             pattern = (dados.get("tipo_evento_pattern") or "*").strip()
             if not url:
                 return JsonResponse({"erro": "url_destino é obrigatório"}, status=400)
+            # SSRF prevention: block private/internal IP ranges
+            import ipaddress, socket
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                host = parsed.hostname or ""
+                if not host:
+                    raise ValueError("URL sem host válido")
+                resolved_ip = socket.gethostbyname(host)
+                ip_obj = ipaddress.ip_address(resolved_ip)
+                if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                    return JsonResponse({"erro": "url_destino aponta para endereço IP privado ou reservado — não permitido"}, status=400)
+            except (ValueError, OSError) as ssrf_err:
+                return JsonResponse({"erro": f"url_destino inválido: {ssrf_err}"}, status=400)
             import secrets
             sub = SubscricaoEvento.objects.create(
                 empresa=empresa,

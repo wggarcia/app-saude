@@ -1,4 +1,6 @@
 import json
+import uuid
+import logging
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,23 +16,56 @@ from .models import (
 )
 from .views_dashboard import _empresa_autenticada
 
+logger = logging.getLogger(__name__)
+
+# Namespace UUID fixo para derivação determinística de alias_publico.
+# Garante que o mesmo (empresa_id, func_id) sempre gera o mesmo UUID opaco.
+# Opaco = não enumerável sem conhecer o namespace (ao contrário de sst-{id}).
+_SST_ALIAS_NS = uuid.UUID("a5e0b2c3-d1f4-4e6a-8b7c-9d2e3f4a5b6c")
+
+
+def _alias_uuid_para_func(empresa_id: int, func_id: int) -> str:
+    """Gera código UUID5 opaco e determinístico para um colaborador SST."""
+    return str(uuid.uuid5(_SST_ALIAS_NS, f"{empresa_id}:{func_id}"))
+
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
-def _resolve_nome_alias(alias_publico):
-    """Resolve 'sst-{id}' alias codes to real FuncionarioSST names."""
-    if alias_publico and alias_publico.startswith("sst-"):
+def _resolve_nome_alias(alias_publico, empresa=None):
+    """Resolve alias_publico → nome real do FuncionarioSST.
+
+    Suporta dois formatos:
+    • UUID5 (novo, seguro): busca por reverse-compute de todos os employees da empresa.
+    • sst-{id} (legado, mantido por backward compat): extrai o id diretamente.
+    Se empresa não for fornecida ou o resolve falhar, retorna o próprio alias_publico.
+    """
+    if not alias_publico:
+        return alias_publico
+
+    # Formato legado — mantém leitura de registros antigos
+    if alias_publico.startswith("sst-"):
         try:
             func = FuncionarioSST.objects.filter(id=int(alias_publico[4:])).first()
             if func:
                 return func.nome
         except (ValueError, Exception):
             pass
+        return alias_publico
+
+    # Formato UUID5 — faz reverse-lookup limitado à empresa (O(n) employees)
+    if empresa:
+        try:
+            for func in FuncionarioSST.objects.filter(empresa=empresa, ativo=True).only("id", "nome"):
+                if _alias_uuid_para_func(empresa.id, func.id) == alias_publico:
+                    return func.nome
+        except Exception:
+            pass
+
     return alias_publico
 
 
 def _get_or_create_sala_direta(empresa, alias, nome_display=None):
-    nome = nome_display or _resolve_nome_alias(alias.alias_publico)
+    nome = nome_display or _resolve_nome_alias(alias.alias_publico, empresa=empresa)
     sala, created = SalaChat.objects.get_or_create(
         empresa=empresa,
         alias=alias,
@@ -47,9 +82,9 @@ def _sala_json(sala):
     ultima = sala.mensagens.last()
     nao_lidas = sala.mensagens.filter(origem=MensagemChat.ORIGEM_COLABORADOR, lida=False).count()
     nome = sala.nome or (sala.alias.alias_publico if sala.alias else "Grupo")
-    # Resolve sst-{id} alias codes to real employee names for display
+    # Resolve alias code → real employee name for display
     if sala.alias:
-        nome = _resolve_nome_alias(sala.alias.alias_publico) if nome == sala.alias.alias_publico else nome
+        nome = _resolve_nome_alias(sala.alias.alias_publico, empresa=sala.empresa) if nome == sala.alias.alias_publico else nome
     return {
         "id": sala.id,
         "tipo": sala.tipo,
@@ -122,8 +157,10 @@ def api_colaboradores_comunicacao(request):
     if funcionarios.exists():
         colaboradores = []
         for func in funcionarios:
-            # Stable alias code derived from the SST employee ID
-            alias_code = f"sst-{func.id}"
+            # SEGURANÇA: alias opaco derivado via UUID5 com namespace secreto.
+            # Não é enumerável (ao contrário do antigo sst-{id}).
+            # O mesmo (empresa.id, func.id) sempre produz o mesmo UUID — estável.
+            alias_code = _alias_uuid_para_func(empresa.id, func.id)
             alias, _ = ColaboradorAliasCorporativo.objects.get_or_create(
                 empresa=empresa,
                 alias_publico=alias_code,
@@ -168,7 +205,9 @@ def api_criar_sala(request):
     alias = ColaboradorAliasCorporativo.objects.filter(empresa=empresa, alias_publico=codigo).first()
     if not alias:
         return JsonResponse({"erro": "colaborador não encontrado"}, status=404)
-    sala = _get_or_create_sala_direta(empresa, alias)
+    # Resolve nome real: tenta reverse-lookup UUID5 → FuncionarioSST
+    nome_display = _resolve_nome_alias(codigo, empresa=empresa)
+    sala = _get_or_create_sala_direta(empresa, alias, nome_display=nome_display if nome_display != codigo else None)
     return JsonResponse({"sala": _sala_json(sala)})
 
 

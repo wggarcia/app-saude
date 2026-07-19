@@ -107,7 +107,10 @@ def api_ccih_infeccoes(request):
             ],
         })
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     with transaction.atomic():
         ih = InfeccaoHospitalar.objects.create(
             empresa=empresa,
@@ -165,12 +168,20 @@ def api_ccih_infeccao_detalhe(request, ih_id):
             "observacoes": ih.observacoes,
         })
 
-    data = json.loads(request.body)
-    campos = ["status", "agente", "agente_descricao", "perfil_resistencia",
-              "data_alta", "obito", "notificado_anvisa", "observacoes"]
-    for c in campos:
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    campos_normais = ["status", "agente", "agente_descricao", "perfil_resistencia",
+                      "data_alta", "obito", "observacoes"]
+    for c in campos_normais:
         if c in data:
             setattr(ih, c, data[c])
+    # notificado_anvisa exige perfil de gerência (operação setorial com escrita)
+    if "notificado_anvisa" in data:
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Notificação ANVISA exige perfil de gerência hospitalar"}, status=403)
+        ih.notificado_anvisa = data["notificado_anvisa"]
     ih.save()
     return JsonResponse({"ok": True})
 
@@ -218,7 +229,10 @@ def api_ccih_isolamentos(request):
             ],
         })
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
     iso = ProtocoloIsolamento.objects.create(
         empresa=empresa,
         infeccao_id=data.get("infeccao_id"),

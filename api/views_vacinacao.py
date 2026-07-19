@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import CampanhaVacinacao, FuncionarioSST, RegistroVacinacao
 from .views_dashboard import _empresa_autenticada
+from .access_control import api_requer_feature
 
 
 def _json_body(request):
@@ -63,6 +64,7 @@ def _registro_to_dict(registro):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_campanhas_vacinacao(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -106,6 +108,7 @@ def api_campanhas_vacinacao(request):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_campanha_detalhe(request, campanha_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -141,6 +144,7 @@ def api_campanha_detalhe(request, campanha_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_registros_vacinacao(request, campanha_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -217,6 +221,7 @@ def api_registros_vacinacao(request, campanha_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_registro_vacinacao_detalhe(request, reg_id):
     empresa = _empresa_autenticada(request)
     if not empresa:

@@ -32,9 +32,10 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.db.models import Sum
 
 from .models import (
-    Empresa, DIOPSDeclaracao, BeneficiarioPlano, ContratoSaude,
+    Empresa, DIOPSDeclaracao, BeneficiarioPlano, ContratoGrupo,
     GuiaTISS, PlanoSaude,
 )
 from .views_dashboard import _empresa_autenticada
@@ -80,6 +81,85 @@ def _cnpj(v):
     return re.sub(r"\D", "", v or "")[:14]
 
 
+# Tipos de GuiaTISS considerados despesa hospitalar (internação e derivados);
+# os demais (consulta, SADT, SP/SADT) são tratados como despesa médica/ambulatorial.
+_TISS_TIPOS_HOSPITALARES = ("internacao", "resumo")
+
+
+def _split_despesas_medicas_hospitalares(empresa, dt_ini: str, dt_fim: str, desp_as: Decimal):
+    """
+    Calcula o split real de EventosAssistenciais entre despesas médicas e
+    hospitalares, a partir das guias TISS emitidas/aprovadas no período.
+
+    Retorna (despesas_medicas, despesas_hospitalares, teve_dado_real: bool).
+    Quando não há guias TISS cadastradas no período (base ainda não populada),
+    não há como segmentar de forma real — nesse caso devolve todo o valor em
+    "médicas" e 0 em "hospitalares", sinalizando teve_dado_real=False para que
+    o chamador possa registrar o TODO/aviso em vez de inventar uma proporção.
+    """
+    guias_periodo = GuiaTISS.objects.filter(
+        empresa=empresa,
+        criado_em__date__gte=dt_ini,
+        criado_em__date__lte=dt_fim,
+    )
+    total_guias = guias_periodo.aggregate(t=Sum("valor_aprovado"))["t"] or Decimal(0)
+    total_guias = Decimal(total_guias)
+
+    if total_guias <= 0:
+        return desp_as, Decimal(0), False
+
+    total_hosp = guias_periodo.filter(
+        tipo__in=_TISS_TIPOS_HOSPITALARES
+    ).aggregate(t=Sum("valor_aprovado"))["t"] or Decimal(0)
+    total_hosp = Decimal(total_hosp)
+
+    pct_hosp = (total_hosp / total_guias) if total_guias > 0 else Decimal(0)
+    despesas_hosp = (desp_as * pct_hosp)
+    despesas_med = desp_as - despesas_hosp
+    return despesas_med, despesas_hosp, True
+
+
+def _beneficiarios_movimentacao(empresa, dt_ini: str, dt_fim: str):
+    """
+    Conta beneficiários novos (data_inicio_vigencia no período) e excluídos
+    (data_fim_vigencia no período), via BeneficiarioPlano — real, sem estimativa.
+    """
+    novos = BeneficiarioPlano.objects.filter(
+        plano__empresa=empresa,
+        data_inicio_vigencia__gte=dt_ini,
+        data_inicio_vigencia__lte=dt_fim,
+    ).count()
+    excluidos = BeneficiarioPlano.objects.filter(
+        plano__empresa=empresa,
+        data_fim_vigencia__gte=dt_ini,
+        data_fim_vigencia__lte=dt_fim,
+    ).count()
+    return novos, excluidos
+
+
+def _percentual_individual_coletivo(empresa, vidas_ativas: int):
+    """
+    Estima o percentual de beneficiários em planos coletivos (empresariais)
+    vs. individuais/familiares, usando ContratoGrupo (contratos corporativos
+    ativos da operadora) como proxy real de "vidas coletivas".
+    Não há, no modelo atual, um vínculo direto beneficiário↔ContratoGrupo,
+    então o percentual é calculado no agregado (total_vidas do contrato vs.
+    total de beneficiários ativos da operadora) — é uma aproximação real
+    baseada em dados do banco, não um valor fixo.
+    """
+    if vidas_ativas <= 0:
+        return Decimal("0.00"), Decimal("100.00"), False
+
+    vidas_coletivo = ContratoGrupo.objects.filter(
+        plano__empresa=empresa, status=ContratoGrupo.STATUS_ATIVO,
+    ).aggregate(t=Sum("total_vidas"))["t"] or 0
+    vidas_coletivo = min(int(vidas_coletivo), vidas_ativas)
+
+    pct_coletivo = (Decimal(vidas_coletivo) / Decimal(vidas_ativas) * 100)
+    pct_individual = Decimal(100) - pct_coletivo
+    return pct_individual.quantize(Decimal("0.01")), pct_coletivo.quantize(Decimal("0.01")), True
+
+
 # ─── Gerador DIOPS 3.0 completo ───────────────────────────────────────────────
 
 def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
@@ -102,6 +182,15 @@ def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
     sinistralidade = (desp_as / rec_op * 100) if rec_op > 0 else Decimal(0)
     indice_despesa = (desp_ad / rec_op * 100) if rec_op > 0 else Decimal(0)
     margem_liq     = (res_per / rec_op * 100) if rec_op > 0 else Decimal(0)
+
+    # Split real médica/hospitalar (FIP2) via GuiaTISS do período
+    desp_medicas, desp_hospitalares, split_real = _split_despesas_medicas_hospitalares(
+        empresa, dt_ini, dt_fim, desp_as
+    )
+    # Movimentação real de beneficiários (FIP9) via BeneficiarioPlano
+    benef_novos, benef_excluidos = _beneficiarios_movimentacao(empresa, dt_ini, dt_fim)
+    # Percentual individual/coletivo real (FIP9) via ContratoGrupo
+    pct_individual, pct_coletivo, pct_real = _percentual_individual_coletivo(empresa, vidas)
 
     # ── Root ──────────────────────────────────────────────────────────────────
     root = Element("DIOPS",
@@ -156,8 +245,13 @@ def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
     desp_el = SubElement(dvp, "Despesas")
     SubElement(desp_el, "EventosAssistenciais").text          = _fmt_dec(desp_as)
     SubElement(desp_el, "DespesasAdministrativas").text       = _fmt_dec(desp_ad)
-    SubElement(desp_el, "DespesasMedicas").text               = _fmt_dec(desp_as * Decimal("0.65"))
-    SubElement(desp_el, "DespesasHospitalares").text          = _fmt_dec(desp_as * Decimal("0.35"))
+    # TODO(split médica/hospitalar): quando não há GuiaTISS cadastrada no
+    # período (split_real=False), todo o valor é atribuído a DespesasMedicas
+    # e DespesasHospitalares fica em 0.00 — não há dado real suficiente para
+    # segmentar. Assim que houver guias TISS emitidas nesse trimestre, o
+    # split passa a ser calculado a partir delas automaticamente.
+    SubElement(desp_el, "DespesasMedicas").text               = _fmt_dec(desp_medicas)
+    SubElement(desp_el, "DespesasHospitalares").text          = _fmt_dec(desp_hospitalares)
     SubElement(desp_el, "DespesasFinanceiras").text           = "0.00"
     SubElement(desp_el, "DepreciacaoAmortizacao").text        = "0.00"
     SubElement(desp_el, "OutrasDespesas").text                = "0.00"
@@ -192,13 +286,16 @@ def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
     SubElement(prod, "SinistraliedadeDosProdutos").text = _fmt_dec(sinistralidade, 4)
 
     # ── FIP 9 — Beneficiários ──────────────────────────────────────────────────
+    # TODO(pct_real): quando pct_real=False (nenhum beneficiário ativo no
+    # período) o cálculo cai no default histórico 0% individual / 100%
+    # coletivo, pois não há base para nenhuma proporção real.
     fip9 = SubElement(root, "FIP9_Beneficiarios")
     SubElement(fip9, "TotalBeneficiariosPeriodo").text   = str(vidas)
-    SubElement(fip9, "BeneficiariosNovasCoberturas").text = "0"
-    SubElement(fip9, "BeneficiariosExcluidos").text       = "0"
+    SubElement(fip9, "BeneficiariosNovasCoberturas").text = str(benef_novos)
+    SubElement(fip9, "BeneficiariosExcluidos").text       = str(benef_excluidos)
     SubElement(fip9, "BeneficiariosAtivos").text          = str(vidas)
-    SubElement(fip9, "PercentualPlanoIndividual").text    = "0.00"
-    SubElement(fip9, "PercentualPlanoColetivo").text      = "100.00"
+    SubElement(fip9, "PercentualPlanoIndividual").text    = _fmt_dec(pct_individual)
+    SubElement(fip9, "PercentualPlanoColetivo").text      = _fmt_dec(pct_coletivo)
 
     return _xml_str(root)
 

@@ -11,10 +11,13 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_gerencia, get_setor, principal_pode_operacao_setorial
+from .access_control import (
+    api_requer_gerencia, api_requer_permissao_modulo,
+    get_setor, principal_pode_operacao_setorial,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .models import ProntuarioCidadao, AtendimentoUBS
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
-from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 def _e(request):
@@ -39,6 +42,7 @@ def governo_pec_page(request):
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_pec_kpis(request):
     e = _e(request)
     if not e:
@@ -59,6 +63,7 @@ def api_pec_kpis(request):
 # ── Pacientes ─────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_pec_lista(request):
     e = _e(request)
     if not e:
@@ -73,6 +78,7 @@ def api_pec_lista(request):
 
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_pec_novo(request):
     e = _e(request)
     if not e:
@@ -96,6 +102,7 @@ def api_pec_novo(request):
 
 
 @require_http_methods(["GET", "PUT"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_pec_detalhe(request, pac_id):
     e = _e(request)
     if not e:
@@ -121,6 +128,7 @@ def api_pec_detalhe(request, pac_id):
 # ── Atendimentos ──────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_pec_atendimentos(request, pac_id):
     e = _e(request)
     if not e:

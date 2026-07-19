@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import SerieEpidemiologica, PontoSerie
 from .views_dashboard import _empresa_autenticada
+from .access_control import api_requer_feature
 
 
 def _serie_to_dict(s, incluir_pontos=False):
@@ -60,6 +61,7 @@ def _serie_to_dict(s, incluir_pontos=False):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_series_epidemiologicas(request):
     """GET list / POST create séries."""
     empresa = _empresa_autenticada(request)
@@ -92,6 +94,7 @@ def api_series_epidemiologicas(request):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_serie_epidemiologica_detalhe(request, serie_id):
     """GET (com pontos) / PUT / DELETE série."""
     empresa = _empresa_autenticada(request)
@@ -124,6 +127,7 @@ def api_serie_epidemiologica_detalhe(request, serie_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_pontos_serie(request, serie_id):
     """GET pontos da série / POST adicionar ponto / DELETE todos."""
     empresa = _empresa_autenticada(request)
@@ -188,6 +192,7 @@ def api_pontos_serie(request, serie_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.saude_ocupacional")
 def api_ponto_serie_detalhe(request, ponto_id):
     """PUT / DELETE ponto individual."""
     empresa = _empresa_autenticada(request)

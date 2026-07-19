@@ -7,6 +7,8 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from .access_control import principal_pode_operacao_setorial
+
 from .models import (
     ASOOcupacional,
     AssinaturaDocumentoSST,
@@ -280,6 +282,8 @@ def api_sst_assinaturas(request):
         return JsonResponse({"assinaturas": [_assinatura_to_dict(item, request) for item in qs[:100]]})
 
     if request.method == "POST":
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Sem permissão para solicitar assinatura SST"}, status=403)
         try:
             data = json.loads(request.body.decode("utf-8") or "{}")
         except json.JSONDecodeError:

@@ -46,6 +46,9 @@ def _pac_or_404(empresa, pac_id):
 
 
 def _pedido_to_dict(p):
+    # N+1 fix: .count() e .filter().exists() em relation prefetchada bypassam
+    # o cache e emitem queries extras. Usar a lista prefetchada diretamente.
+    _resultados = list(p.resultados.all())
     return {
         "id": p.id,
         "paciente_id": p.paciente_id,
@@ -61,8 +64,8 @@ def _pedido_to_dict(p):
         "material": p.material,
         "data_solicitacao": p.data_solicitacao.strftime("%d/%m/%Y %H:%M"),
         "data_coleta": p.data_coleta.strftime("%d/%m/%Y %H:%M") if p.data_coleta else None,
-        "total_resultados": p.resultados.count(),
-        "tem_critico": p.resultados.filter(interpretacao="critico").exists(),
+        "total_resultados": len(_resultados),
+        "tem_critico": any(r.interpretacao == "critico" for r in _resultados),
     }
 
 

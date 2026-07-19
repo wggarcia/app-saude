@@ -52,9 +52,13 @@ def api_prescricoes_internacao(request, internacao_id):
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
     try:
+        # Bug 3 — a query original usava leito__departamento__empresa, que
+        # retornava DoesNotExist (404) quando o leito era NULL (internação sem
+        # leito — cenário legítimo permitido pelo formulário de internação).
+        # A empresa está disponível como FK direto em InternacaoHospital.
         internacao = InternacaoHospital.objects.get(
             id=internacao_id,
-            leito__departamento__empresa=empresa
+            empresa=empresa,
         )
     except InternacaoHospital.DoesNotExist:
         return JsonResponse({"erro": "Internação não encontrada"}, status=404)
@@ -95,9 +99,11 @@ def api_prescricao_status(request, prescricao_id):
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
     try:
+        # Bug 3 — mesma causa: traversal via leito falhava para internações
+        # sem leito. InternacaoHospital.empresa é o FK correto para isolar a empresa.
         p = PrescricaoMedica.objects.get(
             id=prescricao_id,
-            internacao__leito__departamento__empresa=empresa
+            internacao__empresa=empresa,
         )
     except PrescricaoMedica.DoesNotExist:
         return JsonResponse({"erro": "Prescrição não encontrada"}, status=404)

@@ -167,7 +167,56 @@ def api_cirurgia_nova(request):
     except ValueError:
         return JsonResponse({"erro": "data_hora inválida (use ISO 8601)"}, status=400)
 
-    from .models import ProntuarioHospitalar
+    from .models import ProntuarioHospitalar, CentroCirurgico
+    from datetime import timedelta
+
+    # Bug 4 — verificar conflito de sala antes de criar o agendamento.
+    # BlocoCirurgico e CentroCirurgico são dois sistemas paralelos de agenda
+    # cirúrgica; sem esta checagem é possível dupla marcação no mesmo horário/sala.
+    sala = (data.get("sala") or "").strip()
+    duracao_min = max(int(data.get("duracao_prevista_min") or 60), 1)
+    data_hora_fim = data_hora + timedelta(minutes=duracao_min)
+
+    if sala:
+        # Conflito dentro de BlocoCirurgico
+        for c in BlocoCirurgico.objects.filter(
+            empresa=empresa,
+            sala=sala,
+            situacao__in=["agendada", "em_andamento"],
+            data_hora__date=data_hora.date(),
+        ):
+            c_fim = c.data_hora + timedelta(minutes=c.duracao_prevista_min or 60)
+            if c.data_hora < data_hora_fim and data_hora < c_fim:
+                return JsonResponse({
+                    "erro": (
+                        f"Conflito de agenda: sala '{sala}' já está ocupada das "
+                        f"{c.data_hora.strftime('%H:%M')} às {c_fim.strftime('%H:%M')} "
+                        f"(cirurgia #{c.id} — {c.tipo_cirurgia})."
+                    ),
+                    "conflito": True,
+                    "cirurgia_id": c.id,
+                }, status=409)
+
+        # Conflito cruzado com CentroCirurgico (modelo moderno)
+        for c in CentroCirurgico.objects.filter(
+            empresa=empresa,
+            sala=sala,
+            status__in=["agendado", "em_andamento"],
+            data_hora_prevista__date=data_hora.date(),
+        ):
+            # CentroCirurgico não tem campo de duração — margem de segurança de 120 min
+            c_fim = c.data_hora_prevista + timedelta(minutes=120)
+            if c.data_hora_prevista < data_hora_fim and data_hora < c_fim:
+                return JsonResponse({
+                    "erro": (
+                        f"Conflito de agenda: sala '{sala}' já está reservada "
+                        f"a partir das {c.data_hora_prevista.strftime('%H:%M')} "
+                        f"no Centro Cirúrgico (CentroCirurgico #{c.id})."
+                    ),
+                    "conflito": True,
+                    "centro_cirurgico_id": c.id,
+                }, status=409)
+
     prontuario_id = data.get("prontuario_id")
     prontuario = None
     if prontuario_id:

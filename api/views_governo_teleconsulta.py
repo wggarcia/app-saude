@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_permissao_modulo,
     get_setor,
     principal_pode_operacao_setorial,
     requer_operacao_page,
@@ -150,6 +151,7 @@ def teleconsulta_sala_paciente(request, token):
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_teleconsulta_kpis(request):
     e = _e(request)
     if not e:
@@ -169,6 +171,7 @@ def api_teleconsulta_kpis(request):
 # ── Lista ─────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_teleconsulta_lista(request):
     e = _e(request)
     if not e:
@@ -183,6 +186,7 @@ def api_teleconsulta_lista(request):
 # ── Agendar ───────────────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_teleconsulta_agendar(request):
     e = _e(request)
     if not e:
@@ -210,6 +214,7 @@ def api_teleconsulta_agendar(request):
 # ── Atualizar ─────────────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento")
 def api_teleconsulta_atualizar(request, tc_id):
     e = _e(request)
     if not e:
@@ -230,6 +235,7 @@ def api_teleconsulta_atualizar(request, tc_id):
 # ── Token Jitsi — médico ──────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_teleconsulta_sala_token(request, tc_id):
     e = _e(request)
     if not e:
@@ -298,6 +304,7 @@ def api_teleconsulta_tcle_aceitar(request, token):
 # ── Encerrar (médico + CID-10) ────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_teleconsulta_encerrar(request, tc_id):
     e = _e(request)
     if not e:

@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from .access_control import api_requer_permissao_modulo
 from .models import DocumentoClinicoGov, ProntuarioCidadao, TeleconsultaGoverno
 from .views_dashboard import contexto_navegacao_setorial
 from .views_governo_teleconsulta import _e
@@ -36,6 +37,7 @@ def governo_prescricao_nova(request):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@api_requer_permissao_modulo('governo.atencao_clinica')
 def api_governo_prescricao_salvar(request):
     e = _e(request)
     if e is None:
@@ -85,6 +87,7 @@ def governo_atestado_novo(request):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@api_requer_permissao_modulo('governo.atencao_clinica')
 def api_governo_atestado_salvar(request):
     e = _e(request)
     if e is None:
@@ -134,6 +137,7 @@ def governo_exame_novo(request):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@api_requer_permissao_modulo('governo.atencao_clinica')
 def api_governo_exame_salvar(request):
     e = _e(request)
     if e is None:

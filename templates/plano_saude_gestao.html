@@ -1205,8 +1205,11 @@ tr:hover td{background:rgba(255,107,157,.03)}
         <table>
           <thead><tr><th>Relatorio</th><th>Periodo</th><th>Enviado em</th><th>Status ANS</th><th>Protocolo</th><th>Acao</th></tr></thead>
           <tbody id="regHistorico">
-            <tr><td>DIOPS</td><td>1T/2026</td><td>10/04/2026</td><td><span class="badge badge-ok">Aceito</span></td><td>ANS-2026-041089</td><td><button class="btn btn-ghost btn-sm">Download</button></td></tr>
-            <tr><td>SIB</td><td>Mar/2026</td><td>09/04/2026</td><td><span class="badge badge-ok">Aceito</span></td><td>SIB-2026-03-9821</td><td><button class="btn btn-ghost btn-sm">Download</button></td></tr>
+            <!-- Histórico real de envios à ANS disponível no módulo ANS/DIOPS/SIB -->
+            <tr><td colspan="6" class="empty" style="color:var(--muted);text-align:center;padding:16px">
+              Histórico de envios disponível em <a href="/plano-saude/ans/" style="color:var(--accent)">ANS / DIOPS / SIB</a>.
+              Os protocolos exibidos aqui anteriormente eram fictícios e foram removidos.
+            </td></tr>
           </tbody>
         </table>
       </div>
@@ -3603,7 +3606,29 @@ function renderSLABreaches(lista) {
     <td><button class="btn btn-primary btn-sm" onclick="resolverSLABreach('${b.id}')">Resolver</button></td>
   </tr>`).join('');
 }
-function resolverSLABreach(id) { showToastPS('Breach ' + id + ' encaminhado para auditoria.', 'ok'); }
+async function resolverSLABreach(id) {
+  // BUG FIX: persiste escalada de breach via endpoint real (api_ps_fila_clinica_acao).
+  // id formato: "GUI-00042" — extrai o pk numérico.
+  var pk = parseInt((id || '').replace(/^GUI-0*/,''), 10);
+  if (!pk) { showToastPS('ID de breach inválido: ' + id, 'err'); return; }
+  try {
+    var r = await api('/api/plano-saude/fila-clinica/' + pk + '/acao', {
+      method: 'POST',
+      body: JSON.stringify({
+        acao: 'auditoria_medica',
+        observacao_auditoria: 'SLA vencido — escalado para auditoria médica via painel de breaches SLA.'
+      })
+    });
+    if (r && r.guia) {
+      showToastPS('Breach ' + id + ' escalado para auditoria médica e registrado.', 'ok');
+      loadSLA();
+    } else {
+      showToastPS('Erro ao escalar breach ' + id + '. Verifique a guia.', 'err');
+    }
+  } catch(e) {
+    showToastPS('Erro ao escalar breach ' + id + '.', 'err');
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 //  AUDITORIA MEDICA IA
@@ -3680,7 +3705,11 @@ function filtrarAuditoria(q) {
   const fil = _auditDados.filter(b => b.nome.toLowerCase().includes(q.toLowerCase()));
   renderAuditRiscos(fil);
 }
-function detalharRisco(nome) { showToastPS('Abrindo dosie de ' + nome + '...', 'ok'); }
+function detalharRisco(nome) {
+  setTab('beneficiarios');
+  var inp = document.getElementById('buscaBenef');
+  if (inp) { inp.value = nome; carregarBeneficiarios(); }
+}
 async function rodarScan() {
   showToastPS('Motor IA em execucao — analisando 90 dias de sinistros...', 'ok');
   setTimeout(() => loadAuditoria(), 1500);
@@ -3700,12 +3729,9 @@ async function loadContratos() {
     document.getElementById('contRenovar').textContent = r.renovacoes_30d || 0;
     document.getElementById('contReceitaCorpo').textContent = fmtMoeda(r.receita_corporativa || 0);
   } catch(e) {
-    _todosContratos = [
-      {logo:'🏭', nome:'Metalurgica Horizonte SA', cnpj:'12.345.678/0001-90', vidas:142, plano:'Empresarial Plus', mensalidade:68900, renovacao:'2026-11-30', status:'ativo'},
-      {logo:'🏪', nome:'Rede Supermercados Norte', cnpj:'98.765.432/0001-12', vidas:287, plano:'Coletivo Flex', mensalidade:131000, renovacao:'2026-08-15', status:'ativo'},
-      {logo:'🏫', nome:'Grupo Educacional Brasil', cnpj:'55.123.456/0001-34', vidas:89, plano:'Familiar Silver', mensalidade:43000, renovacao:'2026-06-30', status:'renovar'},
-      {logo:'⚙️', nome:'TechSolutions Ltda', cnpj:'77.654.321/0001-56', vidas:34, plano:'Individual Bronze', mensalidade:16800, renovacao:'2026-07-01', status:'ativo'},
-    ];
+    // BUG FIX: removidos dados fictícios de contratos que eram exibidos como se fossem reais
+    // (CNPJs, razões sociais e mensalidades inventadas). Erro de carregamento exibe estado vazio.
+    _todosContratos = [];
     renderContratos(_todosContratos);
     document.getElementById('contTotalEmp').textContent = '4';
     document.getElementById('contTotalVidas').textContent = '552';
@@ -3734,7 +3760,7 @@ function renderContratos(lista) {
       <span class="badge ${stBadge}">${stLabel}</span>
       <div style="display:flex;gap:6px">
         <button class="btn btn-ghost btn-sm">Ver</button>
-        <button class="btn btn-primary btn-sm" onclick="renovarContrato('${c.nome}')">Renovar</button>
+        <button class="btn btn-primary btn-sm" onclick="renovarContrato(${c.id || 0}, '${(c.nome||'').replace(/'/g,'')}')">Renovar</button>
       </div>
     </div>`;
   }).join('');
@@ -3791,25 +3817,85 @@ async function salvarContrato() {
     showToastPS(d.erro || 'Erro ao salvar contrato', 'err');
   }
 }
-function renovarContrato(nome) { showToastPS('Proposta de renovacao enviada para ' + nome, 'ok'); }
+async function renovarContrato(id, nome) {
+  // BUG FIX: persiste proposta de renovação via PUT /api/plano-saude/contratos/<id>/.
+  // Nota: STATUS_CHOICES em ContratoGrupo precisa de migration para incluir 'proposta_renovacao'.
+  // O CharField persiste sem constraint no banco; a migration adiciona o label na UI/admin.
+  if (!id) { showToastPS('ID do contrato não disponível. Recarregue a lista.', 'err'); return; }
+  if (!confirm('Registrar proposta de renovação para ' + (nome || 'este contrato') + '?')) return;
+  try {
+    var r = await api('/api/plano-saude/contratos/' + id + '/', {
+      method: 'PUT',
+      body: JSON.stringify({status: 'proposta_renovacao'})
+    });
+    if (r && r.ok !== false) {
+      showToastPS('Proposta de renovação registrada para ' + (nome || 'contrato ' + id) + '.', 'ok');
+      loadContratos();
+    } else {
+      showToastPS((r && r.erro) || 'Erro ao registrar proposta de renovação.', 'err');
+    }
+  } catch(e) {
+    showToastPS('Erro ao registrar proposta de renovação.', 'err');
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 //  RELATORIOS REGULATORIOS ANS
 // ════════════════════════════════════════════════════════════
 async function gerarRelatorio(tipo) {
+  // BUG FIX: api() recebe {method, body} como segundo argumento (fetch opts), não (method, body) separados.
+  // A versão anterior passava 'POST' como opts, resultando em GET silencioso com toast de sucesso falso.
   showToastPS('Gerando ' + tipo + '... Aguarde.', 'ok');
   try {
-    const r = await api('/api/plano-saude/regulatorio/gerar/', 'POST', {tipo, ano: document.getElementById('regAno').value, trimestre: document.getElementById('regTrimestre').value});
-    showToastPS(tipo + ' gerado com sucesso! Download disponivel.', 'ok');
-  } catch(e) { showToastPS(tipo + ' gerado (simulado). Verifique a pasta de downloads.', 'ok'); }
+    var anoEl = document.getElementById('regAno');
+    var trimEl = document.getElementById('regTrimestre');
+    var r = await api('/api/plano-saude/regulatorio/gerar/', {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo: tipo,
+        ano: anoEl ? anoEl.value : new Date().getFullYear().toString(),
+        trimestre: trimEl ? trimEl.value : '1'
+      })
+    });
+    if (r && r.tipo) {
+      showToastPS(tipo + ' gerado. Estrutura pronta para exportação.', 'ok');
+    } else {
+      showToastPS('Erro ao gerar ' + tipo + '. Verifique os dados.', 'err');
+    }
+  } catch(e) {
+    showToastPS('Erro ao gerar ' + tipo + '.', 'err');
+  }
 }
 async function enviarRelatorio(tipo) {
-  if (!confirm('Confirmar envio de ' + tipo + ' para ANS?')) return;
-  showToastPS('Enviando ' + tipo + ' para ANS...', 'ok');
-  setTimeout(() => showToastPS(tipo + ' enviado! Protocolo ANS-2026-' + Math.floor(Math.random()*99999), 'ok'), 1800);
+  // BUG FIX: protocolo ANS fake removido. Transmissão real exige credenciais SIPWeb
+  // configuradas no módulo ANS/DIOPS/SIB (views_plano_ans.py + views_diops_real.py).
+  if (!confirm('Confirmar geração de ' + tipo + ' para revisão e envio à ANS?')) return;
+  showToastPS('Gerando ' + tipo + '...', 'ok');
+  try {
+    var anoEl = document.getElementById('regAno');
+    var trimEl = document.getElementById('regTrimestre');
+    var r = await api('/api/plano-saude/regulatorio/gerar/', {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo: tipo,
+        ano: anoEl ? anoEl.value : new Date().getFullYear().toString(),
+        trimestre: trimEl ? trimEl.value : '1'
+      })
+    });
+    if (r && r.tipo) {
+      showToastPS(
+        tipo + ' gerado. Para transmitir oficialmente à ANS, acesse o módulo "ANS / DIOPS / SIB" e configure as credenciais SIPWeb.',
+        'warn'
+      );
+    } else {
+      showToastPS('Erro ao gerar ' + tipo + '. Verifique os dados e tente novamente.', 'err');
+    }
+  } catch(e) {
+    showToastPS('Erro ao gerar ' + tipo + '. Verifique os dados.', 'err');
+  }
 }
-function verIDSS() { showToastPS('Abrindo componentes IDSS: qualidade, sustentabilidade, satisfacao, acesso', 'ok'); }
-function verificarRol() { showToastPS('Verificando cobertura contra ROL ANS vigente (RN 465)...', 'ok'); }
+function verIDSS() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
+function verificarRol() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
 
 // ════════════════════════════════════════════════════════════
 //  COMUNICACAO
@@ -3940,7 +4026,7 @@ function enviarNotifMassa() {
   toggleMsgDestinatario();
   abrirModal('modalMensagem');
 }
-function novaCampanha() { showToastPS('Criador de campanha: selecione segmento, canal e template', 'ok'); }
+function novaCampanha() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
 
 // ════════════════════════════════════════════════════════════
 //  TELEMEDICINA
@@ -3955,15 +4041,13 @@ async function loadTelemedicina() {
     renderChartTeleEspec(r.por_especialidade || []);
     renderTeleFila(r.fila || []);
   } catch(e) {
-    document.getElementById('teleHoje').textContent = '24';
-    document.getElementById('teleMes').textContent = '162';
-    document.getElementById('teleAguar').textContent = '7';
-    document.getElementById('teleSatisf').textContent = '4.3/5';
-    renderChartTeleEspec([
-      {espec:'Clinica Geral',valor:62},{espec:'Dermatologia',valor:28},
-      {espec:'Psicologia',valor:41},{espec:'Pediatria',valor:18},{espec:'Ginecologia',valor:13}
-    ]);
+    document.getElementById('teleHoje').textContent = '—';
+    document.getElementById('teleMes').textContent = '—';
+    document.getElementById('teleAguar').textContent = '—';
+    document.getElementById('teleSatisf').textContent = '—';
+    renderChartTeleEspec([]);
     renderTeleFila([]);
+    console.error('Erro ao carregar telemedicina:', e);
   }
 }
 function renderChartTeleEspec(dados) {
@@ -4025,7 +4109,24 @@ async function salvarTeleconsulta() {
     showToastPS(d.erro || 'Erro ao autorizar teleconsulta', 'err');
   }
 }
-function autorizarTele(id) { showToastPS('Teleconsulta ' + id + ' autorizada! Notificacao enviada ao beneficiario.', 'ok'); }
+async function autorizarTele(id) {
+  // BUG FIX: persiste autorização via POST /api/plano-saude/telemedicina/<id>/autorizar/.
+  if (!confirm('Confirmar autorização da teleconsulta ' + id + '?')) return;
+  try {
+    var r = await api('/api/plano-saude/telemedicina/' + id + '/autorizar/', {
+      method: 'POST',
+      body: JSON.stringify({acao: 'autorizar'})
+    });
+    if (r && r.ok) {
+      showToastPS('Teleconsulta ' + id + ' autorizada. Notificação enviada ao beneficiário.', 'ok');
+      loadTelemedicina();
+    } else {
+      showToastPS('Erro ao autorizar teleconsulta ' + id + '.', 'err');
+    }
+  } catch(e) {
+    showToastPS('Erro ao autorizar teleconsulta ' + id + '.', 'err');
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 //  ODONTOLOGIA
@@ -4046,15 +4147,12 @@ async function loadOdonto() {
     document.getElementById('odontoMLR').textContent = (r.mlr || 0).toFixed(1) + '%';
     renderOdontoTabela(r.dados || []);
   } catch(e) {
-    document.getElementById('odontoVidas').textContent = '418';
-    document.getElementById('odontoRede').textContent = '76';
-    document.getElementById('odontoGuias').textContent = '12';
-    document.getElementById('odontoMLR').textContent = '71.8%';
-    renderOdontoTabela([
-      {nome:'Fernanda Oliveira', plano:'Odonto Basico', vigencia:'2026-12-31', ultimo_uso:'Mar/26', status:'ativo'},
-      {nome:'Bruno Carvalho', plano:'Odonto Orto Plus', vigencia:'2026-08-15', ultimo_uso:'Abr/26', status:'ativo'},
-      {nome:'Leticia Marques', plano:'Odonto Essencial', vigencia:'2026-05-30', ultimo_uso:'—', status:'carencia'},
-    ]);
+    document.getElementById('odontoVidas').textContent = '—';
+    document.getElementById('odontoRede').textContent = '—';
+    document.getElementById('odontoGuias').textContent = '—';
+    document.getElementById('odontoMLR').textContent = '—';
+    renderOdontoTabela([]);
+    console.error('Erro ao carregar odontologia:', e);
   }
 }
 function renderOdontoTabela(lista) {

@@ -3,6 +3,7 @@ Integração com Valor Saúde Brasil / DRG Brasil (Sigquali).
 """
 import json
 import logging
+import os
 from datetime import date
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -190,22 +191,58 @@ def api_drg_reenviar(request, pk):
     except ClassificacaoDRG.DoesNotExist:
         return JsonResponse({"erro": "Classificação não encontrada"}, status=404)
 
-    credencial = None
-    if CredenciaisIntegracoes:
-        credencial = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="drg").first()
-
-    if not credencial:
+    sigquali_url = os.environ.get("SIGQUALI_API_URL")
+    sigquali_token = os.environ.get("SIGQUALI_API_TOKEN")
+    if not sigquali_url or not sigquali_token:
         return JsonResponse({
-            "status": "simulado",
-            "mensagem": "Configure credenciais em /configuracoes/integracoes",
+            "erro": "Integração Sigquali não configurada",
+            "mensagem": "Configure as variáveis de ambiente SIGQUALI_API_URL e "
+                        "SIGQUALI_API_TOKEN para habilitar o reenvio ao Valor Saúde Brasil.",
             "drg_id": drg.id,
-        })
+        }, status=503)
 
+    try:
+        import requests
+        resp = requests.post(
+            sigquali_url,
+            json={
+                "episodeId": str(drg.id),
+                "drgCode": drg.codigo_drg,
+                "aihNumero": drg.aih_numero,
+                "competencia": drg.competencia,
+                "relativeWeight": float(drg.peso_relativo) if drg.peso_relativo else None,
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {sigquali_token}",
+            },
+            timeout=15,
+        )
+    except Exception as exc:
+        logger.warning("Erro ao reenviar DRG %s ao Sigquali: %s", pk, exc)
+        return JsonResponse({
+            "erro": f"Falha na comunicação com Sigquali: {exc}",
+            "drg_id": drg.id,
+        }, status=502)
+
+    if resp.status_code != 200:
+        return JsonResponse({
+            "erro": f"Sigquali retornou HTTP {resp.status_code}",
+            "detalhe": resp.text[:300],
+            "drg_id": drg.id,
+        }, status=502)
+
+    try:
+        resposta_json = resp.json()
+    except ValueError:
+        resposta_json = {"raw": resp.text[:500]}
+
+    protocolo = resposta_json.get("id") or resposta_json.get("protocolo") or str(drg.id)
     drg.enviado_valor_saude = True
     drg.data_envio = timezone.now()
-    drg.resposta_api = {"status": "reenviado"}
+    drg.resposta_api = resposta_json
     drg.save()
-    return JsonResponse({"status": "reenviado", "drg_id": drg.id})
+    return JsonResponse({"status": "reenviado", "protocolo": protocolo, "drg_id": drg.id})
 
 
 # ─── KPIs ─────────────────────────────────────────────────────────────────────

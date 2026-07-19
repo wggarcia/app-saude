@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-from django.db.models import Count, Sum, Avg, Q
+from django.db.models import Count, Sum, Q
 from datetime import date, timedelta
 
 from .access_control import (
@@ -44,6 +44,33 @@ def _gov(request):
     return emp
 
 
+# Metas de cobertura vacinal do PNI (Programa Nacional de Imunizações) por
+# imunobiológico. Usadas como denominador em `cobertura = realizado/meta*100`.
+# Valores oficiais aproximados; "default" cobre imunobiológicos não listados.
+METAS_COBERTURA_VACINAL = {
+    "sarampo": 95,
+    "poliomielite": 95,
+    "polio": 95,
+    "covid-19": 100,
+    "covid19": 100,
+    "covid": 100,
+    "hepatite b": 95,
+    "hepatite": 95,
+    "febre amarela": 95,
+}
+META_COBERTURA_VACINAL_DEFAULT = 90
+
+
+def _meta_cobertura_vacinal(nome_imunobiologico):
+    """Retorna a meta de cobertura (PNI) para o imunobiológico pelo nome, com
+    correspondência por substring (case-insensitive, sem acentuação exata)."""
+    nome_norm = (nome_imunobiologico or "").strip().lower()
+    for chave, meta in METAS_COBERTURA_VACINAL.items():
+        if chave in nome_norm:
+            return meta
+    return META_COBERTURA_VACINAL_DEFAULT
+
+
 @require_http_methods(["GET"])
 @api_requer_permissao_modulo("governo.administrativo")
 def bi_producao_mensal(request):
@@ -52,17 +79,6 @@ def bi_producao_mensal(request):
         return JsonResponse({"erro": "Acesso negado"}, status=403)
 
     hoje = date.today()
-    inicio = date(hoje.year if hoje.month > 12 else (hoje.year - 1 if hoje.month == 1 else hoje.year),
-                  (hoje.month - 12) % 12 or 12, 1)
-    # Calcula o inicio como 12 meses atras
-    ano_inicio = hoje.year - 1 if hoje.month == 1 else hoje.year
-    mes_inicio = hoje.month - 1 if hoje.month > 1 else 12
-    if hoje.month == 1:
-        ano_inicio = hoje.year - 1
-        mes_inicio = 1
-    else:
-        ano_inicio = hoje.year - 1
-        mes_inicio = hoje.month
 
     meses = []
 
@@ -95,8 +111,11 @@ def bi_producao_mensal(request):
         )
 
         total = qs.count()
-        consultas = qs.filter(tipo_atendimento="consulta").count()
-        procedimentos = qs.filter(tipo_atendimento="procedimento").count()
+        # Proxy: CBO 225x = médico (consulta), procedimento_ab preenchido = procedimento
+        consultas = qs.filter(cbo__startswith="225").count()
+        procedimentos = qs.filter(
+            procedimento_ab__isnull=False
+        ).exclude(procedimento_ab="").count()
 
         meses.append({
             "mes": f"{ano_ref:04d}-{mes_ref:02d}",
@@ -141,7 +160,7 @@ def bi_cobertura_vacinal(request):
     for item in imunobios:
         nome = item.get("imunobiologico__nome") or "Desconhecido"
         realizado = item.get("realizado", 0)
-        meta = 100
+        meta = _meta_cobertura_vacinal(nome)
         cobertura = round((realizado / meta) * 100, 1) if meta else 0.0
         vacinas.append({
             "nome": nome,
@@ -168,11 +187,14 @@ def bi_cronicas(request):
 
     qs_has = AtendimentoUBS.objects.filter(
         empresa=emp,
-        cid_10__startswith="I10",
+        cid10__startswith="I10",
     )
     total_has = qs_has.count()
-    controlados_has = qs_has.filter(situacao="controlado").count()
-    pct_has = round((controlados_has / total_has) * 100, 1) if total_has else 0.0
+    # Campo 'situacao' não existe em AtendimentoUBS. Controle de crônico requer
+    # modelo de acompanhamento (PA, HbA1c) ainda não implementado.
+    # Retorna 0 até que o campo/model correto seja definido e migrado.
+    controlados_has = 0
+    pct_has = 0.0
 
     resultado_has = {
         "total": total_has,
@@ -182,11 +204,12 @@ def bi_cronicas(request):
 
     qs_dm = AtendimentoUBS.objects.filter(
         empresa=emp,
-        cid_10__startswith="E11",
+        cid10__startswith="E11",
     )
     total_dm = qs_dm.count()
-    controlados_dm = qs_dm.filter(situacao="controlado").count()
-    pct_dm = round((controlados_dm / total_dm) * 100, 1) if total_dm else 0.0
+    # Mesmo motivo: campo 'situacao' não existe.
+    controlados_dm = 0
+    pct_dm = 0.0
 
     resultado_dm = {
         "total": total_dm,
@@ -211,23 +234,24 @@ def bi_produtividade(request):
 
     hoje = date.today()
 
+    # unidade_saude é CharField (não FK) — usar o campo direto
     qs = (
         AtendimentoUBS.objects.filter(
             empresa=emp,
             data_atendimento__year=hoje.year,
             data_atendimento__month=hoje.month,
         )
-        .values("unidade__nome")
+        .values("unidade_saude")
         .annotate(
             atendimentos_mes=Count("id"),
             profissionais=Count("profissional", distinct=True),
         )
-        .order_by("unidade__nome")
+        .order_by("unidade_saude")
     )
 
     for item in qs:
         unidades.append({
-            "nome": item.get("unidade__nome") or "Sem unidade",
+            "nome": item.get("unidade_saude") or "Sem unidade",
             "atendimentos_mes": item.get("atendimentos_mes", 0),
             "profissionais": item.get("profissionais", 0),
         })
@@ -247,21 +271,18 @@ def bi_fila_espera(request):
     if AgendamentoUBS is None:
         return JsonResponse({"especialidades": especialidades})
 
+    # especialidade é CharField (não FK) e tempo_espera_dias não existe no model
     qs = (
         AgendamentoUBS.objects.filter(empresa=emp)
-        .values("especialidade__nome")
-        .annotate(
-            media_dias=Avg("tempo_espera_dias"),
-            agendados=Count("id"),
-        )
-        .order_by("especialidade__nome")
+        .values("especialidade")
+        .annotate(agendados=Count("id"))
+        .order_by("especialidade")
     )
 
     for item in qs:
-        media = item.get("media_dias")
         especialidades.append({
-            "nome": item.get("especialidade__nome") or "Sem especialidade",
-            "media_dias": round(float(media), 1) if media is not None else 0,
+            "nome": item.get("especialidade") or "Sem especialidade",
+            "media_dias": 0,  # campo tempo_espera_dias não existe no model atual
             "agendados": item.get("agendados", 0),
         })
 
@@ -279,6 +300,15 @@ def bi_kpis(request):
 
     atendimentos_mes = 0
     consultas_realizadas = 0
+    # TODO: cobertura_acs não é calculada de verdade. O cálculo real seria
+    # (famílias visitadas no mês pelos Agentes Comunitários de Saúde) / (total de
+    # famílias ativas cadastradas na área) * 100. Isso exigiria models como
+    # `VisitaACS` (registro de visita domiciliar do ACS, com data e família) e
+    # `Familia` (cadastro de família ativa por área/microárea). Nenhum dos dois
+    # existe hoje em api/models.py (existe `VisitaDomiciliar`, mas não representa
+    # visita de ACS vinculada a cobertura de família cadastrada) — não foram
+    # criados aqui por não caber a esta correção decidir sozinho sobre novo
+    # model/migration. Mantido em 0.0 até que o model correto seja definido.
     cobertura_acs = 0.0
     producao_bpa = 0
 
@@ -289,8 +319,12 @@ def bi_kpis(request):
             data_atendimento__month=hoje.month,
         )
         atendimentos_mes = qs_mes.count()
-        consultas_realizadas = qs_mes.filter(tipo_atendimento="consulta").count()
-        producao_bpa = qs_mes.filter(bpa=True).count()
+        # Proxy para consultas: CBO 225x = médico (generalista, especialista APS)
+        consultas_realizadas = qs_mes.filter(cbo__startswith="225").count()
+        # Proxy para produção BPA: atendimentos com procedimento_ab preenchido
+        producao_bpa = qs_mes.filter(
+            procedimento_ab__isnull=False
+        ).exclude(procedimento_ab="").count()
 
     return JsonResponse({
         "atendimentos_mes": atendimentos_mes,

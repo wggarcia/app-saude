@@ -4,6 +4,8 @@ Integração com Epimed Monitor (estatística UTI).
 import json
 import csv
 import io
+import logging
+import os
 from datetime import date
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
@@ -17,6 +19,8 @@ try:
     from .models import TransmissaoEpimed, PacienteInternado, LeitoHospitalar
 except ImportError:
     TransmissaoEpimed = PacienteInternado = LeitoHospitalar = None
+
+logger = logging.getLogger(__name__)
 
 
 # ─── Auth helper ──────────────────────────────────────────────────────────────
@@ -160,14 +164,55 @@ def api_epimed_transmitir(request, id):
         pass
 
     if not credencial:
-        # Sem credencial — retorna CSV para download
+        # Sem credencial cadastrada — retorna CSV para download manual
         response = HttpResponse(transmissao.arquivo_gerado, content_type="text/csv; charset=utf-8")
         response["Content-Disposition"] = (
             f'attachment; filename="epimed_{transmissao.competencia}.csv"'
         )
         return response
 
-    # Com credencial — envio real (placeholder)
+    # Com credencial cadastrada — tenta envio automático real ao Epimed
+    epimed_url = os.environ.get("EPIMED_API_URL")
+    epimed_token = os.environ.get("EPIMED_API_TOKEN")
+    if not epimed_url or not epimed_token:
+        return JsonResponse({
+            "erro": "Integração Epimed não configurada",
+            "mensagem": "Configure as variáveis de ambiente EPIMED_API_URL e "
+                        "EPIMED_API_TOKEN para habilitar a transmissão automática.",
+            "transmissao_id": transmissao.id,
+        }, status=503)
+
+    try:
+        import requests
+        resp = requests.post(
+            epimed_url,
+            data=transmissao.arquivo_gerado.encode("utf-8"),
+            headers={
+                "Content-Type": "text/csv; charset=utf-8",
+                "Authorization": f"Bearer {epimed_token}",
+            },
+            timeout=30,
+        )
+    except Exception as exc:
+        transmissao.status = "erro"
+        transmissao.erro_msg = str(exc)[:500]
+        transmissao.save()
+        logger.warning("Erro ao transmitir Epimed transmissao=%s: %s", id, exc)
+        return JsonResponse({
+            "erro": f"Falha na comunicação com Epimed: {exc}",
+            "transmissao_id": transmissao.id,
+        }, status=502)
+
+    if resp.status_code not in (200, 201):
+        transmissao.status = "erro"
+        transmissao.erro_msg = f"HTTP {resp.status_code}: {resp.text[:300]}"
+        transmissao.save()
+        return JsonResponse({
+            "erro": f"Epimed retornou HTTP {resp.status_code}",
+            "detalhe": resp.text[:300],
+            "transmissao_id": transmissao.id,
+        }, status=502)
+
     transmissao.status = "enviado"
     transmissao.data_envio = timezone.now()
     transmissao.save()

@@ -165,13 +165,18 @@ def api_hospital_rnds_transmitir_alta(request, internacao_id):
     # Gera o Bundle FHIR IPS-BR
     bundle = _gerar_bundle_ips_br(internacao, empresa)
 
+    # Bug 2 — InternacaoHospital não tem campo "paciente_nome" nem "cns" direto:
+    # o nome está em internacao.paciente.nome e CNS não é modelado no legado.
+    # getattr() silencioso retornava "" em vez de buscar no FK correto.
+    _pac_hosp = internacao.paciente
     # Cria registro de transmissão
     tx = TransmissaoRNDSHospital.objects.create(
         empresa         = empresa,
         tipo            = "ips_br",
         internacao_id   = internacao.id,
-        paciente_nome   = getattr(internacao, "paciente_nome", ""),
-        cns_paciente    = getattr(internacao, "cns", "") or "",
+        paciente_nome   = getattr(_pac_hosp, "nome", "") if _pac_hosp else "",
+        cns_paciente    = "",  # PacienteHospital não modela CNS — campo sempre vazio neste flow
+        cpf_paciente    = getattr(_pac_hosp, "cpf", "") if _pac_hosp else "",
         bundle_fhir     = bundle,
         status          = "pendente",
     )
@@ -226,12 +231,16 @@ def api_hospital_rnds_transmitir_rac(request, prontuario_id):
 
     bundle = _gerar_bundle_rac(prontuario, empresa)
 
+    # Bug 2 — ProntuarioHospitalar tem paciente_nome e paciente_cpf como campos
+    # diretos, mas não tem "cns". O getattr("cns", "") retornava vazio.
+    # Usar os campos corretos do model e gravar cpf_paciente quando disponível.
     tx = TransmissaoRNDSHospital.objects.create(
         empresa         = empresa,
         tipo            = "rac",
         internacao_id   = prontuario.id,
-        paciente_nome   = getattr(prontuario, "paciente_nome", ""),
-        cns_paciente    = getattr(prontuario, "cns", "") or "",
+        paciente_nome   = prontuario.paciente_nome,
+        cns_paciente    = "",  # ProntuarioHospitalar não modela CNS
+        cpf_paciente    = prontuario.paciente_cpf or "",
         bundle_fhir     = bundle,
         status          = "pendente",
     )
@@ -330,9 +339,13 @@ def api_hospital_rnds_kpis(request):
             "total_erros":        txs.filter(tipo="rac", status="erro").count(),
         },
         "total_erros_pendentes": com_erro,
-        "ultima_transmissao": (
-            txs.filter(status="transmitido").first().transmitido_em.isoformat()
-            if txs.filter(status="transmitido").exists() else None
+        # TOCTOU fix — .exists() + .first() eram duas queries separadas:
+        # se o registro fosse deletado entre as duas, .first() retornava None
+        # e .transmitido_em levantava AttributeError. Consolidado em query única.
+        "ultima_transmissao": getattr(
+            txs.filter(status="transmitido").only("transmitido_em").first(),
+            "transmitido_em",
+            None,
         ),
     })
 
@@ -357,7 +370,19 @@ def _gerar_bundle_ips_br(internacao, empresa):
     cpf            = getattr(paciente, "cpf", "") or ""
     data_entrada   = getattr(internacao, "data_entrada", None) or date.today()
     data_alta      = getattr(internacao, "data_saida", None) or date.today()
-    cid_principal  = ""  # não modelado em InternacaoHospital/PacienteHospital ainda
+
+    # InternacaoHospital/PacienteHospital não modelam CID codificado — mas
+    # há sincronização opcional com o cadastro moderno (PacienteInternado),
+    # que possui o campo diagnostico_cid. Usa-o quando disponível.
+    cid_principal  = ""
+    cid_display    = ""
+    try:
+        paciente_sync = getattr(internacao, "paciente_interno_sync", None)
+        if paciente_sync and getattr(paciente_sync, "diagnostico_cid", ""):
+            cid_principal = paciente_sync.diagnostico_cid
+            cid_display   = paciente_sync.diagnostico_descricao or cid_principal
+    except Exception:
+        pass
 
     bundle_id = f"ips-br-{empresa.id}-{internacao.id}"
 
@@ -430,7 +455,7 @@ def _gerar_bundle_ips_br(internacao, empresa):
                         "coding": [{
                             "system":  "http://www.who.int/classifications/icd/en/",
                             "code":    cid_principal,
-                            "display": cid_principal,
+                            "display": cid_display or cid_principal,
                         }]
                     } if cid_principal else {},
                     "subject":      {"reference": f"urn:uuid:patient-{internacao.id}"},

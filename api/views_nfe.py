@@ -155,13 +155,23 @@ def _gerar_xml_nfe(nota: NotaFiscalEletronica, cred: CredenciaisIntegracoes) -> 
     _tx(emit, ns, "CNPJ",  cnpj)
     _tx(emit, ns, "xNome", (nota.nome_emitente or cred.nfe_cnpj_emitente)[:60])
     ender = etree.SubElement(emit, f"{{{ns}}}enderEmit")
-    _tx(ender, ns, "xLgr",   "Endereço não informado")
-    _tx(ender, ns, "nro",    "S/N")
-    _tx(ender, ns, "xBairro","Centro")
+    # ATENÇÃO — MIGRATION PENDENTE: `CredenciaisIntegracoes` (e `Empresa`) ainda
+    # NÃO possuem campos de endereço do emitente (logradouro, número, bairro,
+    # CEP, nome do município). Verificado em api/models.py — não existem em
+    # nenhum lugar acessível a partir da empresa/credenciais de NF-e. Sem um
+    # endereço real a SEFAZ tende a rejeitar a NF-e (schema NF-e 4.0 exige
+    # xLgr/CEP válidos do emitente). Usamos getattr() com fallback para que,
+    # assim que os campos abaixo forem adicionados via migration em
+    # CredenciaisIntegracoes (sugestão de nomes: nfe_logradouro, nfe_numero,
+    # nfe_bairro, nfe_cep, nfe_nome_municipio), o XML passe a usar os dados
+    # reais automaticamente, sem precisar tocar neste arquivo novamente.
+    _tx(ender, ns, "xLgr",   getattr(cred, "nfe_logradouro", "") or "Endereço não informado")
+    _tx(ender, ns, "nro",    getattr(cred, "nfe_numero", "") or "S/N")
+    _tx(ender, ns, "xBairro",getattr(cred, "nfe_bairro", "") or "Centro")
     _tx(ender, ns, "cMun",   cred.nfe_municipio_ibge or "3550308")
-    _tx(ender, ns, "xMun",   uf)
+    _tx(ender, ns, "xMun",   getattr(cred, "nfe_nome_municipio", "") or uf)
     _tx(ender, ns, "UF",     uf)
-    _tx(ender, ns, "CEP",    "00000000")
+    _tx(ender, ns, "CEP",    "".join(c for c in (getattr(cred, "nfe_cep", "") or "") if c.isdigit()) or "00000000")
     _tx(ender, ns, "cPais",  "1058")
     _tx(ender, ns, "xPais",  "Brasil")
     _tx(emit, ns, "IE",    cred.nfe_ie or "ISENTO")
@@ -413,7 +423,10 @@ def _transmitir_sefaz(xml_assinado: str, cuf: str, uf: str, tpamb: str,
         "protocolo":   protocolo,
         "dhRecbto":    dhret.text if dhret is not None else "",
         "url_sefaz":   url,
-        "xml_retorno": resp.text[:2000],
+        # Sem truncar: este é o XML de retorno completo (com protNFe) que
+        # passa a ser persistido como `xml_autorizado` — truncar em 2000
+        # chars cortaria o protocolo/assinatura da SEFAZ do documento legal.
+        "xml_retorno": resp.text,
     }
 
 
@@ -585,7 +598,10 @@ def api_nfe_emitir(request):
             nota.protocolo       = ret["protocolo"]
             nota.mensagem_sefaz  = ret["motivo"]
             nota.autorizada_em   = timezone.now()
-            nota.xml_autorizado  = xml_assinado  # em produção: XML de resposta completo
+            # Usa o XML de retorno real da SEFAZ (contém protNFe/protocolo),
+            # não o XML assinado enviado — antes salvava o envelope enviado,
+            # o que descartava a prova de autorização retornada pela SEFAZ.
+            nota.xml_autorizado  = ret.get("xml_retorno") or xml_assinado
             nota.save()
 
             cred.nfe_ultima_transmissao = timezone.now()

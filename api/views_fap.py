@@ -40,10 +40,30 @@ Endpoints:
   GET  /api/sst/fap/historico/              — Evolução FAP por ano (gráfico)
 """
 
+import logging
 from datetime import date
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 import json
+
+logger = logging.getLogger(__name__)
+
+
+def _checar_permissao_escrita_fap(request):
+    """Retorna JsonResponse 403 se o principal não tem permissão de escrita no módulo FAP.
+    FAP é coberto por sst.gestao_conformidade (inclui conformidade, eSocial, FAP, riscos).
+    Retorna None se a permissão estiver ok."""
+    from .access_control import principal_tem_algum_modulo
+    empresa = _empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=403)
+    principal = getattr(request, "principal", None) or empresa
+    if not principal_tem_algum_modulo(empresa, principal, ("sst.gestao_conformidade",)):
+        return JsonResponse({
+            "erro": "Acesso restrito. Requer permissão de Gestão / Conformidade SST para alterar o FAP.",
+            "codigo_modulo": "sst.gestao_conformidade",
+        }, status=403)
+    return None
 
 
 def _empresa(request):
@@ -170,13 +190,16 @@ def _fap_dict(fap):
 def api_fap_lista(request):
     """
     GET  → Lista FAPs registrados da empresa (histórico completo).
-    POST → Alias para registrar (atalho).
+    POST → Alias para registrar (atalho). Requer permissão de gestão de conformidade.
     """
     empresa = _empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=403)
 
     if request.method == "POST":
+        erro_perm = _checar_permissao_escrita_fap(request)
+        if erro_perm:
+            return erro_perm
         return api_fap_registrar(request)
 
     try:
@@ -200,17 +223,21 @@ def api_fap_lista(request):
                 "portal_inss": "https://www.gov.br/previdencia/pt-br/fap",
             },
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro interno FAP")
+        return JsonResponse({"erro": "Erro interno ao processar requisição FAP"}, status=500)
 
 
 def api_fap_registrar(request):
-    """POST — Registra o FAP do exercício informado pelo INSS."""
+    """POST — Registra o FAP do exercício informado pelo INSS. Requer permissão de gestão de conformidade."""
     empresa = _empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "Use POST"}, status=405)
+    erro_perm = _checar_permissao_escrita_fap(request)
+    if erro_perm:
+        return erro_perm
 
     data = _json(request)
     campos_obrig = ["ano", "fap_valor", "folha_salarial_mensal"]
@@ -264,12 +291,13 @@ def api_fap_registrar(request):
             "criado": criado,
             "fap": _fap_dict(fap),
         }, status=201 if criado else 200)
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro interno FAP")
+        return JsonResponse({"erro": "Erro interno ao processar requisição FAP"}, status=500)
 
 
 def api_fap_detalhe(request, fap_id):
-    """GET / PATCH — Detalhe e edição de um registro FAP."""
+    """GET / PATCH — Detalhe e edição de um registro FAP. PATCH requer permissão de gestão de conformidade."""
     empresa = _empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=403)
@@ -278,6 +306,9 @@ def api_fap_detalhe(request, fap_id):
         fap = FAPEmpresa.objects.get(id=fap_id, empresa=empresa)
 
         if request.method == "PATCH":
+            erro_perm = _checar_permissao_escrita_fap(request)
+            if erro_perm:
+                return erro_perm
             data = _json(request)
             campos_editaveis = [
                 "fap_valor", "folha_salarial_mensal", "cnae", "cnae_descricao",
@@ -292,8 +323,9 @@ def api_fap_detalhe(request, fap_id):
             fap.save()
 
         return JsonResponse(_fap_dict(fap))
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=404)
+    except Exception:
+        logger.exception("Erro interno FAP")
+        return JsonResponse({"erro": "Erro interno ao processar requisição FAP"}, status=404)
 
 
 def api_fap_simulacao(request):
@@ -337,8 +369,9 @@ def api_fap_simulacao(request):
             "dica": "Invista em SST para reduzir acidentes e conquistar FAP < 1,0 (bônus). "
                     "Com FAP 0,5 você paga apenas metade do RAT.",
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro interno FAP")
+        return JsonResponse({"erro": "Erro interno ao processar requisição FAP"}, status=500)
 
 
 def api_fap_contestacao(request):
@@ -409,8 +442,9 @@ def api_fap_contestacao(request):
                 ],
             },
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro interno FAP")
+        return JsonResponse({"erro": "Erro interno ao processar requisição FAP"}, status=500)
 
 
 def api_fap_historico(request):
@@ -460,8 +494,9 @@ def api_fap_historico(request):
             }.get(tendencia, ""),
             "total_anos": len(historico),
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro interno FAP")
+        return JsonResponse({"erro": "Erro interno ao processar requisição FAP"}, status=500)
 
 
 def api_fap_kpis(request):
@@ -470,7 +505,7 @@ def api_fap_kpis(request):
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=403)
     try:
-        from .models import FAPEmpresa, CATRegistro, FuncionarioSST
+        from .models import FAPEmpresa, CATOcupacional, FuncionarioSST
 
         fap_atual = FAPEmpresa.objects.filter(empresa=empresa).order_by("-ano").first()
         total_func = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).count()
@@ -481,7 +516,7 @@ def api_fap_kpis(request):
         janela = hoje - timedelta(days=365)
         total_cats = 0
         try:
-            total_cats = CATRegistro.objects.filter(empresa=empresa, data_acidente__gte=janela).count()
+            total_cats = CATOcupacional.objects.filter(empresa=empresa, data_acidente__gte=janela).count()
         except Exception:
             pass
 
@@ -540,13 +575,14 @@ def api_fap_kpis(request):
             ),
             "grau_risco_tabela": GRAU_RISCO_RAT,
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro interno FAP")
+        return JsonResponse({"erro": "Erro interno ao processar requisição FAP"}, status=500)
 
 
 # ── Página HTML ───────────────────────────────────────────────────────────────
 
-from .access_control import requer_permissao_modulo
+from .access_control import api_requer_permissao_modulo, requer_permissao_modulo
 
 
 @requer_permissao_modulo("sst.gestao_conformidade")

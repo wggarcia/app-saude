@@ -3,6 +3,7 @@ Views for SST scheduling (AgendamentoSST).
 Provides full CRUD + calendar/agenda view with status management.
 """
 import json
+import logging
 from datetime import date, datetime, timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -10,6 +11,8 @@ from django.utils import timezone
 from .models import AgendamentoSST, FuncionarioSST
 from .views_dashboard import _empresa_autenticada
 from .access_control import api_requer_feature, get_setor
+
+logger = logging.getLogger(__name__)
 
 
 def _agenda_to_dict(a):
@@ -118,7 +121,7 @@ def api_agendamentos_sst(request):
                 referencia_id=ag.id,
             )
         except Exception:
-            pass  # notificação é best-effort
+            logger.warning("Falha ao enviar notificação de agendamento SST", exc_info=True)
 
         return JsonResponse({"agendamento": _agenda_to_dict(ag)}, status=201)
 

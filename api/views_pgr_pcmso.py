@@ -334,8 +334,8 @@ def api_pcmso_pdf(request, doc_id):
         )
         asos = list(
             ASOOcupacional.objects.filter(empresa=empresa)
-            .order_by("-data_exame")
-            .values("funcionario__nome", "tipo_aso", "data_exame", "resultado", "proxima_avaliacao")[:50]
+            .order_by("-data_emissao")
+            .values("funcionario__nome", "tipo", "data_emissao", "resultado", "data_validade")[:50]
         )
 
         buf = io.BytesIO()
@@ -394,10 +394,10 @@ def api_pcmso_pdf(request, doc_id):
             for a in asos:
                 aso_data.append([
                     a.get("funcionario__nome", "—"),
-                    a.get("tipo_aso", "—"),
-                    str(a.get("data_exame", "") or "—"),
+                    a.get("tipo", "—"),
+                    str(a.get("data_emissao", "") or "—"),
                     a.get("resultado", "—"),
-                    str(a.get("proxima_avaliacao", "") or "—"),
+                    str(a.get("data_validade", "") or "—"),
                 ])
             t3 = Table(aso_data, colWidths=[5 * cm, 3 * cm, 3 * cm, 3 * cm, 3 * cm])
             t3.setStyle(_table_style_base())

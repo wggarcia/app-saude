@@ -15,12 +15,13 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_permissao_modulo,
+    contexto_navegacao_setorial,
     get_setor,
     principal_pode_operacao_setorial,
     requer_operacao_page,
     requer_permissao_modulo,
     requer_setor,
-    contexto_navegacao_setorial,
 )
 from .models import DiagnosticoConfirmadoGov
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
@@ -50,6 +51,7 @@ def governo_diagnosticos_panorama_page(request):
 # ── API ───────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def api_diagnosticos_confirmados(request):
     e = _e(request)
     if not e:

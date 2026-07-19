@@ -45,8 +45,19 @@ def _paginar(request, qs, limit_default=50, limit_max=500):
     return qs[offset: offset + limit], {"total": total, "limit": limit, "offset": offset}
 
 
-def _decimal(value, default=Decimal("0")):
-    """Converte valor para Decimal de forma segura."""
+def _decimal(value, default=None):
+    """Converte valor para Decimal de forma segura.
+
+    Retorna `default` (None por padrão) quando `value` é None/ausente ou
+    inválido — isso permite que o chamador distinga "campo não informado"
+    de "campo enviado com valor zero explícito" (ex.: em ajustes de
+    estoque, onde `None` significa "não altere" e `Decimal('0')` significa
+    "zere o estoque"). Chamadas que precisam de um fallback numérico
+    garantido (ex.: criação de registros com campo NOT NULL) devem passar
+    `default=Decimal("0")` explicitamente.
+    """
+    if value is None:
+        return default
     try:
         return Decimal(str(value))
     except (InvalidOperation, TypeError, ValueError):
@@ -280,11 +291,11 @@ def api_farmacia_estoque(request):
             codigo_barras=data.get("codigo_barras", ""),
             fabricante=data.get("fabricante", ""),
             classe_terapeutica=data.get("classe_terapeutica", "outro"),
-            quantidade_atual=_decimal(data.get("quantidade_atual", 0)),
-            quantidade_minima=_decimal(data.get("quantidade_minima", 0)),
-            quantidade_maxima=_decimal(data.get("quantidade_maxima", 0)),
-            preco_custo=_decimal(data.get("preco_custo", 0)),
-            preco_venda=_decimal(data.get("preco_venda", 0)),
+            quantidade_atual=_decimal(data.get("quantidade_atual", 0), default=Decimal("0")),
+            quantidade_minima=_decimal(data.get("quantidade_minima", 0), default=Decimal("0")),
+            quantidade_maxima=_decimal(data.get("quantidade_maxima", 0), default=Decimal("0")),
+            preco_custo=_decimal(data.get("preco_custo", 0), default=Decimal("0")),
+            preco_venda=_decimal(data.get("preco_venda", 0), default=Decimal("0")),
             controlado=bool(data.get("controlado", False)),
             refrigerado=bool(data.get("refrigerado", False)),
             validade_media_dias=int(data.get("validade_media_dias", 365)),
@@ -394,7 +405,7 @@ def api_farmacia_dispensacao(request):
             prescricao_numero=prescricao_numero,
             medico_crm=medico_crm,
             medicamentos=medicamentos,
-            valor_total=_decimal(data.get("valor_total", 0)),
+            valor_total=_decimal(data.get("valor_total", 0), default=Decimal("0")),
             convenio=data.get("convenio", ""),
             status=data.get("status", "pendente"),
             observacoes=data.get("observacoes", ""),
@@ -422,7 +433,7 @@ def api_farmacia_dispensacao(request):
                     lote=lote_obj,
                     dispensacao=disp,
                     tipo="dispensacao",
-                    quantidade=_decimal(item.get("quantidade", 0)),
+                    quantidade=_decimal(item.get("quantidade", 0), default=Decimal("0")),
                     saldo_apos=med.quantidade_atual,
                     paciente_nome=paciente_nome,
                     paciente_cpf=data.get("paciente_cpf", ""),
@@ -505,7 +516,7 @@ def api_farmacia_movimentos(request):
         if tipo not in dict(EstoqueMovimento.TIPO_CHOICES):
             return JsonResponse({"erro": f"Tipo inválido. Opções: {list(dict(EstoqueMovimento.TIPO_CHOICES).keys())}"}, status=400)
 
-        quantidade = _decimal(data.get("quantidade", 0))
+        quantidade = _decimal(data.get("quantidade", 0), default=Decimal("0"))
         if quantidade <= 0:
             return JsonResponse({"erro": "Quantidade deve ser maior que zero"}, status=400)
 
@@ -515,6 +526,9 @@ def api_farmacia_movimentos(request):
         elif tipo in ("saida", "descarte"):
             med.quantidade_atual -= quantidade
         elif tipo == "ajuste":
+            # Sem default=Decimal("0") propositalmente: precisamos distinguir
+            # "nova_quantidade não foi enviada" (None → cai no delta abaixo)
+            # de "nova_quantidade enviada como 0" (zera o estoque de fato).
             nova_quantidade = _decimal(data.get("nova_quantidade"))
             if nova_quantidade is not None and nova_quantidade >= 0:
                 med.quantidade_atual = nova_quantidade
@@ -666,11 +680,11 @@ def api_farmacia_pedidos(request):
                 pass
 
         # Calcula valor_total a partir dos itens se não fornecido
-        valor_total = _decimal(data.get("valor_total", 0))
+        valor_total = _decimal(data.get("valor_total", 0), default=Decimal("0"))
         if valor_total == 0 and itens:
             for item in itens:
-                qty = _decimal(item.get("quantidade", 0))
-                preco = _decimal(item.get("preco_unitario", 0))
+                qty = _decimal(item.get("quantidade", 0), default=Decimal("0"))
+                preco = _decimal(item.get("preco_unitario", 0), default=Decimal("0"))
                 valor_total += qty * preco
 
         pedido = PedidoFarmacia.objects.create(

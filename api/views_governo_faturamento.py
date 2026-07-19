@@ -26,10 +26,12 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import (
+    api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .models import CredenciaisIntegracoes, FaturamentoSUSLote
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
-from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,7 @@ def governo_faturamento_sus_page(request):
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_faturamento_sus_kpis(request):
     e = _e(request)
     if not e:
@@ -97,6 +100,7 @@ def api_faturamento_sus_kpis(request):
 # ── Lotes ─────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_faturamento_sus_lotes(request):
     e = _e(request)
     if not e:
@@ -125,6 +129,7 @@ def api_faturamento_sus_lotes(request):
 # ── Transmitir ────────────────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
 def api_faturamento_sus_transmitir(request, lote_id):
     """
     Transmite lote BPA/APAC/AIH ao DATASUS/SISAB.

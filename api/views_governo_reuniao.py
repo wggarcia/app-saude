@@ -18,6 +18,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_permissao_modulo,
     contexto_navegacao_setorial,
     get_setor,
     principal_pode_operacao_setorial,
@@ -136,6 +137,7 @@ def governo_reuniao_sala(request, reuniao_id):
 # ── CRUD API ──────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def api_reuniao_gov_lista(request):
     e = _e(request)
     if not e:
@@ -148,6 +150,7 @@ def api_reuniao_gov_lista(request):
 
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def api_reuniao_gov_criar(request):
     e = _e(request)
     if not e:
@@ -169,6 +172,7 @@ def api_reuniao_gov_criar(request):
 
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def api_reuniao_gov_atualizar(request, reuniao_id):
     e = _e(request)
     if not e:
@@ -186,6 +190,7 @@ def api_reuniao_gov_atualizar(request, reuniao_id):
 # ── Token Jitsi ───────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def api_reuniao_gov_token(request, reuniao_id):
     e = _e(request)
     if not e:
@@ -207,6 +212,7 @@ def api_reuniao_gov_token(request, reuniao_id):
 # ── Notas em tempo real ───────────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def api_reuniao_gov_salvar_notas(request, reuniao_id):
     e = _e(request)
     if not e:
@@ -222,6 +228,7 @@ def api_reuniao_gov_salvar_notas(request, reuniao_id):
 # ── Encerrar + gerar ata IA ───────────────────────────────────────────────────
 
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def api_reuniao_gov_encerrar(request, reuniao_id):
     e = _e(request)
     if not e:
@@ -243,6 +250,7 @@ def api_reuniao_gov_encerrar(request, reuniao_id):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.secretaria_agendamento", "governo.administrativo")
 def api_reuniao_gov_ata(request, reuniao_id):
     e = _e(request)
     if not e:

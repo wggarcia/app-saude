@@ -17,7 +17,7 @@ from django.db.models import Sum, Count, Avg, F
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import ItemFarmacia, PDVVenda, PDVItemVenda
+from .models import MedicamentoFarmacia, PDVVenda, PDVItemVenda
 from .access_control import api_requer_gerencia, api_requer_feature
 
 
@@ -34,9 +34,17 @@ def _coletar_dados_farmacia(empresa):
         vendas_qs.values("forma_pagamento").annotate(total=Count("id")).order_by("-total")
     )
 
+    # Bug 4 fix — model errado: ItemFarmacia é para materiais/insumos (sem preço
+    # de venda, sem ANVISA). Medicamentos ficam em MedicamentoFarmacia com os
+    # campos quantidade_atual e quantidade_minima.
     itens_baixo_estoque = list(
-        ItemFarmacia.objects.filter(empresa=empresa, ativo=True, estoque_atual__lte=F("estoque_minimo"))
-        .values("nome", "estoque_atual", "estoque_minimo")[:20]
+        MedicamentoFarmacia.objects.filter(
+            empresa=empresa,
+            ativo=True,
+            quantidade_minima__gt=0,
+            quantidade_atual__lte=F("quantidade_minima"),
+        )
+        .values("nome", "quantidade_atual", "quantidade_minima")[:20]
     )
 
     top_vendidos = list(

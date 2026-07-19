@@ -510,6 +510,7 @@ from api.views_farmacia_ops import (
 from api.views_farmacia_unidades import api_farmacia_unidades, api_farmacia_unidade_detalhe
 from api.views_farmacia_pdv import (
     farmacia_pdv_page,
+    api_pdv_buscar_produto,
     api_pdv_sessao_atual,
     api_pdv_abrir_sessao,
     api_pdv_fechar_sessao,
@@ -1712,6 +1713,7 @@ urlpatterns = [
     path('api/farmacia/pedidos-gestao', api_farmacia_pedidos),
     path('api/farmacia/pedidos-gestao/', api_farmacia_pedidos),
     # ── Farmácia PDV / Caixa ──────────────────────────────────
+    path('api/farmacia/pdv/buscar-produto', api_pdv_buscar_produto),
     path('api/farmacia/pdv/sessao-atual', api_pdv_sessao_atual),
     path('api/farmacia/pdv/abrir-sessao', api_pdv_abrir_sessao),
     path('api/farmacia/pdv/fechar-sessao/<int:sessao_id>', api_pdv_fechar_sessao),

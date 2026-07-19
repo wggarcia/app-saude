@@ -93,7 +93,15 @@ def _churn_ultimos_90():
 
 
 def _nrr_estimado():
-    """Net Revenue Retention estimado via expansão de plano."""
+    """Net Revenue Retention estimado via expansão de plano.
+
+    NOTA: não há hoje histórico de mudança de plano (upgrade/downgrade) por
+    empresa persistido no banco, então este NRR NÃO é calculado a partir de
+    receita real de expansão/contração de contas — é uma heurística
+    (churn observado dos últimos 90d anualizado + 2% de expansão média
+    assumida para healthtech B2B early-stage). Ver `nrr_fonte` no retorno de
+    `api_financeiro_metricas`, que sinaliza este valor como estimativa.
+    """
     try:
         from .models import Empresa
         # Empresas que fizeram upgrade (mudança de pacote para tier maior)
@@ -260,6 +268,13 @@ def api_financeiro_metricas(request):
             "churn_rate_90d": churn_rate,
             "clientes_cancelados_90d": canceladas,
             "nrr": nrr,
+            "nrr_fonte": "estimativa_churn_mais_2pct_expansao",
+            "nrr_aviso": (
+                "NRR estimado — não há histórico de upgrade/downgrade de plano "
+                "por empresa persistido no banco para calcular expansão/contração "
+                "de receita real. Valor = (1 - churn 90d anualizado + 2% de "
+                "expansão média assumida), com cap de 140%."
+            ),
             "ltv": round(ltv, 2),
             "ltv_fmt": f"R$ {ltv:,.0f}",
             "ltv_fonte": ltv_fonte,

@@ -33,7 +33,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
 )
 
-from .access_control import api_requer_feature, requer_permissao_modulo, requer_feature_pacote
+from .access_control import api_requer_feature, requer_permissao_modulo, requer_feature_pacote, principal_pode_operacao_setorial
 
 # ── Palette ──────────────────────────────────────────────────────────────────
 TEAL  = colors.HexColor("#00c9a7")
@@ -168,6 +168,8 @@ def api_cipa_comissoes(request):
             return JsonResponse({"erro": str(e)}, status=500)
 
     if request.method == "POST":
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Sem permissão para criar comissão CIPA"}, status=403)
         try:
             data = _json(request)
             if not data.get("mandato_inicio") or not data.get("mandato_fim"):
@@ -207,6 +209,8 @@ def api_cipa_comissao_detalhe(request, comissao_id):
         return JsonResponse(_comissao_dict(c))
 
     if request.method in ("PATCH", "PUT"):
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Sem permissão para editar comissão CIPA"}, status=403)
         try:
             data = _json(request)
             for field in ("mandato_inicio", "mandato_fim", "numero_membros_eleitos",
@@ -219,6 +223,8 @@ def api_cipa_comissao_detalhe(request, comissao_id):
             return JsonResponse({"erro": str(e)}, status=500)
 
     if request.method == "DELETE":
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Sem permissão para excluir comissão CIPA"}, status=403)
         try:
             c.delete()
             return JsonResponse({"ok": True, "msg": "Comissão removida"})
@@ -253,6 +259,8 @@ def api_cipa_membros(request, comissao_id):
             return JsonResponse({"erro": str(e)}, status=500)
 
     if request.method == "POST":
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Sem permissão para adicionar membro CIPA"}, status=403)
         try:
             data = _json(request)
             if not data.get("funcionario_id") or not data.get("cargo") or not data.get("tipo"):
@@ -304,6 +312,8 @@ def api_cipa_reunioes(request, comissao_id):
             return JsonResponse({"erro": str(e)}, status=500)
 
     if request.method == "POST":
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Sem permissão para criar reunião CIPA"}, status=403)
         try:
             data = _json(request)
             if not data.get("data_reuniao"):

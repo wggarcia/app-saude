@@ -1,8 +1,11 @@
 """
 Integração com Betha Sistemas (compras públicas).
 """
+import hashlib
+import hmac
 import json
 import logging
+import os
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -150,6 +153,28 @@ def api_betha_sincronizar_compras(request):
 @require_http_methods(["POST"])
 def api_betha_webhook(request):
     """Recebe callback do Betha Cloud e atualiza o registro de integração."""
+    webhook_secret = os.environ.get("BETHA_WEBHOOK_SECRET")
+    if webhook_secret:
+        assinatura_recebida = (
+            request.headers.get("X-Betha-Signature")
+            or request.headers.get("X-Betha-Signature-256")
+            or ""
+        ).strip()
+        assinatura_esperada = hmac.new(
+            webhook_secret.encode("utf-8"), request.body or b"", hashlib.sha256
+        ).hexdigest()
+        if not assinatura_recebida or not hmac.compare_digest(assinatura_esperada, assinatura_recebida):
+            logger.warning(
+                "Webhook Betha rejeitado: assinatura HMAC ausente ou inválida (header X-Betha-Signature)."
+            )
+            return JsonResponse({"erro": "Assinatura inválida"}, status=401)
+    else:
+        logger.warning(
+            "Webhook Betha recebido sem BETHA_WEBHOOK_SECRET configurado — "
+            "requisição aceita SEM verificação de autenticidade. Configure a "
+            "variável de ambiente BETHA_WEBHOOK_SECRET para habilitar a validação HMAC."
+        )
+
     try:
         body = json.loads(request.body or "{}")
     except ValueError:
