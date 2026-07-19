@@ -10,11 +10,29 @@ import json
 import math
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
+from .access_control import (
+    get_setor, principal_pode_operacao_setorial,
+    api_requer_permissao_modulo, requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .services.auth_session import empresa_autenticada_from_request
+
+try:
+    from .views_dashboard import contexto_navegacao_setorial
+except ImportError:
+    def contexto_navegacao_setorial(request, setor):
+        return {}
+
+
+@ensure_csrf_cookie
+@requer_setor("governo")
+@requer_operacao_page
+@requer_permissao_modulo("governo.atencao_clinica")
+def governo_caps_page(request):
+    return render(request, "governo_caps.html", contexto_navegacao_setorial(request, "governo"))
 
 
 def _gov(request):

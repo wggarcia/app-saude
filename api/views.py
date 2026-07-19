@@ -1,6 +1,7 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect
+from django.db import transaction
 from django.db.models import Count
 from .utils import probabilidade_doenca
 
@@ -2340,7 +2341,8 @@ def registrar_sintoma_publico(request):
         confianca=confianca,
         suspeito=confianca < 0.75,
     )
-    clear_panorama_cache()
+    # Invalidate after commit so the rebuilt panorama sees the new record.
+    transaction.on_commit(clear_panorama_cache)
 
     return JsonResponse({
         "status": "ok",

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CAPS / Saúde Mental — RAPS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--purple:#a78bfa;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:var(--purple)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:var(--purple)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-sel,.filter-inp{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.filter-sel:focus,.filter-inp:focus{border-color:var(--accent)}
+.filter-sel option{background:#072030}
+.filter-inp{width:180px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+td{padding:10px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.empty{text-align:center;color:var(--muted);padding:32px!important}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.88}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.15);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.15);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.15);color:var(--danger)}
+.badge-info{background:rgba(167,139,250,.15);color:var(--purple)}
+.badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.tab-bar{display:flex;gap:4px;padding:0 20px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+.tab-btn{padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;font-family:Manrope,sans-serif;border-bottom:2px solid transparent;transition:.15s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.msg{font-size:12px;margin-top:6px;padding:8px 12px;border-radius:8px;display:none}
+.msg.ok{background:rgba(0,229,176,.1);color:var(--ok);display:block}
+.msg.err{background:rgba(255,77,109,.1);color:var(--danger);display:block}
+.raas-tag{background:rgba(255,179,71,.12);color:var(--warn);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🧠 CAPS / Saúde Mental — RAPS</div>
+      <div class="page-sub">Rede de Atenção Psicossocial — atendimentos, encaminhamentos e exportação RAAS/DATASUS</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select id="selCompetencia" class="filter-sel" onchange="carregarKpis()"></select>
+      <button class="btn btn-ghost" onclick="exportarRaas()">📤 Exportar RAAS</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi info"><div class="kpi-val" id="kpiCaps">—</div><div class="kpi-lbl">Unidades CAPS Ativas</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiAtend">—</div><div class="kpi-lbl">Atendimentos na Competência</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiRaas">—</div><div class="kpi-lbl">Pendentes de envio RAAS</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiEncam">—</div><div class="kpi-lbl">Encaminhamentos Pendentes</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card" style="overflow:visible">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="setTab('unidades',this)">🏥 Unidades</button>
+      <button class="tab-btn" onclick="setTab('atendimentos',this)">📋 Atendimentos</button>
+      <button class="tab-btn" onclick="setTab('encaminhamentos',this)">🔄 Encaminhamentos RAPS</button>
+    </div>
+
+    <!-- TAB: Unidades -->
+    <div id="tabUnidades" class="tab-panel active">
+      <div class="card-header" style="border-bottom:none">
+        <span class="card-title">Unidades CAPS Cadastradas</span>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalUnidade()">+ Nova Unidade</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Nome</th><th>Tipo</th><th>CNES</th><th>Município / UF</th><th>Telefone</th><th>Status</th><th></th></tr></thead>
+          <tbody id="tbodyUnidades"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Atendimentos -->
+    <div id="tabAtendimentos" class="tab-panel">
+      <div class="card-header" style="border-bottom:none">
+        <span class="card-title">Atendimentos — Saúde Mental</span>
+        <div class="filters">
+          <select id="filtroAtendCaps" class="filter-sel" onchange="carregarAtendimentos()"><option value="">Todas as unidades</option></select>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalAtendimento()">+ Novo Atendimento</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Paciente</th><th>CNS</th><th>CID Principal</th><th>Modalidade</th><th>Profissional</th><th>Data</th><th>RAAS</th></tr></thead>
+          <tbody id="tbodyAtend"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Encaminhamentos -->
+    <div id="tabEncam" class="tab-panel">
+      <div class="card-header" style="border-bottom:none">
+        <span class="card-title">Encaminhamentos RAPS</span>
+        <div class="filters">
+          <select id="filtroEncamStatus" class="filter-sel" onchange="carregarEncaminhamentos()">
+            <option value="">Todos</option>
+            <option value="pendente">Pendente</option>
+            <option value="realizado">Realizado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalEncam()">+ Novo Encaminhamento</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Paciente</th><th>CNS</th><th>CID</th><th>Origem</th><th>Destino</th><th>Data</th><th>Status</th><th></th></tr></thead>
+          <tbody id="tbodyEncam"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top CIDs card -->
+  <div class="card" id="cardTopCids" style="display:none">
+    <div class="card-header"><span class="card-title">📊 Top CIDs na Competência</span></div>
+    <div id="topCidsList" style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
+</main>
+
+<!-- Modal: Nova Unidade -->
+<div class="modal-bg" id="modalUnidade">
+  <div class="modal">
+    <h3>🏥 Cadastrar Unidade CAPS</h3>
+    <input type="hidden" id="uId">
+    <div class="form-group"><label>Nome da Unidade *</label><input id="uNome" placeholder="Ex: CAPS II Centro"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="uTipo">
+          <option value="caps_i">CAPS I</option>
+          <option value="caps_ii">CAPS II</option>
+          <option value="caps_iii">CAPS III (24h)</option>
+          <option value="caps_ad">CAPS AD (álcool e drogas)</option>
+          <option value="caps_ad_iii">CAPS AD III (24h)</option>
+          <option value="caps_ij">CAPS Infanto-Juvenil</option>
+        </select>
+      </div>
+      <div class="form-group"><label>CNES</label><input id="uCnes" placeholder="0000000" maxlength="7"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Município</label><input id="uMunicipio" placeholder="Nome do município"></div>
+      <div class="form-group"><label>UF</label><input id="uUf" placeholder="SP" maxlength="2" style="text-transform:uppercase"></div>
+    </div>
+    <div class="form-group"><label>Endereço</label><input id="uEndereco" placeholder="Rua, número, bairro"></div>
+    <div class="form-group"><label>Telefone</label><input id="uTelefone" placeholder="(00) 0000-0000"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalUnidade')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarUnidade()">💾 Salvar</button>
+    </div>
+    <div id="msgUnidade" class="msg"></div>
+  </div>
+</div>
+
+<!-- Modal: Novo Atendimento -->
+<div class="modal-bg" id="modalAtendimento">
+  <div class="modal">
+    <h3>📋 Registrar Atendimento de Saúde Mental</h3>
+    <div class="form-group"><label>Unidade CAPS *</label>
+      <select id="aCapsSel"><option value="">Selecione…</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nome do Paciente *</label><input id="aPaciente" placeholder="Nome completo"></div>
+      <div class="form-group"><label>CNS</label><input id="aCns" placeholder="Cartão Nacional de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CID Principal</label><input id="aCid" placeholder="Ex: F20" style="text-transform:uppercase"></div>
+      <div class="form-group"><label>CID Secundário</label><input id="aCidSec" placeholder="Ex: F41" style="text-transform:uppercase"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Modalidade</label>
+        <select id="aModal">
+          <option value="individual">Individual</option>
+          <option value="grupo">Grupo</option>
+          <option value="domiciliar">Domiciliar</option>
+          <option value="acolhimento_noturno">Acolhimento Noturno</option>
+          <option value="permanencia_dia">Permanência Dia</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Data do Atendimento *</label><input id="aData" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Profissional</label><input id="aProfissional" placeholder="Nome do profissional"></div>
+      <div class="form-group"><label>CBO</label><input id="aCbo" placeholder="Ex: 225125"></div>
+    </div>
+    <div class="form-group"><label>Procedimento SIGTAP</label><input id="aProcedimento" placeholder="Ex: 0302060014"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAtendimento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAtendimento()">💾 Registrar</button>
+    </div>
+    <div id="msgAtend" class="msg"></div>
+  </div>
+</div>
+
+<!-- Modal: Novo Encaminhamento -->
+<div class="modal-bg" id="modalEncam">
+  <div class="modal">
+    <h3>🔄 Registrar Encaminhamento RAPS</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome do Paciente *</label><input id="ePaciente" placeholder="Nome completo"></div>
+      <div class="form-group"><label>CNS</label><input id="eCns" placeholder="Cartão Nacional de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CID</label><input id="eCid" placeholder="Ex: F20" style="text-transform:uppercase"></div>
+      <div class="form-group"><label>Data do Encaminhamento *</label><input id="eData" type="date"></div>
+    </div>
+    <div class="form-group"><label>Origem (serviço/unidade)</label><input id="eOrigem" placeholder="Ex: UBS Central"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Destino</label>
+        <select id="eDestinoTipo">
+          <option value="caps">CAPS</option>
+          <option value="ubs">UBS</option>
+          <option value="hospital">Hospital</option>
+          <option value="comunidade_terapeutica">Comunidade Terapêutica</option>
+          <option value="pronto_socorro">Pronto-Socorro</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Destino (nome)</label><input id="eDestino" placeholder="Nome do serviço destino"></div>
+    </div>
+    <div class="form-group"><label>Motivo do Encaminhamento</label><textarea id="eMotivo" rows="2" placeholder="Descreva o motivo…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalEncam')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEncam()">💾 Registrar</button>
+    </div>
+    <div id="msgEncam" class="msg"></div>
+  </div>
+</div>
+
+<script>
+const MODAL_TEXTS = {pendente:'Pendente',realizado:'Realizado',cancelado:'Cancelado'};
+const MOD_LABELS = {individual:'Individual',grupo:'Grupo',domiciliar:'Domiciliar',acolhimento_noturno:'Acolhimento Noturno',permanencia_dia:'Permanência Dia'};
+
+// ── Competência ────────────────────────────────────────────────────────────
+function initCompetencias() {
+  const sel = document.getElementById('selCompetencia');
+  const hoje = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    const val = d.getFullYear().toString() + String(d.getMonth()+1).padStart(2,'0');
+    const lbl = d.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+    const opt = new Option(lbl, val, i===0, i===0);
+    sel.appendChild(opt);
+  }
+}
+
+function competencia() { return document.getElementById('selCompetencia').value; }
+
+// ── KPIs ───────────────────────────────────────────────────────────────────
+async function carregarKpis() {
+  try {
+    const r = await fetch('/api/governo/caps/kpis?competencia=' + competencia());
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('kpiCaps').textContent  = d.total_caps_ativos ?? '—';
+    document.getElementById('kpiAtend').textContent = d.total_atendimentos ?? '—';
+    document.getElementById('kpiRaas').textContent  = d.pendentes_raas ?? '—';
+    document.getElementById('kpiEncam').textContent = d.encaminhamentos_pendentes ?? '—';
+    // Top CIDs
+    if (d.top_cids && d.top_cids.length) {
+      document.getElementById('cardTopCids').style.display = '';
+      document.getElementById('topCidsList').innerHTML = d.top_cids
+        .map(c => `<span class="badge badge-info">${c.cid_principal} <strong>${c.total}</strong></span>`)
+        .join('');
+    }
+  } catch(e) {}
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function setTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'unidades') carregarUnidades();
+  if (name === 'atendimentos') carregarAtendimentos();
+  if (name === 'encaminhamentos') carregarEncaminhamentos();
+}
+
+// ── Unidades ───────────────────────────────────────────────────────────────
+async function carregarUnidades() {
+  const tb = document.getElementById('tbodyUnidades');
+  tb.innerHTML = '<tr><td colspan="7" class="empty">Carregando…</td></tr>';
+  try {
+    const r = await fetch('/api/governo/caps/unidades?ativas=false');
+    const d = await r.json();
+    if (!d.unidades || !d.unidades.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma unidade CAPS cadastrada.</td></tr>'; return; }
+    tb.innerHTML = d.unidades.map(u => `
+      <tr>
+        <td><strong>${esc(u.nome)}</strong></td>
+        <td>${esc(u.tipo_display)}</td>
+        <td>${esc(u.cnes)||'—'}</td>
+        <td>${esc(u.municipio)||'—'}${u.uf ? ' / '+esc(u.uf) : ''}</td>
+        <td>${esc(u.telefone)||'—'}</td>
+        <td><span class="badge ${u.ativo?'badge-ok':'badge-muted'}">${u.ativo?'Ativa':'Inativa'}</span></td>
+        <td><button class="btn btn-ghost btn-sm" onclick="editarUnidade(${u.id})">✏️</button></td>
+      </tr>`).join('');
+    // Preenche select de caps no modal de atendimento
+    const sel = document.getElementById('aCapsSel');
+    sel.innerHTML = '<option value="">Selecione…</option>';
+    const ativas = document.getElementById('filtroAtendCaps');
+    ativas.innerHTML = '<option value="">Todas as unidades</option>';
+    d.unidades.filter(u=>u.ativo).forEach(u => {
+      sel.innerHTML += `<option value="${u.id}">${esc(u.nome)}</option>`;
+      ativas.innerHTML += `<option value="${u.id}">${esc(u.nome)}</option>`;
+    });
+  } catch(e) { tb.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; }
+}
+
+let _unidades = {};
+async function editarUnidade(id) {
+  if (!_unidades[id]) {
+    const r = await fetch('/api/governo/caps/unidades/' + id);
+    _unidades[id] = await r.json();
+  }
+  const u = _unidades[id];
+  document.getElementById('uId').value = u.id;
+  document.getElementById('uNome').value = u.nome;
+  document.getElementById('uTipo').value = u.tipo;
+  document.getElementById('uCnes').value = u.cnes;
+  document.getElementById('uMunicipio').value = u.municipio;
+  document.getElementById('uUf').value = u.uf;
+  document.getElementById('uEndereco').value = u.endereco;
+  document.getElementById('uTelefone').value = u.telefone;
+  abrirModal('modalUnidade');
+}
+
+function abrirModalUnidade() {
+  document.getElementById('uId').value = '';
+  ['uNome','uCnes','uMunicipio','uUf','uEndereco','uTelefone'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('uTipo').value = 'caps_i';
+  abrirModal('modalUnidade');
+}
+
+async function salvarUnidade() {
+  const id = document.getElementById('uId').value;
+  const body = {
+    nome:     document.getElementById('uNome').value.trim(),
+    tipo:     document.getElementById('uTipo').value,
+    cnes:     document.getElementById('uCnes').value.trim(),
+    municipio:document.getElementById('uMunicipio').value.trim(),
+    uf:       document.getElementById('uUf').value.trim().toUpperCase(),
+    endereco: document.getElementById('uEndereco').value.trim(),
+    telefone: document.getElementById('uTelefone').value.trim(),
+  };
+  if (!body.nome) { showMsg('msgUnidade','Nome é obrigatório.','err'); return; }
+  const url = id ? '/api/governo/caps/unidades/'+id : '/api/governo/caps/unidades/';
+  const method = id ? 'PATCH' : 'POST';
+  const r = await fetch(url, {method, headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)});
+  const d = await r.json();
+  if (r.ok) { showMsg('msgUnidade','Unidade salva com sucesso!','ok'); _unidades={}; setTimeout(()=>fecharModal('modalUnidade'),900); carregarUnidades(); }
+  else showMsg('msgUnidade', d.erro||'Erro ao salvar.','err');
+}
+
+// ── Atendimentos ──────────────────────────────────────────────────────────
+async function carregarAtendimentos() {
+  const tb = document.getElementById('tbodyAtend');
+  tb.innerHTML = '<tr><td colspan="7" class="empty">Carregando…</td></tr>';
+  const caps = document.getElementById('filtroAtendCaps').value;
+  let url = '/api/governo/caps/atendimentos?competencia=' + competencia();
+  if (caps) url += '&caps_id=' + caps;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!d.atendimentos || !d.atendimentos.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum atendimento nesta competência.</td></tr>'; return; }
+    tb.innerHTML = d.atendimentos.map(a => `
+      <tr>
+        <td><strong>${esc(a.paciente_nome)}</strong></td>
+        <td>${esc(a.cns)||'—'}</td>
+        <td>${a.cid_principal ? `<span class="badge badge-info">${esc(a.cid_principal)}</span>` : '—'}</td>
+        <td>${esc(MOD_LABELS[a.modalidade]||a.modalidade)}</td>
+        <td>${esc(a.profissional)||'—'}</td>
+        <td>${a.data_atendimento||'—'}</td>
+        <td>${a.enviado_raas ? '<span class="badge badge-ok">Enviado</span>' : '<span class="raas-tag">Pendente</span>'}</td>
+      </tr>`).join('');
+  } catch(e) { tb.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; }
+}
+
+function abrirModalAtendimento() {
+  ['aPaciente','aCns','aCid','aCidSec','aProfissional','aCbo','aProcedimento'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('aData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('aModal').value = 'individual';
+  document.getElementById('aCapsSel').value = '';
+  abrirModal('modalAtendimento');
+}
+
+async function salvarAtendimento() {
+  const body = {
+    caps_id:           document.getElementById('aCapsSel').value,
+    paciente_nome:     document.getElementById('aPaciente').value.trim(),
+    cns:               document.getElementById('aCns').value.trim(),
+    cid_principal:     document.getElementById('aCid').value.trim().toUpperCase(),
+    cid_secundario:    document.getElementById('aCidSec').value.trim().toUpperCase(),
+    modalidade:        document.getElementById('aModal').value,
+    data_atendimento:  document.getElementById('aData').value,
+    profissional:      document.getElementById('aProfissional').value.trim(),
+    cbo_profissional:  document.getElementById('aCbo').value.trim(),
+    procedimento_sigtap: document.getElementById('aProcedimento').value.trim(),
+  };
+  if (!body.caps_id) { showMsg('msgAtend','Selecione a unidade CAPS.','err'); return; }
+  if (!body.paciente_nome) { showMsg('msgAtend','Nome do paciente é obrigatório.','err'); return; }
+  if (!body.data_atendimento) { showMsg('msgAtend','Data do atendimento é obrigatória.','err'); return; }
+  const r = await fetch('/api/governo/caps/atendimentos/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)});
+  const d = await r.json();
+  if (r.ok) { showMsg('msgAtend','Atendimento registrado!','ok'); setTimeout(()=>fecharModal('modalAtendimento'),900); carregarAtendimentos(); carregarKpis(); }
+  else showMsg('msgAtend', d.erro||'Erro ao registrar.','err');
+}
+
+// ── Encaminhamentos ───────────────────────────────────────────────────────
+async function carregarEncaminhamentos() {
+  const tb = document.getElementById('tbodyEncam');
+  tb.innerHTML = '<tr><td colspan="8" class="empty">Carregando…</td></tr>';
+  const status = document.getElementById('filtroEncamStatus').value;
+  let url = '/api/governo/caps/encaminhamentos' + (status ? '?status='+status : '');
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!d.encaminhamentos || !d.encaminhamentos.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum encaminhamento.</td></tr>'; return; }
+    tb.innerHTML = d.encaminhamentos.map(e => {
+      const statusBadge = {pendente:'badge-warn',realizado:'badge-ok',cancelado:'badge-muted'}[e.status]||'badge-muted';
+      return `<tr>
+        <td><strong>${esc(e.paciente_nome)}</strong></td>
+        <td>${esc(e.cns)||'—'}</td>
+        <td>${e.cid ? `<span class="badge badge-info">${esc(e.cid)}</span>` : '—'}</td>
+        <td>${esc(e.origem_descricao)||'—'}</td>
+        <td>${esc(e.destino_tipo_display)}: ${esc(e.destino_descricao)||'—'}</td>
+        <td>${e.data_encaminhamento||'—'}</td>
+        <td><span class="badge ${statusBadge}">${esc(MODAL_TEXTS[e.status]||e.status)}</span></td>
+        <td>${e.status==='pendente' ? `<button class="btn btn-ghost btn-sm" onclick="realizarEncam(${e.id})">✓</button>` : ''}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tb.innerHTML = '<tr><td colspan="8" class="empty">Erro ao carregar.</td></tr>'; }
+}
+
+function abrirModalEncam() {
+  ['ePaciente','eCns','eCid','eOrigem','eDestino','eMotivo'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('eData').value = new Date().toISOString().slice(0,10);
+  abrirModal('modalEncam');
+}
+
+async function salvarEncam() {
+  const body = {
+    paciente_nome:      document.getElementById('ePaciente').value.trim(),
+    cns:                document.getElementById('eCns').value.trim(),
+    cid:                document.getElementById('eCid').value.trim().toUpperCase(),
+    data_encaminhamento:document.getElementById('eData').value,
+    origem_descricao:   document.getElementById('eOrigem').value.trim(),
+    destino_tipo:       document.getElementById('eDestinoTipo').value,
+    destino_descricao:  document.getElementById('eDestino').value.trim(),
+    motivo:             document.getElementById('eMotivo').value.trim(),
+  };
+  if (!body.paciente_nome || !body.data_encaminhamento) { showMsg('msgEncam','Paciente e data são obrigatórios.','err'); return; }
+  const r = await fetch('/api/governo/caps/encaminhamentos/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)});
+  const d = await r.json();
+  if (r.ok) { showMsg('msgEncam','Encaminhamento registrado!','ok'); setTimeout(()=>fecharModal('modalEncam'),900); carregarEncaminhamentos(); carregarKpis(); }
+  else showMsg('msgEncam', d.erro||'Erro.','err');
+}
+
+async function realizarEncam(id) {
+  if (!confirm('Marcar encaminhamento como realizado?')) return;
+  const r = await fetch('/api/governo/caps/encaminhamentos/'+id+'/acao/', {method:'PATCH', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify({status:'realizado',data_realizacao:new Date().toISOString().slice(0,10)})});
+  if (r.ok) { carregarEncaminhamentos(); carregarKpis(); }
+}
+
+// ── RAAS Export ───────────────────────────────────────────────────────────
+async function exportarRaas() {
+  const comp = competencia();
+  if (!confirm(`Exportar RAAS para competência ${comp}? Os registros serão marcados como enviados.`)) return;
+  const r = await fetch('/api/governo/caps/raas-exportar?competencia='+comp+'&confirmar=true');
+  const d = await r.json();
+  if (!r.ok) { alert('Erro ao exportar: ' + (d.erro||'desconhecido')); return; }
+  const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'RAAS-SM-' + comp + '.json';
+  a.click();
+  alert(`${d.total_registros} registros exportados. Converta para o layout .txt antes de enviar ao DATASUS.`);
+  carregarKpis();
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────
+function csrf() { return document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''; }
+function esc(s) { const d=document.createElement('span'); d.textContent=s||''; return d.innerHTML; }
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function showMsg(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'msg ' + type;
+  setTimeout(() => { el.className = 'msg'; }, 4000);
+}
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// ── Init ──────────────────────────────────────────────────────────────────
+initCompetencias();
+carregarKpis();
+carregarUnidades();
+</script>
+</body>
+</html>

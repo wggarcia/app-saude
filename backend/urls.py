@@ -666,6 +666,7 @@ from api.views_governo_fase2 import (
     api_metas_previne, api_previne_dashboard,
     api_contratos_gestao, api_contrato_detalhe,
     api_atendimentos_urgencia, api_urgencia_dashboard,
+    governo_urgencia_page,
     api_governo_fase2_dashboard,
     api_governo_plataforma_integracoes, api_governo_plataforma_chaves,
     api_governo_plataforma_webhooks, api_governo_plataforma_seguranca,
@@ -818,6 +819,7 @@ from api.views_governo_caps import (
     api_caps_encaminhamento_acao,
     api_caps_kpis,
     api_caps_raas_exportar,
+    governo_caps_page,
 )
 from api.views_hospital_rnds import (
     api_hospital_rnds_status,
@@ -1222,6 +1224,8 @@ urlpatterns = [
     path('governo/almoxarifado/', governo_almoxarifado_page),
     path('governo/laboratorio/', governo_laboratorio_page),
     path('governo/regulacao/', governo_regulacao_page),
+    path('governo/caps/', governo_caps_page),
+    path('governo/urgencia/', governo_urgencia_page),
     path('governo/sala-situacao/', governo_sala_situacao_page),
     path('governo/app-cidadao/', governo_app_cidadao_page),
     path('governo/regulacao-assistencial/', governo_regulacao_page),

@@ -8,12 +8,14 @@ import uuid
 from datetime import date, timedelta
 from django.db.models import Sum, Count, Avg, Q
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
     api_requer_plataforma_ti, get_setor, principal_pode_operacao_setorial,
-    api_requer_permissao_modulo,
+    api_requer_permissao_modulo, requer_setor, requer_operacao_page, requer_permissao_modulo,
 )
 from .models import (
     UnidadeSaude, EquipeSaude,
@@ -879,6 +881,21 @@ def api_contrato_detalhe(request, contrato_id):
 # ═══════════════════════════════════════════════════════════════
 # URGÊNCIA E EMERGÊNCIA
 # ═══════════════════════════════════════════════════════════════
+
+try:
+    from .views_dashboard import contexto_navegacao_setorial as _ctx_nav
+except ImportError:
+    def _ctx_nav(request, setor):
+        return {}
+
+
+@ensure_csrf_cookie
+@requer_setor("governo")
+@requer_operacao_page
+@requer_permissao_modulo("governo.regulacao_urgencia")
+def governo_urgencia_page(request):
+    return render(request, "governo_urgencia.html", _ctx_nav(request, "governo"))
+
 
 def _urgencia_dict(a):
     return {

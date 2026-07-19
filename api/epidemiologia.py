@@ -161,7 +161,10 @@ def clear_panorama_cache():
     _PANORAMA_CACHE["created_at"] = 0.0
     _PANORAMA_CACHE["payload"] = None
     _PANORAMA_CACHE["version"] = _current_panorama_cache_version()
-    _PUBLIC_EMPRESA_CACHE.update({"obj": None, "loaded": False, "next_retry": 0.0})
+    # NOTE: _PUBLIC_EMPRESA_CACHE is intentionally NOT reset here.
+    # The public population empresa is permanent — resetting it on every symptom
+    # submission forced a DB re-query that could blackout the map for 10–30 s if
+    # the query failed momentarily (retry cooldown in _public_population_empresa).
 
 
 def _public_population_empresa():

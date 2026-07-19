@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Urgência e Emergência — UPA / SAMU</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);--manchester-vermelho:#ff4d6d;--manchester-laranja:#ff6b35;--manchester-amarelo:#ffd166;--manchester-verde:#06d6a0;--manchester-azul:#118ab2}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.danger::before{background:var(--danger)}.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}
+.kpi-val{font-size:26px;font-weight:800;color:var(--accent)}
+.kpi.danger .kpi-val{color:var(--danger)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.kpi-delta{font-size:11px;margin-top:3px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.filter-sel:focus{border-color:var(--accent)}
+.filter-sel option{background:#072030}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+td{padding:10px 16px;border-bottom:1px solid var(--border);vertical-align:middle;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.empty{text-align:center;color:var(--muted);padding:32px!important}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.88}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 11px;font-size:12px}
+/* Manchester classification chips */
+.m-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700}
+.m-vermelho{background:rgba(255,77,109,.18);color:var(--manchester-vermelho)}
+.m-laranja{background:rgba(255,107,53,.18);color:var(--manchester-laranja)}
+.m-amarelo{background:rgba(255,209,102,.18);color:var(--manchester-amarelo)}
+.m-verde{background:rgba(6,214,160,.18);color:var(--manchester-verde)}
+.m-azul{background:rgba(17,138,178,.18);color:var(--manchester-azul)}
+/* Manchester bar chart */
+.mbar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+.mbar-label{width:90px;font-weight:600;font-size:12px}
+.mbar-track{flex:1;height:14px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+.mbar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.mbar-val{width:36px;text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* By-unit grid */
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;padding:16px 20px}
+.unit-card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.unit-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.unit-name{font-size:13px;font-weight:700}
+.unit-tipo{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.unit-stat{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)}
+.unit-stat:last-child{border-bottom:none}
+.unit-stat-val{font-weight:700;font-variant-numeric:tabular-nums}
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:480px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.form-row-5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.form-group input[type=number]{text-align:center}
+.manchester-section{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px}
+.manchester-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+.manchester-inputs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.mc-wrap{display:flex;flex-direction:column;gap:4px;align-items:center}
+.mc-wrap label{font-size:11px;font-weight:700}
+.mc-wrap.mc-v label{color:var(--manchester-vermelho)}
+.mc-wrap.mc-l label{color:var(--manchester-laranja)}
+.mc-wrap.mc-a label{color:var(--manchester-amarelo)}
+.mc-wrap.mc-g label{color:var(--manchester-verde)}
+.mc-wrap.mc-b label{color:var(--manchester-azul)}
+.mc-wrap input{width:100%;text-align:center;border-color:rgba(255,255,255,.1)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.msg{font-size:12px;margin-top:6px;padding:8px 12px;border-radius:8px;display:none}
+.msg.ok{background:rgba(0,229,176,.1);color:var(--ok);display:block}
+.msg.err{background:rgba(255,77,109,.1);color:var(--danger);display:block}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-danger{background:rgba(255,77,109,.15);color:var(--danger)}
+.badge-warn{background:rgba(255,179,71,.15);color:var(--warn)}
+.badge-ok{background:rgba(0,229,176,.15);color:var(--ok)}
+@media(max-width:1000px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🚨 Urgência e Emergência</div>
+      <div class="page-sub">Boletim diário — UPA 24h · SAMU 192 · Pronto-Socorro · CCO · Classificação de Risco Manchester</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select id="filtroTipo" class="filter-sel" onchange="carregarDashboard()">
+        <option value="">Todos os tipos</option>
+        <option value="upa_24h">UPA 24h</option>
+        <option value="samu">SAMU 192</option>
+        <option value="pronto_socorro">Pronto-Socorro</option>
+        <option value="cco">CCO</option>
+      </select>
+      <button class="btn btn-primary" onclick="abrirModalBoletim()">+ Boletim Diário</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs semana -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Atendimentos (7 dias)</div><div class="kpi-delta" id="kpiTotalDelta"></div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiObitos">—</div><div class="kpi-lbl">Óbitos (7 dias)</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiTempo">—</div><div class="kpi-lbl">Tempo Médio Espera (min)</div></div>
+    <div class="kpi" style="--accent:var(--manchester-vermelho)"><div class="kpi-val" id="kpiVerm" style="color:var(--manchester-vermelho)">—</div><div class="kpi-lbl">Emergência (vermelho)</div></div>
+    <div class="kpi" style="--accent:var(--manchester-laranja)"><div class="kpi-val" id="kpiLar" style="color:var(--manchester-laranja)">—</div><div class="kpi-lbl">Muito Urgente (laranja)</div></div>
+  </div>
+
+  <!-- Manchester distribution + By unit -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📊 Distribuição Manchester (7 dias)</span></div>
+      <div id="manchesterChart" style="padding:20px 24px"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏥 Por Tipo de Unidade (7 dias)</span></div>
+      <div id="porTipo" style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Unidade</th><th style="text-align:center">Atend.</th><th style="text-align:center">Óbitos</th><th style="text-align:center">T.Esp (min)</th></tr></thead>
+          <tbody id="tbodyTipos"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Histórico de boletins -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📅 Boletins Registrados</span>
+      <div class="filters">
+        <input type="date" id="filtroDataIni" class="filter-sel" style="padding:6px 10px" onchange="carregarBoletins()">
+        <input type="date" id="filtroDataFim" class="filter-sel" style="padding:6px 10px" onchange="carregarBoletins()">
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo Unidade</th>
+            <th style="text-align:center">Total</th>
+            <th style="text-align:center">🔴 Verm.</th>
+            <th style="text-align:center">🟠 Lar.</th>
+            <th style="text-align:center">🟡 Amar.</th>
+            <th style="text-align:center">🟢 Verde</th>
+            <th style="text-align:center">🔵 Azul</th>
+            <th style="text-align:center">Óbitos</th>
+            <th style="text-align:center">T.Esp.(min)</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyBoletins"><tr><td colspan="10" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Boletim Diário -->
+<div class="modal-bg" id="modalBoletim">
+  <div class="modal">
+    <h3>🚨 Registrar Boletim Diário</h3>
+    <p class="modal-sub">Lançamento da produção diária de urgência/emergência para o BPA e monitoramento gerencial.</p>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Unidade *</label>
+        <select id="bTipo">
+          <option value="upa_24h">UPA 24h</option>
+          <option value="samu">SAMU 192</option>
+          <option value="pronto_socorro">Pronto-Socorro</option>
+          <option value="cco">CCO — Central de Controle de Urgências</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Data *</label><input id="bData" type="date"></div>
+    </div>
+    <div class="form-group"><label>Total de Atendimentos</label><input id="bTotal" type="number" min="0" placeholder="0"></div>
+
+    <div class="manchester-section">
+      <div class="manchester-title">Classificação de Risco Manchester</div>
+      <div class="manchester-inputs">
+        <div class="mc-wrap mc-v"><label>🔴 Vermelho</label><input id="bVerm" type="number" min="0" value="0" class="form-group input"></div>
+        <div class="mc-wrap mc-l"><label>🟠 Laranja</label><input id="bLar" type="number" min="0" value="0"></div>
+        <div class="mc-wrap mc-a"><label>🟡 Amarelo</label><input id="bAmar" type="number" min="0" value="0"></div>
+        <div class="mc-wrap mc-g"><label>🟢 Verde</label><input id="bVerde" type="number" min="0" value="0"></div>
+        <div class="mc-wrap mc-b"><label>🔵 Azul</label><input id="bAzul" type="number" min="0" value="0"></div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+        Vermelho = Emergência · Laranja = Muito urgente · Amarelo = Urgente · Verde = Pouco urgente · Azul = Não urgente
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Óbitos</label><input id="bObitos" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Tempo Médio Espera (min)</label><input id="bTempo" type="number" min="0" placeholder="0"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalBoletim')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarBoletim()">💾 Registrar Boletim</button>
+    </div>
+    <div id="msgBoletim" class="msg"></div>
+  </div>
+</div>
+
+<script>
+const TIPO_LABELS = {upa_24h:'UPA 24h', samu:'SAMU 192', pronto_socorro:'Pronto-Socorro', cco:'CCO'};
+
+// ── Dashboard ─────────────────────────────────────────────────────────────
+async function carregarDashboard() {
+  try {
+    const r = await fetch('/api/governo/urgencia/dashboard/');
+    if (!r.ok) return;
+    const d = await r.json();
+    const sem = d.semana_atual || {};
+    document.getElementById('kpiTotal').textContent = sem.total_atendimentos ?? '—';
+    document.getElementById('kpiObitos').textContent = sem.obitos ?? '—';
+    document.getElementById('kpiTempo').textContent = sem.tempo_espera_medio_min != null ? Math.round(sem.tempo_espera_medio_min) : '—';
+    document.getElementById('kpiVerm').textContent = sem.vermelho ?? '—';
+    document.getElementById('kpiLar').textContent = sem.laranja ?? '—';
+
+    // Delta vs semana anterior
+    const ant = d.semana_anterior || {};
+    if (ant.total_atendimentos != null && sem.total_atendimentos != null) {
+      const delta = sem.total_atendimentos - ant.total_atendimentos;
+      const el = document.getElementById('kpiTotalDelta');
+      el.textContent = (delta >= 0 ? '▲ +' : '▼ ') + delta + ' vs. semana ant.';
+      el.style.color = delta > 0 ? 'var(--warn)' : 'var(--ok)';
+    }
+
+    // Manchester bar chart
+    const total = (sem.total_atendimentos || 1);
+    const bars = [
+      {label:'Vermelho', key:'vermelho', cls:'var(--manchester-vermelho)'},
+      {label:'Laranja',  key:'laranja',  cls:'var(--manchester-laranja)'},
+      {label:'Amarelo',  key:'amarelo',  cls:'var(--manchester-amarelo)'},
+      {label:'Verde',    key:'verde',    cls:'var(--manchester-verde)'},
+      {label:'Azul',     key:'azul',     cls:'var(--manchester-azul)'},
+    ];
+    document.getElementById('manchesterChart').innerHTML = bars.map(b => {
+      const v = sem[b.key] || 0;
+      const pct = Math.round(v / total * 100);
+      return `<div class="mbar-row">
+        <span class="mbar-label">${b.label}</span>
+        <div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${b.cls}"></div></div>
+        <span class="mbar-val">${v}</span>
+      </div>`;
+    }).join('');
+
+    // Por tipo
+    const tipos = d.por_tipo || {};
+    const tbody = document.getElementById('tbodyTipos');
+    const rows = Object.entries(tipos).map(([tipo, info]) => {
+      const t = info.total_atendimentos || 0;
+      if (!t) return '';
+      const obi = info.obitos || 0;
+      const tem = info.tempo_espera_medio_min != null ? Math.round(info.tempo_espera_medio_min) : '—';
+      return `<tr>
+        <td><strong>${esc(info.label||tipo)}</strong></td>
+        <td style="text-align:center">${t}</td>
+        <td style="text-align:center">${obi > 0 ? `<span class="badge badge-danger">${obi}</span>` : '0'}</td>
+        <td style="text-align:center">${tem}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="4" class="empty">Sem dados esta semana.</td></tr>';
+    tbody.innerHTML = rows;
+  } catch(e) {}
+}
+
+// ── Boletins histórico ────────────────────────────────────────────────────
+async function carregarBoletins() {
+  const tb = document.getElementById('tbodyBoletins');
+  tb.innerHTML = '<tr><td colspan="10" class="empty">Carregando…</td></tr>';
+  let url = '/api/governo/urgencia/';
+  const tipo = document.getElementById('filtroTipo').value;
+  const di = document.getElementById('filtroDataIni').value;
+  const df = document.getElementById('filtroDataFim').value;
+  const params = [];
+  if (tipo) params.push('tipo_unidade='+tipo);
+  if (di) params.push('data_inicio='+di);
+  if (df) params.push('data_fim='+df);
+  if (params.length) url += '?' + params.join('&');
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!d.atendimentos || !d.atendimentos.length) { tb.innerHTML = '<tr><td colspan="10" class="empty">Nenhum boletim no período.</td></tr>'; return; }
+    // Sort descending by date
+    d.atendimentos.sort((a,b) => b.data_atendimento.localeCompare(a.data_atendimento));
+    tb.innerHTML = d.atendimentos.map(a => `
+      <tr>
+        <td>${a.data_atendimento}</td>
+        <td>${esc(a.tipo_unidade_label||a.tipo_unidade)}</td>
+        <td style="text-align:center"><strong>${a.total_atendimentos||0}</strong></td>
+        <td style="text-align:center">${a.vermelho ? `<span class="m-chip m-vermelho">${a.vermelho}</span>` : '—'}</td>
+        <td style="text-align:center">${a.laranja ? `<span class="m-chip m-laranja">${a.laranja}</span>` : '—'}</td>
+        <td style="text-align:center">${a.amarelo||'—'}</td>
+        <td style="text-align:center">${a.verde||'—'}</td>
+        <td style="text-align:center">${a.azul||'—'}</td>
+        <td style="text-align:center">${a.obitos > 0 ? `<span class="badge badge-danger">${a.obitos}</span>` : '0'}</td>
+        <td style="text-align:center">${a.tempo_espera_medio_min != null ? Math.round(a.tempo_espera_medio_min) : '—'}</td>
+      </tr>`).join('');
+  } catch(e) { tb.innerHTML = '<tr><td colspan="10" class="empty">Erro ao carregar.</td></tr>'; }
+}
+
+// ── Modal Boletim ─────────────────────────────────────────────────────────
+function abrirModalBoletim() {
+  document.getElementById('bData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('bTotal').value = '';
+  ['bVerm','bLar','bAmar','bVerde','bAzul','bObitos'].forEach(id => document.getElementById(id).value = '0');
+  document.getElementById('bTempo').value = '';
+  abrirModal('modalBoletim');
+}
+
+async function salvarBoletim() {
+  const verm  = parseInt(document.getElementById('bVerm').value)||0;
+  const lar   = parseInt(document.getElementById('bLar').value)||0;
+  const amar  = parseInt(document.getElementById('bAmar').value)||0;
+  const verde = parseInt(document.getElementById('bVerde').value)||0;
+  const azul  = parseInt(document.getElementById('bAzul').value)||0;
+  const somaManchster = verm + lar + amar + verde + azul;
+  const totalInput = parseInt(document.getElementById('bTotal').value)||0;
+  const total = totalInput || somaManchster;
+
+  const body = {
+    tipo_unidade:            document.getElementById('bTipo').value,
+    data_atendimento:        document.getElementById('bData').value,
+    total_atendimentos:      total,
+    vermelho:   verm,
+    laranja:    lar,
+    amarelo:    amar,
+    verde:      verde,
+    azul:       azul,
+    obitos:     parseInt(document.getElementById('bObitos').value)||0,
+    tempo_espera_medio_min: parseFloat(document.getElementById('bTempo').value)||0,
+  };
+  if (!body.data_atendimento) { showMsg('msgBoletim','Data é obrigatória.','err'); return; }
+  if (!body.tipo_unidade) { showMsg('msgBoletim','Tipo de unidade é obrigatório.','err'); return; }
+
+  const r = await fetch('/api/governo/urgencia/', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)});
+  const d = await r.json();
+  if (r.ok) {
+    showMsg('msgBoletim','Boletim registrado com sucesso!','ok');
+    setTimeout(() => fecharModal('modalBoletim'), 900);
+    carregarDashboard();
+    carregarBoletins();
+  } else {
+    showMsg('msgBoletim', d.erro||'Erro ao registrar.','err');
+  }
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────
+function csrf() { return document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''; }
+function esc(s) { const d=document.createElement('span'); d.textContent=s||''; return d.innerHTML; }
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function showMsg(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'msg ' + type;
+  setTimeout(() => { el.className = 'msg'; }, 4000);
+}
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// ── Filtro período padrão: últimos 30 dias ────────────────────────────────
+function initFiltros() {
+  const hoje = new Date();
+  const ini = new Date(hoje); ini.setDate(ini.getDate() - 29);
+  document.getElementById('filtroDataIni').value = ini.toISOString().slice(0,10);
+  document.getElementById('filtroDataFim').value = hoje.toISOString().slice(0,10);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+initFiltros();
+carregarDashboard();
+carregarBoletins();
+</script>
+</body>
+</html>
