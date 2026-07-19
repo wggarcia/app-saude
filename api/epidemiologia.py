@@ -140,7 +140,7 @@ _PANORAMA_CACHE_PAYLOAD_KEY = "epidemiologia:panorama:payload"
 # invalidado imediatamente por clear_panorama_cache() quando chega um novo
 # registro, então dados nunca ficam velhos além do necessário.
 _CACHE_TTL_SECONDS = 300
-_PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False, "next_retry": 0.0}
+_PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False, "next_retry": 0.0, "use_owner": True}
 _EMPRESA_MISS_RETRY_S = 30  # retry interval when empresa not found (cold-start guard)
 _PANORAMA_CACHE_VERSION_KEY = "epidemiologia:panorama:version"
 PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
@@ -175,31 +175,29 @@ def _public_population_empresa():
     if now < _PUBLIC_EMPRESA_CACHE["next_retry"]:
         return None
     obj = None
+    owner_ok = False
     try:
-        # Must use "owner" (superuser) — default connection has RLS active.
-        # When called during a gestão request, RLS is set to the gestor's empresa_id,
-        # so the populacao empresa (different id) would be invisible on the default conn.
+        # Prefer "owner" (superuser) — bypasses RLS so the populacao empresa is
+        # visible even when the request has a different tenant's app.empresa_id set.
         obj = Empresa.objects.using("owner").filter(email=PUBLIC_APP_EMAIL).first()
+        owner_ok = True
     except Exception:
-        _PUBLIC_EMPRESA_CACHE["next_retry"] = now + 10
-        return None
+        # "owner" connection lacks privileges on this server — fall through to
+        # the "default" connection fallback below.
+        pass
     if obj is None:
-        # "owner" query returned nothing (RLS or cold-start).
-        # Call _empresa_app_publico() (which uses get_or_create) to ensure the empresa
-        # exists, then retry via owner by primary key.
+        # "owner" returned nothing or raised a permission error.
+        # Fallback: query via the "default" connection (works when DATABASE_URL is
+        # a superuser or when the empresa table has no RLS policy on the server).
         try:
-            from .views import _empresa_app_publico as _ensure
-            fallback = _ensure()
-            if fallback is not None:
-                obj = Empresa.objects.using("owner").filter(pk=fallback.pk).first()
-                if obj is None:
-                    # "owner" still can't see it — use the fallback object directly
-                    obj = fallback
+            obj = Empresa.objects.filter(email=PUBLIC_APP_EMAIL).first()
+            owner_ok = False  # must also use "default" for RegistroSintoma queries
         except Exception:
             pass
-    _PUBLIC_EMPRESA_CACHE["obj"] = obj
     if obj is not None:
+        _PUBLIC_EMPRESA_CACHE["obj"] = obj
         _PUBLIC_EMPRESA_CACHE["loaded"] = True
+        _PUBLIC_EMPRESA_CACHE["use_owner"] = owner_ok
     else:
         _PUBLIC_EMPRESA_CACHE["next_retry"] = now + _EMPRESA_MISS_RETRY_S
     return obj
@@ -208,10 +206,13 @@ def _public_population_empresa():
 def _scope_public_population_queryset(queryset):
     empresa = _public_population_empresa()
     if not empresa:
-        # Fail safe: return empty queryset rather than leaking data via the
-        # default (RLS-restricted) connection.
         return queryset.none()
-    return queryset.using("owner").filter(empresa=empresa)
+    if _PUBLIC_EMPRESA_CACHE.get("use_owner", True):
+        # "owner" connection works — use it to bypass RLS for cross-tenant reads.
+        return queryset.using("owner").filter(empresa=empresa)
+    # "owner" lacks table privileges on this server — use "default" instead.
+    # This works when DATABASE_URL uses a superuser (no RLS enforcement).
+    return queryset.filter(empresa=empresa)
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
 FOCUS_DECAY_WINDOW_DAYS = 30
