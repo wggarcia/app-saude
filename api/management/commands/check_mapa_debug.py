@@ -48,46 +48,48 @@ class Command(BaseCommand):
 
         empresa = e_owner or e_default
 
-        # 3. Conta registros
+        # 3. Conta registros (tenta owner, cai para default se sem permissão)
         self.stdout.write("\n[3] Contagem de RegistroSintoma:")
-        try:
-            total = RegistroSintoma.objects.using("owner").count()
-            self.stdout.write(f"  Total no banco (owner): {total}")
-        except Exception as ex:
-            self.stdout.write(self.style.ERROR(f"  ERRO ao contar (owner): {ex}"))
-            total = 0
-
-        if empresa:
-            try:
-                count_empresa = RegistroSintoma.objects.using("owner").filter(empresa=empresa).count()
-                self.stdout.write(f"  Para empresa pública: {count_empresa}")
-            except Exception as ex:
-                self.stdout.write(self.style.ERROR(f"  ERRO ao filtrar empresa: {ex}"))
-
-        # 4. Registros nas últimas 24h/7d/30d
-        self.stdout.write("\n[4] Registros por janela de tempo (owner):")
         agora = timezone.now()
-        for label, delta in [("24h", timedelta(hours=24)), ("7d", timedelta(days=7)), ("30d", timedelta(days=30))]:
+        for db_alias in ("owner", "default"):
             try:
-                n = RegistroSintoma.objects.using("owner").filter(
-                    data_registro__gte=agora - delta
-                ).count()
-                self.stdout.write(f"  últimas {label}: {n}")
+                total = RegistroSintoma.objects.using(db_alias).count()
+                self.stdout.write(f"  Total ({db_alias}): {total}")
+                if empresa:
+                    count_empresa = RegistroSintoma.objects.using(db_alias).filter(empresa=empresa).count()
+                    self.stdout.write(f"  Para empresa pública ({db_alias}): {count_empresa}")
+                break
             except Exception as ex:
-                self.stdout.write(self.style.ERROR(f"  ERRO ({label}): {ex}"))
+                self.stdout.write(self.style.WARNING(f"  sem permissão via '{db_alias}': {ex}"))
+
+        # 4. Registros por janela de tempo
+        self.stdout.write("\n[4] Registros por janela de tempo:")
+        for db_alias in ("owner", "default"):
+            try:
+                for label, delta in [("24h", timedelta(hours=24)), ("7d", timedelta(days=7)), ("30d", timedelta(days=30))]:
+                    n = RegistroSintoma.objects.using(db_alias).filter(
+                        data_registro__gte=agora - delta
+                    ).count()
+                    self.stdout.write(f"  últimas {label} ({db_alias}): {n}")
+                break
+            except Exception:
+                pass
 
         # 5. Últimos 3 registros
         self.stdout.write("\n[5] Últimos 3 registros:")
-        try:
-            ultimos = RegistroSintoma.objects.using("owner").order_by("-data_registro")[:3]
-            for r in ultimos:
-                self.stdout.write(
-                    f"  id={r.id_anonimo} | {r.data_registro:%d/%m %H:%M} | "
-                    f"bairro='{r.bairro}' cidade='{r.cidade}' estado='{r.estado}' | "
-                    f"lat={r.latitude} lon={r.longitude} | device='{r.device_id[:12] if r.device_id else 'N/A'}...'"
-                )
-        except Exception as ex:
-            self.stdout.write(self.style.ERROR(f"  ERRO: {ex}"))
+        for db_alias in ("owner", "default"):
+            try:
+                ultimos = RegistroSintoma.objects.using(db_alias).order_by("-data_registro")[:3]
+                for r in ultimos:
+                    self.stdout.write(
+                        f"  id={r.id_anonimo} | {r.data_registro:%d/%m %H:%M} | "
+                        f"bairro='{r.bairro}' cidade='{r.cidade}' estado='{r.estado}' | "
+                        f"lat={r.latitude} lon={r.longitude} | "
+                        f"device='{(r.device_id or 'N/A')[:16]}...'"
+                    )
+                break
+            except Exception as ex:
+                self.stdout.write(self.style.WARNING(f"  sem permissão via '{db_alias}': {ex}"))
 
         # 6. Verifica função de cache
         self.stdout.write("\n[6] _public_population_empresa() (cache em memória):")
