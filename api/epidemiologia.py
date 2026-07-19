@@ -173,8 +173,8 @@ def _public_population_empresa():
         return _PUBLIC_EMPRESA_CACHE["obj"]
     now = _time()
     if now < _PUBLIC_EMPRESA_CACHE["next_retry"]:
-        # Still in retry cooldown — don't hammer DB on every request
         return None
+    obj = None
     try:
         # Must use "owner" (superuser) — default connection has RLS active.
         # When called during a gestão request, RLS is set to the gestor's empresa_id,
@@ -183,12 +183,24 @@ def _public_population_empresa():
     except Exception:
         _PUBLIC_EMPRESA_CACHE["next_retry"] = now + 10
         return None
+    if obj is None:
+        # "owner" query returned nothing (RLS or cold-start).
+        # Call _empresa_app_publico() (which uses get_or_create) to ensure the empresa
+        # exists, then retry via owner by primary key.
+        try:
+            from .views import _empresa_app_publico as _ensure
+            fallback = _ensure()
+            if fallback is not None:
+                obj = Empresa.objects.using("owner").filter(pk=fallback.pk).first()
+                if obj is None:
+                    # "owner" still can't see it — use the fallback object directly
+                    obj = fallback
+        except Exception:
+            pass
     _PUBLIC_EMPRESA_CACHE["obj"] = obj
     if obj is not None:
-        _PUBLIC_EMPRESA_CACHE["loaded"] = True  # permanent cache — empresa found
+        _PUBLIC_EMPRESA_CACHE["loaded"] = True
     else:
-        # Empresa not found yet (cold-start DB hiccup) — retry in 30s instead of
-        # caching None forever, which would poison all panorama queries.
         _PUBLIC_EMPRESA_CACHE["next_retry"] = now + _EMPRESA_MISS_RETRY_S
     return obj
 

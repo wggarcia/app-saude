@@ -79,6 +79,7 @@ class TelaResultado extends StatelessWidget {
     final alerta   = cidadao['alerta_urgente'] as Map<String, dynamic>?;
     final safeguard = cidadao['safeguard']     as String?;
 
+    final jaMonitorado      = cidadao['ja_monitorado']      == true;
     final hipotese          = cidadao['hipotese']           as Map<String, dynamic>?;
     final sintomasPositivos = (cidadao['sintomas_positivos'] as List<dynamic>?)
         ?.map((e) => e.toString()).toList() ?? const <String>[];
@@ -120,7 +121,7 @@ class TelaResultado extends StatelessWidget {
                       _MencionarAoMedicoCard(itens: mencionarAoMedico),
                     ],
                     const SizedBox(height: 14),
-                    _MapaCard(localStr: localStr),
+                    _MapaCard(localStr: localStr, jaMonitorado: jaMonitorado),
                     const SizedBox(height: 14),
                     _AvisoLegal(
                       texto: safeguard ??
@@ -522,8 +523,9 @@ class _MencionarAoMedicoCard extends StatelessWidget {
 
 // ── Registro no mapa ─────────────────────────────────────────────────────
 class _MapaCard extends StatelessWidget {
-  const _MapaCard({required this.localStr});
+  const _MapaCard({required this.localStr, this.jaMonitorado = false});
   final String localStr;
+  final bool jaMonitorado;
 
   @override
   Widget build(BuildContext context) {
@@ -538,16 +540,21 @@ class _MapaCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.location_on_outlined,
-              color: TelaResultado._accent, size: 20),
+          Icon(
+            jaMonitorado ? Icons.check_circle_outline : Icons.location_on_outlined,
+            color: TelaResultado._accent,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Seu relato foi registrado no mapa',
-                  style: TextStyle(
+                Text(
+                  jaMonitorado
+                      ? 'Seus sintomas já estão no radar'
+                      : 'Seu relato foi registrado no mapa',
+                  style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                       color: Colors.white),
@@ -560,7 +567,9 @@ class _MapaCard extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.5)),
                   ),
                 Text(
-                  'Ao fechar você verá sua contribuição no mapa da sua região.',
+                  jaMonitorado
+                      ? 'Relato desta semana já considerado no monitoramento regional.'
+                      : 'Ao fechar você verá sua contribuição no mapa da sua região.',
                   style: TextStyle(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.5)),

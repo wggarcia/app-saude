@@ -602,21 +602,21 @@ class _TelaSintomasState extends State<TelaSintomas> {
       setState(() => _lastResult = result);
 
       final cidadao = result['cidadao'] as Map<String, dynamic>?;
+      final jaConsiderado = result['status'] == 'ja_considerado';
 
-      if (cidadao != null) {
+      if (cidadao != null && !jaConsiderado) {
         await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => TelaResultado(cidadao: cidadao, local: local),
           ),
         );
       } else {
-        final jaConsiderado = result['status'] == 'ja_considerado';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(jaConsiderado
-                ? 'Envio recebido. Para proteger o mapa, repetições recentes entram como revisão.'
+                ? 'Seus sintomas desta semana já estão no radar epidemiológico. Você pode enviar novamente em 7 dias.'
                 : 'Sintomas enviados com segurança. Obrigado por contribuir.'),
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 6),
           ),
         );
       }
