@@ -1120,28 +1120,18 @@ from api.views_assinatura_sst import (
 )
 
 
-try:
-    from api.views_hospital_custos import (hospital_custos_page, api_custos_centros, api_custos_lancamentos, api_custos_apuracao, api_custos_drg, api_custos_drg_enviar, api_custos_kpis)
-    from api.views_hospital_drg import (hospital_drg_page, api_drg_status, api_drg_enviar_internacao, api_drg_historico, api_drg_reenviar, api_drg_kpis)
-    from api.views_hospital_epimed import (hospital_epimed_page, api_epimed_status, api_epimed_gerar, api_epimed_transmitir, api_epimed_historico, api_epimed_kpis)
-    from api.views_hospital_betha import (hospital_betha_page, api_betha_status, api_betha_sincronizar_almoxarifado, api_betha_sincronizar_compras, api_betha_webhook, api_betha_fila, api_betha_kpis)
-    from api.views_hospital_telemedicina import (hospital_telemedicina_page, api_hosp_telemedicina_consultas, api_hosp_telemedicina_consulta_detalhe, api_hosp_telemedicina_iniciar, api_hosp_telemedicina_encerrar, api_hosp_telemedicina_kpis)
-except ImportError:
-    pass
+from api.views_hospital_custos import (hospital_custos_page, api_custos_centros, api_custos_lancamentos, api_custos_apuracao, api_custos_drg, api_custos_drg_enviar, api_custos_kpis)
+from api.views_hospital_drg import (hospital_drg_page, api_drg_status, api_drg_enviar_internacao, api_drg_historico, api_drg_reenviar, api_drg_kpis)
+from api.views_hospital_epimed import (hospital_epimed_page, api_epimed_status, api_epimed_gerar, api_epimed_transmitir, api_epimed_historico, api_epimed_kpis)
+from api.views_hospital_betha import (hospital_betha_page, api_betha_status, api_betha_sincronizar_almoxarifado, api_betha_sincronizar_compras, api_betha_webhook, api_betha_fila, api_betha_kpis)
+from api.views_hospital_telemedicina import (hospital_telemedicina_page, api_hosp_telemedicina_consultas, api_hosp_telemedicina_consulta_detalhe, api_hosp_telemedicina_iniciar, api_hosp_telemedicina_encerrar, api_hosp_telemedicina_kpis)
 
-try:
-    from api.views_governo_bi import (governo_bi_page, api_bi_kpis, api_bi_producao_mensal, api_bi_cobertura_vacinal, api_bi_cronicas, api_bi_produtividade, api_bi_fila_espera)
-    from api.views_governo_ppi import (governo_ppi_page, api_ppi_programacoes, api_ppi_programacao_detalhe, api_ppi_programacao_itens, api_ppi_aprovar, api_ppi_exportar, api_ppi_kpis)
-    from api.views_governo_agendamento import (governo_agendamento_page, api_agendamento_agenda, api_agendamento_agendar, api_agendamento_detalhe, api_agendamento_confirmar, api_agendamento_cancelar, api_agendamento_realizar, api_agendamento_enviar_lembretes, api_agendamento_kpis, api_agendamento_disponibilidade)
-    from api.views_governo_sia_sus import (api_sia_sus_status, api_sia_sus_competencia, api_sia_sus_validar, api_sia_sus_transmitir, api_sia_sus_historico, api_sia_sus_reprocessar)
-except ImportError:
-    pass
-
-try:
-    from api.views_governo_icp_brasil import (api_gov_icp_assinar_prescricao, api_gov_icp_assinar_atestado, api_gov_icp_certificados, api_gov_icp_validar, api_gov_icp_status)
-    from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis)
-except ImportError:
-    pass
+from api.views_governo_bi import (governo_bi_page, api_bi_kpis, api_bi_producao_mensal, api_bi_cobertura_vacinal, api_bi_cronicas, api_bi_produtividade, api_bi_fila_espera)
+from api.views_governo_ppi import (governo_ppi_page, api_ppi_programacoes, api_ppi_programacao_detalhe, api_ppi_programacao_itens, api_ppi_aprovar, api_ppi_exportar, api_ppi_kpis)
+from api.views_governo_agendamento import (governo_agendamento_page, api_agendamento_agenda, api_agendamento_agendar, api_agendamento_detalhe, api_agendamento_confirmar, api_agendamento_cancelar, api_agendamento_realizar, api_agendamento_enviar_lembretes, api_agendamento_kpis, api_agendamento_disponibilidade)
+from api.views_governo_sia_sus import (api_sia_sus_status, api_sia_sus_competencia, api_sia_sus_validar, api_sia_sus_transmitir, api_sia_sus_historico, api_sia_sus_reprocessar)
+from api.views_governo_icp_brasil import (api_gov_icp_assinar_prescricao, api_gov_icp_assinar_atestado, api_gov_icp_certificados, api_gov_icp_validar, api_gov_icp_status)
+from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis)
 
 
 def service_worker(request):
