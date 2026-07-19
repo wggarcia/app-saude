@@ -1126,9 +1126,9 @@ from api.views_hospital_epimed import (hospital_epimed_page, api_epimed_status, 
 from api.views_hospital_betha import (hospital_betha_page, api_betha_status, api_betha_sincronizar_almoxarifado, api_betha_sincronizar_compras, api_betha_webhook, api_betha_fila, api_betha_kpis)
 from api.views_hospital_telemedicina import (hospital_telemedicina_page, api_hosp_telemedicina_consultas, api_hosp_telemedicina_consulta_detalhe, api_hosp_telemedicina_iniciar, api_hosp_telemedicina_encerrar, api_hosp_telemedicina_kpis)
 
-from api.views_governo_bi import (governo_bi_page, api_bi_kpis, api_bi_producao_mensal, api_bi_cobertura_vacinal, api_bi_cronicas, api_bi_produtividade, api_bi_fila_espera)
-from api.views_governo_ppi import (governo_ppi_page, api_ppi_programacoes, api_ppi_programacao_detalhe, api_ppi_programacao_itens, api_ppi_aprovar, api_ppi_exportar, api_ppi_kpis)
-from api.views_governo_agendamento import (governo_agendamento_page, api_agendamento_agenda, api_agendamento_agendar, api_agendamento_detalhe, api_agendamento_confirmar, api_agendamento_cancelar, api_agendamento_realizar, api_agendamento_enviar_lembretes, api_agendamento_kpis, api_agendamento_disponibilidade)
+from api.views_governo_bi import (governo_bi_page, bi_kpis, bi_producao_mensal, bi_cobertura_vacinal, bi_cronicas, bi_produtividade, bi_fila_espera)
+from api.views_governo_ppi import (governo_ppi_page, api_ppi_programacoes, api_ppi_programacao_detalhe, api_ppi_programacao_itens, api_ppi_programacao_aprovar, api_ppi_programacao_exportar, api_ppi_kpis)
+from api.views_governo_agendamento import (governo_agendamento_page, api_governo_agenda, api_governo_agendar, api_governo_agendamento_detalhe, api_governo_agendamento_confirmar, api_governo_agendamento_cancelar, api_governo_agendamento_realizar, api_governo_enviar_lembretes, api_governo_agendamento_kpis, api_governo_agendamento_disponibilidade)
 from api.views_governo_sia_sus import (api_sia_sus_status, api_sia_sus_competencia, api_sia_sus_validar, api_sia_sus_transmitir, api_sia_sus_historico, api_sia_sus_reprocessar)
 from api.views_governo_icp_brasil import (api_gov_icp_assinar_prescricao, api_gov_icp_assinar_atestado, api_gov_icp_certificados, api_gov_icp_validar, api_gov_icp_status)
 from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis)
@@ -2821,18 +2821,18 @@ urlpatterns = [
 
     # ── Governo BI ────────────────────────────────────────────────────────────
     path('governo/bi/',                                         governo_bi_page),
-    path('api/governo/bi/kpis',                                 api_bi_kpis),
-    path('api/governo/bi/kpis/',                                api_bi_kpis),
-    path('api/governo/bi/producao-mensal',                      api_bi_producao_mensal),
-    path('api/governo/bi/producao-mensal/',                     api_bi_producao_mensal),
-    path('api/governo/bi/cobertura-vacinal',                    api_bi_cobertura_vacinal),
-    path('api/governo/bi/cobertura-vacinal/',                   api_bi_cobertura_vacinal),
-    path('api/governo/bi/cronicas',                             api_bi_cronicas),
-    path('api/governo/bi/cronicas/',                            api_bi_cronicas),
-    path('api/governo/bi/produtividade',                        api_bi_produtividade),
-    path('api/governo/bi/produtividade/',                       api_bi_produtividade),
-    path('api/governo/bi/fila-espera',                          api_bi_fila_espera),
-    path('api/governo/bi/fila-espera/',                         api_bi_fila_espera),
+    path('api/governo/bi/kpis',                                 bi_kpis),
+    path('api/governo/bi/kpis/',                                bi_kpis),
+    path('api/governo/bi/producao-mensal',                      bi_producao_mensal),
+    path('api/governo/bi/producao-mensal/',                     bi_producao_mensal),
+    path('api/governo/bi/cobertura-vacinal',                    bi_cobertura_vacinal),
+    path('api/governo/bi/cobertura-vacinal/',                   bi_cobertura_vacinal),
+    path('api/governo/bi/cronicas',                             bi_cronicas),
+    path('api/governo/bi/cronicas/',                            bi_cronicas),
+    path('api/governo/bi/produtividade',                        bi_produtividade),
+    path('api/governo/bi/produtividade/',                       bi_produtividade),
+    path('api/governo/bi/fila-espera',                          bi_fila_espera),
+    path('api/governo/bi/fila-espera/',                         bi_fila_espera),
 
     # ── Governo PPI ───────────────────────────────────────────────────────────
     path('governo/ppi/',                                        governo_ppi_page),
@@ -2842,33 +2842,33 @@ urlpatterns = [
     path('api/governo/ppi/programacoes/<int:pk>/',              api_ppi_programacao_detalhe),
     path('api/governo/ppi/programacoes/<int:pk>/itens',         api_ppi_programacao_itens),
     path('api/governo/ppi/programacoes/<int:pk>/itens/',        api_ppi_programacao_itens),
-    path('api/governo/ppi/programacoes/<int:pk>/aprovar',       api_ppi_aprovar),
-    path('api/governo/ppi/programacoes/<int:pk>/aprovar/',      api_ppi_aprovar),
-    path('api/governo/ppi/programacoes/<int:pk>/exportar',      api_ppi_exportar),
-    path('api/governo/ppi/programacoes/<int:pk>/exportar/',     api_ppi_exportar),
+    path('api/governo/ppi/programacoes/<int:pk>/aprovar',       api_ppi_programacao_aprovar),
+    path('api/governo/ppi/programacoes/<int:pk>/aprovar/',      api_ppi_programacao_aprovar),
+    path('api/governo/ppi/programacoes/<int:pk>/exportar',      api_ppi_programacao_exportar),
+    path('api/governo/ppi/programacoes/<int:pk>/exportar/',     api_ppi_programacao_exportar),
     path('api/governo/ppi/kpis',                                api_ppi_kpis),
     path('api/governo/ppi/kpis/',                               api_ppi_kpis),
 
     # ── Governo Agendamento ───────────────────────────────────────────────────
     path('governo/agendamento/',                                governo_agendamento_page),
-    path('api/governo/agendamento/agenda',                      api_agendamento_agenda),
-    path('api/governo/agendamento/agenda/',                     api_agendamento_agenda),
-    path('api/governo/agendamento/agendar',                     api_agendamento_agendar),
-    path('api/governo/agendamento/agendar/',                    api_agendamento_agendar),
-    path('api/governo/agendamento/<int:ag_id>',                 api_agendamento_detalhe),
-    path('api/governo/agendamento/<int:ag_id>/',                api_agendamento_detalhe),
-    path('api/governo/agendamento/<int:ag_id>/confirmar',       api_agendamento_confirmar),
-    path('api/governo/agendamento/<int:ag_id>/confirmar/',      api_agendamento_confirmar),
-    path('api/governo/agendamento/<int:ag_id>/cancelar',        api_agendamento_cancelar),
-    path('api/governo/agendamento/<int:ag_id>/cancelar/',       api_agendamento_cancelar),
-    path('api/governo/agendamento/<int:ag_id>/realizar',        api_agendamento_realizar),
-    path('api/governo/agendamento/<int:ag_id>/realizar/',       api_agendamento_realizar),
-    path('api/governo/agendamento/enviar-lembretes',            api_agendamento_enviar_lembretes),
-    path('api/governo/agendamento/enviar-lembretes/',           api_agendamento_enviar_lembretes),
-    path('api/governo/agendamento/kpis',                        api_agendamento_kpis),
-    path('api/governo/agendamento/kpis/',                       api_agendamento_kpis),
-    path('api/governo/agendamento/disponibilidade',             api_agendamento_disponibilidade),
-    path('api/governo/agendamento/disponibilidade/',            api_agendamento_disponibilidade),
+    path('api/governo/agendamento/agenda',                      api_governo_agenda),
+    path('api/governo/agendamento/agenda/',                     api_governo_agenda),
+    path('api/governo/agendamento/agendar',                     api_governo_agendar),
+    path('api/governo/agendamento/agendar/',                    api_governo_agendar),
+    path('api/governo/agendamento/<int:ag_id>',                 api_governo_agendamento_detalhe),
+    path('api/governo/agendamento/<int:ag_id>/',                api_governo_agendamento_detalhe),
+    path('api/governo/agendamento/<int:ag_id>/confirmar',       api_governo_agendamento_confirmar),
+    path('api/governo/agendamento/<int:ag_id>/confirmar/',      api_governo_agendamento_confirmar),
+    path('api/governo/agendamento/<int:ag_id>/cancelar',        api_governo_agendamento_cancelar),
+    path('api/governo/agendamento/<int:ag_id>/cancelar/',       api_governo_agendamento_cancelar),
+    path('api/governo/agendamento/<int:ag_id>/realizar',        api_governo_agendamento_realizar),
+    path('api/governo/agendamento/<int:ag_id>/realizar/',       api_governo_agendamento_realizar),
+    path('api/governo/agendamento/enviar-lembretes',            api_governo_enviar_lembretes),
+    path('api/governo/agendamento/enviar-lembretes/',           api_governo_enviar_lembretes),
+    path('api/governo/agendamento/kpis',                        api_governo_agendamento_kpis),
+    path('api/governo/agendamento/kpis/',                       api_governo_agendamento_kpis),
+    path('api/governo/agendamento/disponibilidade',             api_governo_agendamento_disponibilidade),
+    path('api/governo/agendamento/disponibilidade/',            api_governo_agendamento_disponibilidade),
 
     # ── SIA/SUS ───────────────────────────────────────────────────────────────
     path('api/governo/sia-sus/status',                          api_sia_sus_status),
