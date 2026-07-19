@@ -10682,3 +10682,725 @@ class NoticiaEpidemiologica(models.Model):
 
     def __str__(self):
         return f"[{self.nivel_alerta.upper()}] {self.titulo[:80]}"
+
+
+# ── SAME — Serviço de Arquivo Médico ─────────────────────────────────────────
+
+class CodigoSAME(models.Model):
+    SEXO_CHOICES = [
+        ("M", "Masculino"),
+        ("F", "Feminino"),
+        ("I", "Ignorado"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="codigos_same")
+    prontuario       = models.CharField(max_length=20)
+    paciente         = models.CharField(max_length=200)
+    data_nascimento  = models.DateField(null=True, blank=True)
+    sexo             = models.CharField(max_length=1, choices=SEXO_CHOICES, default="I")
+    data_abertura    = models.DateField(auto_now_add=True)
+    ativo            = models.BooleanField(default=True)
+    observacoes      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Código SAME"
+        verbose_name_plural = "Códigos SAME"
+        unique_together     = [("empresa", "prontuario")]
+        ordering            = ["prontuario"]
+
+    def __str__(self):
+        return f"{self.prontuario} — {self.paciente}"
+
+
+class EmprestimoSAME(models.Model):
+    STATUS_CHOICES = [
+        ("emprestado", "Emprestado"),
+        ("devolvido",  "Devolvido"),
+        ("extraviado", "Extraviado"),
+    ]
+
+    empresa                   = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="emprestimos_same")
+    codigo_same               = models.ForeignKey(CodigoSAME, on_delete=models.CASCADE, related_name="emprestimos")
+    solicitante               = models.CharField(max_length=200)
+    setor                     = models.CharField(max_length=100)
+    data_saida                = models.DateTimeField(auto_now_add=True)
+    data_prevista_devolucao   = models.DateField()
+    data_devolucao            = models.DateTimeField(null=True, blank=True)
+    status                    = models.CharField(max_length=20, choices=STATUS_CHOICES, default="emprestado")
+    observacoes               = models.TextField(blank=True, default="")
+    criado_em                 = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Empréstimo SAME"
+        verbose_name_plural = "Empréstimos SAME"
+        ordering            = ["-data_saida"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Empréstimo {self.codigo_same.prontuario} — {self.solicitante} [{self.status}]"
+
+
+# ── CME — Central de Materiais e Esterilização ───────────────────────────────
+
+class InstrumentalCirurgico(models.Model):
+    TIPO_CHOICES = [
+        ("caixa",   "Caixa Cirúrgica"),
+        ("avulso",  "Item Avulso"),
+        ("textil",  "Têxtil / Roupa Cirúrgica"),
+    ]
+
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="instrumentais_cirurgicos")
+    nome          = models.CharField(max_length=200)
+    codigo        = models.CharField(max_length=50, blank=True, default="")
+    tipo          = models.CharField(max_length=20, choices=TIPO_CHOICES, default="avulso")
+    setor_origem  = models.CharField(max_length=100, blank=True, default="")
+    ativo         = models.BooleanField(default=True)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Instrumental Cirúrgico"
+        verbose_name_plural = "Instrumentais Cirúrgicos"
+        ordering            = ["nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_tipo_display()})"
+
+
+class CicloCME(models.Model):
+    METODO_CHOICES = [
+        ("autoclave_134", "Autoclave 134°C"),
+        ("autoclave_121", "Autoclave 121°C"),
+        ("quimico",       "Esterilização Química"),
+        ("plasma",        "Plasma de H₂O₂"),
+    ]
+    RESULTADO_CHOICES = [
+        ("aprovado",    "Aprovado"),
+        ("reprovado",   "Reprovado"),
+        ("quarentena",  "Quarentena"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="ciclos_cme")
+    instrumental        = models.ForeignKey(InstrumentalCirurgico, on_delete=models.CASCADE, related_name="ciclos_cme")
+    metodo              = models.CharField(max_length=20, choices=METODO_CHOICES, default="autoclave_134")
+    numero_ciclo        = models.CharField(max_length=30)
+    data_esterilizacao  = models.DateTimeField()
+    validade_ate        = models.DateField()
+    responsavel         = models.CharField(max_length=120, blank=True, default="")
+    lote_produto        = models.CharField(max_length=50, blank=True, default="")
+    resultado           = models.CharField(max_length=20, choices=RESULTADO_CHOICES, default="aprovado")
+    paciente_uso        = models.CharField(max_length=200, blank=True, default="",
+                                           help_text="Paciente em que foi utilizado, se aplicável")
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Ciclo CME"
+        verbose_name_plural = "Ciclos CME"
+        ordering            = ["-data_esterilizacao"]
+        indexes             = [
+            models.Index(fields=["empresa", "resultado"]),
+        ]
+
+    def __str__(self):
+        return f"Ciclo {self.numero_ciclo} — {self.instrumental.nome} [{self.resultado}]"
+
+
+# ── Nutrição e Dietética Hospitalar ──────────────────────────────────────────
+
+class DietaHospitalar(models.Model):
+    TIPO_DIETA_CHOICES = [
+        ("livre",           "Livre"),
+        ("hipossodica",     "Hipossódica"),
+        ("hipoglicidica",   "Hipoglicídica"),
+        ("hipolipidica",    "Hipolipídica"),
+        ("liquida",         "Líquida"),
+        ("pastosa",         "Pastosa"),
+        ("enteral",         "Enteral"),
+        ("parenteral",      "Parenteral"),
+        ("jejum",           "Jejum"),
+    ]
+    VIA_CHOICES = [
+        ("oral",                       "Oral"),
+        ("sonda_nasoenteral",          "Sonda Nasoenteral"),
+        ("sonda_gastrostomia",         "Sonda Gastrostomia"),
+        ("parenteral_central",         "Parenteral Central"),
+        ("parenteral_periferica",      "Parenteral Periférica"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="dietas_hospitalares")
+    paciente_internado  = models.ForeignKey(
+        "PacienteInternado", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="dietas_hospitalares",
+    )
+    nome_paciente       = models.CharField(max_length=200, blank=True, default="")
+    tipo_dieta          = models.CharField(max_length=30, choices=TIPO_DIETA_CHOICES, default="livre")
+    via_administracao   = models.CharField(max_length=40, choices=VIA_CHOICES, default="oral")
+    calorias_kcal       = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    proteinas_g         = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    restricoes          = models.TextField(blank=True, default="",
+                                           help_text="Alergias, restrições religiosas, etc")
+    data_inicio         = models.DateField()
+    data_fim            = models.DateField(null=True, blank=True)
+    prescrito_por       = models.CharField(max_length=120, blank=True, default="")
+    ativa               = models.BooleanField(default=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Dieta Hospitalar"
+        verbose_name_plural = "Dietas Hospitalares"
+        ordering            = ["-data_inicio"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativa"]),
+        ]
+
+    def __str__(self):
+        return f"Dieta {self.get_tipo_dieta_display()} — {self.nome_paciente or 'sem paciente'}"
+
+
+# ── Lavanderia e Rouparia ────────────────────────────────────────────────────
+
+class ItemRoupa(models.Model):
+    empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="itens_roupa")
+    descricao             = models.CharField(max_length=120)
+    quantidade_total      = models.PositiveIntegerField(default=0)
+    quantidade_disponivel = models.PositiveIntegerField(default=0)
+    setor                 = models.CharField(max_length=100, blank=True, default="")
+    ativo                 = models.BooleanField(default=True)
+    criado_em             = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Item de Roupa"
+        verbose_name_plural = "Itens de Roupa"
+        ordering            = ["descricao"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+        ]
+
+    def __str__(self):
+        return f"{self.descricao} (disponível: {self.quantidade_disponivel}/{self.quantidade_total})"
+
+
+class CicloLavanderia(models.Model):
+    TIPO_CHOICES = [
+        ("entrada_sujo", "Entrada Sujo"),
+        ("saida_limpo",  "Saída Limpo"),
+    ]
+
+    empresa        = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="ciclos_lavanderia")
+    item           = models.ForeignKey(ItemRoupa, on_delete=models.CASCADE, related_name="ciclos_lavanderia")
+    quantidade     = models.PositiveIntegerField()
+    tipo           = models.CharField(max_length=20, choices=TIPO_CHOICES, default="entrada_sujo")
+    setor_origem   = models.CharField(max_length=100, blank=True, default="")
+    responsavel    = models.CharField(max_length=120, blank=True, default="")
+    data_registro  = models.DateTimeField(auto_now_add=True)
+    observacoes    = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Ciclo de Lavanderia"
+        verbose_name_plural = "Ciclos de Lavanderia"
+        ordering            = ["-data_registro"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.item.descricao} ({self.quantidade} un.)"
+
+
+# ── Manutenção Hospitalar (predial) ──────────────────────────────────────────
+
+class OrdemServicoPredial(models.Model):
+    TIPO_CHOICES = [
+        ("preventiva",  "Preventiva"),
+        ("corretiva",   "Corretiva"),
+        ("emergencial", "Emergencial"),
+    ]
+    PRIORIDADE_CHOICES = [
+        ("baixa",   "Baixa"),
+        ("media",   "Média"),
+        ("alta",    "Alta"),
+        ("critica", "Crítica"),
+    ]
+    STATUS_CHOICES = [
+        ("aberta",           "Aberta"),
+        ("em_andamento",     "Em Andamento"),
+        ("aguardando_peca",  "Aguardando Peça"),
+        ("concluida",        "Concluída"),
+        ("cancelada",        "Cancelada"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="ordens_servico_predial")
+    numero_os        = models.CharField(max_length=20, blank=True, default="")
+    descricao        = models.TextField()
+    tipo             = models.CharField(max_length=20, choices=TIPO_CHOICES, default="corretiva")
+    setor            = models.CharField(max_length=100)
+    prioridade       = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default="media")
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aberta")
+    responsavel      = models.CharField(max_length=120, blank=True, default="")
+    solicitante      = models.CharField(max_length=120, blank=True, default="")
+    data_abertura    = models.DateTimeField(auto_now_add=True)
+    data_previsao    = models.DateField(null=True, blank=True)
+    data_conclusao   = models.DateTimeField(null=True, blank=True)
+    custo_estimado   = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    custo_real       = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    observacoes      = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Ordem de Serviço Predial"
+        verbose_name_plural = "Ordens de Serviço Predial"
+        ordering            = ["-data_abertura"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "prioridade"]),
+        ]
+
+    def __str__(self):
+        numero = self.numero_os or str(self.pk)
+        return f"OS {numero} — {self.setor} [{self.get_status_display()}]"
+
+
+# ── NHVE — Núcleo de Vigilância Epidemiológica Hospitalar ────────────────────
+
+class NotificacaoNHVE(models.Model):
+    SEXO_CHOICES = [
+        ("M", "Masculino"),
+        ("F", "Feminino"),
+        ("I", "Ignorado"),
+    ]
+    STATUS_CHOICES = [
+        ("suspeito",   "Suspeito"),
+        ("confirmado", "Confirmado"),
+        ("descartado", "Descartado"),
+    ]
+
+    empresa                    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="notificacoes_nhve")
+    doenca_cid                 = models.CharField(max_length=20)
+    nome_paciente              = models.CharField(max_length=200, blank=True, default="")
+    data_nascimento            = models.DateField(null=True, blank=True)
+    sexo                       = models.CharField(max_length=1, choices=SEXO_CHOICES, default="I")
+    data_notificacao           = models.DateField()
+    data_inicio_sintomas       = models.DateField(null=True, blank=True)
+    status                     = models.CharField(max_length=20, choices=STATUS_CHOICES, default="suspeito")
+    notificado_sinan           = models.BooleanField(default=False)
+    data_notificacao_sinan     = models.DateTimeField(null=True, blank=True)
+    notificado_por             = models.CharField(max_length=120, blank=True, default="")
+    unidade                    = models.CharField(max_length=120, blank=True, default="")
+    observacoes                = models.TextField(blank=True, default="")
+    criado_em                  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Notificação NHVE"
+        verbose_name_plural = "Notificações NHVE"
+        ordering            = ["-data_notificacao"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "notificado_sinan"]),
+        ]
+
+    def __str__(self):
+        return f"NHVE {self.doenca_cid} — {self.nome_paciente or 'sem nome'} [{self.get_status_display()}]"
+
+
+# ── Qualidade Hospitalar / NSP ────────────────────────────────────────────────
+
+class IncidenteSegurancaPaciente(models.Model):
+    TIPO_CHOICES = [
+        ("queda",          "Queda"),
+        ("medicamento",    "Medicamento"),
+        ("procedimento",   "Procedimento"),
+        ("identificacao",  "Identificação"),
+        ("comunicacao",    "Comunicação"),
+        ("infeccao",       "Infecção"),
+        ("outro",          "Outro"),
+    ]
+    GRAVIDADE_CHOICES = [
+        ("near_miss",     "Near Miss"),
+        ("sem_dano",      "Sem Dano"),
+        ("dano_leve",     "Dano Leve"),
+        ("dano_moderado", "Dano Moderado"),
+        ("dano_grave",    "Dano Grave"),
+        ("obito",         "Óbito"),
+    ]
+
+    empresa           = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="incidentes_seguranca_paciente")
+    tipo              = models.CharField(max_length=20, choices=TIPO_CHOICES, default="outro")
+    descricao         = models.TextField()
+    setor             = models.CharField(max_length=100)
+    data_ocorrencia   = models.DateTimeField()
+    gravidade         = models.CharField(max_length=20, choices=GRAVIDADE_CHOICES, default="near_miss")
+    paciente          = models.CharField(max_length=200, blank=True, default="")
+    notificado_anvisa = models.BooleanField(default=False)
+    acao_tomada       = models.TextField(blank=True, default="")
+    encerrado         = models.BooleanField(default=False)
+    registrado_por    = models.CharField(max_length=120, blank=True, default="")
+    criado_em         = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Incidente de Segurança do Paciente"
+        verbose_name_plural = "Incidentes de Segurança do Paciente"
+        ordering            = ["-data_ocorrencia"]
+        indexes             = [
+            models.Index(fields=["empresa", "gravidade"]),
+            models.Index(fields=["empresa", "encerrado"]),
+        ]
+
+    def __str__(self):
+        return f"Incidente {self.get_tipo_display()} — {self.get_gravidade_display()} [{self.data_ocorrencia.date()}]"
+
+
+# ── RHC — Registro Hospitalar do Câncer ──────────────────────────────────────
+
+class RegistroHospitalarCancer(models.Model):
+    SEXO_CHOICES = [
+        ("M", "Masculino"),
+        ("F", "Feminino"),
+    ]
+    ESTADIAMENTO_CHOICES = [
+        ("0",   "Estádio 0"),
+        ("I",   "Estádio I"),
+        ("II",  "Estádio II"),
+        ("III", "Estádio III"),
+        ("IV",  "Estádio IV"),
+        ("X",   "Não Classificado"),
+    ]
+    STATUS_CHOICES = [
+        ("em_tratamento",       "Em Tratamento"),
+        ("remissao",            "Remissão"),
+        ("obito",               "Óbito"),
+        ("transferido",         "Transferido"),
+        ("perdido_seguimento",  "Perdido de Seguimento"),
+    ]
+
+    empresa                   = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="registros_hospitalares_cancer")
+    nome_paciente             = models.CharField(max_length=200)
+    data_nascimento           = models.DateField()
+    sexo                      = models.CharField(max_length=1, choices=SEXO_CHOICES)
+    cid_topografia            = models.CharField(max_length=10)
+    cid_morfologia            = models.CharField(max_length=10, blank=True, default="")
+    estadiamento              = models.CharField(max_length=3, choices=ESTADIAMENTO_CHOICES, default="X",
+                                                 help_text="X=não classificado")
+    data_primeiro_atendimento = models.DateField()
+    data_diagnostico          = models.DateField(null=True, blank=True)
+    tratamentos_realizados    = models.JSONField(default=list, blank=True,
+                                                 help_text="['quimio','radio','cirurgia']")
+    status_paciente           = models.CharField(max_length=30, choices=STATUS_CHOICES, default="em_tratamento")
+    notificado_inca           = models.BooleanField(default=False)
+    numero_rhc                = models.CharField(max_length=30, blank=True, default="")
+    medico_responsavel        = models.CharField(max_length=120, blank=True, default="")
+    criado_em                 = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Registro Hospitalar de Câncer"
+        verbose_name_plural = "Registros Hospitalares de Câncer"
+        ordering            = ["-data_primeiro_atendimento"]
+        indexes             = [
+            models.Index(fields=["empresa", "status_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"RHC {self.nome_paciente} — {self.cid_topografia} [{self.get_status_paciente_display()}]"
+
+
+# ── Radioterapia / HL7 ────────────────────────────────────────────────────────
+
+class SessaoRadioterapia(models.Model):
+    SISTEMA_CHOICES = [
+        ("aria",    "Aria (Varian)"),
+        ("halcyon", "Halcyon (Varian)"),
+        ("outro",   "Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("planejado",    "Planejado"),
+        ("em_andamento", "Em Andamento"),
+        ("concluido",    "Concluído"),
+        ("suspenso",     "Suspenso"),
+    ]
+
+    empresa                    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="sessoes_radioterapia")
+    paciente                   = models.CharField(max_length=200)
+    cid                        = models.CharField(max_length=20, blank=True, default="")
+    sistema_radioterapia       = models.CharField(max_length=20, choices=SISTEMA_CHOICES, default="aria")
+    numero_plano               = models.CharField(max_length=50, blank=True, default="",
+                                                  help_text="ID do plano no sistema Varian")
+    dose_prescrita_gy          = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    dose_fracao_gy             = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    numero_fracoes_total       = models.PositiveIntegerField(null=True, blank=True)
+    numero_fracoes_realizadas  = models.PositiveIntegerField(default=0)
+    tecnica                    = models.CharField(max_length=100, blank=True, default="",
+                                                  help_text="IMRT, VMAT, 3DCRT, etc")
+    data_inicio                = models.DateField(null=True, blank=True)
+    data_ultima_sessao         = models.DateField(null=True, blank=True)
+    status                     = models.CharField(max_length=20, choices=STATUS_CHOICES, default="planejado")
+    hl7_mensagem_id            = models.CharField(max_length=100, blank=True, default="",
+                                                  help_text="MSH-10 do HL7 de origem")
+    sincronizado_hl7           = models.BooleanField(default=False)
+    criado_em                  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Sessão de Radioterapia"
+        verbose_name_plural = "Sessões de Radioterapia"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Radioterapia {self.paciente} — {self.get_status_display()}"
+
+
+# ── Custos Hospitalares ────────────────────────────────────────────────────────
+
+class CentroResponsabilidade(models.Model):
+    TIPO_CHOICES = [
+        ("direto",   "Direto"),
+        ("indireto", "Indireto"),
+        ("apoio",    "Apoio"),
+    ]
+
+    empresa      = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="centros_responsabilidade")
+    codigo       = models.CharField(max_length=20)
+    nome         = models.CharField(max_length=120)
+    tipo         = models.CharField(max_length=20, choices=TIPO_CHOICES, default="direto")
+    responsavel  = models.CharField(max_length=120, blank=True, default="")
+    ativo        = models.BooleanField(default=True)
+    criado_em    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Centro de Responsabilidade"
+        verbose_name_plural = "Centros de Responsabilidade"
+        ordering            = ["nome"]
+        unique_together     = [("empresa", "codigo")]
+
+    def __str__(self):
+        return f"{self.codigo} — {self.nome}"
+
+
+class CustoAssistencial(models.Model):
+    CATEGORIA_CHOICES = [
+        ("pessoal",      "Pessoal"),
+        ("material",     "Material"),
+        ("servico",      "Serviço"),
+        ("depreciacao",  "Depreciação"),
+        ("overhead",     "Overhead"),
+    ]
+
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="custos_assistenciais")
+    centro               = models.ForeignKey(CentroResponsabilidade, on_delete=models.SET_NULL,
+                                             null=True, blank=True, related_name="custos")
+    competencia          = models.CharField(max_length=7, help_text="YYYY-MM")
+    categoria            = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default="material")
+    descricao            = models.CharField(max_length=200)
+    valor                = models.DecimalField(max_digits=12, decimal_places=2)
+    procedimento_sigtap  = models.CharField(max_length=20, blank=True, default="")
+    drg_codigo           = models.CharField(max_length=20, blank=True, default="")
+    criado_em            = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Custo Assistencial"
+        verbose_name_plural = "Custos Assistenciais"
+        ordering            = ["-competencia"]
+        indexes             = [
+            models.Index(fields=["empresa", "competencia"]),
+            models.Index(fields=["empresa", "categoria"]),
+        ]
+
+    def __str__(self):
+        return f"{self.competencia} — {self.descricao} (R$ {self.valor})"
+
+
+# ── DRG / Valor Saúde Brasil ──────────────────────────────────────────────────
+
+class ClassificacaoDRG(models.Model):
+    empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="classificacoes_drg")
+    paciente_internado    = models.ForeignKey(
+        "PacienteInternado", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="classificacoes_drg",
+    )
+    codigo_drg            = models.CharField(max_length=20)
+    descricao_drg         = models.CharField(max_length=200, blank=True, default="")
+    peso_relativo         = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    aih_numero            = models.CharField(max_length=30, blank=True, default="")
+    competencia           = models.CharField(max_length=7)
+    enviado_valor_saude   = models.BooleanField(default=False)
+    data_envio            = models.DateTimeField(null=True, blank=True)
+    resposta_api          = models.JSONField(default=dict, blank=True)
+    criado_em             = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Classificação DRG"
+        verbose_name_plural = "Classificações DRG"
+        ordering            = ["-competencia"]
+        indexes             = [
+            models.Index(fields=["empresa", "enviado_valor_saude"]),
+        ]
+
+    def __str__(self):
+        return f"DRG {self.codigo_drg} — {self.competencia}"
+
+
+# ── Epimed ────────────────────────────────────────────────────────────────────
+
+class TransmissaoEpimed(models.Model):
+    STATUS_CHOICES = [
+        ("pendente", "Pendente"),
+        ("enviado",  "Enviado"),
+        ("erro",     "Erro"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="transmissoes_epimed")
+    competencia      = models.CharField(max_length=7)
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    total_registros  = models.PositiveIntegerField(default=0)
+    arquivo_gerado   = models.TextField(blank=True, default="")
+    data_envio       = models.DateTimeField(null=True, blank=True)
+    erro_msg         = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Transmissão Epimed"
+        verbose_name_plural = "Transmissões Epimed"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Epimed {self.competencia} [{self.get_status_display()}]"
+
+
+# ── Betha Sistemas ────────────────────────────────────────────────────────────
+
+class IntegracaoBetha(models.Model):
+    TIPO_CHOICES = [
+        ("almoxarifado", "Almoxarifado"),
+        ("compras",      "Compras"),
+        ("financeiro",   "Financeiro"),
+    ]
+    STATUS_CHOICES = [
+        ("pendente",     "Pendente"),
+        ("sincronizado", "Sincronizado"),
+        ("erro",         "Erro"),
+    ]
+
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="integracoes_betha")
+    tipo               = models.CharField(max_length=20, choices=TIPO_CHOICES, default="compras")
+    status             = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    referencia_betha   = models.CharField(max_length=80, blank=True, default="",
+                                          help_text="ID do objeto no Betha")
+    payload            = models.JSONField(default=dict, blank=True)
+    resposta           = models.JSONField(default=dict, blank=True)
+    criado_em          = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Integração Betha"
+        verbose_name_plural = "Integrações Betha"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Betha {self.get_tipo_display()} — {self.get_status_display()}"
+
+
+# ── PPI — Planejamento Programação Integrada ──────────────────────────────────
+
+class ProgramacaoPPI(models.Model):
+    STATUS_CHOICES = [
+        ("rascunho", "Rascunho"),
+        ("aprovado", "Aprovado"),
+        ("enviado",  "Enviado"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="programacoes_ppi")
+    competencia         = models.CharField(max_length=7)
+    municipio_origem    = models.CharField(max_length=100)
+    municipio_destino   = models.CharField(max_length=100, blank=True, default="")
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="rascunho")
+    aprovado_por        = models.CharField(max_length=120, blank=True, default="")
+    data_aprovacao      = models.DateTimeField(null=True, blank=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Programação PPI"
+        verbose_name_plural = "Programações PPI"
+        ordering            = ["-competencia"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"PPI {self.competencia} — {self.municipio_origem} [{self.get_status_display()}]"
+
+
+class ItemPPI(models.Model):
+    empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="itens_ppi")
+    programacao              = models.ForeignKey(ProgramacaoPPI, on_delete=models.CASCADE, related_name="itens")
+    procedimento_sigtap      = models.CharField(max_length=20)
+    descricao_procedimento   = models.CharField(max_length=200, blank=True, default="")
+    quantidade_programada    = models.PositiveIntegerField(default=0)
+    quantidade_realizada     = models.PositiveIntegerField(default=0)
+    valor_unitario           = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    criado_em                = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Item PPI"
+        verbose_name_plural = "Itens PPI"
+        ordering            = ["procedimento_sigtap"]
+        indexes             = [
+            models.Index(fields=["empresa", "programacao"]),
+        ]
+
+    def __str__(self):
+        return f"PPI Item {self.procedimento_sigtap} — {self.descricao_procedimento or 'sem descrição'}"
+
+
+# ── Agendamento UBS + WhatsApp ────────────────────────────────────────────────
+
+class AgendamentoUBS(models.Model):
+    TIPO_CHOICES = [
+        ("consulta",     "Consulta"),
+        ("retorno",      "Retorno"),
+        ("exame",        "Exame"),
+        ("vacina",       "Vacina"),
+        ("procedimento", "Procedimento"),
+    ]
+    STATUS_CHOICES = [
+        ("agendado",   "Agendado"),
+        ("confirmado", "Confirmado"),
+        ("cancelado",  "Cancelado"),
+        ("faltou",     "Faltou"),
+        ("realizado",  "Realizado"),
+    ]
+
+    empresa                       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="agendamentos_ubs")
+    paciente_nome                 = models.CharField(max_length=200)
+    paciente_cpf                  = models.CharField(max_length=14, blank=True, default="")
+    paciente_telefone             = models.CharField(max_length=20, blank=True, default="")
+    unidade                       = models.CharField(max_length=120)
+    profissional                  = models.CharField(max_length=120, blank=True, default="")
+    especialidade                 = models.CharField(max_length=100, blank=True, default="")
+    data_consulta                 = models.DateField()
+    horario                       = models.TimeField()
+    tipo                          = models.CharField(max_length=20, choices=TIPO_CHOICES, default="consulta")
+    status                        = models.CharField(max_length=20, choices=STATUS_CHOICES, default="agendado")
+    confirmado_whatsapp           = models.BooleanField(default=False)
+    data_confirmacao_whatsapp     = models.DateTimeField(null=True, blank=True)
+    lembrete_enviado              = models.BooleanField(default=False)
+    observacoes                   = models.TextField(blank=True, default="")
+    criado_em                     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Agendamento UBS"
+        verbose_name_plural = "Agendamentos UBS"
+        ordering            = ["data_consulta", "horario"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_consulta"]),
+        ]
+
+    def __str__(self):
+        return f"Agendamento {self.paciente_nome} — {self.data_consulta} {self.horario} [{self.get_status_display()}]"

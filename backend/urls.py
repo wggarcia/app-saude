@@ -1120,6 +1120,30 @@ from api.views_assinatura_sst import (
 )
 
 
+try:
+    from api.views_hospital_custos import (hospital_custos_page, api_custos_centros, api_custos_lancamentos, api_custos_apuracao, api_custos_drg, api_custos_drg_enviar, api_custos_kpis)
+    from api.views_hospital_drg import (hospital_drg_page, api_drg_status, api_drg_enviar_internacao, api_drg_historico, api_drg_reenviar, api_drg_kpis)
+    from api.views_hospital_epimed import (hospital_epimed_page, api_epimed_status, api_epimed_gerar, api_epimed_transmitir, api_epimed_historico, api_epimed_kpis)
+    from api.views_hospital_betha import (hospital_betha_page, api_betha_status, api_betha_sincronizar_almoxarifado, api_betha_sincronizar_compras, api_betha_webhook, api_betha_fila, api_betha_kpis)
+    from api.views_hospital_telemedicina import (hospital_telemedicina_page, api_hosp_telemedicina_consultas, api_hosp_telemedicina_consulta_detalhe, api_hosp_telemedicina_iniciar, api_hosp_telemedicina_encerrar, api_hosp_telemedicina_kpis)
+except ImportError:
+    pass
+
+try:
+    from api.views_governo_bi import (governo_bi_page, api_bi_kpis, api_bi_producao_mensal, api_bi_cobertura_vacinal, api_bi_cronicas, api_bi_produtividade, api_bi_fila_espera)
+    from api.views_governo_ppi import (governo_ppi_page, api_ppi_programacoes, api_ppi_programacao_detalhe, api_ppi_programacao_itens, api_ppi_aprovar, api_ppi_exportar, api_ppi_kpis)
+    from api.views_governo_agendamento import (governo_agendamento_page, api_agendamento_agenda, api_agendamento_agendar, api_agendamento_detalhe, api_agendamento_confirmar, api_agendamento_cancelar, api_agendamento_realizar, api_agendamento_enviar_lembretes, api_agendamento_kpis, api_agendamento_disponibilidade)
+    from api.views_governo_sia_sus import (api_sia_sus_status, api_sia_sus_competencia, api_sia_sus_validar, api_sia_sus_transmitir, api_sia_sus_historico, api_sia_sus_reprocessar)
+except ImportError:
+    pass
+
+try:
+    from api.views_governo_icp_brasil import (api_gov_icp_assinar_prescricao, api_gov_icp_assinar_atestado, api_gov_icp_certificados, api_gov_icp_validar, api_gov_icp_status)
+    from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis)
+except ImportError:
+    pass
+
+
 def service_worker(request):
     return FileResponse(open(os.path.join(os.getcwd(), 'sw.js'), 'rb'))
 
@@ -2735,4 +2759,164 @@ urlpatterns = [
     path('api/governo/acs/fichas/',                             api_fichas_acompanhamento),
     path('api/governo/acs/fichas/<int:ficha_id>',               api_ficha_detalhe),
     path('api/governo/acs/fichas/<int:ficha_id>/',              api_ficha_detalhe),
+
+    # ── Custos Hospitalares ───────────────────────────────────────────────────
+    path('hospital/custos/',                                    hospital_custos_page),
+    path('api/hospital/custos/centros',                         api_custos_centros),
+    path('api/hospital/custos/centros/',                        api_custos_centros),
+    path('api/hospital/custos/lancamentos',                     api_custos_lancamentos),
+    path('api/hospital/custos/lancamentos/',                    api_custos_lancamentos),
+    path('api/hospital/custos/apuracao/<str:comp>',             api_custos_apuracao),
+    path('api/hospital/custos/apuracao/<str:comp>/',            api_custos_apuracao),
+    path('api/hospital/custos/drg',                             api_custos_drg),
+    path('api/hospital/custos/drg/',                            api_custos_drg),
+    path('api/hospital/custos/drg/<int:pk>/enviar',             api_custos_drg_enviar),
+    path('api/hospital/custos/drg/<int:pk>/enviar/',            api_custos_drg_enviar),
+    path('api/hospital/custos/kpis',                            api_custos_kpis),
+    path('api/hospital/custos/kpis/',                           api_custos_kpis),
+
+    # ── DRG / Valor Saúde Brasil ──────────────────────────────────────────────
+    path('hospital/drg/',                                       hospital_drg_page),
+    path('api/hospital/drg/status',                             api_drg_status),
+    path('api/hospital/drg/status/',                            api_drg_status),
+    path('api/hospital/drg/enviar-internacao',                  api_drg_enviar_internacao),
+    path('api/hospital/drg/enviar-internacao/',                 api_drg_enviar_internacao),
+    path('api/hospital/drg/historico',                          api_drg_historico),
+    path('api/hospital/drg/historico/',                         api_drg_historico),
+    path('api/hospital/drg/reenviar/<int:pk>',                  api_drg_reenviar),
+    path('api/hospital/drg/reenviar/<int:pk>/',                 api_drg_reenviar),
+    path('api/hospital/drg/kpis',                               api_drg_kpis),
+    path('api/hospital/drg/kpis/',                              api_drg_kpis),
+
+    # ── Epimed ────────────────────────────────────────────────────────────────
+    path('hospital/epimed/',                                    hospital_epimed_page),
+    path('api/hospital/epimed/status',                          api_epimed_status),
+    path('api/hospital/epimed/status/',                         api_epimed_status),
+    path('api/hospital/epimed/gerar',                           api_epimed_gerar),
+    path('api/hospital/epimed/gerar/',                          api_epimed_gerar),
+    path('api/hospital/epimed/transmitir/<int:id>',             api_epimed_transmitir),
+    path('api/hospital/epimed/transmitir/<int:id>/',            api_epimed_transmitir),
+    path('api/hospital/epimed/historico',                       api_epimed_historico),
+    path('api/hospital/epimed/historico/',                      api_epimed_historico),
+    path('api/hospital/epimed/kpis',                            api_epimed_kpis),
+    path('api/hospital/epimed/kpis/',                           api_epimed_kpis),
+
+    # ── Betha Sistemas ────────────────────────────────────────────────────────
+    path('hospital/betha/',                                     hospital_betha_page),
+    path('api/hospital/betha/status',                           api_betha_status),
+    path('api/hospital/betha/status/',                          api_betha_status),
+    path('api/hospital/betha/sincronizar-almoxarifado',         api_betha_sincronizar_almoxarifado),
+    path('api/hospital/betha/sincronizar-almoxarifado/',        api_betha_sincronizar_almoxarifado),
+    path('api/hospital/betha/sincronizar-compras',              api_betha_sincronizar_compras),
+    path('api/hospital/betha/sincronizar-compras/',             api_betha_sincronizar_compras),
+    path('api/hospital/betha/webhook',                          api_betha_webhook),
+    path('api/hospital/betha/webhook/',                         api_betha_webhook),
+    path('api/hospital/betha/fila',                             api_betha_fila),
+    path('api/hospital/betha/fila/',                            api_betha_fila),
+    path('api/hospital/betha/kpis',                             api_betha_kpis),
+    path('api/hospital/betha/kpis/',                            api_betha_kpis),
+
+    # ── Telemedicina Hospitalar ───────────────────────────────────────────────
+    path('hospital/telemedicina/',                              hospital_telemedicina_page),
+    path('api/hospital/telemedicina/consultas',                 api_hosp_telemedicina_consultas),
+    path('api/hospital/telemedicina/consultas/',                api_hosp_telemedicina_consultas),
+    path('api/hospital/telemedicina/consultas/<int:pk>',        api_hosp_telemedicina_consulta_detalhe),
+    path('api/hospital/telemedicina/consultas/<int:pk>/',       api_hosp_telemedicina_consulta_detalhe),
+    path('api/hospital/telemedicina/consultas/<int:pk>/iniciar',  api_hosp_telemedicina_iniciar),
+    path('api/hospital/telemedicina/consultas/<int:pk>/iniciar/', api_hosp_telemedicina_iniciar),
+    path('api/hospital/telemedicina/consultas/<int:pk>/encerrar', api_hosp_telemedicina_encerrar),
+    path('api/hospital/telemedicina/consultas/<int:pk>/encerrar/',api_hosp_telemedicina_encerrar),
+    path('api/hospital/telemedicina/kpis',                      api_hosp_telemedicina_kpis),
+    path('api/hospital/telemedicina/kpis/',                     api_hosp_telemedicina_kpis),
+
+    # ── Governo BI ────────────────────────────────────────────────────────────
+    path('governo/bi/',                                         governo_bi_page),
+    path('api/governo/bi/kpis',                                 api_bi_kpis),
+    path('api/governo/bi/kpis/',                                api_bi_kpis),
+    path('api/governo/bi/producao-mensal',                      api_bi_producao_mensal),
+    path('api/governo/bi/producao-mensal/',                     api_bi_producao_mensal),
+    path('api/governo/bi/cobertura-vacinal',                    api_bi_cobertura_vacinal),
+    path('api/governo/bi/cobertura-vacinal/',                   api_bi_cobertura_vacinal),
+    path('api/governo/bi/cronicas',                             api_bi_cronicas),
+    path('api/governo/bi/cronicas/',                            api_bi_cronicas),
+    path('api/governo/bi/produtividade',                        api_bi_produtividade),
+    path('api/governo/bi/produtividade/',                       api_bi_produtividade),
+    path('api/governo/bi/fila-espera',                          api_bi_fila_espera),
+    path('api/governo/bi/fila-espera/',                         api_bi_fila_espera),
+
+    # ── Governo PPI ───────────────────────────────────────────────────────────
+    path('governo/ppi/',                                        governo_ppi_page),
+    path('api/governo/ppi/programacoes',                        api_ppi_programacoes),
+    path('api/governo/ppi/programacoes/',                       api_ppi_programacoes),
+    path('api/governo/ppi/programacoes/<int:pk>',               api_ppi_programacao_detalhe),
+    path('api/governo/ppi/programacoes/<int:pk>/',              api_ppi_programacao_detalhe),
+    path('api/governo/ppi/programacoes/<int:pk>/itens',         api_ppi_programacao_itens),
+    path('api/governo/ppi/programacoes/<int:pk>/itens/',        api_ppi_programacao_itens),
+    path('api/governo/ppi/programacoes/<int:pk>/aprovar',       api_ppi_aprovar),
+    path('api/governo/ppi/programacoes/<int:pk>/aprovar/',      api_ppi_aprovar),
+    path('api/governo/ppi/programacoes/<int:pk>/exportar',      api_ppi_exportar),
+    path('api/governo/ppi/programacoes/<int:pk>/exportar/',     api_ppi_exportar),
+    path('api/governo/ppi/kpis',                                api_ppi_kpis),
+    path('api/governo/ppi/kpis/',                               api_ppi_kpis),
+
+    # ── Governo Agendamento ───────────────────────────────────────────────────
+    path('governo/agendamento/',                                governo_agendamento_page),
+    path('api/governo/agendamento/agenda',                      api_agendamento_agenda),
+    path('api/governo/agendamento/agenda/',                     api_agendamento_agenda),
+    path('api/governo/agendamento/agendar',                     api_agendamento_agendar),
+    path('api/governo/agendamento/agendar/',                    api_agendamento_agendar),
+    path('api/governo/agendamento/<int:ag_id>',                 api_agendamento_detalhe),
+    path('api/governo/agendamento/<int:ag_id>/',                api_agendamento_detalhe),
+    path('api/governo/agendamento/<int:ag_id>/confirmar',       api_agendamento_confirmar),
+    path('api/governo/agendamento/<int:ag_id>/confirmar/',      api_agendamento_confirmar),
+    path('api/governo/agendamento/<int:ag_id>/cancelar',        api_agendamento_cancelar),
+    path('api/governo/agendamento/<int:ag_id>/cancelar/',       api_agendamento_cancelar),
+    path('api/governo/agendamento/<int:ag_id>/realizar',        api_agendamento_realizar),
+    path('api/governo/agendamento/<int:ag_id>/realizar/',       api_agendamento_realizar),
+    path('api/governo/agendamento/enviar-lembretes',            api_agendamento_enviar_lembretes),
+    path('api/governo/agendamento/enviar-lembretes/',           api_agendamento_enviar_lembretes),
+    path('api/governo/agendamento/kpis',                        api_agendamento_kpis),
+    path('api/governo/agendamento/kpis/',                       api_agendamento_kpis),
+    path('api/governo/agendamento/disponibilidade',             api_agendamento_disponibilidade),
+    path('api/governo/agendamento/disponibilidade/',            api_agendamento_disponibilidade),
+
+    # ── SIA/SUS ───────────────────────────────────────────────────────────────
+    path('api/governo/sia-sus/status',                          api_sia_sus_status),
+    path('api/governo/sia-sus/status/',                         api_sia_sus_status),
+    path('api/governo/sia-sus/competencia/<str:comp>',          api_sia_sus_competencia),
+    path('api/governo/sia-sus/competencia/<str:comp>/',         api_sia_sus_competencia),
+    path('api/governo/sia-sus/validar',                         api_sia_sus_validar),
+    path('api/governo/sia-sus/validar/',                        api_sia_sus_validar),
+    path('api/governo/sia-sus/transmitir',                      api_sia_sus_transmitir),
+    path('api/governo/sia-sus/transmitir/',                     api_sia_sus_transmitir),
+    path('api/governo/sia-sus/historico',                       api_sia_sus_historico),
+    path('api/governo/sia-sus/historico/',                      api_sia_sus_historico),
+    path('api/governo/sia-sus/reprocessar/<int:lote_id>',       api_sia_sus_reprocessar),
+    path('api/governo/sia-sus/reprocessar/<int:lote_id>/',      api_sia_sus_reprocessar),
+
+    # ── ICP-Brasil no PEC/UBS (Governo) ──────────────────────────────────────
+    path('api/governo/icp-brasil/assinar-prescricao',           api_gov_icp_assinar_prescricao),
+    path('api/governo/icp-brasil/assinar-prescricao/',          api_gov_icp_assinar_prescricao),
+    path('api/governo/icp-brasil/assinar-atestado',             api_gov_icp_assinar_atestado),
+    path('api/governo/icp-brasil/assinar-atestado/',            api_gov_icp_assinar_atestado),
+    path('api/governo/icp-brasil/certificados',                 api_gov_icp_certificados),
+    path('api/governo/icp-brasil/certificados/',                api_gov_icp_certificados),
+    path('api/governo/icp-brasil/validar',                      api_gov_icp_validar),
+    path('api/governo/icp-brasil/validar/',                     api_gov_icp_validar),
+    path('api/governo/icp-brasil/status',                       api_gov_icp_status),
+    path('api/governo/icp-brasil/status/',                      api_gov_icp_status),
+
+    # ── WhatsApp Agendamentos Hospitalares ────────────────────────────────────
+    path('api/hospital/whatsapp-agendamento/status',            api_hosp_wa_status),
+    path('api/hospital/whatsapp-agendamento/status/',           api_hosp_wa_status),
+    path('api/hospital/whatsapp-agendamento/enviar-lembrete',   api_hosp_wa_enviar_lembrete),
+    path('api/hospital/whatsapp-agendamento/enviar-lembrete/',  api_hosp_wa_enviar_lembrete),
+    path('api/hospital/whatsapp-agendamento/confirmar-via-wa',  api_hosp_wa_confirmar),
+    path('api/hospital/whatsapp-agendamento/confirmar-via-wa/', api_hosp_wa_confirmar),
+    path('api/hospital/whatsapp-agendamento/historico',         api_hosp_wa_historico),
+    path('api/hospital/whatsapp-agendamento/historico/',        api_hosp_wa_historico),
+    path('api/hospital/whatsapp-agendamento/webhook',           api_hosp_wa_webhook),
+    path('api/hospital/whatsapp-agendamento/webhook/',          api_hosp_wa_webhook),
+    path('api/hospital/whatsapp-agendamento/kpis',              api_hosp_wa_kpis),
+    path('api/hospital/whatsapp-agendamento/kpis/',             api_hosp_wa_kpis),
 ]
