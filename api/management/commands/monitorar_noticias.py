@@ -118,8 +118,13 @@ FONTES_CURADAS = {
     "opas", "cdc-eid", "healio-id",        # Américas — vigilância
     "ecdc",                                 # Europa — vigilância
     "who-africa", "nicd-za", "reliefweb",  # África
-    "india-pib", "nhc-china",              # Ásia — ministérios de saúde
+    "nhc-china",                            # Ásia — ministério de saúde (China)
     "who", "outbreaknews", "sciencedaily", # Global — vigilância e ciência
+    # india-pib REMOVIDA em 2026-07-20: não é fonte de saúde, é o escritório de
+    # imprensa do governo indiano (Press Information Bureau) — publica press
+    # releases de TODOS os ministérios (força aérea, censo, bancos, agricultura
+    # etc.). Sem filtro de palavra-chave gerava 1200+ artigos irrelevantes/dia,
+    # consumindo o crédito da API de tradução com conteúdo sem relação com saúde.
 }
 
 # Cron BR — fontes nacionais + Américas + global diário

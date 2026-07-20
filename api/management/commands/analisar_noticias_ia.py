@@ -136,6 +136,10 @@ class Command(BaseCommand):
 
         analisadas = 0
         erros = 0
+        erros_consecutivos = 0
+        # Se a API falhar repetidamente (ex: crédito esgotado, chave inválida),
+        # abortar cedo em vez de percorrer o resto da fila com falhas garantidas.
+        LIMITE_ERROS_CONSECUTIVOS = 5
 
         for i, noticia in enumerate(pendentes, 1):
             self.stdout.write(f"  [{i}/{total}] {noticia.titulo[:70]}...")
@@ -143,8 +147,17 @@ class Command(BaseCommand):
             if resultado:
                 self._salvar(noticia, resultado)
                 analisadas += 1
+                erros_consecutivos = 0
             else:
                 erros += 1
+                erros_consecutivos += 1
+                if erros_consecutivos >= LIMITE_ERROS_CONSECUTIVOS:
+                    self.stderr.write(self.style.ERROR(
+                        f"Abortado: {erros_consecutivos} erros consecutivos da API. "
+                        "Provável falta de crédito ou chave inválida — verifique "
+                        "console.anthropic.com > Plans & Billing antes de tentar novamente."
+                    ))
+                    break
             # Pausa mínima para não exceder rate limit do Haiku
             if i % 10 == 0:
                 time.sleep(1)
