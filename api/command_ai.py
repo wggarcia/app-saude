@@ -557,11 +557,13 @@ def _learning_block(empresa):
         criado_em__gte=since,
     ).count()
     return {
-        "mode": "human_feedback_loop",
+        "mode": "human_feedback_registered",
         "feedback_30d": total_feedback,
         "message": (
-            "A IA registra feedback humano autorizado para calibrar recomendações, "
-            "prioridades e confiança sem expor dado individual da população."
+            "O feedback humano autorizado é registrado para auditoria e revisão da "
+            "equipe, sem expor dado individual da população. As recomendações seguem "
+            "regras clínicas e epidemiológicas fixas — o feedback não recalibra o motor "
+            "automaticamente."
         ),
     }
 
@@ -813,13 +815,13 @@ def _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=6):
             for card in company_payload["executive_cards"]
         ],
         "learning": {
-            "mode": "corporate_feedback_loop",
+            "mode": "corporate_feedback_registered",
             "feedback_30d": AuditoriaInstitucional.objects.filter(
                 empresa=empresa,
                 acao="command_ai_feedback",
                 criado_em__gte=timezone.now() - timedelta(days=30),
             ).count(),
-            "message": "A IA corporativa usa check-ins anônimos, fila de apoio e validação institucional para calibrar prioridades de saúde ocupacional.",
+            "message": "A IA corporativa lê check-ins anônimos, fila de apoio e validação institucional para orientar prioridades de saúde ocupacional. O feedback é registrado para revisão da equipe e não recalibra o motor automaticamente.",
         },
         "safeguards": [
             "Não usa dado individual do colaborador no painel institucional.",

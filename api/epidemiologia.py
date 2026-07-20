@@ -232,6 +232,14 @@ FOCUS_STABILITY_DAYS = 10
 FOCUS_DECAY_WINDOW_DAYS = 30
 FOCUS_MIN_WEIGHT = 0.1
 FOCUS_VISIBILITY_THRESHOLD = 0.01
+# Nº de casos absolutos (reais, não ponderados) para o score de risco atingir
+# confiança plena. Abaixo disso o score é amortecido proporcionalmente, para que
+# 1-2 relatos isolados não sejam rotulados como CRÍTICO/epidemia. Áreas com
+# volume >= este valor não sofrem amortecimento (fator = 1.0).
+FOCUS_MIN_CASOS_CONFIANCA = 8
+# Piso absoluto de casos/dia para sinalizar "acima do limiar epidêmico" na
+# timeline pública — impede que 1 caso dispare alerta quando a base é ~0.
+EPIDEMIC_MIN_ABS = 5
 
 UF_CODES = {
     11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO",
@@ -353,7 +361,7 @@ def _risco_oficial_doenca_map_seguro():
         return {}
 
 
-def _risk_score(total, max_total, recent_24h, max_recent, growth, temporal_retention_percent, oficial_probability=None):
+def _risk_score(total, max_total, recent_24h, max_recent, growth, temporal_retention_percent, oficial_probability=None, raw_total=None):
     total_score = (total / max_total) * 55 if max_total else 0
     recent_score = (recent_24h / max_recent) * 25 if max_recent else 0
     growth_score = min(max(growth, 0), 100) * 0.2
@@ -367,6 +375,13 @@ def _risk_score(total, max_total, recent_24h, max_recent, growth, temporal_reten
         # (api/epidemiologia_ml.py). Fator entre 0.85x e 1.25x — ajusta sem dominar
         # o sinal de autorrelato ao vivo.
         score *= 0.85 + (0.40 * max(min(oficial_probability, 1.0), 0.0))
+    # Âncora de volume absoluto: sem um mínimo de casos reais, o score relativo
+    # (min-max entre áreas) inflaria — a área com 1 único relato viraria o
+    # max_total e receberia ~55 pts, chegando a CRÍTICO. Aqui amortecemos pelo
+    # nº de casos reais (raw_total): 1 caso ≈ 12% do score, 8+ casos = 100%.
+    if raw_total is not None:
+        volume_confidence = min(max(int(raw_total), 0) / FOCUS_MIN_CASOS_CONFIANCA, 1.0)
+        score *= volume_confidence
     return round(score, 2)
 
 
@@ -417,7 +432,7 @@ def _alert_stage(risk_level, growth_percent, total_cases):
 
 def _public_recommendation(dominant_disease, dominant_symptom, risk_level):
     base = {
-        "COVID": "reforcar etiqueta respiratoria, mascara em ambientes fechados e triagem imediata",
+        "COVID-19": "reforcar etiqueta respiratoria, mascara em ambientes fechados e triagem imediata",
         "Gripe": "reforcar etiqueta respiratoria, hidratacao e avaliacao rapida de sintomaticos",
         "Dengue": "eliminar agua parada, acelerar vigilancia vetorial e orientar hidratacao",
         "Chikungunya": "orientar dor articular persistente, hidratar e rastrear aumento de vetores",
@@ -438,7 +453,9 @@ def _public_recommendation(dominant_disease, dominant_symptom, risk_level):
 
 
 def _market_recommendation(dominant_disease, dominant_symptom):
-    if dominant_disease in {"COVID", "Hantavirose"}:
+    if dominant_disease == "Hantavirose":
+        return "reforcar mascaras PFF2/N95, materiais de desinfeccao, orientacao de risco ambiental e encaminhamento urgente"
+    if dominant_disease == "COVID-19":
         return "reforcar estoque de mascaras, antitermicos, testes e antigripais"
     if dominant_disease == "Gripe":
         return "reforcar antigripais, xaropes, vitamina C e analgesicos"
@@ -448,22 +465,20 @@ def _market_recommendation(dominant_disease, dominant_symptom):
         return "reforcar hidratacao, antitermicos seguros, orientacao de encaminhamento e materiais educativos"
     if dominant_disease in {"Sarampo", "Meningite"}:
         return "reforcar mascaras, antitermicos, orientacao de isolamento/encaminhamento e comunicacao de risco"
-    if dominant_disease == "Hantavirus":
-        return "reforcar mascaras PFF2/N95, materiais de desinfeccao, orientacao de risco ambiental e encaminhamento urgente"
     if dominant_symptom == "Falta de Ar":
         return "priorizar itens respiratorios e protocolos de encaminhamento"
     return "acompanhar demanda de sintomaticos e ajustar estoque de suporte"
 
 
 def _hospital_recommendation(dominant_disease, dominant_symptom, risk_level):
-    if dominant_symptom == "Falta de Ar" or dominant_disease in {"COVID", "Hantavirose"}:
+    if dominant_disease == "Hantavirose":
+        action = "preparar UTI com suporte ventilatório mecanico, isolamento de contato/respiratorio e protocolo de notificacao imediata"
+    elif dominant_symptom == "Falta de Ar" or dominant_disease == "COVID-19":
         action = "preparar leitos respiratorios, triagem rapida, oxigenio e retaguarda de UTI"
     elif dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela", "Leptospirose", "Malaria"}:
         action = "preparar hidratacao venosa, analgesia, observacao e fluxo para sinais de alarme"
     elif dominant_disease == "Meningite":
         action = "preparar triagem de emergencia, isolamento quando indicado, coleta diagnostica e protocolo de notificação"
-    elif dominant_disease == "Hantavirus":
-        action = "preparar UTI com suporte ventilatório mecanico, isolamento de contato/respiratorio e protocolo de notificacao imediata"
     elif dominant_disease == "Sarampo":
         action = "reforcar triagem respiratoria, isolamento orientado, vigilancia de contatos e verificacao vacinal"
     elif dominant_disease == "Gripe":
@@ -483,11 +498,11 @@ def _government_recommendation(dominant_disease, dominant_symptom, risk_level, g
         action = "intensificar vigilancia vetorial, bloqueio territorial, comunicacao comunitaria e mutirao de campo"
     elif dominant_disease in {"Leptospirose", "Malaria"}:
         action = "acionar vigilancia territorial, investigacao ambiental, comunicacao de risco e rede de testagem/encaminhamento"
-    elif dominant_disease == "Hantavirus":
+    elif dominant_disease == "Hantavirose":
         action = "acionar notificacao compulsoria imediata, investigacao de foco de roedores, interdição de area contaminada e articulacao com CIEVS/SVS"
     elif dominant_disease in {"Sarampo", "Meningite"}:
         action = "acionar notificacao imediata, investigacao de contatos, comunicacao de risco e articulacao da rede assistencial"
-    elif dominant_symptom == "Falta de Ar" or dominant_disease in {"COVID", "Hantavirose"}:
+    elif dominant_symptom == "Falta de Ar" or dominant_disease == "COVID-19":
         action = "acionar vigilancia sindromica respiratoria, campanha de protecao e retaguarda regional"
     elif dominant_disease == "Gripe":
         action = "reforcar sentinelas, testagem estrategica e comunicacao de sazonalidade"
@@ -530,6 +545,11 @@ def _trend_status(growth_percent, recent_24h, previous_24h):
         return "Sem atividade recente"
     if recent_24h == 0 and previous_24h > 0:
         return "Desaceleracao forte"
+    # Foco novo (sem base anterior) com poucos casos: _safe_growth devolve 100%
+    # artificialmente. Não rotular como "Explosao" — é um foco emergente, não um
+    # surto explosivo, até haver volume real.
+    if previous_24h == 0 and recent_24h < 5:
+        return "Novo foco"
     if growth_percent >= 70:
         return "Explosao"
     if growth_percent >= 30:
@@ -615,7 +635,7 @@ def _market_signal(dominant_disease, dominant_symptom, stock_pressure):
         category = "hidratacao, antitermicos seguros e orientacao de encaminhamento"
     elif dominant_disease in {"Sarampo", "Meningite"}:
         category = "mascaras, antitermicos e comunicacao de risco"
-    elif dominant_disease in {"COVID", "Gripe", "Hantavirose"} or dominant_symptom == "Tosse":
+    elif dominant_disease in {"COVID-19", "Gripe", "Hantavirose"} or dominant_symptom == "Tosse":
         category = "antigripais, testes, mascaras e suporte respiratorio leve"
     elif dominant_symptom == "Falta de Ar":
         category = "oximetria, suporte respiratorio e itens de encaminhamento"
@@ -877,6 +897,7 @@ def _serialize_layer(level, group_fields, risco_oficial_map=None, risco_oficial_
             growth,
             row.get("temporal_retention_percent", 100),
             oficial_probability=oficial_probability,
+            raw_total=raw_total_cases,
         )
         risk_level = _risk_level(risk_score)
         surveillance_index = _surveillance_index(total_cases, int(row["recent_24h"] or 0), growth, max_total, max_recent)
@@ -1004,6 +1025,7 @@ def _build_state_layer(municipios, risco_oficial_map=None, risco_oficial_doenca_
             growth,
             temporal_retention_percent,
             oficial_probability=oficial_probability,
+            raw_total=raw_total_cases,
         )
         weight = row["weight"] or 1
         risk_level = _risk_level(risk_score)
@@ -1089,12 +1111,16 @@ def _build_timeline(empresa_pub=None):
     baseline_average = sum(item["total"] for item in baseline_window) / max(len(baseline_window), 1)
     current_total = recent_window[-1]["total"] if recent_window else 0
 
+    # Piso absoluto: quando a base é ~0, baseline*1.35 vira ~0 e QUALQUER caso
+    # dispararia "acima do limiar". Exige também superar um mínimo de casos reais.
+    threshold = max(round(baseline_average * 1.35, 2), EPIDEMIC_MIN_ABS)
+
     return {
         "series": timeline,
         "today_total": current_total,
-        "epidemic_threshold": round(baseline_average * 1.35, 2),
+        "epidemic_threshold": threshold,
         "baseline_average": round(baseline_average, 2),
-        "above_threshold": current_total > (baseline_average * 1.35),
+        "above_threshold": current_total > threshold,
     }
 
 

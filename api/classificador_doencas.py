@@ -79,7 +79,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
     "Zika": {
         "grupo": "Arbovirose",
         "vetor": "Aedes aegypti",
-        "cid10": "A928",
+        "cid10": "U06.9",  # OMS/CID-10 pós-2016 (A92.8 era o código legado pré-Zika-específico)
         "descricao": "Febre baixa, exantema pruriginoso, conjuntivite não-purulenta; risco de microcefalia e Guillan-Barré",
         "sazonalidade": [10, 11, 12, 1, 2, 3, 4, 5],
         "sintomas": {
@@ -1105,7 +1105,7 @@ SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     "Leptospirose":   ["ictericia", "dor_corpo", "calafrios"],       # precisa ≥1 dos 3
     "Hepatite A/B":   ["ictericia"],                                 # icterícia é essencial
     # Novas doenças expandidas
-    "Bronquite":      ["tosse"],            # bronquite sem tosse é rara — tosse crônica é critério clínico
+    "Bronquite / DPOC Agudização": ["tosse"],  # nome completo (bate com DOENCAS_BRASIL); sem tosse não é bronquite
     "Tuberculose":    ["tosse"],           # TB pulmonar sem tosse é rara no cidadão sintomático
     "Varicela":       ["exantema"],        # sem exantema, não é varicela
     "Mpox":           ["exantema_vesicular", "febre"],  # tríade: vesículas + febre + contato
