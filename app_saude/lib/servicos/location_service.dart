@@ -95,6 +95,10 @@ class LocationService {
       await _requestPreciseLocationIfNeeded();
       final current = await _getCurrentPositionResilient();
       _validateSubmissionPosition(current);
+      // A generalização de privacidade (grade de 200m) é aplicada no backend
+      // via generalizar_coordenada() em utils_geo.py antes de persistir —
+      // o app envia a posição real para permitir geocodificação correta de
+      // bairro/cidade; só a coordenada salva/exibida é generalizada.
       return LocationSnapshot(
         latitude: current.latitude,
         longitude: current.longitude,
