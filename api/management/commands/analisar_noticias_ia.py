@@ -30,7 +30,10 @@ from django.db import transaction
 from api.models import NoticiaEpidemiologica
 
 MODEL_ID = "claude-haiku-4-5"
-MAX_POR_RODADA = 50  # limite por execução para controlar custo
+# Volume real observado: 240-330 notícias/dia (picos de até ~1200 em dias
+# de alta cobertura GDELT). O cron roda 1x/dia — a cota precisa cobrir o
+# dia inteiro, senão o backlog de não-traduzidas cresce indefinidamente.
+MAX_POR_RODADA = 1500
 
 SYSTEM_PROMPT = """Você é o Agente Analisador Epidemiológico da SolusCRT.
 Analise o título e resumo de uma notícia de saúde e retorne SOMENTE um JSON válido
