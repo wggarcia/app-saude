@@ -18,6 +18,7 @@ nomeado pelo indicador, para nao misturar series de doencas diferentes.
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -48,6 +49,10 @@ except OSError:
     pass
 
 MIN_AMOSTRAS_TREINO = 40  # minimo de observacoes (estado x semana) reais para treinar
+# Auto-treino seguro: um modelo novo só substitui o que está em produção se
+# atingir este F1 (cross-val) mínimo E não for uma regressão frente ao atual.
+MIN_F1_PROMOCAO = 0.55
+TOLERANCIA_REGRESSAO_F1 = 0.05
 JANELA_MEDIA_MOVEL = 4
 
 FEATURE_NAMES = ["valor_atual", "media_movel", "desvio_movel", "razao_media", "semana_do_ano", "estado_idx"]
@@ -186,8 +191,27 @@ def _construir_dataset(fonte_id: str, indicador: str):
     return np.array(X, dtype=float), np.array(y), estados
 
 
-def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificacoes_sinan"):
-    """Treina (ou recusa treinar, de forma transparente) com dado real oficial."""
+def _f1_do_modelo_atual(meta_path):
+    """F1 (cross-val) do modelo hoje em produção, se houver meta salva. None caso contrário."""
+    try:
+        if meta_path.exists():
+            with open(meta_path) as f:
+                m = json.load(f)
+            if m.get("treinado") and m.get("cv_f1_media") is not None:
+                return float(m["cv_f1_media"])
+    except Exception:
+        pass
+    return None
+
+
+def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificacoes_sinan", validar_promocao=False):
+    """Treina (ou recusa treinar, de forma transparente) com dado real oficial.
+
+    validar_promocao=True (usado pelo cron semanal desassistido): só substitui o
+    modelo em produção se o novo atingir o F1 mínimo e não regredir frente ao atual.
+    Padrão False (treino manual/supervisionado e testes): salva o resultado do
+    treino como antes — o humano que roda vê o F1 e decide.
+    """
     from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier, VotingClassifier
     from sklearn.model_selection import cross_val_score
 
@@ -221,9 +245,41 @@ def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificac
 
     cv_folds = min(5, len(X) // 20 + 2)
     cv_scores = cross_val_score(ensemble, X, y, cv=cv_folds, scoring="f1_weighted")
+    novo_f1 = float(cv_scores.mean())
 
+    # ── Validação ANTES de promover (só no modo automático/cron) ──────────────
+    # O modelo em produção só é substituído se o novo (a) atingir o F1 mínimo e
+    # (b) não for pior que o atual. Se falhar, o modelo atual permanece intacto —
+    # o treino "falha para o lado seguro" e nunca deixa o sistema pior.
+    if validar_promocao:
+        if novo_f1 < MIN_F1_PROMOCAO:
+            return {
+                "treinado": False,
+                "motivo": "qualidade_insuficiente",
+                "fonte_id": fonte_id,
+                "indicador": indicador,
+                "n_amostras": int(len(X)),
+                "cv_f1_media": novo_f1,
+                "minimo_f1": MIN_F1_PROMOCAO,
+            }
+        f1_atual = _f1_do_modelo_atual(meta_path)
+        if f1_atual is not None and novo_f1 < f1_atual - TOLERANCIA_REGRESSAO_F1:
+            return {
+                "treinado": False,
+                "motivo": "regressao_vs_modelo_atual",
+                "fonte_id": fonte_id,
+                "indicador": indicador,
+                "n_amostras": int(len(X)),
+                "cv_f1_media": novo_f1,
+                "cv_f1_atual": f1_atual,
+            }
+
+    # Escrita atômica: grava num arquivo temporário e troca de uma só vez. Se
+    # algo falhar no meio, o modelo atual continua íntegro (nunca fica pela metade).
     model_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump({"model": ensemble, "estados": estados, "fonte_id": fonte_id, "indicador": indicador}, model_path)
+    tmp_path = model_path.parent / (model_path.name + ".tmp")
+    joblib.dump({"model": ensemble, "estados": estados, "fonte_id": fonte_id, "indicador": indicador}, tmp_path)
+    os.replace(tmp_path, model_path)
 
     meta = {
         "treinado": True,
@@ -232,7 +288,7 @@ def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificac
         "indicador": indicador,
         "n_amostras": int(len(X)),
         "estados": estados,
-        "cv_f1_media": float(cv_scores.mean()),
+        "cv_f1_media": novo_f1,
         "cv_f1_std": float(cv_scores.std()),
         "dataset_real_oficial": True,
     }
@@ -241,12 +297,14 @@ def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificac
     return meta
 
 
-def treinar_todas_doencas_registradas():
+def treinar_todas_doencas_registradas(validar_promocao=False):
     """Treina (ou recusa, de forma transparente) o modelo de cada doenca em
     DOENCAS_REGISTRADAS. Retorna {nome_doenca: meta}."""
     resultados = {}
     for fonte_id, indicador, nome_doenca in DOENCAS_REGISTRADAS:
-        resultados[nome_doenca] = treinar_modelo_oficial(fonte_id=fonte_id, indicador=indicador)
+        resultados[nome_doenca] = treinar_modelo_oficial(
+            fonte_id=fonte_id, indicador=indicador, validar_promocao=validar_promocao
+        )
     return resultados
 
 
