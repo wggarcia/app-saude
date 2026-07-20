@@ -28,6 +28,8 @@ class _TelaRegistroFuncionarioState extends State<TelaRegistroFuncionario> {
   // funcionario_id preenchido = etapa 2 (email+senha)
   List<Map<String, dynamic>>? _opcoes;
   int? _funcionarioId;
+  // Prova do CPF validado na etapa 1 — enviada na etapa 2 no lugar do id cru.
+  String? _registroToken;
   String? _nomeFunc;
   String? _empresaNomeEscolhida;
 

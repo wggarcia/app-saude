@@ -1,7 +1,7 @@
 name: app_ocupacional
 description: App dedicado ao ambiente SaaS de saude ocupacional (empresa + trabalhador)
 publish_to: 'none'
-version: 1.0.3+8
+version: 1.0.4+9
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

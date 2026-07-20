@@ -56,9 +56,12 @@ class FuncionarioAuthService {
     return body;
   }
 
-  /// Etapa 2: registro com funcionario_id já escolhido + email + senha
+  /// Etapa 2: registro com o registro_token emitido na etapa 1 + email + senha.
+  /// O token prova a posse do CPF validado — o backend deriva o funcionário
+  /// dele e ignora qualquer funcionario_id cru (evita account takeover
+  /// cross-tenant por enumeração de IDs).
   static Future<Map<String, dynamic>> registrar(
-    int funcionarioId,
+    String registroToken,
     String email,
     String senha,
   ) async {
@@ -66,7 +69,7 @@ class FuncionarioAuthService {
       Uri.parse('${Config.baseUrl}/api/funcionario/registrar'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'funcionario_id': funcionarioId,
+        'registro_token': registroToken,
         'email': email.trim().toLowerCase(),
         'senha': senha,
       }),

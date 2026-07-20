@@ -5,10 +5,13 @@ ou via CPF + data de nascimento (legado).
 """
 import jwt
 import json
+import hmac
+import hashlib
 import secrets
 from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -78,6 +81,53 @@ def _token_funcionario(funcionario):
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
 
 
+# Prova de que o CPF foi validado na etapa 1 (funcionario_buscar_cpf). Este
+# token curto e assinado substitui o funcionario_id cru no corpo da etapa 2:
+# sem ele, um atacante poderia enumerar funcionario_id sequenciais globais e
+# auto-registrar credenciais para funcionários de qualquer tenant/segmento,
+# recebendo um JWT de 30 dias com acesso a PII de saúde (account takeover
+# cross-tenant). O TTL é curto porque só precisa cobrir a janela entre digitar
+# o CPF e escolher e-mail/senha na tela seguinte.
+_REGISTRO_TOKEN_TTL = timedelta(minutes=15)
+_REGISTRO_PURPOSE = "registro_funcionario_v1"
+
+
+def _cpf_hash(cpf):
+    """HMAC-SHA256 do CPF limpo — vincula o token ao CPF sem transportá-lo em claro."""
+    return hmac.new(
+        settings.JWT_SECRET_KEY.encode(),
+        _cpf_limpo(cpf).encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _registro_token(funcionario):
+    payload = {
+        "purpose": _REGISTRO_PURPOSE,
+        "funcionario_id": funcionario.id,
+        "empresa_id": funcionario.empresa_id,
+        "cpf_hash": _cpf_hash(funcionario.cpf),
+        "iat": int(timezone.now().timestamp()),
+        "exp": int((timezone.now() + _REGISTRO_TOKEN_TTL).timestamp()),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+
+
+def _verificar_registro_token(token):
+    """Decodifica o token da etapa 1. Retorna o payload validado ou None."""
+    if not token:
+        return None
+    try:
+        data = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+    except Exception:
+        return None
+    if data.get("purpose") != _REGISTRO_PURPOSE:
+        return None
+    if not data.get("funcionario_id") or not data.get("empresa_id") or not data.get("cpf_hash"):
+        return None
+    return data
+
+
 def _autenticar_funcionario(request):
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
@@ -136,6 +186,20 @@ def funcionario_buscar_cpf(request):
     """
     if request.method != "POST":
         return JsonResponse({"erro": "Use POST"}, status=405)
+
+    # Rate limiting: impede enumeração de CPFs (LGPD — CPF é dado pessoal e o
+    # endpoint revela nome/empresa/cargo de qualquer funcionário). Máx. 10 por
+    # IP por minuto.
+    ip = (
+        request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+        or request.META.get("REMOTE_ADDR", "unknown")
+    )
+    rl_key = f"func_buscar_cpf_rl:{ip}"
+    tentativas = cache.get(rl_key, 0)
+    if tentativas >= 10:
+        return JsonResponse({"erro": "Muitas tentativas. Aguarde 1 minuto."}, status=429)
+    cache.set(rl_key, tentativas + 1, timeout=60)
+
     try:
         dados = json.loads(request.body)
     except Exception:
@@ -157,6 +221,7 @@ def funcionario_buscar_cpf(request):
         return JsonResponse({
             "status": "ok",
             "funcionario_id": funcs[0].id,
+            "registro_token": _registro_token(funcs[0]),
             "nome": funcs[0].nome,
             "empresa_nome": funcs[0].empresa.nome,
             "cargo": funcs[0].cargo,
@@ -166,7 +231,12 @@ def funcionario_buscar_cpf(request):
         "status": "escolher_empresa",
         "nome": funcs[0].nome,
         "opcoes": [
-            {"funcionario_id": f.id, "empresa_nome": f.empresa.nome, "cargo": f.cargo or ""}
+            {
+                "funcionario_id": f.id,
+                "registro_token": _registro_token(f),
+                "empresa_nome": f.empresa.nome,
+                "cargo": f.cargo or "",
+            }
             for f in funcs
         ],
     })
@@ -175,8 +245,14 @@ def funcionario_buscar_cpf(request):
 @csrf_exempt
 def funcionario_registrar(request):
     """
-    Etapa 2 do registro: cria credencial com email + senha para o funcionario_id escolhido.
-    POST { "funcionario_id": X, "email": "...", "senha": "..." }
+    Etapa 2 do registro: cria credencial com email + senha.
+    POST { "registro_token": "...", "email": "...", "senha": "..." }
+
+    O funcionário é derivado do registro_token emitido na etapa 1
+    (funcionario_buscar_cpf), que prova a posse do CPF validado. NUNCA confie no
+    funcionario_id cru vindo do cliente: sem essa amarração, o endpoint (que é
+    @csrf_exempt, sem autenticação e roda na rota RLS-free /api/funcionario/)
+    permitiria account takeover cross-tenant por enumeração de IDs.
     """
     if request.method != "POST":
         return JsonResponse({"erro": "Use POST"}, status=405)
@@ -185,12 +261,15 @@ def funcionario_registrar(request):
     except Exception:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
-    funcionario_id = dados.get("funcionario_id")
     email = (dados.get("email") or "").strip().lower()
     senha = dados.get("senha", "")
 
-    if not funcionario_id:
-        return JsonResponse({"erro": "funcionario_id é obrigatório"}, status=400)
+    prova = _verificar_registro_token(dados.get("registro_token"))
+    if not prova:
+        return JsonResponse(
+            {"erro": "Sessão de registro inválida ou expirada. Refaça a busca por CPF."},
+            status=401,
+        )
     if not email or "@" not in email:
         return JsonResponse({"erro": "E-mail inválido"}, status=400)
     if not senha or len(senha) < 6:
@@ -198,12 +277,20 @@ def funcionario_registrar(request):
 
     func = (
         FuncionarioSST.objects.using(_OWNER_DB)
-        .filter(id=funcionario_id, ativo=True)
+        .filter(id=prova["funcionario_id"], empresa_id=prova["empresa_id"], ativo=True)
         .select_related("empresa")
         .first()
     )
     if not func:
         return JsonResponse({"erro": "Funcionário não encontrado."}, status=404)
+
+    # Revalida que o registro ainda corresponde ao CPF provado na etapa 1
+    # (defende contra qualquer reatribuição de id entre as duas etapas).
+    if not hmac.compare_digest(_cpf_hash(func.cpf), prova["cpf_hash"]):
+        return JsonResponse(
+            {"erro": "Sessão de registro inválida. Refaça a busca por CPF."},
+            status=401,
+        )
 
     if CredencialAppFuncionario.objects.using(_OWNER_DB).filter(email=email).exists():
         return JsonResponse({"erro": "E-mail já cadastrado. Use outro ou recupere sua senha."}, status=409)
