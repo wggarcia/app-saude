@@ -134,6 +134,31 @@ DISEASE_WEIGHTS = {
     },
 }
 
+# Âncora epidemiológica: feature(s) DISCRIMINANTE(s) que a doença precisa ter no
+# foco para ranquear com destaque no painel do gestor.
+#
+# Motivo clínico: sintomas como dor no corpo, calafrios e cefaleia são
+# INESPECÍFICOS (presentes em quase toda síndrome febril) — não distinguem uma
+# doença da outra. A "trava de sintoma-chave" (SINTOMA_CHAVE_OBRIGATORIO) da
+# Leptospirose/Malária usava justamente esses genéricos, deixando doenças graves
+# de notificação aparecerem alto sem base epidemiológica (ex.: leptospirose sem
+# febre, sem icterícia e sem exposição a água). Diante de médico/gestão/ministério
+# isso destrói a confiabilidade. Aqui exigimos o marcador que realmente ancora o
+# diagnóstico; sem ele, o score sofre forte penalização (a doença não some do
+# diferencial — cai para o rodapé, onde é honesto que esteja).
+#
+# Só listamos doenças cuja trava de sintoma-chave é genérica demais. As demais
+# (Dengue, Meningite, Hepatite, Febre Amarela, Hantavirose...) já são ancoradas
+# por sintomas específicos no próprio SINTOMA_CHAVE_OBRIGATORIO.
+ANCORA_EPIDEMIOLOGICA = {
+    # Leptospirose é febril; distingue-se pela exposição a água/enchente ou icterícia.
+    "Leptospirose": ("febre", "exposicao_agua_enchente", "ictericia"),
+    # Malária é febril por definição — sem febre no foco, não é malária.
+    "Malaria": ("febre",),
+}
+# Multiplicador aplicado ao score quando NENHUMA âncora está presente no foco.
+ANCORA_PENALIDADE = 0.15
+
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None, "version": None}
 _PANORAMA_CACHE_PAYLOAD_KEY = "epidemiologia:panorama:payload"
 # TTL de 5 min: as queries de mapa custam 4-9 s sem cache. O cache é
@@ -742,6 +767,13 @@ def _build_disease_probabilities(symptom_counts, total_cases, risco_oficial_doen
         if oficial_probability is not None:
             score *= 0.85 + (0.40 * max(min(oficial_probability, 1.0), 0.0))
             calculo_ml_oficial_doencas.append(disease)
+
+        # Âncora epidemiológica: sem o marcador discriminante da doença, o score
+        # é fortemente penalizado (não ranqueia à frente de um quadro viral
+        # inespecífico). Ver ANCORA_EPIDEMIOLOGICA acima.
+        ancoras = ANCORA_EPIDEMIOLOGICA.get(disease)
+        if ancoras and not any(rates.get(a, 0.0) > 0.05 for a in ancoras):
+            score *= ANCORA_PENALIDADE
 
         raw_scores[disease] = score
 
