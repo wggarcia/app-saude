@@ -123,7 +123,7 @@ class FuncionarioRegistroSegurancaTests(TransactionTestCase):
             "email": "ana@example.com",
             "senha": "senha123",
         })
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 201)  # 201 Created no registro bem-sucedido
         self.assertTrue(self._credencial_existe(self.func_a))
         # E nada foi criado para o funcionário do outro tenant.
         self.assertFalse(self._credencial_existe(self.func_b))
