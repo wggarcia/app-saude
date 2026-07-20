@@ -210,7 +210,14 @@ class Command(BaseCommand):
         artigos_relevantes = [
             a for a in artigos
             if _dentro_janela(a["publicado_em"])
-            and (a["curada"] or a["doencas_detectadas"])
+            and (
+                a["curada"]
+                or a["doencas_detectadas"]
+                # Sinal de surto/epidemia sem doença nomeada (ex: "epidemia de
+                # doença desconhecida") também é relevante — antes só entrava
+                # com doença nomeada, descartando alertas genéricos legítimos.
+                or a["nivel_alerta"] != "informativo"
+            )
         ]
         self.stdout.write(f"Relevantes (saúde ou doença detectada, ≤7 dias): {len(artigos_relevantes)}")
 
