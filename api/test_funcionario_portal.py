@@ -30,6 +30,7 @@ class FuncionarioPortalCpfTests(TransactionTestCase):
             "/api/funcionario/buscar-cpf",
             data=json.dumps({"cpf": "12345678900"}),
             content_type="application/json",
+            secure=True,
         )
 
         self.assertEqual(response.status_code, 200)
@@ -43,6 +44,7 @@ class FuncionarioPortalCpfTests(TransactionTestCase):
             "/api/funcionario/login",
             data=json.dumps({"cpf": "12345678900"}),
             content_type="application/json",
+            secure=True,
         )
 
         self.assertEqual(response.status_code, 200)
@@ -80,6 +82,7 @@ class FuncionarioRegistroSegurancaTests(TransactionTestCase):
             "/api/funcionario/registrar",
             data=json.dumps(payload),
             content_type="application/json",
+            secure=True,
         )
 
     def _credencial_existe(self, funcionario):
@@ -110,6 +113,7 @@ class FuncionarioRegistroSegurancaTests(TransactionTestCase):
             "/api/funcionario/buscar-cpf",
             data=json.dumps({"cpf": "11144477735"}),
             content_type="application/json",
+            secure=True,
         )
         self.assertEqual(busca.status_code, 200)
         token = busca.json()["registro_token"]
