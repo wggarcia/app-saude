@@ -61,6 +61,11 @@
   <a class="nav-link{% if request.path == '/governo/tfd/' %} active{% endif %}" href="/governo/tfd/"><span>🚐</span> TFD / Veículos</a>
   {% endif %}
 
+  {% if gov_ver_suas %}
+  <div class="nav-section">Assistência Social</div>
+  <a class="nav-link{% if request.path == '/governo/suas/' %} active{% endif %}" href="/governo/suas/"><span>🏘️</span> SUAS / CRAS / CREAS</a>
+  {% endif %}
+
   {% if gov_ver_administrativo %}
   <div class="nav-section">Administrativo</div>
   <a class="nav-link{% if request.path == '/governo/almoxarifado/' %} active{% endif %}" href="/governo/almoxarifado/"><span>📦</span> Almoxarifado</a>

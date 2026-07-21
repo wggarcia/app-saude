@@ -1153,6 +1153,7 @@ from api.views_governo_suas_cadun import (
     api_beneficios_eventuais, api_beneficio_eventual_detalhe,
 )
 from api.views_governo_suas_gestao import (
+    governo_suas_page,
     api_suas_dashboard, api_suas_censo,
     api_suas_ia_inconsistencias, api_suas_relatorio_mensal,
 )
@@ -2938,6 +2939,8 @@ urlpatterns = [
     path('api/hospital/whatsapp-agendamento/kpis/',             api_hosp_wa_kpis),
 
     # ── SUAS — Assistência Social (CRAS / CREAS / CadÚnico / BPC / SICON) ────
+    path('governo/suas/',                                       governo_suas_page),
+
     path('api/governo/suas/dashboard',                          api_suas_dashboard),
     path('api/governo/suas/dashboard/',                         api_suas_dashboard),
     path('api/governo/suas/censo',                              api_suas_censo),

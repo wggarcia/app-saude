@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Assistência Social (SUAS) — SolusCRT Governo</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--purple:#a78bfa;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:var(--purple)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:var(--purple)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-sel,.filter-inp{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.filter-sel:focus,.filter-inp:focus{border-color:var(--accent)}
+.filter-sel option{background:#072030}
+.filter-inp{width:180px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+td{padding:10px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.empty{text-align:center;color:var(--muted);padding:32px!important}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.88}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-warn{background:rgba(255,179,71,.15);color:var(--warn);border:1px solid rgba(255,179,71,.3)}
+.btn-danger{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.15);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.15);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.15);color:var(--danger)}
+.badge-info{background:rgba(167,139,250,.15);color:var(--purple)}
+.badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.tab-bar{display:flex;gap:4px;padding:0 20px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);overflow-x:auto}
+.tab-btn{padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;font-family:Manrope,sans-serif;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.msg{font-size:12px;margin-top:6px;padding:8px 12px;border-radius:8px;display:none}
+.msg.ok{background:rgba(0,229,176,.1);color:var(--ok);display:block}
+.msg.err{background:rgba(255,77,109,.1);color:var(--danger);display:block}
+.alerta-item{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)}
+.alerta-item:last-child{border-bottom:none}
+.alerta-sev{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.sev-alta{background:var(--danger)}.sev-media{background:var(--warn)}.sev-baixa{background:var(--muted)}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🏘️ Assistência Social — SUAS</div>
+      <div class="page-sub">CRAS · CREAS · CadÚnico · BPC · SICON · Benefícios Eventuais</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="abrirCenso()">📊 Censo SUAS</button>
+      <button class="btn btn-warn" onclick="abrirIA()">🤖 IA: Inconsistências</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi ok"><div class="kpi-val" id="kpiFamilias">—</div><div class="kpi-lbl">Famílias em Acompanhamento CRAS</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiAtendMes">—</div><div class="kpi-lbl">Atendimentos este Mês</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiDescump">—</div><div class="kpi-lbl">Condicionalidades Descumpridas</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiCreasCasos">—</div><div class="kpi-lbl">Casos Ativos CREAS</div></div>
+  </div>
+
+  <!-- Tabs principais -->
+  <div class="card" style="overflow:visible">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="setTab('dashboard',this)">📊 Dashboard</button>
+      <button class="tab-btn" onclick="setTab('cras',this)">🏠 CRAS / Famílias</button>
+      <button class="tab-btn" onclick="setTab('creas',this)">🛡️ CREAS</button>
+      <button class="tab-btn" onclick="setTab('cadunico',this)">📋 CadÚnico</button>
+      <button class="tab-btn" onclick="setTab('bpc',this)">♿ BPC</button>
+      <button class="tab-btn" onclick="setTab('beneficios',this)">🎁 Benefícios Eventuais</button>
+    </div>
+
+    <!-- TAB: Dashboard -->
+    <div id="tabDashboard" class="tab-panel active" style="padding:20px">
+      <div id="dashConteudo" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card" style="padding:20px">
+          <div class="card-title" style="margin-bottom:16px">🏠 CRAS — Síntese</div>
+          <div id="dashCras" style="color:var(--muted);font-size:13px">Carregando…</div>
+        </div>
+        <div class="card" style="padding:20px">
+          <div class="card-title" style="margin-bottom:16px">🛡️ CREAS — Síntese</div>
+          <div id="dashCreas" style="color:var(--muted);font-size:13px">Carregando…</div>
+        </div>
+        <div class="card" style="padding:20px">
+          <div class="card-title" style="margin-bottom:16px">📋 CadÚnico / PBF / BPC</div>
+          <div id="dashCadunico" style="color:var(--muted);font-size:13px">Carregando…</div>
+        </div>
+        <div class="card" style="padding:20px">
+          <div class="card-title" style="margin-bottom:16px">🔔 SICON — Condicionalidades</div>
+          <div id="dashSicon" style="color:var(--muted);font-size:13px">Carregando…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CRAS / Famílias -->
+    <div id="tabCras" class="tab-panel">
+      <div class="tab-bar" style="border-top:1px solid var(--border)">
+        <button class="tab-btn active" onclick="setSubTab('cras','unidades',this)">Unidades</button>
+        <button class="tab-btn" onclick="setSubTab('cras','familias',this)">Famílias</button>
+        <button class="tab-btn" onclick="setSubTab('cras','atendimentos',this)">Atendimentos PAIF</button>
+        <button class="tab-btn" onclick="setSubTab('cras','visitas',this)">Visitas Domiciliares</button>
+      </div>
+      <div id="crasUnidades" class="sub-panel cras active">
+        <div class="card-header" style="border-bottom:none">
+          <span class="card-title">Unidades CRAS</span>
+          <button class="btn btn-primary btn-sm" onclick="abrirModal('modalCrasUnidade')">+ Nova Unidade</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Nome</th><th>Código CRAS</th><th>CNES</th><th>Município/UF</th><th>Responsável</th><th>Status</th></tr></thead>
+            <tbody id="tbCrasUnidades"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="crasFamilias" class="sub-panel cras" style="display:none">
+        <div class="card-header" style="border-bottom:none">
+          <span class="card-title">Famílias Cadastradas</span>
+          <div class="filters">
+            <input id="filtroFamiliaNome" class="filter-inp" placeholder="Buscar responsável…" oninput="carregarFamilias()">
+            <select id="filtroFamiliaSituacao" class="filter-sel" onchange="carregarFamilias()">
+              <option value="">Todas as situações</option>
+              <option value="em_acompanhamento">Em Acompanhamento</option>
+              <option value="ativa">Ativa</option>
+              <option value="encerrada">Encerrada</option>
+              <option value="suspensa">Suspensa</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="abrirModal('modalFamilia')">+ Nova Família</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Responsável</th><th>CPF</th><th>NIS</th><th>Integrantes</th><th>Renda/per capita</th><th>PBF</th><th>BPC</th><th>Situação</th></tr></thead>
+            <tbody id="tbFamilias"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+        <div id="paginacaoFamilias" style="padding:12px 20px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)"></div>
+      </div>
+      <div id="crasAtendimentos" class="sub-panel cras" style="display:none">
+        <div class="card-header" style="border-bottom:none">
+          <span class="card-title">Atendimentos PAIF</span>
+          <div class="filters">
+            <select id="filtroAtendTipo" class="filter-sel" onchange="carregarAtendCras()">
+              <option value="">Todos os tipos</option>
+              <option value="individual">Individual</option>
+              <option value="familiar">Familiar</option>
+              <option value="grupo">Grupo</option>
+              <option value="visita">Visita</option>
+              <option value="encaminhamento">Encaminhamento</option>
+              <option value="acompanhamento">Acompanhamento</option>
+            </select>
+            <input id="filtroAtendDataIni" type="date" class="filter-inp" onchange="carregarAtendCras()">
+            <input id="filtroAtendDataFim" type="date" class="filter-inp" onchange="carregarAtendCras()">
+            <button class="btn btn-primary btn-sm" onclick="abrirModal('modalAtendCras')">+ Novo Atendimento</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Família</th><th>Técnico</th><th>Tipo</th><th>Objetivo</th><th>Data</th></tr></thead>
+            <tbody id="tbAtendCras"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="crasVisitas" class="sub-panel cras" style="display:none">
+        <div class="card-header" style="border-bottom:none">
+          <span class="card-title">Visitas Domiciliares</span>
+          <button class="btn btn-primary btn-sm" onclick="abrirModal('modalVisita')">+ Nova Visita</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Família</th><th>Técnico</th><th>Data</th><th>Objetivo</th><th>Vulnerabilidade</th></tr></thead>
+            <tbody id="tbVisitas"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CREAS -->
+    <div id="tabCreas" class="tab-panel">
+      <div class="tab-bar" style="border-top:1px solid var(--border)">
+        <button class="tab-btn active" onclick="setSubTab('creas','unidades',this)">Unidades</button>
+        <button class="tab-btn" onclick="setSubTab('creas','atendimentos',this)">Atendimentos PAEFI</button>
+      </div>
+      <div id="creasUnidades" class="sub-panel creas active">
+        <div class="card-header" style="border-bottom:none">
+          <span class="card-title">Unidades CREAS</span>
+          <button class="btn btn-primary btn-sm" onclick="abrirModal('modalCreasUnidade')">+ Nova Unidade</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Nome</th><th>Código CREAS</th><th>CNES</th><th>Município/UF</th><th>Responsável</th><th>Status</th></tr></thead>
+            <tbody id="tbCreasUnidades"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="creasAtendimentos" class="sub-panel creas" style="display:none">
+        <div class="card-header" style="border-bottom:none">
+          <span class="card-title">Atendimentos PAEFI</span>
+          <div class="filters">
+            <select id="filtroCreasViolacao" class="filter-sel" onchange="carregarAtendCreas()">
+              <option value="">Todos os tipos</option>
+              <option value="violencia_domestica">Violência Doméstica</option>
+              <option value="sexual">Violência Sexual</option>
+              <option value="trabalho_infantil">Trabalho Infantil</option>
+              <option value="negligencia">Negligência/Abandono</option>
+              <option value="populacao_rua">Pop. Situação de Rua</option>
+              <option value="cumprimento_medida">Medida Socioeducativa</option>
+              <option value="outros">Outros</option>
+            </select>
+            <select id="filtroCreasStatus" class="filter-sel" onchange="carregarAtendCreas()">
+              <option value="">Todas as situações</option>
+              <option value="em_acompanhamento">Em Acompanhamento</option>
+              <option value="encerrado">Encerrado</option>
+              <option value="referenciado">Referenciado</option>
+            </select>
+            <input id="filtroCreasQ" class="filter-inp" placeholder="Buscar usuário…" oninput="carregarAtendCreas()">
+            <button class="btn btn-primary btn-sm" onclick="abrirModal('modalAtendCreas')">+ Novo Atendimento</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Usuário</th><th>CPF</th><th>Tipo de Violação</th><th>Técnico</th><th>Data</th><th>Situação</th><th>Prontuário</th></tr></thead>
+            <tbody id="tbAtendCreas"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+        <div id="paginacaoCreas" style="padding:12px 20px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <!-- TAB: CadÚnico -->
+    <div id="tabCadunico" class="tab-panel">
+      <div class="card-header" style="border-bottom:none">
+        <span class="card-title">Famílias CadÚnico Importadas</span>
+        <div class="filters">
+          <input id="filtroCadNome" class="filter-inp" placeholder="Buscar responsável…" oninput="carregarCadunico()">
+          <select id="filtroCadPbf" class="filter-sel" onchange="carregarCadunico()">
+            <option value="">Todos</option>
+            <option value="true">Com PBF</option>
+            <option value="false">Sem PBF</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Responsável</th><th>NIS</th><th>Pessoas</th><th>Renda per capita</th><th>PBF</th><th>BPC</th><th>Município/UF</th><th>Atualização</th></tr></thead>
+          <tbody id="tbCadunico"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+      <div id="paginacaoCad" style="padding:12px 20px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)"></div>
+    </div>
+
+    <!-- TAB: BPC -->
+    <div id="tabBpc" class="tab-panel">
+      <div class="card-header" style="border-bottom:none">
+        <span class="card-title">Beneficiários BPC</span>
+        <div class="filters">
+          <select id="filtroBpcTipo" class="filter-sel" onchange="carregarBpc()">
+            <option value="">Todos</option>
+            <option value="pessoa_deficiencia">Pessoa com Deficiência</option>
+            <option value="idoso_65">Idoso (65+)</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="abrirModal('modalBpc')">+ Novo BPC</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Beneficiário</th><th>CPF</th><th>NIS</th><th>Tipo</th><th>Valor</th><th>Início</th><th>Ativo</th></tr></thead>
+          <tbody id="tbBpc"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Benefícios Eventuais -->
+    <div id="tabBeneficios" class="tab-panel">
+      <div class="card-header" style="border-bottom:none">
+        <span class="card-title">Benefícios Eventuais Concedidos</span>
+        <div class="filters">
+          <select id="filtroBenTipo" class="filter-sel" onchange="carregarBeneficios()">
+            <option value="">Todos os tipos</option>
+            <option value="cesta_basica">Cesta Básica</option>
+            <option value="auxilio_aluguel">Auxílio Aluguel</option>
+            <option value="passagem">Passagem</option>
+            <option value="material_escolar">Material Escolar</option>
+            <option value="medicamento">Medicamento</option>
+            <option value="auxilio_funeral">Auxílio Funeral</option>
+            <option value="outros">Outros</option>
+          </select>
+          <input id="filtroBenDataIni" type="date" class="filter-inp" onchange="carregarBeneficios()">
+          <button class="btn btn-primary btn-sm" onclick="abrirModal('modalBeneficio')">+ Novo Benefício</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Beneficiário</th><th>CPF</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Data</th><th>Técnico</th></tr></thead>
+          <tbody id="tbBeneficios"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal Unidade CRAS -->
+<div class="modal-bg" id="modalCrasUnidade"><div class="modal">
+  <h3>🏠 Cadastrar Unidade CRAS</h3>
+  <input type="hidden" id="cuId">
+  <div class="form-group"><label>Nome *</label><input id="cuNome" placeholder="Ex: CRAS Centro"></div>
+  <div class="form-row">
+    <div class="form-group"><label>Código CRAS</label><input id="cuCodigo" placeholder="Código MDS"></div>
+    <div class="form-group"><label>CNES</label><input id="cuCnes" placeholder="7 dígitos"></div>
+  </div>
+  <div class="form-group"><label>Endereço</label><input id="cuEndereco"></div>
+  <div class="form-row">
+    <div class="form-group"><label>Município</label><input id="cuMunicipio"></div>
+    <div class="form-group"><label>UF</label><input id="cuUf" maxlength="2" style="text-transform:uppercase"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Telefone</label><input id="cuTelefone"></div>
+    <div class="form-group"><label>Responsável Técnico</label><input id="cuResponsavel"></div>
+  </div>
+  <div id="msgCrasUnidade" class="msg"></div>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="fecharModal('modalCrasUnidade')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarCrasUnidade()">Salvar</button>
+  </div>
+</div></div>
+
+<!-- Modal Família CRAS -->
+<div class="modal-bg" id="modalFamilia"><div class="modal">
+  <h3>👨‍👩‍👧‍👦 Cadastrar Família</h3>
+  <input type="hidden" id="fId">
+  <div class="form-group"><label>Responsável Familiar *</label><input id="fNome" placeholder="Nome completo"></div>
+  <div class="form-row">
+    <div class="form-group"><label>CPF</label><input id="fCpf" placeholder="000.000.000-00"></div>
+    <div class="form-group"><label>NIS</label><input id="fNis" placeholder="NIS Bolsa Família"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Número de Integrantes</label><input id="fIntegrantes" type="number" min="1" value="1"></div>
+    <div class="form-group"><label>Renda Familiar Total (R$)</label><input id="fRenda" type="number" step="0.01" min="0" value="0"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Unidade CRAS</label>
+      <select id="fUnidade"><option value="">Selecione…</option></select>
+    </div>
+    <div class="form-group"><label>Situação</label>
+      <select id="fSituacao">
+        <option value="em_acompanhamento">Em Acompanhamento</option>
+        <option value="ativa">Ativa</option>
+        <option value="encerrada">Encerrada</option>
+        <option value="suspensa">Suspensa</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Número CadÚnico</label><input id="fCadunico" placeholder="Nº sequencial CadÚnico"></div>
+    <div class="form-group"><label>Telefone</label><input id="fTelefone"></div>
+  </div>
+  <div id="msgFamilia" class="msg"></div>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="fecharModal('modalFamilia')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarFamilia()">Salvar</button>
+  </div>
+</div></div>
+
+<!-- Modal Atendimento CRAS -->
+<div class="modal-bg" id="modalAtendCras"><div class="modal">
+  <h3>📋 Registrar Atendimento PAIF</h3>
+  <div class="form-group"><label>Família *</label>
+    <select id="aCrasFamilia"><option value="">Selecione a família…</option></select>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Data do Atendimento *</label><input id="aCrasData" type="date"></div>
+    <div class="form-group"><label>Tipo *</label>
+      <select id="aCrasTipo">
+        <option value="individual">Individual</option>
+        <option value="familiar">Familiar</option>
+        <option value="grupo">Grupo</option>
+        <option value="visita">Visita Domiciliar</option>
+        <option value="encaminhamento">Encaminhamento</option>
+        <option value="acompanhamento">Acompanhamento</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Nome do Técnico</label><input id="aCrasTecNome"></div>
+    <div class="form-group"><label>Cargo</label><input id="aCrasTecCargo" placeholder="Assistente Social"></div>
+  </div>
+  <div class="form-group"><label>Objetivo</label><input id="aCrasObjetivo"></div>
+  <div class="form-group"><label>Descrição</label><textarea id="aCrasDescricao" rows="3"></textarea></div>
+  <div class="form-group"><label>Encaminhamento</label><textarea id="aCrasEncam" rows="2"></textarea></div>
+  <div id="msgAtendCras" class="msg"></div>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="fecharModal('modalAtendCras')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarAtendCras()">Salvar</button>
+  </div>
+</div></div>
+
+<!-- Modal Atendimento CREAS -->
+<div class="modal-bg" id="modalAtendCreas"><div class="modal">
+  <h3>🛡️ Registrar Atendimento PAEFI</h3>
+  <div class="form-group"><label>Nome do Usuário *</label><input id="acNome" placeholder="Nome completo"></div>
+  <div class="form-row">
+    <div class="form-group"><label>CPF</label><input id="acCpf" placeholder="000.000.000-00"></div>
+    <div class="form-group"><label>Data Nascimento</label><input id="acNasc" type="date"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Tipo de Violação *</label>
+      <select id="acViolacao">
+        <option value="violencia_domestica">Violência Doméstica</option>
+        <option value="sexual">Violência Sexual</option>
+        <option value="exploracao_sexual">Exploração Sexual</option>
+        <option value="trabalho_infantil">Trabalho Infantil</option>
+        <option value="negligencia">Negligência/Abandono</option>
+        <option value="trafico_pessoas">Tráfico de Pessoas</option>
+        <option value="cumprimento_medida">Medida Socioeducativa</option>
+        <option value="populacao_rua">Pop. Situação de Rua</option>
+        <option value="abuso_substancias">Abuso de Substâncias</option>
+        <option value="outros">Outros</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Data do Atendimento *</label><input id="acData" type="date"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Técnico</label><input id="acTecNome"></div>
+    <div class="form-group"><label>Cargo</label><input id="acTecCargo" placeholder="Assistente Social"></div>
+  </div>
+  <div class="form-group"><label>Descrição</label><textarea id="acDescricao" rows="3"></textarea></div>
+  <div class="form-group"><label>Plano de Atendimento</label><textarea id="acPlano" rows="2"></textarea></div>
+  <div class="form-group"><label>Prontuário Nº</label><input id="acProntuario"></div>
+  <div id="msgAtendCreas" class="msg"></div>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="fecharModal('modalAtendCreas')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarAtendCreas()">Salvar</button>
+  </div>
+</div></div>
+
+<!-- Modal BPC -->
+<div class="modal-bg" id="modalBpc"><div class="modal">
+  <h3>♿ Cadastrar Beneficiário BPC</h3>
+  <div class="form-group"><label>Nome *</label><input id="bpNome"></div>
+  <div class="form-row">
+    <div class="form-group"><label>CPF</label><input id="bpCpf" placeholder="000.000.000-00"></div>
+    <div class="form-group"><label>NIS</label><input id="bpNis"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Tipo BPC *</label>
+      <select id="bpTipo">
+        <option value="pessoa_deficiencia">Pessoa com Deficiência</option>
+        <option value="idoso_65">Idoso (65+)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Valor (R$)</label><input id="bpValor" type="number" step="0.01" min="0"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Data Início</label><input id="bpInicio" type="date"></div>
+    <div class="form-group"><label>Data Fim</label><input id="bpFim" type="date"></div>
+  </div>
+  <div id="msgBpc" class="msg"></div>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="fecharModal('modalBpc')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarBpc()">Salvar</button>
+  </div>
+</div></div>
+
+<!-- Modal Benefício Eventual -->
+<div class="modal-bg" id="modalBeneficio"><div class="modal">
+  <h3>🎁 Registrar Benefício Eventual</h3>
+  <div class="form-group"><label>Beneficiário *</label><input id="beNome"></div>
+  <div class="form-row">
+    <div class="form-group"><label>CPF</label><input id="beCpf" placeholder="000.000.000-00"></div>
+    <div class="form-group"><label>NIS</label><input id="beNis"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Tipo *</label>
+      <select id="beTipo">
+        <option value="cesta_basica">Cesta Básica</option>
+        <option value="auxilio_aluguel">Auxílio Aluguel</option>
+        <option value="passagem">Passagem</option>
+        <option value="material_escolar">Material Escolar</option>
+        <option value="material_construcao">Material de Construção</option>
+        <option value="medicamento">Medicamento</option>
+        <option value="enxoval_bebe">Enxoval de Bebê</option>
+        <option value="auxilio_funeral">Auxílio Funeral</option>
+        <option value="outros">Outros</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Data da Concessão *</label><input id="beData" type="date"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Quantidade</label><input id="beQtd" type="number" step="0.001" min="0" value="1"></div>
+    <div class="form-group"><label>Valor (R$)</label><input id="beValor" type="number" step="0.01" min="0" value="0"></div>
+  </div>
+  <div class="form-group"><label>Técnico Responsável</label><input id="beTecnico"></div>
+  <div id="msgBeneficio" class="msg"></div>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="fecharModal('modalBeneficio')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarBeneficio()">Salvar</button>
+  </div>
+</div></div>
+
+<!-- Modal IA Inconsistências -->
+<div class="modal-bg" id="modalIA"><div class="modal" style="max-width:680px">
+  <h3>🤖 IA: Inconsistências Cadastrais CadÚnico</h3>
+  <div id="iaConteudo" style="color:var(--muted);font-size:13px">Analisando…</div>
+  <div class="modal-actions" style="margin-top:20px">
+    <button class="btn btn-ghost" onclick="fecharModal('modalIA')">Fechar</button>
+  </div>
+</div></div>
+
+<!-- Modal Censo SUAS -->
+<div class="modal-bg" id="modalCenso"><div class="modal" style="max-width:640px">
+  <h3>📊 Censo SUAS — Indicadores MDS</h3>
+  <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
+    <select id="censoAno" class="filter-sel"></select>
+    <select id="censoMes" class="filter-sel">
+      <option value="">Ano inteiro</option>
+      <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+      <option value="3">Março</option><option value="4">Abril</option>
+      <option value="5">Maio</option><option value="6">Junho</option>
+      <option value="7">Julho</option><option value="8">Agosto</option>
+      <option value="9">Setembro</option><option value="10">Outubro</option>
+      <option value="11">Novembro</option><option value="12">Dezembro</option>
+    </select>
+    <button class="btn btn-primary btn-sm" onclick="carregarCenso()">Consultar</button>
+  </div>
+  <div id="censoConteudo" style="color:var(--muted);font-size:13px">Selecione o período…</div>
+  <div class="modal-actions" style="margin-top:20px">
+    <button class="btn btn-ghost" onclick="fecharModal('modalCenso')">Fechar</button>
+  </div>
+</div></div>
+
+<script>
+// ─── Utilitários ─────────────────────────────────────────────────────────────
+function setTab(nome, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab' + nome.charAt(0).toUpperCase() + nome.slice(1)).classList.add('active');
+  btn.classList.add('active');
+  carregarTab(nome);
+}
+function setSubTab(grupo, sub, btn) {
+  document.querySelectorAll('.sub-panel.' + grupo).forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  document.querySelectorAll('.tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById(grupo + sub.charAt(0).toUpperCase() + sub.slice(1));
+  if (el) { el.classList.add('active'); el.style.display = ''; }
+  btn.classList.add('active');
+  carregarSubTab(grupo, sub);
+}
+function carregarTab(nome) {
+  if (nome === 'dashboard') carregarDashboard();
+  else if (nome === 'cras') { carregarCrasUnidades(); }
+  else if (nome === 'creas') { carregarCreasUnidades(); }
+  else if (nome === 'cadunico') carregarCadunico();
+  else if (nome === 'bpc') carregarBpc();
+  else if (nome === 'beneficios') carregarBeneficios();
+}
+function carregarSubTab(grupo, sub) {
+  if (grupo === 'cras') {
+    if (sub === 'unidades') carregarCrasUnidades();
+    else if (sub === 'familias') carregarFamilias();
+    else if (sub === 'atendimentos') carregarAtendCras();
+    else if (sub === 'visitas') carregarVisitas();
+  } else if (grupo === 'creas') {
+    if (sub === 'unidades') carregarCreasUnidades();
+    else if (sub === 'atendimentos') carregarAtendCreas();
+  }
+}
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function setMsg(id, txt, tipo) {
+  const el = document.getElementById(id);
+  el.className = 'msg ' + tipo;
+  el.textContent = txt;
+}
+function fmt(v, casas=0) { return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:casas,maximumFractionDigits:casas}); }
+function fmtMoeda(v) { return 'R$ ' + fmt(v, 2); }
+function badgeSit(s) {
+  const m = {em_acompanhamento:'ok',ativa:'ok',encerrada:'muted',suspensa:'warn',encerrado:'muted',referenciado:'info',aguardando:'warn'};
+  return `<span class="badge badge-${m[s]||'muted'}">${s.replace(/_/g,' ')}</span>`;
+}
+function sim_nao(v) { return v ? '<span class="badge badge-ok">Sim</span>' : '<span class="badge badge-muted">Não</span>'; }
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+async function carregarDashboard() {
+  try {
+    const d = await fetch('/api/governo/suas/dashboard').then(r=>r.json());
+    document.getElementById('kpiFamilias').textContent = fmt(d.cras?.familias_em_acompanhamento);
+    document.getElementById('kpiAtendMes').textContent = fmt(d.cras?.atendimentos_mes);
+    document.getElementById('kpiDescump').textContent = fmt(d.sicon?.descumpridas);
+    document.getElementById('kpiCreasCasos').textContent = fmt(d.creas?.casos_ativos);
+    document.getElementById('dashCras').innerHTML = `
+      <div style="display:grid;gap:8px;font-size:13px">
+        <div>Unidades CRAS ativas: <b>${d.cras.unidades}</b></div>
+        <div>Famílias total: <b>${fmt(d.cras.familias_total)}</b></div>
+        <div>Em acompanhamento: <b>${fmt(d.cras.familias_em_acompanhamento)}</b></div>
+        <div>Atendimentos este mês: <b>${fmt(d.cras.atendimentos_mes)}</b></div>
+        <div>Visitas domiciliares (mês): <b>${fmt(d.cras.visitas_domiciliares_mes)}</b></div>
+        <div>Vulnerabilidades identificadas (mês): <b style="color:var(--warn)">${fmt(d.cras.vulnerabilidades_identificadas_mes)}</b></div>
+      </div>`;
+    document.getElementById('dashCreas').innerHTML = `
+      <div style="display:grid;gap:8px;font-size:13px">
+        <div>Unidades CREAS ativas: <b>${d.creas.unidades}</b></div>
+        <div>Casos em acompanhamento: <b style="color:var(--danger)">${fmt(d.creas.casos_ativos)}</b></div>
+        <div>Novos este mês: <b>${fmt(d.creas.novos_mes)}</b></div>
+        ${Object.entries(d.creas.por_tipo_violacao||{}).slice(0,3).map(([k,v])=>`<div>${k.replace(/_/g,' ')}: <b>${v}</b></div>`).join('')}
+      </div>`;
+    document.getElementById('dashCadunico').innerHTML = `
+      <div style="display:grid;gap:8px;font-size:13px">
+        <div>Famílias importadas: <b>${fmt(d.cadunico.familias_importadas)}</b></div>
+        <div>Com PBF: <b style="color:var(--ok)">${fmt(d.cadunico.titulares_pbf)}</b></div>
+        <div>BPC ativos: <b>${fmt(d.bpc.beneficiarios_ativos)}</b></div>
+        <div>Benefícios eventuais (mês): <b>${fmt(d.beneficios_eventuais_mes)}</b></div>
+      </div>`;
+    document.getElementById('dashSicon').innerHTML = `
+      <div style="display:grid;gap:8px;font-size:13px">
+        <div>Condicionalidades descumpridas: <b style="color:var(--danger)">${fmt(d.sicon.descumpridas)}</b></div>
+        <div>Sem informação: <b style="color:var(--warn)">${fmt(d.sicon.sem_informacao)}</b></div>
+      </div>`;
+  } catch(e) { console.error(e); }
+}
+
+// ─── CRAS Unidades ────────────────────────────────────────────────────────────
+async function carregarCrasUnidades() {
+  const r = await fetch('/api/governo/suas/cras').then(r=>r.json());
+  const tb = document.getElementById('tbCrasUnidades');
+  if (!r.unidades?.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma unidade cadastrada</td></tr>'; return; }
+  tb.innerHTML = r.unidades.map(u=>`<tr>
+    <td><b>${u.nome}</b></td><td>${u.codigo_cras||'—'}</td><td>${u.cnes||'—'}</td>
+    <td>${u.municipio||'—'}/${u.uf||'—'}</td><td>${u.responsavel_tecnico||'—'}</td>
+    <td>${u.ativo?'<span class="badge badge-ok">Ativa</span>':'<span class="badge badge-muted">Inativa</span>'}</td>
+  </tr>`).join('');
+  // popula select de família
+  const sel = document.getElementById('fUnidade');
+  sel.innerHTML = '<option value="">Selecione…</option>' + r.unidades.map(u=>`<option value="${u.id}">${u.nome}</option>`).join('');
+}
+
+// ─── Famílias ─────────────────────────────────────────────────────────────────
+let familiaPage = 1;
+async function carregarFamilias(page) {
+  if (page) familiaPage = page;
+  const q = document.getElementById('filtroFamiliaNome').value;
+  const sit = document.getElementById('filtroFamiliaSituacao').value;
+  const params = new URLSearchParams({page: familiaPage});
+  if (q) params.set('q', q);
+  if (sit) params.set('situacao', sit);
+  const r = await fetch('/api/governo/suas/cras/familias?' + params).then(r=>r.json());
+  const tb = document.getElementById('tbFamilias');
+  if (!r.familias?.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma família encontrada</td></tr>'; return; }
+  tb.innerHTML = r.familias.map(f=>`<tr>
+    <td><b>${f.responsavel_nome}</b></td>
+    <td>${f.responsavel_cpf||'—'}</td>
+    <td>${f.responsavel_nis||'—'}</td>
+    <td>${f.num_integrantes}</td>
+    <td>${fmtMoeda(f.renda_familiar_total / Math.max(f.num_integrantes,1))}</td>
+    <td>${sim_nao(f.marcador_pbf)}</td>
+    <td>${sim_nao(f.marcador_bpc)}</td>
+    <td>${badgeSit(f.situacao)}</td>
+  </tr>`).join('');
+  // popula select de família no modal de atendimento
+  const sel = document.getElementById('aCrasFamilia');
+  if (sel.options.length <= 1) {
+    sel.innerHTML = '<option value="">Selecione…</option>' + r.familias.map(f=>`<option value="${f.id}">${f.responsavel_nome}</option>`).join('');
+  }
+  const pag = document.getElementById('paginacaoFamilias');
+  pag.innerHTML = r.paginas > 1 ? `
+    <button class="btn btn-ghost btn-sm" ${familiaPage<=1?'disabled':''} onclick="carregarFamilias(${familiaPage-1})">← Anterior</button>
+    <span>Página ${familiaPage} de ${r.paginas} (${fmt(r.total)} registros)</span>
+    <button class="btn btn-ghost btn-sm" ${familiaPage>=r.paginas?'disabled':''} onclick="carregarFamilias(${familiaPage+1})">Próxima →</button>` : `<span>${fmt(r.total)} registros</span>`;
+}
+
+// ─── Atendimentos CRAS ────────────────────────────────────────────────────────
+async function carregarAtendCras() {
+  const tipo = document.getElementById('filtroAtendTipo').value;
+  const di = document.getElementById('filtroAtendDataIni').value;
+  const df = document.getElementById('filtroAtendDataFim').value;
+  const params = new URLSearchParams();
+  if (tipo) params.set('tipo', tipo);
+  if (di) params.set('data_inicio', di);
+  if (df) params.set('data_fim', df);
+  const r = await fetch('/api/governo/suas/cras/atendimentos?' + params).then(r=>r.json());
+  const tb = document.getElementById('tbAtendCras');
+  if (!r.atendimentos?.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Nenhum atendimento encontrado</td></tr>'; return; }
+  tb.innerHTML = r.atendimentos.map(a=>`<tr>
+    <td>${a.familia_nome||'—'}</td>
+    <td>${a.tecnico_nome||'—'}</td>
+    <td><span class="badge badge-info">${a.tipo}</span></td>
+    <td>${a.objetivo||'—'}</td>
+    <td>${a.data_atendimento}</td>
+  </tr>`).join('');
+}
+
+// ─── Visitas ─────────────────────────────────────────────────────────────────
+async function carregarVisitas() {
+  const r = await fetch('/api/governo/suas/cras/visitas').then(r=>r.json());
+  const tb = document.getElementById('tbVisitas');
+  if (!r.visitas?.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Nenhuma visita registrada</td></tr>'; return; }
+  tb.innerHTML = r.visitas.map(v=>`<tr>
+    <td>${v.familia_nome||'—'}</td>
+    <td>${v.tecnico_nome||'—'}</td>
+    <td>${v.data_visita}</td>
+    <td>${v.objetivo||'—'}</td>
+    <td>${v.vulnerabilidade_identificada?'<span class="badge badge-danger">Sim</span>':'<span class="badge badge-muted">Não</span>'}</td>
+  </tr>`).join('');
+}
+
+// ─── CREAS Unidades ───────────────────────────────────────────────────────────
+async function carregarCreasUnidades() {
+  const r = await fetch('/api/governo/suas/creas').then(r=>r.json());
+  const tb = document.getElementById('tbCreasUnidades');
+  if (!r.unidades?.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma unidade CREAS cadastrada</td></tr>'; return; }
+  tb.innerHTML = r.unidades.map(u=>`<tr>
+    <td><b>${u.nome}</b></td><td>${u.codigo_creas||'—'}</td><td>${u.cnes||'—'}</td>
+    <td>${u.municipio||'—'}/${u.uf||'—'}</td><td>${u.responsavel_tecnico||'—'}</td>
+    <td>${u.ativo?'<span class="badge badge-ok">Ativa</span>':'<span class="badge badge-muted">Inativa</span>'}</td>
+  </tr>`).join('');
+}
+
+// ─── Atendimentos CREAS ───────────────────────────────────────────────────────
+let creasPage = 1;
+async function carregarAtendCreas(page) {
+  if (page) creasPage = page;
+  const violacao = document.getElementById('filtroCreasViolacao').value;
+  const status = document.getElementById('filtroCreasStatus').value;
+  const q = document.getElementById('filtroCreasQ').value;
+  const params = new URLSearchParams({page: creasPage});
+  if (violacao) params.set('tipo_violacao', violacao);
+  if (status) params.set('situacao', status);
+  if (q) params.set('q', q);
+  const r = await fetch('/api/governo/suas/creas/atendimentos?' + params).then(r=>r.json());
+  const tb = document.getElementById('tbAtendCreas');
+  if (!r.atendimentos?.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum atendimento encontrado</td></tr>'; return; }
+  tb.innerHTML = r.atendimentos.map(a=>`<tr>
+    <td><b>${a.usuario_nome}</b></td>
+    <td>${a.usuario_cpf||'—'}</td>
+    <td><span class="badge badge-danger">${(a.tipo_violacao||'').replace(/_/g,' ')}</span></td>
+    <td>${a.tecnico_nome||'—'}</td>
+    <td>${a.data_atendimento}</td>
+    <td>${badgeSit(a.situacao)}</td>
+    <td>${a.numero_prontuario||'—'}</td>
+  </tr>`).join('');
+  const pag = document.getElementById('paginacaoCreas');
+  pag.innerHTML = r.paginas > 1 ? `
+    <button class="btn btn-ghost btn-sm" ${creasPage<=1?'disabled':''} onclick="carregarAtendCreas(${creasPage-1})">← Anterior</button>
+    <span>Página ${creasPage} de ${r.paginas} (${fmt(r.total)} registros)</span>
+    <button class="btn btn-ghost btn-sm" ${creasPage>=r.paginas?'disabled':''} onclick="carregarAtendCreas(${creasPage+1})">Próxima →</button>` : `<span>${fmt(r.total)} registros</span>`;
+}
+
+// ─── CadÚnico ─────────────────────────────────────────────────────────────────
+let cadPage = 1;
+async function carregarCadunico(page) {
+  if (page) cadPage = page;
+  const q = document.getElementById('filtroCadNome').value;
+  const pbf = document.getElementById('filtroCadPbf').value;
+  const params = new URLSearchParams({page: cadPage});
+  if (q) params.set('q', q);
+  if (pbf) params.set('marcador_pbf', pbf);
+  const r = await fetch('/api/governo/suas/cadunico?' + params).then(r=>r.json());
+  const tb = document.getElementById('tbCadunico');
+  if (!r.familias?.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum registro CadÚnico</td></tr>'; return; }
+  tb.innerHTML = r.familias.map(f=>`<tr>
+    <td><b>${f.responsavel_nome}</b></td>
+    <td>${f.responsavel_nis||'—'}</td>
+    <td>${f.qtd_pessoas}</td>
+    <td>${fmtMoeda(f.renda_per_capita)}</td>
+    <td>${sim_nao(f.marcador_pbf)}</td>
+    <td>${sim_nao(f.marcador_bpc)}</td>
+    <td>${f.municipio||'—'}/${f.uf||'—'}</td>
+    <td>${f.data_ultima_atualizacao||'—'}</td>
+  </tr>`).join('');
+  const pag = document.getElementById('paginacaoCad');
+  pag.innerHTML = r.paginas > 1 ? `
+    <button class="btn btn-ghost btn-sm" ${cadPage<=1?'disabled':''} onclick="carregarCadunico(${cadPage-1})">← Anterior</button>
+    <span>Página ${cadPage} de ${r.paginas} (${fmt(r.total)} registros)</span>
+    <button class="btn btn-ghost btn-sm" ${cadPage>=r.paginas?'disabled':''} onclick="carregarCadunico(${cadPage+1})">Próxima →</button>` : `<span>${fmt(r.total)} registros</span>`;
+}
+
+// ─── BPC ──────────────────────────────────────────────────────────────────────
+async function carregarBpc() {
+  const tipo = document.getElementById('filtroBpcTipo').value;
+  const params = new URLSearchParams();
+  if (tipo) params.set('tipo_bpc', tipo);
+  const r = await fetch('/api/governo/suas/bpc?' + params).then(r=>r.json());
+  const tb = document.getElementById('tbBpc');
+  if (!r.beneficiarios?.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum beneficiário BPC</td></tr>'; return; }
+  tb.innerHTML = r.beneficiarios.map(b=>`<tr>
+    <td><b>${b.beneficiario_nome}</b></td>
+    <td>${b.beneficiario_cpf||'—'}</td>
+    <td>${b.beneficiario_nis||'—'}</td>
+    <td>${b.tipo_bpc==='pessoa_deficiencia'?'<span class="badge badge-info">PCD</span>':'<span class="badge badge-warn">Idoso 65+</span>'}</td>
+    <td>${fmtMoeda(b.valor_beneficio)}</td>
+    <td>${b.data_inicio||'—'}</td>
+    <td>${sim_nao(b.ativo)}</td>
+  </tr>`).join('');
+}
+
+// ─── Benefícios Eventuais ─────────────────────────────────────────────────────
+async function carregarBeneficios() {
+  const tipo = document.getElementById('filtroBenTipo').value;
+  const di = document.getElementById('filtroBenDataIni').value;
+  const params = new URLSearchParams();
+  if (tipo) params.set('tipo', tipo);
+  if (di) params.set('data_inicio', di);
+  const r = await fetch('/api/governo/suas/beneficios-eventuais?' + params).then(r=>r.json());
+  const tb = document.getElementById('tbBeneficios');
+  if (!r.beneficios?.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum benefício registrado</td></tr>'; return; }
+  tb.innerHTML = r.beneficios.map(b=>`<tr>
+    <td><b>${b.beneficiario_nome}</b></td>
+    <td>${b.beneficiario_cpf||'—'}</td>
+    <td><span class="badge badge-info">${(b.tipo||'').replace(/_/g,' ')}</span></td>
+    <td>${fmt(b.quantidade,3)}</td>
+    <td>${fmtMoeda(b.valor)}</td>
+    <td>${b.data_concessao}</td>
+    <td>${b.tecnico_responsavel||'—'}</td>
+  </tr>`).join('');
+}
+
+// ─── IA Inconsistências ───────────────────────────────────────────────────────
+async function abrirIA() {
+  abrirModal('modalIA');
+  document.getElementById('iaConteudo').innerHTML = '<span style="color:var(--muted)">Analisando dados CadÚnico…</span>';
+  try {
+    const r = await fetch('/api/governo/suas/ia-inconsistencias').then(r=>r.json());
+    if (!r.alertas?.length) {
+      document.getElementById('iaConteudo').innerHTML = '<span style="color:var(--ok)">✅ Nenhuma inconsistência detectada.</span>';
+      return;
+    }
+    const sevCor = {alta:'sev-alta',media:'sev-media',baixa:'sev-baixa'};
+    document.getElementById('iaConteudo').innerHTML = `
+      <div style="display:flex;gap:16px;margin-bottom:16px">
+        <span style="color:var(--danger)">● Alta: <b>${r.resumo.alta}</b></span>
+        <span style="color:var(--warn)">● Média: <b>${r.resumo.media}</b></span>
+        <span style="color:var(--muted)">● Baixa: <b>${r.resumo.baixa}</b></span>
+      </div>
+      <div style="max-height:400px;overflow-y:auto">
+        ${r.alertas.map(a=>`
+          <div class="alerta-item">
+            <div class="alerta-sev ${sevCor[a.severidade]||''}"></div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px">${a.tipo.replace(/_/g,' ')} · ${a.severidade}</div>
+              <div style="font-size:13px">${a.descricao}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) { document.getElementById('iaConteudo').innerHTML = '<span style="color:var(--danger)">Erro ao carregar análise.</span>'; }
+}
+
+// ─── Censo SUAS ───────────────────────────────────────────────────────────────
+function abrirCenso() {
+  const ano = document.getElementById('censoAno');
+  if (!ano.options.length) {
+    const y = new Date().getFullYear();
+    for (let i=y; i>=y-4; i--) ano.innerHTML += `<option value="${i}">${i}</option>`;
+  }
+  abrirModal('modalCenso');
+}
+async function carregarCenso() {
+  const ano = document.getElementById('censoAno').value;
+  const mes = document.getElementById('censoMes').value;
+  const params = new URLSearchParams({ano});
+  if (mes) params.set('mes', mes);
+  const r = await fetch('/api/governo/suas/censo?' + params).then(r=>r.json());
+  document.getElementById('censoConteudo').innerHTML = `
+    <div style="display:grid;gap:12px">
+      <b>CRAS / PAIF — ${r.periodo.data_inicio} a ${r.periodo.data_fim}</b>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+        <div>Famílias referenciadas: <b>${fmt(r.cras_paif.familias_referenciadas_total)}</b></div>
+        <div>Atendimentos individuais: <b>${fmt(r.cras_paif.atendimentos_individuais)}</b></div>
+        <div>Atendimentos familiares: <b>${fmt(r.cras_paif.atendimentos_familiares)}</b></div>
+        <div>Grupos: <b>${fmt(r.cras_paif.atendimentos_grupo)}</b></div>
+        <div>Visitas domiciliares: <b>${fmt(r.cras_paif.visitas_domiciliares)}</b></div>
+        <div>Total atendimentos: <b style="color:var(--accent)">${fmt(r.cras_paif.total_atendimentos)}</b></div>
+      </div>
+      <b>CREAS / PAEFI</b>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+        <div>Novos acolhimentos: <b>${fmt(r.creas_paefi.novos_acolhimentos)}</b></div>
+        <div>Em acompanhamento: <b style="color:var(--danger)">${fmt(r.creas_paefi.em_acompanhamento)}</b></div>
+      </div>
+      <b>BPC</b>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+        <div>PCD: <b>${fmt(r.bpc.pessoa_deficiencia)}</b></div>
+        <div>Idoso 65+: <b>${fmt(r.bpc.idoso_65)}</b></div>
+        <div>Total BPC: <b style="color:var(--ok)">${fmt(r.bpc.total)}</b></div>
+      </div>
+      <b>SICON — Descumprimento</b>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:13px">
+        <div>Saúde: <b style="color:var(--warn)">${fmt(r.sicon_descumprimento.saude)}</b></div>
+        <div>Educação: <b style="color:var(--warn)">${fmt(r.sicon_descumprimento.educacao)}</b></div>
+        <div>Social: <b style="color:var(--warn)">${fmt(r.sicon_descumprimento.assistencia_social)}</b></div>
+      </div>
+    </div>`;
+}
+
+// ─── Salvar Unidade CRAS ──────────────────────────────────────────────────────
+async function salvarCrasUnidade() {
+  const body = {
+    nome: document.getElementById('cuNome').value.trim(),
+    codigo_cras: document.getElementById('cuCodigo').value.trim(),
+    cnes: document.getElementById('cuCnes').value.trim(),
+    endereco: document.getElementById('cuEndereco').value.trim(),
+    municipio: document.getElementById('cuMunicipio').value.trim(),
+    uf: document.getElementById('cuUf').value.trim().toUpperCase(),
+    telefone: document.getElementById('cuTelefone').value.trim(),
+    responsavel_tecnico: document.getElementById('cuResponsavel').value.trim(),
+  };
+  if (!body.nome) { setMsg('msgCrasUnidade','Nome obrigatório','err'); return; }
+  const r = await fetch('/api/governo/suas/cras', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.id) { fecharModal('modalCrasUnidade'); carregarCrasUnidades(); }
+  else setMsg('msgCrasUnidade', r.erro||'Erro ao salvar', 'err');
+}
+
+// ─── Salvar Família ───────────────────────────────────────────────────────────
+async function salvarFamilia() {
+  const body = {
+    responsavel_nome: document.getElementById('fNome').value.trim(),
+    responsavel_cpf: document.getElementById('fCpf').value.trim(),
+    responsavel_nis: document.getElementById('fNis').value.trim(),
+    num_integrantes: parseInt(document.getElementById('fIntegrantes').value)||1,
+    renda_familiar_total: parseFloat(document.getElementById('fRenda').value)||0,
+    unidade_cras_id: document.getElementById('fUnidade').value||null,
+    situacao: document.getElementById('fSituacao').value,
+    cadUnico_numero_seq: document.getElementById('fCadunico').value.trim(),
+    responsavel_telefone: document.getElementById('fTelefone').value.trim(),
+  };
+  if (!body.responsavel_nome) { setMsg('msgFamilia','Nome obrigatório','err'); return; }
+  const r = await fetch('/api/governo/suas/cras/familias',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.id) { fecharModal('modalFamilia'); carregarFamilias(); }
+  else setMsg('msgFamilia', r.erro||'Erro ao salvar', 'err');
+}
+
+// ─── Salvar Atendimento CRAS ──────────────────────────────────────────────────
+async function salvarAtendCras() {
+  const body = {
+    familia_id: document.getElementById('aCrasFamilia').value,
+    data_atendimento: document.getElementById('aCrasData').value,
+    tipo: document.getElementById('aCrasTipo').value,
+    tecnico_nome: document.getElementById('aCrasTecNome').value.trim(),
+    tecnico_cargo: document.getElementById('aCrasTecCargo').value.trim(),
+    objetivo: document.getElementById('aCrasObjetivo').value.trim(),
+    descricao: document.getElementById('aCrasDescricao').value.trim(),
+    encaminhamento: document.getElementById('aCrasEncam').value.trim(),
+  };
+  if (!body.familia_id||!body.data_atendimento) { setMsg('msgAtendCras','Família e data obrigatórios','err'); return; }
+  const r = await fetch('/api/governo/suas/cras/atendimentos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.id) { fecharModal('modalAtendCras'); carregarAtendCras(); }
+  else setMsg('msgAtendCras', r.erro||'Erro ao salvar', 'err');
+}
+
+// ─── Salvar Atendimento CREAS ─────────────────────────────────────────────────
+async function salvarAtendCreas() {
+  const body = {
+    usuario_nome: document.getElementById('acNome').value.trim(),
+    usuario_cpf: document.getElementById('acCpf').value.trim(),
+    usuario_data_nascimento: document.getElementById('acNasc').value||null,
+    tipo_violacao: document.getElementById('acViolacao').value,
+    data_atendimento: document.getElementById('acData').value,
+    tecnico_nome: document.getElementById('acTecNome').value.trim(),
+    tecnico_cargo: document.getElementById('acTecCargo').value.trim(),
+    descricao: document.getElementById('acDescricao').value.trim(),
+    plano_atendimento: document.getElementById('acPlano').value.trim(),
+    numero_prontuario: document.getElementById('acProntuario').value.trim(),
+  };
+  if (!body.usuario_nome||!body.data_atendimento) { setMsg('msgAtendCreas','Nome e data obrigatórios','err'); return; }
+  const r = await fetch('/api/governo/suas/creas/atendimentos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.id) { fecharModal('modalAtendCreas'); carregarAtendCreas(); }
+  else setMsg('msgAtendCreas', r.erro||'Erro ao salvar', 'err');
+}
+
+// ─── Salvar BPC ───────────────────────────────────────────────────────────────
+async function salvarBpc() {
+  const body = {
+    beneficiario_nome: document.getElementById('bpNome').value.trim(),
+    beneficiario_cpf: document.getElementById('bpCpf').value.trim(),
+    beneficiario_nis: document.getElementById('bpNis').value.trim(),
+    tipo_bpc: document.getElementById('bpTipo').value,
+    valor_beneficio: parseFloat(document.getElementById('bpValor').value)||0,
+    data_inicio: document.getElementById('bpInicio').value||null,
+    data_fim: document.getElementById('bpFim').value||null,
+    ativo: true,
+  };
+  if (!body.beneficiario_nome) { setMsg('msgBpc','Nome obrigatório','err'); return; }
+  const r = await fetch('/api/governo/suas/bpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.id) { fecharModal('modalBpc'); carregarBpc(); }
+  else setMsg('msgBpc', r.erro||'Erro ao salvar', 'err');
+}
+
+// ─── Salvar Benefício Eventual ────────────────────────────────────────────────
+async function salvarBeneficio() {
+  const body = {
+    beneficiario_nome: document.getElementById('beNome').value.trim(),
+    beneficiario_cpf: document.getElementById('beCpf').value.trim(),
+    beneficiario_nis: document.getElementById('beNis').value.trim(),
+    tipo: document.getElementById('beTipo').value,
+    data_concessao: document.getElementById('beData').value,
+    quantidade: parseFloat(document.getElementById('beQtd').value)||1,
+    valor: parseFloat(document.getElementById('beValor').value)||0,
+    tecnico_responsavel: document.getElementById('beTecnico').value.trim(),
+  };
+  if (!body.beneficiario_nome||!body.data_concessao) { setMsg('msgBeneficio','Nome e data obrigatórios','err'); return; }
+  const r = await fetch('/api/governo/suas/beneficios-eventuais',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.id) { fecharModal('modalBeneficio'); carregarBeneficios(); }
+  else setMsg('msgBeneficio', r.erro||'Erro ao salvar', 'err');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  carregarDashboard();
+  // Fechar modal ao clicar fora
+  document.querySelectorAll('.modal-bg').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  });
+});
+</script>
+</body>
+</html>

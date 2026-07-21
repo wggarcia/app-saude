@@ -19,11 +19,19 @@ from datetime import date, timedelta
 
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial
+from .access_control import (
+    api_requer_permissao_modulo, contexto_navegacao_setorial,
+    get_setor, principal_pode_operacao_setorial,
+)
 from .services.auth_session import empresa_autenticada_from_request
+
+
+def governo_suas_page(request):
+    return render(request, "governo_suas.html", contexto_navegacao_setorial(request, "governo"))
 
 logger = logging.getLogger(__name__)
 
