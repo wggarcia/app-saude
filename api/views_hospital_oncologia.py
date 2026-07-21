@@ -326,7 +326,7 @@ def api_onco_apacs(request):
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    _, _, APACOncologia, _ = _get_onco_models()
+    _, CicloQuimioterapia, APACOncologia, _ = _get_onco_models()
 
     if request.method == "GET":
         qs = APACOncologia.objects.filter(empresa=empresa)
@@ -372,6 +372,16 @@ def api_onco_apacs(request):
     data = json.loads(request.body)
     competencia = data.get("competencia", date.today().strftime("%Y%m"))
 
+    # Valida que o ciclo referenciado pertence a ESTA empresa antes de vincular —
+    # senão a APAC poderia apontar para um ciclo de outro tenant (ciclo_id vinha
+    # cru do payload, sem checagem de posse).
+    ciclo_ref = None
+    ciclo_id = data.get("ciclo_id")
+    if ciclo_id:
+        ciclo_ref = CicloQuimioterapia.objects.filter(id=ciclo_id, empresa=empresa).first()
+        if ciclo_ref is None:
+            return JsonResponse({"erro": "Ciclo de quimioterapia não encontrado para esta empresa"}, status=400)
+
     with transaction.atomic():
         ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
         if not ok_cpf:
@@ -385,7 +395,7 @@ def api_onco_apacs(request):
             cid10_principal=data["cid10_principal"],
             cid10_secundario=data.get("cid10_secundario", ""),
             procedimento_principal=data.get("procedimento_principal", ""),
-            ciclo_referencia_id=data.get("ciclo_id"),
+            ciclo_referencia=ciclo_ref,
             competencia=competencia,
             valor_solicitado=data.get("valor_solicitado"),
         )

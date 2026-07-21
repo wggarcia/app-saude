@@ -14,7 +14,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from .access_control import contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
 from .models import (
     BeneficiarioPlano, PortalBeneficiarioToken,
-    RedeCredenciadaPlano, IAAutorizacaoGuia,
+    RedeCredenciadaPlano,
     GuiaAutorizacao,
 )
 from .views_dashboard import _empresa_autenticada
@@ -181,11 +181,32 @@ def plano_portal_beneficiario_page(request, token):
     if cidade_filtro:
         rede = rede.filter(cidade__icontains=cidade_filtro)
 
-    # Autorizações recentes do beneficiário (pelo nome)
-    autorizacoes = IAAutorizacaoGuia.objects.filter(
-        empresa=empresa,
-        beneficiario__icontains=b.nome.split()[0],  # busca pelo primeiro nome
-    ).order_by("-criado_em")[:10]
+    # Autorizações recentes do beneficiário — pela FK real (GuiaAutorizacao.beneficiario),
+    # NUNCA por match de nome. O match anterior (IAAutorizacaoGuia por primeiro nome)
+    # expunha guias de homônimos da mesma operadora a este beneficiário (vazamento de
+    # privacidade intra-tenant). GuiaAutorizacao tem FK ao beneficiário e ao plano.
+    from types import SimpleNamespace
+    _DECISAO = {
+        GuiaAutorizacao.STATUS_AUTORIZADA: "aprovada",
+        GuiaAutorizacao.STATUS_NEGADA: "negada",
+    }
+    guias = (
+        GuiaAutorizacao.objects
+        .filter(beneficiario=b, plano=b.plano)
+        .order_by("-solicitada_em")[:10]
+    )
+    autorizacoes = [
+        SimpleNamespace(
+            decisao=_DECISAO.get(g.status, "revisao"),
+            numero_guia=g.numero_guia or g.numero_autorizacao or f"#{g.pk}",
+            cid10=g.cid,
+            procedimento=g.descricao_procedimento or g.codigo_procedimento,
+            criado_em=g.solicitada_em,
+            justificativa_ia=(g.justificativa_negativa or g.observacao_auditoria or ""),
+            get_decisao_display=g.get_status_display(),
+        )
+        for g in guias
+    ]
 
     # Tipos disponíveis para filtro
     tipos_rede = list(
