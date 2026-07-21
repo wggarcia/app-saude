@@ -132,7 +132,11 @@ FONTES_PADRAO = "gdelt-br,agbrasil,folha,g1,opas,cdc-eid,outbreaknews"
 
 # Cron Internacional — Europa, África, Ásia + global científico
 # (ecdc e reliefweb removidas em 2026-07-16 — ver comentários no FONTES_CATALOGO)
-FONTES_INTL   = "gdelt-intl,who,bbc-health,who-africa,nicd-za,india-pib,nhc-china,sciencedaily,healio-id"
+FONTES_INTL   = "gdelt-intl,who,bbc-health,who-africa,nicd-za,nhc-china,sciencedaily,healio-id"
+# india-pib REMOVIDA de FONTES_INTL em 2026-07-20: é imprensa GERAL do governo
+# indiano (cinema, ferrovia, contrabando...), não vigilância de saúde — irrelevante
+# para um painel brasileiro. O cron do VPS também deve deixar de listá-la, e os
+# registros antigos já coletados devem ser apagados do banco.
 
 
 class Command(BaseCommand):
