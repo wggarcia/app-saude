@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
+from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_feature,
     api_requer_gerencia,
@@ -145,6 +146,9 @@ def api_prontuario_hospitalar_novo(request):
         except ValueError:
             nasc = None
 
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     p = ProntuarioHospitalar.objects.create(
         empresa=empresa,
         numero_prontuario=data.get("numero_prontuario", ""),

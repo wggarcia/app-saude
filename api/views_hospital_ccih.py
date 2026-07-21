@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
@@ -112,6 +113,9 @@ def api_ccih_infeccoes(request):
     except (ValueError, TypeError):
         return JsonResponse({"erro": "JSON inválido"}, status=400)
     with transaction.atomic():
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         ih = InfeccaoHospitalar.objects.create(
             empresa=empresa,
             paciente_nome=data["paciente_nome"],

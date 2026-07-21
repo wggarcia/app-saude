@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_feature,
     api_requer_operacao_ou_gerencia,
@@ -292,6 +293,9 @@ def api_hospital_triagem(request):
         else:
             data_hora = timezone.now()
 
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         triagem = TriagemManchester.objects.create(
             empresa=empresa,
             data_hora=data_hora,
@@ -381,6 +385,9 @@ def api_hospital_pacientes(request):
         # "internado" quando admitido de fato (leito informado ou status explícito).
         status_default = "internado" if leito else "cadastrado"
 
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         paciente = PacienteInternado.objects.create(
             empresa=empresa,
             nome=nome,

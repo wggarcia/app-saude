@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
@@ -219,6 +220,9 @@ def api_opme_autorizacoes(request):
     validade_padrao = date.today() + timedelta(days=90)
 
     with transaction.atomic():
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         aut = AutorizacaoOPME.objects.create(
             empresa=empresa,
             paciente_nome=data["paciente_nome"],
@@ -345,6 +349,9 @@ def api_opme_implantaveis(request):
     except CatalogoOPME.DoesNotExist:
         return JsonResponse({"erro": "OPME não encontrado no catálogo"}, status=404)
 
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     impl = ImplantavelRegistro.objects.create(
         empresa=empresa,
         opme=opme,
