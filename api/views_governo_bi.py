@@ -136,39 +136,17 @@ def bi_cobertura_vacinal(request):
 
     vacinas = []
 
-    if TransmissaoSIPNI is None and VacinacaoRegistro is None:
-        return JsonResponse({"vacinas": vacinas})
-
-    imunobios = []
-
-    if VacinacaoRegistro is not None:
-        imunobios = (
-            VacinacaoRegistro.objects.filter(empresa=emp)
-            .values("imunobiologico__nome")
-            .annotate(realizado=Count("id"))
-            .order_by("imunobiologico__nome")
-        )
-
-    if not imunobios and TransmissaoSIPNI is not None:
-        imunobios = (
-            TransmissaoSIPNI.objects.filter(empresa=emp)
-            .values("imunobiologico__nome")
-            .annotate(realizado=Count("id"))
-            .order_by("imunobiologico__nome")
-        )
-
-    for item in imunobios:
-        nome = item.get("imunobiologico__nome") or "Desconhecido"
-        realizado = item.get("realizado", 0)
-        meta = _meta_cobertura_vacinal(nome)
-        cobertura = round((realizado / meta) * 100, 1) if meta else 0.0
-        vacinas.append({
-            "nome": nome,
-            "meta": meta,
-            "realizado": realizado,
-            "cobertura": cobertura,
-        })
-
+    # NOTA: não há model de vacinação DO CIDADÃO no segmento Governo. O único
+    # model de vacinação existente é RegistroVacinacao, que é do SST (vínculo
+    # funcionario → FuncionarioSST) — usá-lo aqui misturaria dado ocupacional
+    # no painel do Governo. Já TransmissaoSIPNI é registro agregado de lote de
+    # transmissão (sem quebra por imunobiológico). Portanto o card de cobertura
+    # vacinal retorna vazio até existir um model próprio de vacinação do cidadão
+    # (FK empresa + imunobiológico). A tela trata o vazio com "Sem dados".
+    #
+    # (Correção: a versão anterior consultava VacinacaoRegistro — model
+    # inexistente — e TransmissaoSIPNI.values("imunobiologico__nome") — campo
+    # inexistente — o que lançava FieldError em runtime ao abrir o BI.)
     return JsonResponse({"vacinas": vacinas})
 
 
