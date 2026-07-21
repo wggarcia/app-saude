@@ -19,6 +19,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature, get_setor
+from .utils import validar_cpf_cadastro
 
 from .services.auth_session import empresa_autenticada_from_request
 
@@ -332,6 +333,9 @@ def api_magistral_ordens(request):
         seq    = (int(ultimo.numero_om.split("-")[-1]) + 1) if ultimo and "-" in ultimo.numero_om else 1
         numero_om = f"OM-{date.today().strftime('%Y%m')}-{seq:04d}"
 
+        ok_cpf, erro_cpf = validar_cpf_cadastro(body.get("paciente_cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         om = OrdemManipulacao.objects.create(
             empresa              = empresa,
             formula              = formula,

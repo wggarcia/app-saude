@@ -138,6 +138,9 @@ def api_receitas_farmacia(request):
     data = json.loads(request.body or "{}")
     if not data.get("data_emissao"):
         return JsonResponse({"erro": "Data de emissão obrigatória"}, status=400)
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     item = None
     if data.get("item_id"):
         try:

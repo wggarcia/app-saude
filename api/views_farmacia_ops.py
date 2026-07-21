@@ -1,6 +1,7 @@
 import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from .utils import validar_cpf_cadastro
 from .models import (
     EmpresaUnidade, FornecedorFarmacia, ItemFarmacia, MovimentoEstoque,
     PedidoCompraFarmacia, ItemPedidoCompra, DispensacaoMedicamento,
@@ -275,6 +276,9 @@ def api_dispensacoes_farmacia(request):
     ant = item.estoque_atual
     item.estoque_atual -= quantidade
     item.save()
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     MovimentoEstoque.objects.create(
         empresa=e, item=item, tipo="saida",
         quantidade=quantidade, estoque_anterior=ant,

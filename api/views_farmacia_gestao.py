@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from .utils import validar_cpf_cadastro
 from .models import (
     Dispensacao,
     EstoqueMovimento,
@@ -398,6 +399,9 @@ def api_farmacia_dispensacao(request):
                 except LoteMedicamento.DoesNotExist:
                     pass
 
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         disp = Dispensacao.objects.create(
             empresa=empresa,
             paciente_nome=paciente_nome,

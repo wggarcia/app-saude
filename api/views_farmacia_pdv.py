@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
+from .utils import validar_cpf_cadastro
 from .models import (
     Empresa,
     LivroRegistroControlado,
@@ -402,6 +403,9 @@ def api_pdv_registrar_venda(request, sessao_id):
     numero_cupom = data.get("numero_cupom") or f"CUP-{uuid.uuid4().hex[:8].upper()}"
 
     # Criar venda
+    ok_cpf, erro_cpf = validar_cpf_cadastro((data.get("cpf_cliente") or "").strip(), empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     venda = PDVVenda.objects.create(
         sessao=sessao,
         empresa=empresa,

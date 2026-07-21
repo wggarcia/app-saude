@@ -663,6 +663,15 @@ def validar_cpf_cadastro(valor, empresa=None):
     return True, None
 
 
+def validar_cpf_ou_cnpj_cadastro(valor, empresa=None):
+    """Para campos que aceitam CPF OU CNPJ (ex.: destinatário de NF-e,
+    estabelecimento). Valida como CPF apenas quando o valor tem 11 dígitos;
+    CNPJ (14 dígitos), vazio ou outro formato passam sem checagem de CPF."""
+    if len(cpf_digitos(valor)) != 11:
+        return True, None
+    return validar_cpf_cadastro(valor, empresa)
+
+
 def validar_arquivo_upload(arquivo, extensoes_extra=None):
     """
     Valida um arquivo de upload (Django UploadedFile) por extensao e
