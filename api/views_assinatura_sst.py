@@ -22,6 +22,7 @@ from .models import (
 )
 from .services.employee_notifications import notificar_assinatura_sst
 from .views_dashboard import _empresa_autenticada
+from .utils import validar_cpf_cadastro
 
 
 ASSINATURA_SST_REGRAS = {
@@ -308,6 +309,9 @@ def api_sst_assinaturas(request):
         if regra["papel"] == "funcionario" and funcionario:
             signatario_nome = signatario_nome or funcionario.nome
             signatario_cpf = signatario_cpf or funcionario.cpf
+        ok_cpf, erro_cpf = validar_cpf_cadastro(signatario_cpf, empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         assinatura = AssinaturaDocumentoSST.objects.create(
             empresa=empresa,
             funcionario=funcionario,
@@ -399,6 +403,10 @@ def api_public_assinar_sst(request, token):
     email = (data.get("email") or assinatura.signatario_email or "").strip()
     if not nome:
         return JsonResponse({"erro": "nome obrigatório"}, status=400)
+
+    ok_cpf, erro_cpf = validar_cpf_cadastro(cpf, assinatura.empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
 
     assinado_em = timezone.now()
     ip = _client_ip(request)

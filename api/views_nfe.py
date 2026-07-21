@@ -31,6 +31,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .access_control import get_setor
 from .models import CredenciaisIntegracoes, NotaFiscalEletronica
 from .views_dashboard import _empresa_autenticada
+from .utils import validar_cpf_ou_cnpj_cadastro
 
 logger = logging.getLogger(__name__)
 
@@ -532,6 +533,9 @@ def api_nfe_emitir(request):
     ultima  = NotaFiscalEletronica.objects.filter(empresa=empresa).order_by("-numero").first()
     proximo = (ultima.numero + 1) if ultima else 1
 
+    ok_doc, erro_doc = validar_cpf_ou_cnpj_cadastro(body.get("cpf_cnpj_destinatario", ""), empresa)
+    if not ok_doc:
+        return JsonResponse({"erro": erro_doc}, status=400)
     nota = NotaFiscalEletronica(
         empresa=empresa,
         numero=proximo,

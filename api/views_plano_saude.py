@@ -3176,6 +3176,9 @@ def api_ps_odontologia(request):
         except (json.JSONDecodeError, AttributeError):
             return JsonResponse({"erro": "JSON inválido"}, status=400)
 
+        ok_cpf, erro_cpf = validar_cpf_cadastro(d.get("cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         b = BeneficiarioOdonto.objects.create(
             empresa=empresa,
             nome=d.get("nome", ""),

@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from .models import CredenciaisIntegracoes, Empresa
 from .views_dashboard import _empresa_autenticada
+from .utils import validar_cpf_cadastro
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -601,6 +602,9 @@ def api_credenciais_rnds_salvar(request):
             }, status=400)
 
     cred = cred_existente
+    ok_cpf, erro_cpf = validar_cpf_cadastro(cpf_gestor, empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     cred.rnds_cpf_gestor = cpf_gestor
     cred.rnds_cnes       = cnes
     cred.rnds_ibge       = ibge

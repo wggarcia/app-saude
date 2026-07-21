@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .utils import validar_cpf_cadastro
 
 logger = logging.getLogger(__name__)
 
@@ -241,6 +242,9 @@ def api_ntep_alertas(request):
             "mensagem": "Par CID × CNAE não encontra nexo na Tabela NTEP.",
         })
 
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_funcionario", ""), empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     alerta = AlertaNTEP.objects.create(
         empresa=empresa,
         ntep=ntep_match,
