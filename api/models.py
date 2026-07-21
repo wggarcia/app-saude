@@ -11417,3 +11417,361 @@ class AgendamentoUBS(models.Model):
 
     def __str__(self):
         return f"Agendamento {self.paciente_nome} — {self.data_consulta} {self.horario} [{self.get_status_display()}]"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SUAS — ASSISTÊNCIA SOCIAL (segmento Governo)
+# CRAS · CREAS · CadÚnico · BPC · SICON · Benefícios Eventuais
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── CRAS ───────────────────────────────────────────────────────────────────
+
+class UnidadeCRAS(models.Model):
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cras_unidades")
+    nome             = models.CharField(max_length=160)
+    codigo_cras      = models.CharField(max_length=20, blank=True, default="")
+    cnes             = models.CharField(max_length=7, blank=True, default="")
+    endereco         = models.CharField(max_length=255, blank=True, default="")
+    bairro           = models.CharField(max_length=100, blank=True, default="")
+    municipio        = models.CharField(max_length=100, blank=True, default="")
+    uf               = models.CharField(max_length=2, blank=True, default="")
+    cep              = models.CharField(max_length=9, blank=True, default="")
+    telefone         = models.CharField(max_length=20, blank=True, default="")
+    email            = models.EmailField(blank=True, default="")
+    responsavel_tecnico = models.CharField(max_length=160, blank=True, default="")
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Unidade CRAS"
+        verbose_name_plural = "Unidades CRAS"
+        ordering            = ["nome"]
+        indexes             = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.nome} ({self.municipio}/{self.uf})"
+
+
+class FamiliaCRAS(models.Model):
+    SITUACAO_CHOICES = [
+        ("em_acompanhamento", "Em Acompanhamento"),
+        ("ativa",             "Ativa — Sem Acompanhamento Ativo"),
+        ("encerrada",         "Encerrada"),
+        ("suspensa",          "Suspensa"),
+    ]
+
+    empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cras_familias")
+    unidade_cras             = models.ForeignKey(UnidadeCRAS, on_delete=models.SET_NULL, null=True, blank=True, related_name="familias")
+    numero_prontuario        = models.CharField(max_length=30, blank=True, default="")
+    responsavel_nome         = models.CharField(max_length=200)
+    responsavel_cpf          = models.CharField(max_length=11, blank=True, default="")
+    responsavel_nis          = models.CharField(max_length=11, blank=True, default="")
+    responsavel_cns          = models.CharField(max_length=18, blank=True, default="")
+    responsavel_data_nascimento = models.DateField(null=True, blank=True)
+    responsavel_telefone     = models.CharField(max_length=20, blank=True, default="")
+    num_integrantes          = models.PositiveSmallIntegerField(default=1)
+    renda_familiar_total     = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    endereco                 = models.CharField(max_length=255, blank=True, default="")
+    bairro                   = models.CharField(max_length=100, blank=True, default="")
+    cadUnico_numero_seq      = models.CharField(max_length=30, blank=True, default="", verbose_name="Número Seq. CadÚnico")
+    marcador_pbf             = models.BooleanField(default=False, verbose_name="Recebe Bolsa Família / CadÚnico PBF")
+    marcador_bpc             = models.BooleanField(default=False, verbose_name="Possui BPC")
+    situacao                 = models.CharField(max_length=30, choices=SITUACAO_CHOICES, default="em_acompanhamento")
+    data_cadastro            = models.DateField(auto_now_add=True)
+    observacoes              = models.TextField(blank=True, default="")
+    criado_em                = models.DateTimeField(auto_now_add=True)
+    atualizado_em            = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Família CRAS"
+        verbose_name_plural = "Famílias CRAS"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "situacao"]),
+            models.Index(fields=["empresa", "unidade_cras"]),
+            models.Index(fields=["empresa", "responsavel_cpf"]),
+        ]
+
+    def __str__(self):
+        return f"{self.responsavel_nome} — {self.numero_prontuario or 'sem prontuário'}"
+
+
+class AtendimentoCRAS(models.Model):
+    TIPO_CHOICES = [
+        ("individual",        "Atendimento Individual"),
+        ("familiar",          "Atendimento Familiar"),
+        ("grupo",             "Atendimento em Grupo"),
+        ("visita",            "Visita Domiciliar"),
+        ("encaminhamento",    "Encaminhamento"),
+        ("acompanhamento",    "Acompanhamento PAIF"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cras_atendimentos")
+    familia          = models.ForeignKey(FamiliaCRAS, on_delete=models.CASCADE, related_name="atendimentos")
+    unidade_cras     = models.ForeignKey(UnidadeCRAS, on_delete=models.SET_NULL, null=True, blank=True, related_name="atendimentos")
+    tecnico_nome     = models.CharField(max_length=160)
+    tecnico_cargo    = models.CharField(max_length=100, blank=True, default="")
+    data_atendimento = models.DateField()
+    tipo             = models.CharField(max_length=30, choices=TIPO_CHOICES, default="individual")
+    objetivo         = models.CharField(max_length=255, blank=True, default="")
+    descricao        = models.TextField(blank=True, default="")
+    encaminhamento   = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Atendimento CRAS"
+        verbose_name_plural = "Atendimentos CRAS"
+        ordering            = ["-data_atendimento"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_atendimento"]),
+            models.Index(fields=["empresa", "familia"]),
+        ]
+
+    def __str__(self):
+        return f"Atendimento {self.get_tipo_display()} — {self.familia.responsavel_nome} [{self.data_atendimento}]"
+
+
+class VisitaDomiciliarSocial(models.Model):
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="visitas_sociais")
+    familia          = models.ForeignKey(FamiliaCRAS, on_delete=models.CASCADE, related_name="visitas")
+    tecnico_nome     = models.CharField(max_length=160)
+    data_visita      = models.DateField()
+    objetivo         = models.CharField(max_length=255, blank=True, default="")
+    relato           = models.TextField(blank=True, default="")
+    resultado        = models.TextField(blank=True, default="")
+    vulnerabilidade_identificada = models.BooleanField(default=False)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Visita Domiciliar Social"
+        verbose_name_plural = "Visitas Domiciliares Sociais"
+        ordering            = ["-data_visita"]
+        indexes             = [models.Index(fields=["empresa", "data_visita"])]
+
+    def __str__(self):
+        return f"Visita {self.familia.responsavel_nome} — {self.data_visita}"
+
+
+# ─── CREAS ──────────────────────────────────────────────────────────────────
+
+class UnidadeCREAS(models.Model):
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="creas_unidades")
+    nome             = models.CharField(max_length=160)
+    codigo_creas     = models.CharField(max_length=20, blank=True, default="")
+    cnes             = models.CharField(max_length=7, blank=True, default="")
+    endereco         = models.CharField(max_length=255, blank=True, default="")
+    bairro           = models.CharField(max_length=100, blank=True, default="")
+    municipio        = models.CharField(max_length=100, blank=True, default="")
+    uf               = models.CharField(max_length=2, blank=True, default="")
+    cep              = models.CharField(max_length=9, blank=True, default="")
+    telefone         = models.CharField(max_length=20, blank=True, default="")
+    responsavel_tecnico = models.CharField(max_length=160, blank=True, default="")
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Unidade CREAS"
+        verbose_name_plural = "Unidades CREAS"
+        ordering            = ["nome"]
+        indexes             = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.nome} ({self.municipio}/{self.uf})"
+
+
+class AtendimentoCREAS(models.Model):
+    TIPO_VIOLACAO_CHOICES = [
+        ("violencia_domestica",     "Violência Doméstica / Familiar"),
+        ("violencia_sexual",        "Violência Sexual"),
+        ("exploracao_sexual",       "Exploração Sexual"),
+        ("trabalho_infantil",       "Trabalho Infantil"),
+        ("negligencia",             "Negligência / Abandono"),
+        ("trafico_pessoas",         "Tráfico de Pessoas"),
+        ("cumprimento_medida",      "Cumprimento de Medida Socioeducativa"),
+        ("populacao_rua",           "Situação de Rua"),
+        ("abuso_substancias",       "Dependência Química / Abuso de Substâncias"),
+        ("outros",                  "Outros"),
+    ]
+    SITUACAO_CHOICES = [
+        ("em_acompanhamento", "Em Acompanhamento"),
+        ("encerrado",         "Encerrado"),
+        ("referenciado",      "Referenciado para Outro Serviço"),
+        ("aguardando",        "Aguardando Atendimento"),
+    ]
+
+    empresa           = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="creas_atendimentos")
+    unidade_creas     = models.ForeignKey(UnidadeCREAS, on_delete=models.SET_NULL, null=True, blank=True, related_name="atendimentos")
+    usuario_nome      = models.CharField(max_length=200)
+    usuario_cpf       = models.CharField(max_length=11, blank=True, default="")
+    usuario_cns       = models.CharField(max_length=18, blank=True, default="")
+    usuario_data_nascimento = models.DateField(null=True, blank=True)
+    usuario_telefone  = models.CharField(max_length=20, blank=True, default="")
+    tecnico_nome      = models.CharField(max_length=160)
+    tecnico_cargo     = models.CharField(max_length=100, blank=True, default="")
+    data_atendimento  = models.DateField()
+    tipo_violacao     = models.CharField(max_length=40, choices=TIPO_VIOLACAO_CHOICES, default="outros")
+    situacao          = models.CharField(max_length=30, choices=SITUACAO_CHOICES, default="em_acompanhamento")
+    descricao         = models.TextField(blank=True, default="")
+    plano_atendimento = models.TextField(blank=True, default="")
+    encaminhamento    = models.TextField(blank=True, default="")
+    numero_prontuario = models.CharField(max_length=30, blank=True, default="")
+    criado_em         = models.DateTimeField(auto_now_add=True)
+    atualizado_em     = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Atendimento CREAS"
+        verbose_name_plural = "Atendimentos CREAS"
+        ordering            = ["-data_atendimento"]
+        indexes             = [
+            models.Index(fields=["empresa", "situacao"]),
+            models.Index(fields=["empresa", "data_atendimento"]),
+            models.Index(fields=["empresa", "usuario_cpf"]),
+        ]
+
+    def __str__(self):
+        return f"CREAS {self.usuario_nome} — {self.get_tipo_violacao_display()} [{self.data_atendimento}]"
+
+
+# ─── CadÚnico / BPC / SICON / Benefícios Eventuais ──────────────────────────
+
+class CadUnicoFamilia(models.Model):
+    empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cadUnico_familias")
+    numero_seq               = models.CharField(max_length=30, blank=True, default="", verbose_name="Número Sequencial CadÚnico")
+    cod_familiar_fam         = models.CharField(max_length=30, blank=True, default="", verbose_name="Código Familiar CadÚnico")
+    responsavel_nome         = models.CharField(max_length=200)
+    responsavel_cpf          = models.CharField(max_length=11, blank=True, default="")
+    responsavel_nis          = models.CharField(max_length=11, blank=True, default="")
+    qtd_pessoas              = models.PositiveSmallIntegerField(default=1)
+    renda_per_capita         = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    data_cadastramento       = models.DateField(null=True, blank=True)
+    data_ultima_atualizacao  = models.DateField(null=True, blank=True)
+    marcador_pbf             = models.BooleanField(default=False, verbose_name="Titular Bolsa Família/PBF")
+    marcador_bpc             = models.BooleanField(default=False, verbose_name="Possui BPC")
+    municipio                = models.CharField(max_length=100, blank=True, default="")
+    uf                       = models.CharField(max_length=2, blank=True, default="")
+    importado_em             = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Família CadÚnico"
+        verbose_name_plural = "Famílias CadÚnico"
+        ordering            = ["responsavel_nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "responsavel_cpf"]),
+            models.Index(fields=["empresa", "marcador_pbf"]),
+        ]
+
+    def __str__(self):
+        return f"CadÚnico: {self.responsavel_nome} (NIS: {self.responsavel_nis})"
+
+
+class BeneficiarioBPC(models.Model):
+    TIPO_CHOICES = [
+        ("pessoa_deficiencia", "Pessoa com Deficiência"),
+        ("idoso_65",           "Idoso (65 anos ou mais)"),
+    ]
+
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="bpc_beneficiarios")
+    beneficiario_nome    = models.CharField(max_length=200)
+    beneficiario_cpf     = models.CharField(max_length=11, blank=True, default="")
+    beneficiario_nis     = models.CharField(max_length=11, blank=True, default="")
+    tipo_bpc             = models.CharField(max_length=30, choices=TIPO_CHOICES, default="pessoa_deficiencia")
+    data_inicio          = models.DateField(null=True, blank=True)
+    data_fim             = models.DateField(null=True, blank=True)
+    valor_beneficio      = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    ativo                = models.BooleanField(default=True)
+    observacoes          = models.TextField(blank=True, default="")
+    criado_em            = models.DateTimeField(auto_now_add=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Beneficiário BPC"
+        verbose_name_plural = "Beneficiários BPC"
+        ordering            = ["beneficiario_nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["empresa", "tipo_bpc"]),
+        ]
+
+    def __str__(self):
+        return f"BPC {self.get_tipo_bpc_display()} — {self.beneficiario_nome}"
+
+
+class CondicionalidadeSICON(models.Model):
+    """Registro de acompanhamento de condicionalidades do Bolsa Família / SICON."""
+    AREA_CHOICES = [
+        ("saude",    "Saúde (vacinas, pré-natal, nutrição)"),
+        ("educacao", "Educação (frequência escolar)"),
+        ("social",   "Assistência Social (acompanhamento familiar)"),
+    ]
+    STATUS_CHOICES = [
+        ("cumprida",          "Cumprida"),
+        ("descumprida",       "Descumprida"),
+        ("sem_informacao",    "Sem Informação"),
+        ("em_acompanhamento", "Em Acompanhamento"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="sicon_condicionalidades")
+    titular_nome     = models.CharField(max_length=200)
+    titular_cpf      = models.CharField(max_length=11, blank=True, default="")
+    titular_nis      = models.CharField(max_length=11, blank=True, default="")
+    area             = models.CharField(max_length=20, choices=AREA_CHOICES, default="social")
+    periodo_referencia = models.CharField(max_length=7, blank=True, default="", help_text="AAAA/MM")
+    status           = models.CharField(max_length=30, choices=STATUS_CHOICES, default="sem_informacao")
+    motivo_descumprimento = models.TextField(blank=True, default="")
+    acompanhamento_tecnico = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Condicionalidade SICON"
+        verbose_name_plural = "Condicionalidades SICON"
+        ordering            = ["-periodo_referencia", "titular_nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "periodo_referencia"]),
+        ]
+
+    def __str__(self):
+        return f"SICON {self.get_area_display()} — {self.titular_nome} [{self.periodo_referencia}]"
+
+
+class BeneficioEventual(models.Model):
+    TIPO_CHOICES = [
+        ("cesta_basica",       "Cesta Básica"),
+        ("auxilio_aluguel",    "Auxílio Aluguel"),
+        ("passagem",           "Passagem / Transporte"),
+        ("material_escolar",   "Material Escolar"),
+        ("material_construcao","Material de Construção / Reforma"),
+        ("medicamento",        "Medicamento / Insumo de Saúde"),
+        ("enxoval_bebe",       "Enxoval de Bebê / Auxílio Natalidade"),
+        ("auxilio_funeral",    "Auxílio Funeral"),
+        ("outros",             "Outros"),
+    ]
+
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="beneficios_eventuais")
+    beneficiario_nome    = models.CharField(max_length=200)
+    beneficiario_cpf     = models.CharField(max_length=11, blank=True, default="")
+    beneficiario_nis     = models.CharField(max_length=11, blank=True, default="")
+    tipo                 = models.CharField(max_length=30, choices=TIPO_CHOICES, default="cesta_basica")
+    descricao            = models.CharField(max_length=255, blank=True, default="")
+    quantidade           = models.DecimalField(max_digits=8, decimal_places=2, default=1)
+    valor                = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    data_concessao       = models.DateField()
+    unidade_cras         = models.ForeignKey(UnidadeCRAS, on_delete=models.SET_NULL, null=True, blank=True, related_name="beneficios_eventuais")
+    tecnico_responsavel  = models.CharField(max_length=160, blank=True, default="")
+    observacoes          = models.TextField(blank=True, default="")
+    criado_em            = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Benefício Eventual"
+        verbose_name_plural = "Benefícios Eventuais"
+        ordering            = ["-data_concessao"]
+        indexes             = [
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["empresa", "data_concessao"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.beneficiario_nome} [{self.data_concessao}]"

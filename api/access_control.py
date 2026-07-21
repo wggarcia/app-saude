@@ -379,6 +379,9 @@ MODULOS_POR_SETOR = {
         {"codigo": "governo.laboratorio", "label": "Laboratório",
          "funcao": "Técnico de Laboratório, Biomédico",
          "area": "Solicitações e resultados de exames laboratoriais"},
+        {"codigo": "governo.suas", "label": "Assistência Social (SUAS)",
+         "funcao": "Assistente Social, Técnico CRAS/CREAS",
+         "area": "CRAS, CREAS, CadÚnico, Bolsa Família (SICON), BPC, Benefícios Eventuais"},
     ],
     "plano_saude": [
         {"codigo": "plano.autorizacao", "label": "Autorização / Sinistro",
@@ -787,6 +790,7 @@ def modulos_governo_visibilidade(request, setor_resolvido=None):
         "gov_ver_epidemiologia": True,
         "gov_ver_farmacia": True,
         "gov_ver_laboratorio": True,
+        "gov_ver_suas": True,
     }
     if not empresa or setor != "governo":
         return flags
@@ -801,6 +805,7 @@ def modulos_governo_visibilidade(request, setor_resolvido=None):
             "gov_ver_epidemiologia": "governo.epidemiologia" in ativos,
             "gov_ver_farmacia": "governo.farmacia" in ativos,
             "gov_ver_laboratorio": "governo.laboratorio" in ativos,
+            "gov_ver_suas": "governo.suas" in ativos,
         }
     except Exception:
         logger.exception("Falha ao calcular visibilidade de módulos do governo")

@@ -1135,6 +1135,27 @@ from api.views_governo_agendamento import (governo_agendamento_page, api_governo
 from api.views_governo_sia_sus import (api_sia_sus_status, api_sia_sus_competencia, api_sia_sus_validar, api_sia_sus_transmitir, api_sia_sus_historico, api_sia_sus_reprocessar)
 from api.views_governo_icp_brasil import (api_gov_icp_assinar_prescricao, api_gov_icp_assinar_atestado, api_gov_icp_certificados, api_gov_icp_validar, api_gov_icp_status)
 from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis)
+from api.views_governo_suas_cras import (
+    api_cras_unidades, api_cras_unidade_detalhe,
+    api_cras_familias, api_cras_familia_detalhe,
+    api_cras_atendimentos, api_cras_atendimento_detalhe,
+    api_cras_visitas, api_cras_kpis,
+)
+from api.views_governo_suas_creas import (
+    api_creas_unidades, api_creas_unidade_detalhe,
+    api_creas_atendimentos, api_creas_atendimento_detalhe,
+    api_creas_kpis,
+)
+from api.views_governo_suas_cadun import (
+    api_cadunico_familias, api_cadunico_consultar_cpf, api_cadunico_importar_lote,
+    api_bpc_beneficiarios, api_bpc_beneficiario_detalhe,
+    api_sicon_condicionalidades,
+    api_beneficios_eventuais, api_beneficio_eventual_detalhe,
+)
+from api.views_governo_suas_gestao import (
+    api_suas_dashboard, api_suas_censo,
+    api_suas_ia_inconsistencias, api_suas_relatorio_mensal,
+)
 
 
 def service_worker(request):
@@ -2915,4 +2936,62 @@ urlpatterns = [
     path('api/hospital/whatsapp-agendamento/webhook/',          api_hosp_wa_webhook),
     path('api/hospital/whatsapp-agendamento/kpis',              api_hosp_wa_kpis),
     path('api/hospital/whatsapp-agendamento/kpis/',             api_hosp_wa_kpis),
+
+    # ── SUAS — Assistência Social (CRAS / CREAS / CadÚnico / BPC / SICON) ────
+    path('api/governo/suas/dashboard',                          api_suas_dashboard),
+    path('api/governo/suas/dashboard/',                         api_suas_dashboard),
+    path('api/governo/suas/censo',                              api_suas_censo),
+    path('api/governo/suas/censo/',                             api_suas_censo),
+    path('api/governo/suas/ia-inconsistencias',                 api_suas_ia_inconsistencias),
+    path('api/governo/suas/ia-inconsistencias/',                api_suas_ia_inconsistencias),
+    path('api/governo/suas/relatorio-mensal',                   api_suas_relatorio_mensal),
+    path('api/governo/suas/relatorio-mensal/',                  api_suas_relatorio_mensal),
+
+    path('api/governo/suas/cras',                               api_cras_unidades),
+    path('api/governo/suas/cras/',                              api_cras_unidades),
+    path('api/governo/suas/cras/<int:cras_id>',                 api_cras_unidade_detalhe),
+    path('api/governo/suas/cras/<int:cras_id>/',                api_cras_unidade_detalhe),
+    path('api/governo/suas/cras/familias',                      api_cras_familias),
+    path('api/governo/suas/cras/familias/',                     api_cras_familias),
+    path('api/governo/suas/cras/familias/<int:familia_id>',     api_cras_familia_detalhe),
+    path('api/governo/suas/cras/familias/<int:familia_id>/',    api_cras_familia_detalhe),
+    path('api/governo/suas/cras/atendimentos',                  api_cras_atendimentos),
+    path('api/governo/suas/cras/atendimentos/',                 api_cras_atendimentos),
+    path('api/governo/suas/cras/atendimentos/<int:atendimento_id>',  api_cras_atendimento_detalhe),
+    path('api/governo/suas/cras/atendimentos/<int:atendimento_id>/', api_cras_atendimento_detalhe),
+    path('api/governo/suas/cras/visitas',                       api_cras_visitas),
+    path('api/governo/suas/cras/visitas/',                      api_cras_visitas),
+    path('api/governo/suas/cras/kpis',                          api_cras_kpis),
+    path('api/governo/suas/cras/kpis/',                         api_cras_kpis),
+
+    path('api/governo/suas/creas',                              api_creas_unidades),
+    path('api/governo/suas/creas/',                             api_creas_unidades),
+    path('api/governo/suas/creas/<int:creas_id>',               api_creas_unidade_detalhe),
+    path('api/governo/suas/creas/<int:creas_id>/',              api_creas_unidade_detalhe),
+    path('api/governo/suas/creas/atendimentos',                 api_creas_atendimentos),
+    path('api/governo/suas/creas/atendimentos/',                api_creas_atendimentos),
+    path('api/governo/suas/creas/atendimentos/<int:atendimento_id>',  api_creas_atendimento_detalhe),
+    path('api/governo/suas/creas/atendimentos/<int:atendimento_id>/', api_creas_atendimento_detalhe),
+    path('api/governo/suas/creas/kpis',                         api_creas_kpis),
+    path('api/governo/suas/creas/kpis/',                        api_creas_kpis),
+
+    path('api/governo/suas/cadunico',                           api_cadunico_familias),
+    path('api/governo/suas/cadunico/',                          api_cadunico_familias),
+    path('api/governo/suas/cadunico/importar-lote',             api_cadunico_importar_lote),
+    path('api/governo/suas/cadunico/importar-lote/',            api_cadunico_importar_lote),
+    path('api/governo/suas/cadunico/cpf/<str:cpf>',             api_cadunico_consultar_cpf),
+    path('api/governo/suas/cadunico/cpf/<str:cpf>/',            api_cadunico_consultar_cpf),
+
+    path('api/governo/suas/bpc',                                api_bpc_beneficiarios),
+    path('api/governo/suas/bpc/',                               api_bpc_beneficiarios),
+    path('api/governo/suas/bpc/<int:bpc_id>',                   api_bpc_beneficiario_detalhe),
+    path('api/governo/suas/bpc/<int:bpc_id>/',                  api_bpc_beneficiario_detalhe),
+
+    path('api/governo/suas/sicon',                              api_sicon_condicionalidades),
+    path('api/governo/suas/sicon/',                             api_sicon_condicionalidades),
+
+    path('api/governo/suas/beneficios-eventuais',               api_beneficios_eventuais),
+    path('api/governo/suas/beneficios-eventuais/',              api_beneficios_eventuais),
+    path('api/governo/suas/beneficios-eventuais/<int:beneficio_id>',  api_beneficio_eventual_detalhe),
+    path('api/governo/suas/beneficios-eventuais/<int:beneficio_id>/', api_beneficio_eventual_detalhe),
 ]
