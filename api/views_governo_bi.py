@@ -348,7 +348,6 @@ def bi_kpis(request):
 @requer_operacao_page
 @requer_permissao_modulo("governo.administrativo")
 def governo_bi_page(request):
-    emp = empresa_autenticada_from_request(request)
-    ctx = contexto_navegacao_setorial(request, emp)
+    ctx = contexto_navegacao_setorial(request, "governo")
     ctx["titulo"] = "Business Intelligence - Governo / APS"
     return render(request, "governo_bi.html", ctx)

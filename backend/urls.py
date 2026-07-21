@@ -681,6 +681,7 @@ from api.views_governo_pec import (
     api_pec_novo,
     api_pec_detalhe,
     api_pec_atendimentos,
+    api_pec_assinar_atendimento,
 )
 from api.views_governo_farmacia_basica import (
     governo_farmacia_basica_page,
@@ -751,6 +752,7 @@ from api.views_governo_faturamento import (
     api_faturamento_sus_kpis,
     api_faturamento_sus_lotes,
     api_faturamento_sus_transmitir,
+    api_faturamento_sus_gerar_bpa,
 )
 from api.views_governo_teleconsulta import (
     governo_teleconsulta_page,
@@ -2037,6 +2039,8 @@ urlpatterns = [
     path('api/governo/pec/novo/', api_pec_novo),
     path('api/governo/pec/<int:pac_id>/', api_pec_detalhe),
     path('api/governo/pec/<int:pac_id>/atendimentos/', api_pec_atendimentos),
+    path('api/governo/pec/atendimentos/<int:atend_id>/assinar', api_pec_assinar_atendimento),
+    path('api/governo/pec/atendimentos/<int:atend_id>/assinar/', api_pec_assinar_atendimento),
     path('api/governo/farmacia-basica/kpis/', api_farmacia_basica_kpis),
     path('api/governo/farmacia-basica/itens/', api_farmacia_basica_itens),
     path('api/governo/farmacia-basica/dispensar/', api_farmacia_basica_dispensar),
@@ -2077,6 +2081,8 @@ urlpatterns = [
     path('api/governo/faturamento-sus/kpis/', api_faturamento_sus_kpis),
     path('api/governo/faturamento-sus/lotes/', api_faturamento_sus_lotes),
     path('api/governo/faturamento-sus/<int:lote_id>/transmitir/', api_faturamento_sus_transmitir),
+    path('api/governo/faturamento-sus/lotes/<int:lote_id>/gerar-bpa', api_faturamento_sus_gerar_bpa),
+    path('api/governo/faturamento-sus/lotes/<int:lote_id>/gerar-bpa/', api_faturamento_sus_gerar_bpa),
     path('api/governo/teleconsulta/kpis/', api_teleconsulta_kpis),
     path('api/governo/teleconsulta/', api_teleconsulta_lista),
     path('api/governo/teleconsulta/agendar/', api_teleconsulta_agendar),

@@ -18,6 +18,7 @@
   <a class="nav-link{% if request.path == '/governo/faturamento-sus/' %} active{% endif %}" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
   <a class="nav-link{% if request.path == '/governo/esus/' %} active{% endif %}" href="/governo/esus/"><span>🔗</span> Integração e-SUS / RNDS</a>
   <a class="nav-link{% if request.path == '/governo/rag/' %} active{% endif %}" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link{% if request.path == '/governo/agendamento/' %} active{% endif %}" href="/governo/agendamento/"><span>📅</span> Agendamento UBS</a>
   {% endif %}
 
   {% if gov_ver_atencao_clinica or gov_ver_secretaria %}
@@ -67,7 +68,9 @@
   {% endif %}
 
   {% if gov_ver_administrativo %}
-  <div class="nav-section">Administrativo</div>
+  <div class="nav-section">Administrativo / Gestão</div>
+  <a class="nav-link{% if request.path == '/governo/bi/' %} active{% endif %}" href="/governo/bi/"><span>📈</span> Business Intelligence</a>
+  <a class="nav-link{% if request.path == '/governo/ppi/' %} active{% endif %}" href="/governo/ppi/"><span>🗺️</span> PPI — Prog. Pactuada</a>
   <a class="nav-link{% if request.path == '/governo/almoxarifado/' %} active{% endif %}" href="/governo/almoxarifado/"><span>📦</span> Almoxarifado</a>
   {% endif %}
 

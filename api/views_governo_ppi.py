@@ -65,8 +65,9 @@ def _programacao_dict(prog, incluir_itens=False):
         "municipio_origem": prog.municipio_origem,
         "municipio_destino": prog.municipio_destino,
         "status": prog.status,
+        "aprovado_por": prog.aprovado_por,
+        "data_aprovacao": prog.data_aprovacao.isoformat() if prog.data_aprovacao else None,
         "criado_em": prog.criado_em.isoformat() if prog.criado_em else None,
-        "atualizado_em": prog.atualizado_em.isoformat() if prog.atualizado_em else None,
     }
     if incluir_itens:
         dados["itens"] = [_item_dict(i) for i in prog.itens.all()]
@@ -292,7 +293,9 @@ def api_ppi_programacao_aprovar(request, pk):
         return JsonResponse({"erro": "Não é possível aprovar uma programação sem itens"}, status=400)
 
     prog.status = "aprovado"
-    prog.save(update_fields=["status", "atualizado_em"])
+    prog.data_aprovacao = timezone.now()
+    prog.aprovado_por = (getattr(empresa, "nome", "") or "").strip()
+    prog.save(update_fields=["status", "data_aprovacao", "aprovado_por"])
     return JsonResponse({"programacao": _programacao_dict(prog)})
 
 

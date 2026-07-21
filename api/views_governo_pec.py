@@ -198,5 +198,98 @@ def _atend_dict(a):
         "data_atendimento": str(a.data_atendimento),
         "texto_evolucao": a.texto_evolucao,
         "enviado_esus": a.enviado_esus,
+        "assinado_digitalmente": a.assinado_digitalmente,
+        "assinado_digitalmente_em": a.assinado_digitalmente_em.isoformat() if a.assinado_digitalmente_em else None,
+        "assinatura_hash": a.assinatura_hash,
+        "assinatura_metodo": a.assinatura_metodo,
+        "assinatura_profissional": a.assinatura_profissional,
         "criado_em": a.criado_em.isoformat(),
     }
+
+
+# ── Assinatura digital do atendimento (ICP-Brasil / CFM 2.299/2021) ────────────
+
+def _conteudo_canonical_atend(a):
+    """Texto canônico do atendimento — qualquer alteração invalida a assinatura."""
+    return "|".join([
+        f"ATEND:{a.id}",
+        f"PAC:{a.paciente_nome}",
+        f"CNS:{a.cns}",
+        f"PROF:{a.profissional}",
+        f"CBO:{a.cbo}",
+        f"PROC:{a.procedimento_ab}",
+        f"CID:{a.cid10}",
+        f"DATA:{a.data_atendimento}",
+        f"EVOL:{a.texto_evolucao}",
+    ])
+
+
+@require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
+def api_pec_assinar_atendimento(request, atend_id):
+    """
+    POST /api/governo/pec/atendimentos/<id>/assinar
+    Body: {"crm_coren": "CRM/PR 12345", "senha_certificado": "opcional"}
+
+    Assina o registro clínico com o certificado ICP-Brasil da secretaria
+    (quando configurado em CredenciaisIntegracoes). Sem certificado, aplica
+    assinatura funcional SHA-256 (integridade, sem validade jurídica plena).
+    """
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    try:
+        a = AtendimentoUBS.objects.get(id=atend_id, empresa=e)
+    except AtendimentoUBS.DoesNotExist:
+        return JsonResponse({"erro": "Atendimento não encontrado"}, status=404)
+
+    if a.assinado_digitalmente:
+        return JsonResponse({
+            "aviso": "Atendimento já assinado digitalmente.",
+            "assinado_em": a.assinado_digitalmente_em.isoformat() if a.assinado_digitalmente_em else None,
+            "hash": a.assinatura_hash,
+            "metodo": a.assinatura_metodo,
+        })
+
+    try:
+        body = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    crm_coren = (body.get("crm_coren") or a.profissional or "").strip()
+    senha_override = (body.get("senha_certificado") or "").strip()
+
+    from .assinatura_digital import assinar_conteudo
+    from .models import CredenciaisIntegracoes
+    cred, _ = CredenciaisIntegracoes.objects.get_or_create(empresa=e)
+
+    conteudo = _conteudo_canonical_atend(a)
+    ok, assinatura, hash_doc, metodo, erro = assinar_conteudo(conteudo, cred, crm_coren, senha_override)
+    if not ok:
+        return JsonResponse({"erro": f"Falha na assinatura: {erro}"}, status=422)
+
+    a.assinatura_icp = assinatura
+    a.assinatura_hash = hash_doc
+    a.assinatura_metodo = metodo
+    a.assinatura_profissional = crm_coren
+    a.assinado_digitalmente = True
+    a.assinado_digitalmente_em = timezone.now()
+    a.save(update_fields=[
+        "assinatura_icp", "assinatura_hash", "assinatura_metodo",
+        "assinatura_profissional", "assinado_digitalmente", "assinado_digitalmente_em",
+    ])
+
+    return JsonResponse({
+        "ok": True,
+        "atendimento_id": a.id,
+        "hash": hash_doc,
+        "metodo": metodo,
+        "assinado_em": a.assinado_digitalmente_em.isoformat(),
+        "profissional": crm_coren,
+        "aviso": (
+            "Assinatura aplicada como hash SHA-256 (modo operacional). Para "
+            "validade jurídica plena (CFM Res. 2.299/2021), configure o "
+            "certificado ICP-Brasil em Configurações → Integrações → RNDS."
+        ) if metodo == "SHA256" else None,
+    })

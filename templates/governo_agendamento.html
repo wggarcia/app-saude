@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agendamento UBS — SolusCRT Governo</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--purple:#a78bfa;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 20px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:var(--purple)}
+.kpi-val{font-size:26px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:var(--purple)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-sel,.filter-inp{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.filter-sel:focus,.filter-inp:focus{border-color:var(--accent)}
+.filter-sel option{background:#072030}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+td{padding:10px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.empty{text-align:center;color:var(--muted);padding:32px!important}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.88}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-wa{background:#25d366;color:#04210f}.btn-wa:hover{opacity:.9}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-danger{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.15);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.15);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.15);color:var(--danger)}
+.badge-info{background:rgba(167,139,250,.15);color:var(--purple)}
+.badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.wa-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#25d366;margin-left:4px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.msg{font-size:12px;margin-top:6px;padding:8px 12px;border-radius:8px;display:none}
+.msg.ok{background:rgba(0,229,176,.1);color:var(--ok);display:block}
+.msg.err{background:rgba(255,77,109,.1);color:var(--danger);display:block}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">📅 Agendamento UBS</div>
+      <div class="page-sub">Marcação de consultas · confirmação e lembretes automáticos via WhatsApp</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-wa" onclick="enviarLembretes()">💬 Enviar lembretes (amanhã)</button>
+      <button class="btn btn-primary" onclick="abrirNovo()">+ Novo Agendamento</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi info"><div class="kpi-val" id="kTotal">—</div><div class="kpi-lbl">Total no Mês</div></div>
+    <div class="kpi"><div class="kpi-val" id="kAgendados">—</div><div class="kpi-lbl">Agendados</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kConfirmados">—</div><div class="kpi-lbl">Confirmados</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kFaltou">—</div><div class="kpi-lbl">Faltas</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kCancelados">—</div><div class="kpi-lbl">Cancelados</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Agenda</div>
+      <div class="filters">
+        <input type="date" class="filter-inp" id="fData" onchange="carregarAgenda()">
+        <select class="filter-sel" id="fStatus" onchange="carregarAgenda()">
+          <option value="">Todos os status</option>
+          <option value="agendado">Agendado</option>
+          <option value="confirmado">Confirmado</option>
+          <option value="realizado">Realizado</option>
+          <option value="cancelado">Cancelado</option>
+          <option value="faltou">Faltou</option>
+        </select>
+        <input class="filter-inp" id="fUnidade" placeholder="Unidade" onkeyup="if(event.key==='Enter')carregarAgenda()">
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Data / Hora</th><th>Paciente</th><th>Unidade / Prof.</th><th>Tipo</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<div class="modal-bg" id="modalNovo">
+  <div class="modal">
+    <h3>Novo Agendamento</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label><input id="nNome"></div>
+      <div class="form-group"><label>CPF</label><input id="nCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Telefone (WhatsApp)</label><input id="nTel" placeholder="(00) 90000-0000"></div>
+      <div class="form-group"><label>Unidade *</label><input id="nUnidade"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Profissional</label><input id="nProf"></div>
+      <div class="form-group"><label>Especialidade</label><input id="nEsp"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data *</label><input type="date" id="nData"></div>
+      <div class="form-group"><label>Horário *</label><input type="time" id="nHora"></div>
+    </div>
+    <div class="form-group"><label>Tipo</label><select id="nTipo">
+      <option value="consulta">Consulta</option><option value="retorno">Retorno</option><option value="exame">Exame</option><option value="vacina">Vacina</option><option value="procedimento">Procedimento</option>
+    </select></div>
+    <div class="msg" id="msgNovo"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fechar('modalNovo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovo()">Agendar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():''}
+const CSRF=getCookie('csrftoken');
+async function api(url,opt={}){opt.headers=Object.assign({'Content-Type':'application/json','X-CSRFToken':CSRF},opt.headers||{});const r=await fetch(url,opt);const j=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,data:j}}
+function fechar(id){document.getElementById(id).classList.remove('open')}
+function abrir(id){document.getElementById(id).classList.add('open')}
+
+async function carregarKpis(){
+  const {ok,data}=await api('/api/governo/agendamento/kpis');if(!ok)return;
+  document.getElementById('kTotal').textContent=data.total??0;
+  document.getElementById('kAgendados').textContent=data.agendados??0;
+  document.getElementById('kConfirmados').textContent=data.confirmados??0;
+  document.getElementById('kFaltou').textContent=data.faltou??0;
+  document.getElementById('kCancelados').textContent=data.cancelados??0;
+}
+
+const ST={agendado:['Agendado','badge-info'],confirmado:['Confirmado','badge-ok'],realizado:['Realizado','badge-ok'],cancelado:['Cancelado','badge-danger'],faltou:['Faltou','badge-warn']};
+async function carregarAgenda(){
+  const qs=new URLSearchParams();
+  const d=document.getElementById('fData').value;if(d)qs.set('data_consulta',d);
+  const s=document.getElementById('fStatus').value;if(s)qs.set('status',s);
+  const u=document.getElementById('fUnidade').value;if(u)qs.set('unidade',u);
+  const {ok,data}=await api('/api/governo/agendamento/agenda?'+qs.toString());
+  const tb=document.getElementById('tbody');
+  if(!ok){tb.innerHTML='<tr><td colspan="6" class="empty">Erro ao carregar</td></tr>';return}
+  const rows=data.agendamentos||[];
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="empty">Nenhum agendamento</td></tr>';return}
+  tb.innerHTML=rows.map(a=>{
+    const [lbl,cls]=ST[a.status]||[a.status,'badge-muted'];
+    const wa=a.confirmado_whatsapp?'<span class="wa-dot" title="Confirmado no WhatsApp"></span>':(a.lembrete_enviado?' <span style="font-size:10px;color:var(--muted)">lembrete✓</span>':'');
+    let acoes='';
+    if(a.status==='agendado'||a.status==='confirmado'){
+      acoes=`<button class="btn btn-ok btn-sm" onclick="acao(${a.id},'confirmar')">Confirmar</button>
+             <button class="btn btn-ghost btn-sm" onclick="acao(${a.id},'realizar')">Realizar</button>
+             <button class="btn btn-danger btn-sm" onclick="acao(${a.id},'cancelar')">Cancelar</button>`;
+    }
+    return `<tr>
+      <td><strong>${a.data_consulta.substring(8,10)}/${a.data_consulta.substring(5,7)}</strong> ${a.horario}</td>
+      <td>${a.paciente_nome}${wa}<br><span style="font-size:11px;color:var(--muted)">${a.paciente_telefone||'sem telefone'}</span></td>
+      <td>${a.unidade}<br><span style="font-size:11px;color:var(--muted)">${a.profissional||a.especialidade||'—'}</span></td>
+      <td>${a.tipo}</td>
+      <td><span class="badge ${cls}">${lbl}</span></td>
+      <td style="text-align:right;white-space:nowrap">${acoes}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function acao(id,tipo){
+  const {ok,data}=await api('/api/governo/agendamento/'+id+'/'+tipo,{method:'POST'});
+  if(!ok){alert(data.erro||'Erro');return}
+  carregarKpis();carregarAgenda();
+}
+
+function abrirNovo(){
+  ['nNome','nCpf','nTel','nUnidade','nProf','nEsp','nData','nHora'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('msgNovo').className='msg';abrir('modalNovo');
+}
+async function salvarNovo(){
+  const body={paciente_nome:document.getElementById('nNome').value,paciente_cpf:document.getElementById('nCpf').value,
+    paciente_telefone:document.getElementById('nTel').value,unidade:document.getElementById('nUnidade').value,
+    profissional:document.getElementById('nProf').value,especialidade:document.getElementById('nEsp').value,
+    data_consulta:document.getElementById('nData').value,horario:document.getElementById('nHora').value,
+    tipo:document.getElementById('nTipo').value};
+  const {ok,data}=await api('/api/governo/agendamento/agendar',{method:'POST',body:JSON.stringify(body)});
+  const m=document.getElementById('msgNovo');
+  if(!ok){m.className='msg err';m.textContent=data.erro||'Erro ao agendar';return}
+  fechar('modalNovo');carregarKpis();carregarAgenda();
+}
+
+async function enviarLembretes(){
+  if(!confirm('Enviar lembretes de WhatsApp para todos os agendamentos de amanhã?'))return;
+  const {ok,data}=await api('/api/governo/agendamento/enviar-lembretes',{method:'POST'});
+  if(!ok){alert(data.erro||'Erro');return}
+  const n=data.enviados??data.total_enviados??0;
+  alert('Lembretes processados: '+n+(data.erros&&data.erros.length?('\nFalhas: '+data.erros.length):''));
+  carregarAgenda();
+}
+
+carregarKpis();carregarAgenda();
+</script>
+</body>
+</html>

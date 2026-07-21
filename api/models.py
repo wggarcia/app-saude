@@ -7298,6 +7298,13 @@ class AtendimentoUBS(models.Model):
     enviado_esus = models.BooleanField(default=False)
     situacao_pressao = models.CharField(max_length=20, blank=True, default="")
     ultima_pa_sistolica = models.IntegerField(null=True, blank=True)
+    # Assinatura digital do registro clínico (ICP-Brasil / CFM 2.299/2021)
+    assinado_digitalmente = models.BooleanField(default=False)
+    assinado_digitalmente_em = models.DateTimeField(null=True, blank=True)
+    assinatura_hash = models.CharField(max_length=64, blank=True, default="")
+    assinatura_icp = models.TextField(blank=True, default="")
+    assinatura_metodo = models.CharField(max_length=30, blank=True, default="")
+    assinatura_profissional = models.CharField(max_length=120, blank=True, default="")
     criado_em = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["-data_atendimento"]

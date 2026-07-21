@@ -309,7 +309,9 @@ function renderTimeline(atends) {
       <div class="tl-header">
         <span class="tl-date">${a.data_atendimento} — ${a.turno_label}</span>
         <div style="display:flex;gap:6px;align-items:center">
+          ${a.assinado_digitalmente ? `<span class="badge badge-ok" title="Assinado ${a.assinatura_metodo} em ${a.assinado_digitalmente_em || ''}">🔏 Assinado${a.assinatura_metodo === 'ICP-Brasil-PKCS7' ? ' ICP' : ''}</span>` : ''}
           ${a.enviado_esus ? '<span class="badge badge-ok">Enviado e-SUS</span>' : '<span class="badge badge-warn">Pendente e-SUS</span>'}
+          ${!a.assinado_digitalmente ? `<button class="btn btn-ghost btn-sm" onclick="assinarAtend(${a.id})">🔏 Assinar</button>` : ''}
           ${!a.enviado_esus ? `<button class="btn btn-ok btn-sm" onclick="enviarEsus(${a.id})">Enviar ao e-SUS</button>` : ''}
         </div>
       </div>
@@ -321,6 +323,20 @@ function renderTimeline(atends) {
         ${a.unidade_saude ? `<span style="font-size:11px;color:var(--muted)">${a.unidade_saude}</span>` : ''}
       </div>
     </div>`).join("");
+}
+
+async function assinarAtend(atendId) {
+  const crm = prompt("Confirme sua identidade profissional (CRM/CRO/COREN):", "");
+  if (crm === null) return;
+  const d = await fetchJSON(`/api/governo/pec/atendimentos/${atendId}/assinar`, {
+    method: "POST", body: JSON.stringify({ crm_coren: crm })
+  });
+  if (d && (d.ok || d.aviso)) {
+    alert(d.aviso ? d.aviso : ("Atendimento assinado (" + (d.metodo || "") + ")."));
+    if (pacienteAtual) abrirPaciente(pacienteAtual.id);
+  } else {
+    alert((d && d.erro) || "Erro ao assinar.");
+  }
 }
 
 async function enviarEsus(atendId) {

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Business Intelligence — SolusCRT Governo</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--purple:#a78bfa;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 20px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:var(--purple)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:var(--purple)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+td{padding:10px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.empty{text-align:center;color:var(--muted);padding:32px!important}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.88}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.bar-wrap{display:flex;align-items:center;gap:8px}
+.bar-track{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:20px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:20px}
+.bar-fill.ok{background:var(--ok)}.bar-fill.warn{background:var(--warn)}.bar-fill.danger{background:var(--danger)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:80px;padding:8px 0}
+.spark-bar{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+.spark-lbl{display:flex;gap:3px;font-size:9px;color:var(--muted);margin-top:4px}
+.spark-lbl span{flex:1;text-align:center;overflow:hidden}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">📈 Business Intelligence — Saúde Pública / APS</div>
+      <div class="page-sub">Produção, cobertura vacinal, crônicos, produtividade e fila de espera</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="window.print()">🖨️ Imprimir / PDF</button>
+      <button class="btn btn-primary" onclick="exportarCSV()">⬇ Exportar CSV</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi info"><div class="kpi-val" id="kAtend">—</div><div class="kpi-lbl">Atendimentos no Mês</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kConsult">—</div><div class="kpi-lbl">Consultas Médicas</div></div>
+    <div class="kpi"><div class="kpi-val" id="kBpa">—</div><div class="kpi-lbl">Produção BPA</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kAcs">—</div><div class="kpi-lbl">Cobertura ACS</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Produção Mensal (últimos 12 meses)</div></div>
+    <div style="padding:16px 20px">
+      <div class="spark" id="sparkProd"></div>
+      <div class="spark-lbl" id="sparkLbl"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">💉 Cobertura Vacinal</div></div>
+      <table><thead><tr><th>Imunobiológico</th><th style="width:45%">Cobertura</th><th style="text-align:right">Realizado</th></tr></thead>
+      <tbody id="tbVac"><tr><td colspan="3" class="empty">Carregando…</td></tr></tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🩺 Condições Crônicas</div></div>
+      <table><thead><tr><th>Condição</th><th>Total</th><th>Controlados</th><th style="text-align:right">% Controle</th></tr></thead>
+      <tbody id="tbCron"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">🏥 Produtividade por Unidade (mês)</div></div>
+      <table><thead><tr><th>Unidade</th><th style="text-align:right">Atendimentos</th><th style="text-align:right">Profissionais</th></tr></thead>
+      <tbody id="tbProd"><tr><td colspan="3" class="empty">Carregando…</td></tr></tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">⏳ Fila de Espera por Especialidade</div></div>
+      <table><thead><tr><th>Especialidade</th><th style="text-align:right">Espera Média (dias)</th><th style="text-align:right">Agendados</th></tr></thead>
+      <tbody id="tbFila"><tr><td colspan="3" class="empty">Carregando…</td></tr></tbody></table>
+    </div>
+  </div>
+</main>
+
+<script>
+const dados={vac:[],cron:{},prod:[],fila:[],meses:[]};
+async function get(u){const r=await fetch(u);return r.ok?r.json():{}}
+
+async function carregar(){
+  const k=await get('/api/governo/bi/kpis');
+  document.getElementById('kAtend').textContent=k.atendimentos_mes??0;
+  document.getElementById('kConsult').textContent=k.consultas_realizadas??0;
+  document.getElementById('kBpa').textContent=k.producao_bpa??0;
+  document.getElementById('kAcs').textContent=(k.cobertura_acs??0)+'%';
+
+  const pm=await get('/api/governo/bi/producao-mensal');dados.meses=pm.meses||[];renderSpark(dados.meses);
+
+  const v=await get('/api/governo/bi/cobertura-vacinal');dados.vac=v.vacinas||[];
+  const tv=document.getElementById('tbVac');
+  tv.innerHTML=dados.vac.length?dados.vac.map(x=>{
+    const cls=x.cobertura>=95?'ok':(x.cobertura>=70?'warn':'danger');
+    return `<tr><td>${x.nome}</td><td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.min(x.cobertura,100)}%"></div></div><span style="font-size:11px;color:var(--muted)">${x.cobertura}%</span></div></td><td style="text-align:right">${x.realizado}/${x.meta}</td></tr>`;
+  }).join(''):'<tr><td colspan="3" class="empty">Sem dados de vacinação</td></tr>';
+
+  const c=await get('/api/governo/bi/cronicas');dados.cron=c;
+  const rows=[['Hipertensão (HAS)',c.has],['Diabetes (DM)',c.dm]].filter(r=>r[1]);
+  document.getElementById('tbCron').innerHTML=rows.length?rows.map(([n,d])=>`<tr><td>${n}</td><td>${d.total}</td><td>${d.controlados}</td><td style="text-align:right"><strong>${d.pct_controle}%</strong></td></tr>`).join(''):'<tr><td colspan="4" class="empty">Sem dados</td></tr>';
+
+  const p=await get('/api/governo/bi/produtividade');dados.prod=p.unidades||[];
+  document.getElementById('tbProd').innerHTML=dados.prod.length?dados.prod.map(u=>`<tr><td>${u.nome}</td><td style="text-align:right">${u.atendimentos_mes}</td><td style="text-align:right">${u.profissionais}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">Sem dados no mês</td></tr>';
+
+  const f=await get('/api/governo/bi/fila-espera');dados.fila=f.especialidades||[];
+  document.getElementById('tbFila').innerHTML=dados.fila.length?dados.fila.map(e=>`<tr><td>${e.nome}</td><td style="text-align:right">${e.media_dias}</td><td style="text-align:right">${e.agendados}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">Sem fila registrada</td></tr>';
+}
+
+function renderSpark(meses){
+  const max=Math.max(1,...meses.map(m=>m.total));
+  document.getElementById('sparkProd').innerHTML=meses.map(m=>`<div class="spark-bar" style="height:${Math.max(2,m.total/max*100)}%" title="${m.mes}: ${m.total}"></div>`).join('');
+  document.getElementById('sparkLbl').innerHTML=meses.map(m=>`<span>${m.mes.substring(5)}</span>`).join('');
+}
+
+function exportarCSV(){
+  let linhas=[['SolusCRT BI — Governo/APS'],[],['Produção Mensal'],['Mês','Total','Consultas','Procedimentos']];
+  dados.meses.forEach(m=>linhas.push([m.mes,m.total,m.consultas,m.procedimentos]));
+  linhas.push([],['Cobertura Vacinal'],['Imunobiológico','Meta','Realizado','Cobertura %']);
+  dados.vac.forEach(v=>linhas.push([v.nome,v.meta,v.realizado,v.cobertura]));
+  linhas.push([],['Produtividade por Unidade'],['Unidade','Atendimentos','Profissionais']);
+  dados.prod.forEach(u=>linhas.push([u.nome,u.atendimentos_mes,u.profissionais]));
+  linhas.push([],['Fila de Espera'],['Especialidade','Espera Média (dias)','Agendados']);
+  dados.fila.forEach(e=>linhas.push([e.nome,e.media_dias,e.agendados]));
+  const csv=linhas.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob=new Blob(["﻿"+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bi_governo.csv';a.click();
+}
+
+carregar();
+</script>
+</body>
+</html>

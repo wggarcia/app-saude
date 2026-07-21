@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PPI — Programação Pactuada e Integrada — SolusCRT Governo</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--purple:#a78bfa;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 20px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:var(--purple)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:var(--purple)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-sel,.filter-inp{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.filter-sel:focus,.filter-inp:focus{border-color:var(--accent)}
+.filter-sel option{background:#072030}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+td{padding:10px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.empty{text-align:center;color:var(--muted);padding:32px!important}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s;text-decoration:none}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.88}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.15);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.15);color:var(--warn)}
+.badge-info{background:rgba(167,139,250,.15);color:var(--purple)}
+.badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.msg{font-size:12px;margin-top:6px;padding:8px 12px;border-radius:8px;display:none}
+.msg.ok{background:rgba(0,229,176,.1);color:var(--ok);display:block}
+.msg.err{background:rgba(255,77,109,.1);color:var(--danger);display:block}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🗺️ PPI — Programação Pactuada e Integrada</div>
+      <div class="page-sub">Pactuação de teto físico e financeiro entre municípios · procedimentos SIGTAP</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="abrirNovaProg()">+ Nova Programação</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi info"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Programações</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiAprovadas">—</div><div class="kpi-lbl">Aprovadas</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiComp">—</div><div class="kpi-lbl">Competência Atual</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiMeta">—</div><div class="kpi-lbl">% Aprovadas</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Programações PPI</div>
+      <div class="filters">
+        <select class="filter-sel" id="fStatus" onchange="carregarLista()">
+          <option value="">Todos os status</option>
+          <option value="rascunho">Rascunho</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="enviado">Enviado</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Competência</th><th>Origem → Destino</th><th>Status</th><th>Criado</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody id="tbodyProg"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal nova programação -->
+<div class="modal-bg" id="modalProg">
+  <div class="modal">
+    <h3>Nova Programação PPI</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Competência (AAAA-MM) *</label><input type="month" id="pComp"></div>
+      <div class="form-group"><label>Município Origem *</label><input id="pOrigem" placeholder="Município executante"></div>
+    </div>
+    <div class="form-group"><label>Município Destino</label><input id="pDestino" placeholder="Município de referência"></div>
+    <div class="msg" id="msgProg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fechar('modalProg')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProg()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal detalhe/itens -->
+<div class="modal-bg" id="modalDet">
+  <div class="modal">
+    <h3 id="detTitulo">Programação</h3>
+    <div id="detResumo" style="font-size:13px;color:var(--muted);margin-bottom:16px"></div>
+    <table>
+      <thead><tr><th>SIGTAP</th><th>Procedimento</th><th style="text-align:right">Qtd</th><th style="text-align:right">Vlr Unit.</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody id="tbodyItens"><tr><td colspan="5" class="empty">Sem itens</td></tr></tbody>
+    </table>
+    <div id="formNovoItem" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div class="form-row">
+        <div class="form-group"><label>Código SIGTAP *</label><input id="iCod" placeholder="0301010015"></div>
+        <div class="form-group"><label>Descrição *</label><input id="iDesc" placeholder="Consulta médica"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Qtd Programada *</label><input type="number" id="iQtd" min="1" value="1"></div>
+        <div class="form-group"><label>Valor Unitário (R$)</label><input type="number" id="iVlr" step="0.01" min="0" placeholder="10.00"></div>
+      </div>
+      <div class="msg" id="msgItem"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Adicionar item</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fechar('modalDet')">Fechar</button>
+      <button class="btn btn-ok" id="btnAprovar" onclick="aprovar()">✓ Aprovar</button>
+      <button class="btn btn-primary" id="btnExportar" onclick="exportar()">⬇ Exportar JSON</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():''}
+const CSRF=getCookie('csrftoken');
+let progAtual=null;
+
+async function api(url,opt={}){
+  opt.headers=Object.assign({'Content-Type':'application/json','X-CSRFToken':CSRF},opt.headers||{});
+  const r=await fetch(url,opt);
+  const j=await r.json().catch(()=>({}));
+  return {ok:r.ok,status:r.status,data:j};
+}
+function fechar(id){document.getElementById(id).classList.remove('open')}
+function abrir(id){document.getElementById(id).classList.add('open')}
+
+async function carregarKpis(){
+  const {ok,data}=await api('/api/governo/ppi/kpis');
+  if(!ok)return;
+  document.getElementById('kpiTotal').textContent=data.total_programacoes??0;
+  document.getElementById('kpiAprovadas').textContent=data.aprovadas??0;
+  document.getElementById('kpiComp').textContent=data.competencia_atual||'—';
+  document.getElementById('kpiMeta').textContent=(data.meta_cumprida_pct??0)+'%';
+}
+
+const ST={rascunho:['Rascunho','badge-muted'],aprovado:['Aprovado','badge-ok'],enviado:['Enviado','badge-info']};
+async function carregarLista(){
+  const st=document.getElementById('fStatus').value;
+  const {ok,data}=await api('/api/governo/ppi/programacoes'+(st?'?status='+st:''));
+  const tb=document.getElementById('tbodyProg');
+  if(!ok){tb.innerHTML='<tr><td colspan="5" class="empty">Erro ao carregar</td></tr>';return}
+  const rows=data.programacoes||[];
+  if(!rows.length){tb.innerHTML='<tr><td colspan="5" class="empty">Nenhuma programação cadastrada</td></tr>';return}
+  tb.innerHTML=rows.map(p=>{
+    const [lbl,cls]=ST[p.status]||[p.status,'badge-muted'];
+    const criado=p.criado_em?p.criado_em.substring(0,10):'—';
+    return `<tr>
+      <td><strong>${p.competencia||'—'}</strong></td>
+      <td>${p.municipio_origem||'—'} → ${p.municipio_destino||'—'}</td>
+      <td><span class="badge ${cls}">${lbl}</span></td>
+      <td>${criado}</td>
+      <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="verDet(${p.id})">Abrir</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirNovaProg(){
+  document.getElementById('pComp').value='';document.getElementById('pOrigem').value='';document.getElementById('pDestino').value='';
+  document.getElementById('msgProg').className='msg';abrir('modalProg');
+}
+async function salvarProg(){
+  const comp=document.getElementById('pComp').value;
+  const body={competencia:comp,municipio_origem:document.getElementById('pOrigem').value,municipio_destino:document.getElementById('pDestino').value};
+  const {ok,data}=await api('/api/governo/ppi/programacoes',{method:'POST',body:JSON.stringify(body)});
+  const m=document.getElementById('msgProg');
+  if(!ok){m.className='msg err';m.textContent=data.erro||'Erro';return}
+  fechar('modalProg');carregarKpis();carregarLista();
+}
+
+async function verDet(id){
+  const {ok,data}=await api('/api/governo/ppi/programacoes/'+id);
+  if(!ok)return;
+  progAtual=data.programacao;
+  document.getElementById('detTitulo').textContent='PPI '+(progAtual.competencia||'');
+  document.getElementById('detResumo').textContent=(progAtual.municipio_origem||'')+' → '+(progAtual.municipio_destino||'')+' · '+(ST[progAtual.status]?ST[progAtual.status][0]:progAtual.status);
+  renderItens(progAtual.itens||[]);
+  const aprovado=progAtual.status==='aprovado';
+  document.getElementById('formNovoItem').style.display=aprovado?'none':'block';
+  document.getElementById('btnAprovar').style.display=aprovado?'none':'inline-flex';
+  abrir('modalDet');
+}
+function renderItens(itens){
+  const tb=document.getElementById('tbodyItens');
+  if(!itens.length){tb.innerHTML='<tr><td colspan="5" class="empty">Sem itens</td></tr>';return}
+  tb.innerHTML=itens.map(i=>`<tr>
+    <td>${i.procedimento_sigtap}</td><td>${i.descricao_procedimento||'—'}</td>
+    <td style="text-align:right">${i.quantidade_programada}</td>
+    <td style="text-align:right">${i.valor_unitario?('R$ '+parseFloat(i.valor_unitario).toFixed(2)):'—'}</td>
+    <td style="text-align:right">R$ ${parseFloat(i.valor_total||0).toFixed(2)}</td>
+  </tr>`).join('');
+}
+async function addItem(){
+  const body={procedimento_sigtap:document.getElementById('iCod').value,descricao_procedimento:document.getElementById('iDesc').value,
+    quantidade_programada:parseInt(document.getElementById('iQtd').value||'0'),valor_unitario:document.getElementById('iVlr').value||null};
+  const {ok,data}=await api('/api/governo/ppi/programacoes/'+progAtual.id+'/itens',{method:'POST',body:JSON.stringify(body)});
+  const m=document.getElementById('msgItem');
+  if(!ok){m.className='msg err';m.textContent=data.erro||'Erro';return}
+  m.className='msg';document.getElementById('iCod').value='';document.getElementById('iDesc').value='';document.getElementById('iQtd').value='1';document.getElementById('iVlr').value='';
+  verDet(progAtual.id);
+}
+async function aprovar(){
+  const {ok,data}=await api('/api/governo/ppi/programacoes/'+progAtual.id+'/aprovar',{method:'POST'});
+  if(!ok){alert(data.erro||'Erro');return}
+  verDet(progAtual.id);carregarKpis();carregarLista();
+}
+async function exportar(){
+  const {ok,data}=await api('/api/governo/ppi/programacoes/'+progAtual.id+'/exportar',{method:'POST'});
+  if(!ok){alert(data.erro||'Erro');return}
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ppi_'+(progAtual.competencia||'export')+'.json';a.click();
+}
+
+carregarKpis();carregarLista();
+</script>
+</body>
+</html>

@@ -195,10 +195,18 @@ async function carregarLotes() {
     <td>${l.enviado_cnes
       ? '<span class="badge badge-ok">Transmitido</span>'
       : '<span class="badge badge-warn">Pendente</span>'}</td>
-    <td>${!l.enviado_cnes
-      ? `<button class="btn btn-ok btn-sm" onclick="transmitirLote(${l.id})">Transmitir</button>`
-      : '—'}</td>
+    <td style="white-space:nowrap">
+      ${l.tipo === 'bpa' ? `<button class="btn btn-ghost btn-sm" onclick="gerarBPA(${l.id}, '${l.competencia}')">⬇ BPA</button>` : ''}
+      ${!l.enviado_cnes
+        ? `<button class="btn btn-ok btn-sm" onclick="transmitirLote(${l.id})">Transmitir</button>`
+        : ''}
+    </td>
   </tr>`).join("");
+}
+
+function gerarBPA(id, comp) {
+  // Download do arquivo BPA-Magnético (registros 01/02/03) da competência do lote.
+  window.location.href = `/api/governo/faturamento-sus/lotes/${id}/gerar-bpa/`;
 }
 
 async function transmitirLote(id) {

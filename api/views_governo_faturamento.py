@@ -20,7 +20,7 @@ import logging
 from datetime import date
 
 from django.db.models import Sum
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -263,3 +263,65 @@ def _lote_dict(l):
         "enviado_cnes":          l.enviado_cnes,
         "criado_em":             l.criado_em.isoformat(),
     }
+
+
+# ── Geração do arquivo BPA-Magnético (SIA/SUS) ─────────────────────────────────
+
+@require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.administrativo")
+def api_faturamento_sus_gerar_bpa(request, lote_id):
+    """
+    GET /api/governo/faturamento-sus/lotes/<id>/gerar-bpa
+    Gera e faz download do arquivo BPA-Magnético (registros 01/02/03) do lote,
+    a partir dos atendimentos (AtendimentoUBS) da competência do lote.
+    """
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Acesso restrito ao módulo Governo"}, status=403)
+
+    from .models import FaturamentoSUSLote, AtendimentoUBS
+    from .bpa_magnetico import gerar_arquivo_bpa
+
+    try:
+        lote = FaturamentoSUSLote.objects.get(id=lote_id, empresa=e)
+    except FaturamentoSUSLote.DoesNotExist:
+        return JsonResponse({"erro": "Lote não encontrado"}, status=404)
+
+    comp = (lote.competencia or "").strip()
+    try:
+        ano = int(comp[:4])
+        mes = int(comp[4:6])
+    except (ValueError, IndexError):
+        return JsonResponse({"erro": "Competência do lote inválida (esperado AAAAMM)"}, status=400)
+
+    atendimentos = (
+        AtendimentoUBS.objects
+        .filter(empresa=e, data_atendimento__year=ano, data_atendimento__month=mes)
+        .select_related("prontuario")
+        .order_by("data_atendimento", "id")
+    )
+
+    resultado = gerar_arquivo_bpa(
+        competencia=comp,
+        cnes=lote.estabelecimento_cnes or "0000000",
+        atendimentos=atendimentos,
+        orgao_origem=getattr(e, "nome", "") or "SECRETARIA DE SAUDE",
+        sigla_origem=getattr(e, "uf", "") or "",
+        cnpj="",
+        orgao_destino="SECRETARIA MUNICIPAL DE SAUDE",
+        indicador_destino="M",
+        codigo_ibge="",
+        versao="SOLUSCRT",
+    )
+
+    # Reflete a produção real contada no lote (não altera valor financeiro).
+    if lote.total_registros != resultado["bpa_i"]:
+        lote.total_registros = resultado["bpa_i"]
+        lote.save(update_fields=["total_registros"])
+
+    resp = HttpResponse(resultado["conteudo"], content_type="text/plain; charset=latin-1")
+    resp["Content-Disposition"] = f'attachment; filename="PA{comp}.txt"'
+    resp["X-BPA-Total-Linhas"] = str(resultado["linhas"])
+    resp["X-BPA-I"] = str(resultado["bpa_i"])
+    resp["X-BPA-C"] = str(resultado["bpa_c"])
+    return resp
