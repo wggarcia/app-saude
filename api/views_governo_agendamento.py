@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
+from .utils import validar_cpf_cadastro
 from .access_control import (
     requer_setor,
     requer_operacao_page,
@@ -132,6 +133,9 @@ def api_governo_agendar(request):
             return JsonResponse({"erro": f"Campo obrigatório ausente: {campo}"}, status=400)
 
     try:
+        ok_cpf, erro_cpf = validar_cpf_cadastro(body.get("paciente_cpf", ""), e)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         ag = AgendamentoUBS.objects.create(
             empresa=e,
             paciente_nome=body["paciente_nome"],

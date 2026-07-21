@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .utils import validar_cpf_ou_cnpj_cadastro
 from .access_control import api_requer_permissao_modulo
 
 
@@ -94,6 +95,9 @@ def api_vigsan_estabelecimentos(request):
     if not razao_social:
         return JsonResponse({"erro": "razao_social é obrigatória"}, status=400)
 
+    ok_doc, erro_doc = validar_cpf_ou_cnpj_cadastro((data.get("cnpj_cpf") or "").strip(), empresa)
+    if not ok_doc:
+        return JsonResponse({"erro": erro_doc}, status=400)
     estab = EstabelecimentoSanitario.objects.create(
         empresa=empresa,
         razao_social=razao_social,

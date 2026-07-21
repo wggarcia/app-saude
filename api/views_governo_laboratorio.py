@@ -15,6 +15,7 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
+from .utils import validar_cpf_cadastro
 from .access_control import (
     get_setor, principal_pode_operacao_setorial,
     requer_setor, requer_operacao_page, requer_permissao_modulo,
@@ -139,6 +140,9 @@ def api_lab_solicitacoes(request):
     if data_agendamento:
         data_entrega = (data_agendamento + timezone.timedelta(days=exame.prazo_entrega_dias)).date()
 
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     solicitacao = SolicitacaoExameLab.objects.create(
         empresa=e, unidade=unidade, exame=exame, protocolo=protocolo,
         paciente_nome=paciente_nome,

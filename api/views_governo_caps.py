@@ -14,6 +14,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
+from .utils import validar_cpf_cadastro
 from .access_control import (
     get_setor, principal_pode_operacao_setorial,
     api_requer_permissao_modulo, requer_setor, requer_operacao_page, requer_permissao_modulo,
@@ -208,6 +209,9 @@ def api_caps_atendimentos(request):
             except ValueError:
                 competencia = ""
 
+        ok_cpf, erro_cpf = validar_cpf_cadastro(body.get("cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         atend = AtendimentoSaudeMental.objects.create(
             caps              = caps,
             empresa           = empresa,

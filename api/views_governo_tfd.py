@@ -11,6 +11,7 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
+from .utils import validar_cpf_cadastro
 from .access_control import (
     get_setor, principal_pode_operacao_setorial,
     requer_setor, requer_operacao_page, requer_permissao_modulo,
@@ -148,6 +149,9 @@ def api_tfd_viagens(request):
 
     data_retorno = parse_datetime(data.get("data_retorno_prevista", "")) if data.get("data_retorno_prevista") else None
 
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     viagem = ViagemTFD.objects.create(
         empresa=e, veiculo=veiculo,
         paciente_nome=paciente_nome,

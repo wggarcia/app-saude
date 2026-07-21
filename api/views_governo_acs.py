@@ -217,6 +217,9 @@ def api_visitas_lista(request):
     uuid_esus = str(uuid.uuid4())
 
     with transaction.atomic():
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         visita = VisitaDomiciliar.objects.create(
             empresa=empresa,
             acs=acs,
@@ -516,6 +519,9 @@ def api_fichas_acompanhamento(request):
             return JsonResponse({"erro": "ACS não encontrado"}, status=404)
 
     with transaction.atomic():
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         ficha = FichaAcompanhamento.objects.create(
             empresa=empresa,
             acs=acs,

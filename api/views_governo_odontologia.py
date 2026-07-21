@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
+from .utils import validar_cpf_cadastro
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,9 @@ def api_ceo_atendimentos(request):
 
     data = json.loads(request.body)
     with transaction.atomic():
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         atend = AtendimentoCEO.objects.create(
             empresa=empresa,
             paciente_nome=data["paciente_nome"],

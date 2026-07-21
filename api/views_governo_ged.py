@@ -8,6 +8,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
+from .utils import validar_cpf_cadastro
 from .access_control import (
     get_setor, principal_e_gerencia, principal_pode_operacao_setorial,
     requer_setor, requer_operacao_page, requer_permissao_modulo,
@@ -84,6 +85,9 @@ def api_ged_documentos(request):
     if unidade_id:
         unidade = EmpresaUnidade.objects.filter(pk=unidade_id, empresa=e).first()
 
+    ok_cpf, erro_cpf = validar_cpf_cadastro(request.POST.get("paciente_cpf", ""), e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     doc = DocumentoGED.objects.create(
         empresa=e, unidade=unidade,
         categoria=request.POST.get("categoria", "outro"),

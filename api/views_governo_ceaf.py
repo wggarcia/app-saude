@@ -23,6 +23,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
+from .utils import validar_cpf_cadastro
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .services.rnds_fhir import transmitir_bundle, get_cred as _rnds_cred
 
@@ -183,6 +184,9 @@ def api_ceaf_solicitacoes(request):
     validade = date.today().replace(day=1) + timedelta(days=30 * meses)
 
     with transaction.atomic():
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         sol = SolicitacaoCEAF.objects.create(
             empresa=empresa,
             medicamento=med,
