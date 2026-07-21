@@ -621,6 +621,48 @@ EMAILS_CONTAS_DEMO = {
 }
 
 
+# ── Validação de CPF ────────────────────────────────────────────────────────
+# Contas REAIS só aceitam CPF verdadeiro (dígitos verificadores corretos).
+# Contas DEMO (EMAILS_CONTAS_DEMO) aceitam CPF fake — necessário para demonstração.
+
+def cpf_digitos(valor):
+    """Remove tudo que não for dígito. Fonte única (substitui as cópias de _cpf_limpo)."""
+    return "".join(c for c in (valor or "") if c.isdigit())
+
+
+def cpf_valido(valor):
+    """True se o CPF tem 11 dígitos e os 2 dígitos verificadores conferem.
+    Rejeita sequências repetidas (000..., 111..., ...) que passam no checksum."""
+    cpf = cpf_digitos(valor)
+    if len(cpf) != 11 or cpf == cpf[0] * 11:
+        return False
+    soma = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    d1 = (soma * 10) % 11
+    d1 = 0 if d1 == 10 else d1
+    if d1 != int(cpf[9]):
+        return False
+    soma = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    d2 = (soma * 10) % 11
+    d2 = 0 if d2 == 10 else d2
+    return d2 == int(cpf[10])
+
+
+def validar_cpf_cadastro(valor, empresa=None):
+    """Regra de negócio para cadastro de CPF. Retorna (ok: bool, erro: str|None).
+
+    - Conta DEMO (empresa.email em EMAILS_CONTAS_DEMO): sempre ok (permite fake).
+    - CPF vazio: ok (o campo é opcional na maioria dos cadastros).
+    - Caso contrário: exige CPF real (dígitos verificadores válidos).
+    """
+    if empresa is not None and getattr(empresa, "email", None) in EMAILS_CONTAS_DEMO:
+        return True, None
+    if not cpf_digitos(valor):
+        return True, None
+    if not cpf_valido(valor):
+        return False, "CPF inválido. Informe um CPF real (com dígitos verificadores corretos)."
+    return True, None
+
+
 def validar_arquivo_upload(arquivo, extensoes_extra=None):
     """
     Valida um arquivo de upload (Django UploadedFile) por extensao e

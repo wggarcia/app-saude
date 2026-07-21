@@ -55,6 +55,7 @@ from .models import (
     eSocialEventoSST,
 )
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
+from .utils import validar_cpf_cadastro
 
 
 def _cpf_limpo(cpf):
@@ -567,6 +568,10 @@ def api_funcionarios(request):
         if not nome or not cargo:
             return JsonResponse({"erro": "nome e cargo são obrigatórios"}, status=400)
 
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
+
         contagem_atual = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).count()
         if not dentro_do_limite(empresa, "max_funcionarios", contagem_atual):
             return JsonResponse({
@@ -607,6 +612,9 @@ def api_funcionario_detalhe(request, funcionario_id):
         if "nome" in data:
             func.nome = data["nome"].strip()[:200]
         if "cpf" in data:
+            ok_cpf, erro_cpf = validar_cpf_cadastro(data["cpf"], empresa)
+            if not ok_cpf:
+                return JsonResponse({"erro": erro_cpf}, status=400)
             func.cpf = _cpf_limpo(data["cpf"])[:11]
         if "matricula" in data:
             func.matricula = data["matricula"].strip()[:40]
