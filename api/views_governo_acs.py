@@ -29,6 +29,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import api_requer_permissao_modulo
+from .utils import validar_cpf_cadastro
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,9 @@ def api_acs_lista(request):
         })
 
     data = json.loads(request.body)
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf", ""), empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     with transaction.atomic():
         acs = AgenteComunidadeSaude.objects.create(
             empresa=empresa,

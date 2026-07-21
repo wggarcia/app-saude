@@ -11,6 +11,7 @@ from .models import (
     DispensacaoMedicamento,
 )
 from .views_dashboard import _empresa_autenticada
+from .utils import validar_cpf_cadastro
 
 
 def _e(req):
@@ -42,6 +43,9 @@ def api_pacientes_farmacia(request):
         return JsonResponse({"erro": "Nome obrigatório"}, status=400)
     # handle unique CPF gracefully
     cpf = data.get("cpf", "").strip()
+    ok_cpf, erro_cpf = validar_cpf_cadastro(cpf, e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     if cpf:
         existing = PacienteFarmacia.objects.filter(empresa=e, cpf=cpf).first()
         if existing:

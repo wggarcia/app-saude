@@ -10,6 +10,7 @@ from .models import (
     CarenciaBeneficiario,
 )
 from .access_control import get_setor
+from .utils import validar_cpf_cadastro
 
 
 def get_empresa(request):
@@ -721,6 +722,9 @@ def api_beneficiarios(request, plano_id):
 
     if request.method == 'POST':
         data = json.loads(request.body)
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get('cpf', ''), empresa)
+        if not ok_cpf:
+            return JsonResponse({'erro': erro_cpf}, status=400)
         b = BeneficiarioPlano.objects.create(
             plano=plano,
             nome=data.get('nome', ''),

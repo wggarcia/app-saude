@@ -12,6 +12,7 @@ from .models import (
     ResultadoExame, MonitoramentoUTI, FaturaHospitalar, PacienteInternado,
 )
 from .views_dashboard import _empresa_autenticada
+from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_operacao_ou_gerencia,
     api_requer_setor,
@@ -159,6 +160,9 @@ def api_pacientes_hospital(request):
             for p in qs[:100]
         ]})
     data = json.loads(request.body or "{}")
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf", ""), e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     p = PacienteHospital.objects.create(
         empresa=e,
         nome=data.get("nome", ""),

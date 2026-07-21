@@ -24,6 +24,7 @@ from .models import (
     CarenciaBeneficiario, RegraAutorizacaoAutomatica,
 )
 from .views_dashboard import _empresa_autenticada
+from .utils import validar_cpf_cadastro
 from .email_service import (
     enviar_email_novo_contrato,
     enviar_email_teleconsulta_autorizada,
@@ -724,6 +725,9 @@ def api_ps_beneficiarios(request):
                 dfv = datetime.strptime(data["data_fim_vigencia"], "%Y-%m-%d").date()
             except ValueError:
                 pass
+        ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf", ""), empresa)
+        if not ok_cpf:
+            return JsonResponse({"erro": erro_cpf}, status=400)
         b = BeneficiarioPlano.objects.create(
             plano=plano,
             nome=data["nome"],

@@ -18,6 +18,7 @@ from .access_control import (
 )
 from .models import ProntuarioCidadao, AtendimentoUBS
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
+from .utils import validar_cpf_cadastro
 
 
 def _e(request):
@@ -84,6 +85,9 @@ def api_pec_novo(request):
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     data = json.loads(request.body or "{}")
+    ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf", ""), e)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
     p = ProntuarioCidadao.objects.create(
         empresa=e,
         cns=data.get("cns", ""),
