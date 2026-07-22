@@ -8,14 +8,69 @@ from datetime import date, datetime, timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from .models import AgendamentoSST, FuncionarioSST
+from .models import AgendamentoSST, ASOOcupacional, FuncionarioSST
 from .views_dashboard import _empresa_autenticada
 from .access_control import api_requer_feature, get_setor
 
 logger = logging.getLogger(__name__)
 
+# Mapeamento AgendamentoSST.tipo → ASOOcupacional.tipo
+_TIPO_AGENDAMENTO_PARA_ASO = {
+    "exame_admissional": "admissional",
+    "exame_periodico":   "periodico",
+    "exame_retorno":     "retorno_trabalho",
+    "exame_demissional": "demissional",
+    "exame_mudanca":     "mudanca_risco",
+}
+
+
+def _auto_gerar_aso(ag):
+    """
+    Cria um ASOOcupacional vinculado ao agendamento, se ainda não existir.
+    Só é acionado para tipos de exame ocupacional (não consulta, treinamento, outro).
+    Retorna o ASO criado, o ASO já existente, ou None se o tipo não gera ASO.
+    """
+    tipo_aso = _TIPO_AGENDAMENTO_PARA_ASO.get(ag.tipo)
+    if not tipo_aso:
+        return None  # consulta / treinamento / outro — não gera ASO automático
+
+    # Idempotente: se já existe um ASO vinculado a este agendamento, não cria outro.
+    # Usamos try/except pois o acesso ao reverse OneToOneField levanta
+    # RelatedObjectDoesNotExist quando não há registro relacionado.
+    try:
+        return ag.aso_gerado  # já existe — devolve sem criar novo
+    except Exception:
+        pass  # não existe ainda — segue para criação
+
+    data_exame = ag.data_hora.date()
+    aso = ASOOcupacional.objects.create(
+        empresa=ag.empresa,
+        funcionario=ag.funcionario,
+        agendamento_origem=ag,
+        tipo=tipo_aso,
+        data_emissao=data_exame,
+        medico_responsavel=ag.medico,
+        resultado="apto",  # pré-preenchido; médico deve confirmar/ajustar
+        observacoes=(
+            f"ASO gerado automaticamente a partir do agendamento #{ag.id}. "
+            f"{ag.observacoes}".strip()
+        ),
+    )
+    logger.info(
+        "ASO id=%s gerado automaticamente para agendamento id=%s (funcionario=%s)",
+        aso.id, ag.id, ag.funcionario_id,
+    )
+    return aso
+
 
 def _agenda_to_dict(a):
+    aso_id = None
+    try:
+        # OneToOneField reverso: levanta RelatedObjectDoesNotExist (subclasse de
+        # AttributeError) quando não há ASO vinculado.
+        aso_id = a.aso_gerado.id
+    except Exception:
+        pass
     return {
         "id": a.id,
         "funcionario_id": a.funcionario_id,
@@ -31,6 +86,7 @@ def _agenda_to_dict(a):
         "medico": a.medico,
         "observacoes": a.observacoes,
         "criado_em": a.criado_em.strftime("%d/%m/%Y"),
+        "aso_gerado_id": aso_id,
     }
 
 
@@ -148,6 +204,7 @@ def api_agendamento_sst_detalhe(request, ag_id):
 
     elif request.method in ("PUT", "PATCH"):
         data = json.loads(request.body)
+        status_anterior = ag.status
         for field in ("tipo", "status", "local", "medico", "observacoes"):
             if field in data:
                 setattr(ag, field, data[field])
@@ -157,7 +214,21 @@ def api_agendamento_sst_detalhe(request, ag_id):
             except ValueError:
                 return JsonResponse({"erro": "Formato de data inválido"}, status=400)
         ag.save()
-        return JsonResponse({"agendamento": _agenda_to_dict(ag)})
+
+        # ── Auto-gera ASO quando agendamento transita para "realizado" ────────
+        aso_gerado = None
+        if ag.status == "realizado" and status_anterior != "realizado":
+            try:
+                aso_gerado = _auto_gerar_aso(ag)
+            except Exception:
+                logger.error(
+                    "Falha ao gerar ASO automático para agendamento id=%s", ag.id, exc_info=True
+                )
+
+        resp = {"agendamento": _agenda_to_dict(ag)}
+        if aso_gerado is not None:
+            resp["aso_gerado"] = {"id": aso_gerado.id, "tipo": aso_gerado.tipo}
+        return JsonResponse(resp)
 
     elif request.method == "DELETE":
         ag.delete()

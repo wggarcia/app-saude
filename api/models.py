@@ -1135,6 +1135,15 @@ class ASOOcupacional(models.Model):
 
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="asos")
     funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="asos")
+    agendamento_origem = models.OneToOneField(
+        "AgendamentoSST",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="aso_gerado",
+        verbose_name="Agendamento SST de origem",
+        help_text="Agendamento SST que gerou este ASO automaticamente",
+    )
     tipo = models.CharField(max_length=30, choices=TIPO)
     data_emissao = models.DateField()
     data_validade = models.DateField(null=True, blank=True)
