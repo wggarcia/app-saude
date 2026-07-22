@@ -58,6 +58,7 @@ class _TelaRegistroFuncionarioState extends State<TelaRegistroFuncionario> {
         // Única empresa — avança direto para etapa 2
         setState(() {
           _funcionarioId = res['funcionario_id'] as int;
+          _registroToken = res['registro_token']?.toString();
           _nomeFunc = res['nome']?.toString();
           _empresaNomeEscolhida = res['empresa_nome']?.toString();
           _opcoes = null;
@@ -82,6 +83,7 @@ class _TelaRegistroFuncionarioState extends State<TelaRegistroFuncionario> {
   void _selecionarEmpresa(Map<String, dynamic> opcao) {
     setState(() {
       _funcionarioId = opcao['funcionario_id'] as int;
+      _registroToken = opcao['registro_token']?.toString();
       _empresaNomeEscolhida = opcao['empresa_nome']?.toString();
       _opcoes = null;
     });
@@ -106,10 +108,15 @@ class _TelaRegistroFuncionarioState extends State<TelaRegistroFuncionario> {
       return;
     }
 
+    if (_registroToken == null || _registroToken!.isEmpty) {
+      setState(() => _erro = 'Sessão de registro expirada. Refaça a busca por CPF.');
+      return;
+    }
+
     setState(() { _loading = true; _erro = null; });
     try {
       final payload = await FuncionarioAuthService.registrar(
-        _funcionarioId!,
+        _registroToken!,
         email,
         senha,
       );
@@ -134,6 +141,7 @@ class _TelaRegistroFuncionarioState extends State<TelaRegistroFuncionario> {
   void _voltarEtapa1() {
     setState(() {
       _funcionarioId = null;
+      _registroToken = null;
       _opcoes = null;
       _nomeFunc = null;
       _empresaNomeEscolhida = null;

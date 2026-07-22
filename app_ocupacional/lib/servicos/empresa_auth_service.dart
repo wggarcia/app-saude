@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,6 +43,13 @@ class EmpresaAuthService {
   static const _principalNomeKey = 'empresa_principal_nome';
   static const _deviceIdKey = 'empresa_device_id';
 
+  // Token JWT em armazenamento cifrado (AES-256 Android Keystore / iOS Keychain).
+  // device_id e nomes de exibição ficam em SharedPreferences — não são credenciais.
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
+  );
+
   static Future<EmpresaSession> login(
     String email,
     String senha, {
@@ -80,14 +88,14 @@ class EmpresaAuthService {
       throw Exception('Token ausente no login da empresa.');
     }
 
-    await prefs.setString(_tokenKey, session.token);
+    await _storage.write(key: _tokenKey, value: session.token);
     await prefs.setString(_empresaNomeKey, session.empresaNome);
     await prefs.setString(_principalNomeKey, session.principalNome);
     return session;
   }
 
   static Future<String?> token() async {
-    return (await SharedPreferences.getInstance()).getString(_tokenKey);
+    return _storage.read(key: _tokenKey);
   }
 
   static Future<String?> empresaNome() async {
@@ -95,8 +103,8 @@ class EmpresaAuthService {
   }
 
   static Future<void> logout() async {
+    await _storage.delete(key: _tokenKey);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
     await prefs.remove(_empresaNomeKey);
     await prefs.remove(_principalNomeKey);
   }
