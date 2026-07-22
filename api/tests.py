@@ -3719,7 +3719,7 @@ class AssinaturaSSTApiTests(TestCase):
 
         resp_assinar = self.client.post(
             f"/api/public/sst/assinar/{token}",
-            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "123.456.789-00"}),
+            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "529.982.247-25"}),
             content_type="application/json",
         )
         self.assertEqual(resp_assinar.status_code, 200)
@@ -3727,7 +3727,7 @@ class AssinaturaSSTApiTests(TestCase):
 
         resp_repetido = self.client.post(
             f"/api/public/sst/assinar/{token}",
-            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "123.456.789-00"}),
+            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "529.982.247-25"}),
             content_type="application/json",
         )
         self.assertEqual(resp_repetido.status_code, 409)
@@ -5445,7 +5445,7 @@ class AssinaturaSSTTests(TestCase):
 
         sign_response = self.client.post(
             f"/api/public/sst/assinaturas/{token}/assinar/",
-            data=json.dumps({"nome": "Colaborador Assinatura", "cpf": "000", "aceite": True}),
+            data=json.dumps({"nome": "Colaborador Assinatura", "cpf": "529.982.247-25", "aceite": True}),
             content_type="application/json",
         )
         self.assertEqual(sign_response.status_code, 200)
