@@ -2436,6 +2436,10 @@ class InternacaoHospital(models.Model):
         "PacienteInternado", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
         help_text="Sincronização interna com o cadastro moderno de paciente — não exposta na UI",
     )
+    prontuario_pep        = models.ForeignKey(
+        "ProntuarioHospitalar", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        help_text="PEP vinculado na criação da internação por CPF/MPI — não exposto na UI",
+    )
 
     class Meta:
         ordering = ["-data_entrada"]
@@ -5095,6 +5099,10 @@ class PacienteInternado(models.Model):
         "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="perfis_internacao",
         help_text="Vínculo com a identidade única do paciente (MPI) — populado por sync, não exposto na UI",
+    )
+    internacao_sync     = models.ForeignKey(
+        "InternacaoHospital", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        help_text="InternacaoHospital correspondente — populado ao criar internação, não exposto na UI",
     )
     criado_em           = models.DateTimeField(auto_now_add=True)
     atualizado_em       = models.DateTimeField(auto_now=True)

@@ -265,8 +265,15 @@ def api_internacoes_hospital(request):
         diagnostico=data.get("diagnostico", ""),
         medico_responsavel=data.get("medico_responsavel", ""),
     )
+    update_fields = ["paciente_interno_sync"]
     i.paciente_interno_sync = _sincronizar_paciente_interno(e, pac, i, "internado")
-    i.save(update_fields=["paciente_interno_sync"])
+    # Liga ao PEP (ProntuarioHospitalar) pelo CPF do paciente legado, se existir.
+    if pac.cpf:
+        pep = ProntuarioHospitalar.objects.filter(empresa=e, paciente_cpf=pac.cpf).order_by("-id").first()
+        if pep:
+            i.prontuario_pep = pep
+            update_fields.append("prontuario_pep")
+    i.save(update_fields=update_fields)
     return JsonResponse({"id": i.id}, status=201)
 
 
@@ -301,6 +308,9 @@ def _sincronizar_paciente_interno(empresa, pac_legado, internacao, status):
         if identidade and moderno.identidade_id != identidade.id:
             moderno.identidade = identidade
             campos.append("identidade")
+        if not moderno.internacao_sync_id:
+            moderno.internacao_sync = internacao
+            campos.append("internacao_sync")
         moderno.save(update_fields=campos)
         return moderno
     return PacienteInternado.objects.create(
@@ -315,6 +325,7 @@ def _sincronizar_paciente_interno(empresa, pac_legado, internacao, status):
         alergias=pac_legado.alergias,
         status=status,
         identidade=identidade,
+        internacao_sync=internacao,
     )
 
 
