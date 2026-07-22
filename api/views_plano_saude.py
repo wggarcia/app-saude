@@ -22,6 +22,7 @@ from .models import (
     ContratoGrupo, TeleconsultaAutorizacao,
     BeneficiarioOdonto, GuiaOdonto, MensagemPlano,
     CarenciaBeneficiario, RegraAutorizacaoAutomatica,
+    RedeCredenciadaPlano, ProcedimentoTUSS,
 )
 from .views_dashboard import _empresa_autenticada
 from .utils import validar_cpf_cadastro
@@ -206,6 +207,186 @@ PRIORIDADES_SEMPRE_MANUAL = {
     GuiaAutorizacao.PRIORIDADE_ALTA_COMPLEXIDADE,
     GuiaAutorizacao.PRIORIDADE_INTERNACAO,
 }
+
+
+# ── Cadeia autorização → conta: TUSS, rede credenciada, sinistro ───────────────
+
+def _norm_cnpj(valor):
+    return "".join(ch for ch in (valor or "") if ch.isdigit())
+
+
+def _tuss_por_codigo(empresa, codigo):
+    """ProcedimentoTUSS ativo da empresa cujo codigo_tuss casa com `codigo` (ou None)."""
+    codigo = (codigo or "").strip()
+    if not codigo:
+        return None
+    return ProcedimentoTUSS.objects.filter(
+        empresa=empresa, codigo_tuss=codigo, ativo=True
+    ).first()
+
+
+def _valor_referencia_tuss(empresa, codigo):
+    """valor_referencia (Decimal) do TUSS da empresa, ou None se não houver match/valor."""
+    proc = _tuss_por_codigo(empresa, codigo)
+    if proc and proc.valor_referencia is not None:
+        return proc.valor_referencia
+    return None
+
+
+def _prestador_credenciado_status(empresa, prestador):
+    """
+    Valida o prestador contra a rede ativa/credenciada, unificando os dois cadastros
+    paralelos: PrestadorPlanoSaude (usado nas guias) e RedeCredenciadaPlano (módulo
+    Rede Credenciada). Retorna (ok: bool, motivo: str).
+
+    - Bloqueia prestador suspenso/descredenciado.
+    - Se a empresa mantém cadastro em RedeCredenciadaPlano, exige um registro
+      correspondente (por CNPJ, senão por nome) ativo e com contrato vigente.
+      Operadoras que ainda não populam a Rede Credenciada não são bloqueadas por
+      ausência de match.
+    """
+    if prestador is None:
+        return True, ""
+    if prestador.status in (PrestadorPlanoSaude.STATUS_SUSPENSO,
+                            PrestadorPlanoSaude.STATUS_DESCREDENCIADO):
+        return False, (
+            f"Prestador '{prestador.nome_fantasia}' está "
+            f"{prestador.get_status_display().lower()} — fora da rede credenciada ativa."
+        )
+
+    rede_qs = RedeCredenciadaPlano.objects.filter(empresa=empresa)
+    if not rede_qs.exists():
+        # Sem cadastro de Rede Credenciada: valida apenas pelo status do prestador.
+        return True, ""
+
+    cnpj = _norm_cnpj(prestador.cnpj)
+    match = None
+    if cnpj:
+        for r in rede_qs:
+            if _norm_cnpj(r.cnpj) == cnpj:
+                match = r
+                break
+    if match is None and prestador.nome_fantasia:
+        match = rede_qs.filter(nome__iexact=prestador.nome_fantasia.strip()).first()
+
+    if match is None:
+        # Prestador ausente da Rede Credenciada: não bloqueia (cadastro pode estar
+        # incompleto), valida pelo status próprio já verificado acima.
+        return True, ""
+    if not match.ativo:
+        return False, (
+            f"Prestador '{prestador.nome_fantasia}' consta como inativo na Rede Credenciada."
+        )
+    if match.contrato_vigente_ate and match.contrato_vigente_ate < date.today():
+        return False, (
+            f"Contrato do prestador '{prestador.nome_fantasia}' venceu em "
+            f"{match.contrato_vigente_ate.strftime('%d/%m/%Y')} (Rede Credenciada)."
+        )
+    return True, ""
+
+
+_GUIA_TIPO_TO_SINISTRO = {
+    GuiaAutorizacao.TIPO_CONSULTA: "consulta",
+    GuiaAutorizacao.TIPO_EXAME: "exame",
+    GuiaAutorizacao.TIPO_INTERNACAO: "internacao",
+    GuiaAutorizacao.TIPO_MEDICAMENTO: "medicamento",
+    GuiaAutorizacao.TIPO_PROCEDIMENTO: "procedimento",
+}
+
+
+def _valor_total_para_sinistro(guia):
+    """Valor do sinistro a partir da guia: valor_estimado, senão TUSS × quantidade."""
+    if guia.valor_estimado is not None:
+        return guia.valor_estimado
+    ref = _valor_referencia_tuss(guia.plano.empresa, guia.codigo_procedimento)
+    if ref is not None:
+        return ref * (guia.quantidade or 1)
+    return Decimal("0")
+
+
+def _gerar_sinistro_de_guia(guia):
+    """
+    Materializa (ou atualiza) o Sinistro correspondente a uma guia autorizada,
+    populando Sinistro.guia — o elo que faltava entre autorização e conta.
+    Idempotente: se já existe sinistro para a guia, atualiza valores-chave enquanto
+    o sinistro ainda estiver aberto. Escopado por plano__empresa (a guia já vem
+    filtrada pelo chamador). Retorna (sinistro, criado: bool).
+    """
+    import uuid as _uuid
+    empresa = guia.plano.empresa
+    prestador_nome = guia.prestador.nome_fantasia if guia.prestador_id else ""
+    tipo = _GUIA_TIPO_TO_SINISTRO.get(guia.tipo, "outro")
+    valor_total = _valor_total_para_sinistro(guia)
+
+    sinistro = guia.sinistros.first()
+    if sinistro is None:
+        sinistro = Sinistro.objects.create(
+            empresa=empresa,
+            plano=guia.plano,
+            beneficiario=guia.beneficiario,
+            guia=guia,
+            numero_sinistro=f"S{_uuid.uuid4().hex[:8].upper()}",
+            tipo=tipo,
+            cid=guia.cid or "",
+            descricao_procedimento=guia.descricao_procedimento or "",
+            prestador=prestador_nome,
+            medico=guia.medico_solicitante or "",
+            valor_total=valor_total,
+            status="aberto",
+            observacao=f"Gerado automaticamente da guia autorizada #{guia.numero_guia or guia.id}.",
+        )
+        return sinistro, True
+
+    # Atualiza sinistro pré-existente ainda em aberto (não mexe em conta fechada/paga).
+    if sinistro.status in ("aberto", "em_analise"):
+        campos = []
+        if not sinistro.valor_total or sinistro.valor_total == 0:
+            sinistro.valor_total = valor_total
+            campos.append("valor_total")
+        if not sinistro.descricao_procedimento and guia.descricao_procedimento:
+            sinistro.descricao_procedimento = guia.descricao_procedimento
+            campos.append("descricao_procedimento")
+        if not sinistro.cid and guia.cid:
+            sinistro.cid = guia.cid
+            campos.append("cid")
+        if campos:
+            sinistro.save(update_fields=campos)
+    return sinistro, False
+
+
+def _autorizar_guia_e_gerar_sinistro(guia):
+    """
+    Autoriza a guia (validando a rede credenciada ativa) e materializa o sinistro
+    com a FK guia. Usado pelo fluxo de IA (aprovação automática ou por revisão
+    humana) para fechar a cadeia autorização → conta. Retorna (sinistro, erro):
+    se a rede reprovar o prestador, não autoriza e devolve (None, motivo).
+    """
+    ok, motivo = _prestador_credenciado_status(guia.plano.empresa, guia.prestador)
+    if not ok:
+        return None, motivo
+    if guia.status != GuiaAutorizacao.STATUS_AUTORIZADA:
+        guia.status = GuiaAutorizacao.STATUS_AUTORIZADA
+        guia.fila_status = GuiaAutorizacao.FILA_AUTORIZADA
+        if not guia.numero_autorizacao:
+            guia.numero_autorizacao = f"AUTH-{guia.id:05d}"
+        if not guia.validade_autorizacao:
+            guia.validade_autorizacao = timezone.localdate() + timedelta(days=30)
+        guia.save(update_fields=[
+            "status", "fila_status", "numero_autorizacao", "validade_autorizacao", "atualizada_em",
+        ])
+    sinistro, _criado = _gerar_sinistro_de_guia(guia)
+    return sinistro, None
+
+
+def _negar_guia(guia, justificativa=""):
+    """Nega a guia (fluxo de decisão IA/revisão). Não gera sinistro."""
+    guia.status = GuiaAutorizacao.STATUS_NEGADA
+    guia.fila_status = GuiaAutorizacao.FILA_NEGADA
+    if justificativa:
+        guia.justificativa_negativa = justificativa
+    guia.save(update_fields=[
+        "status", "fila_status", "justificativa_negativa", "atualizada_em",
+    ])
 
 
 def _regra_autorizacao_automatica(empresa):
@@ -430,6 +611,7 @@ def _sinistro_dict(s):
         "plano_nome": s.plano.nome,
         "beneficiario_id": s.beneficiario_id,
         "beneficiario_nome": s.beneficiario.nome,
+        "guia_id": s.guia_id,
         "numero_sinistro": s.numero_sinistro,
         "tipo": s.tipo,
         "tipo_label": s.get_tipo_display(),
@@ -1090,8 +1272,26 @@ def api_ps_fila_clinica_acao(request, guia_id):
             guia.fila_status = _fila_status_from_status(guia.status)
     if "fila_status" in data:
         guia.fila_status = data["fila_status"]
+
+    # Autorizar exige prestador na rede credenciada ativa (validação centralizada).
+    if guia.status == GuiaAutorizacao.STATUS_AUTORIZADA:
+        ok, motivo = _prestador_credenciado_status(empresa, guia.prestador)
+        if not ok:
+            return JsonResponse({"erro": motivo}, status=422)
+
     guia.save()
-    return JsonResponse({"guia": _guia_dict(guia)})
+
+    resp = {"guia": _guia_dict(guia)}
+    # Cadeia autorização → conta: guia autorizada materializa o Sinistro (com FK guia).
+    if guia.status == GuiaAutorizacao.STATUS_AUTORIZADA:
+        sinistro, criado = _gerar_sinistro_de_guia(guia)
+        resp["sinistro"] = {
+            "id": sinistro.id,
+            "numero_sinistro": sinistro.numero_sinistro,
+            "valor_total": float(sinistro.valor_total),
+            "criado": criado,
+        }
+    return JsonResponse(resp)
 
 
 def _regra_dict(r):
@@ -1225,15 +1425,29 @@ def api_ps_guias(request):
             ).first()
             if not prestador:
                 return JsonResponse({"erro": "Prestador não encontrado"}, status=404)
+            ok, motivo = _prestador_credenciado_status(empresa, prestador)
+            if not ok:
+                return JsonResponse({"erro": motivo}, status=422)
         if not data.get("descricao_procedimento"):
             return JsonResponse({"erro": "Descrição do procedimento obrigatória"}, status=400)
         import uuid as _uuid
+        codigo_procedimento = (data.get("codigo_procedimento") or "").strip()
+        try:
+            quantidade = int(data.get("quantidade", 1) or 1)
+        except (TypeError, ValueError):
+            quantidade = 1
         valor = None
-        if data.get("valor_estimado"):
+        if data.get("valor_estimado") not in (None, ""):
             try:
                 valor = Decimal(str(data["valor_estimado"]))
             except Exception:
                 pass
+        # Precificação TUSS: sem valor informado, se o código casar com o catálogo
+        # ProcedimentoTUSS da empresa, pré-preenche pelo valor_referencia (× quantidade).
+        if valor is None and codigo_procedimento:
+            ref = _valor_referencia_tuss(empresa, codigo_procedimento)
+            if ref is not None:
+                valor = ref * quantidade
         prioridade = data.get("prioridade_clinica") or GuiaAutorizacao.PRIORIDADE_ELETIVA
         g = GuiaAutorizacao.objects.create(
             plano=plano,
@@ -1241,11 +1455,12 @@ def api_ps_guias(request):
             prestador=prestador,
             numero_guia=data.get("numero_guia") or f"G{_uuid.uuid4().hex[:8].upper()}",
             tipo=data.get("tipo", "consulta"),
+            codigo_procedimento=codigo_procedimento,
             descricao_procedimento=data["descricao_procedimento"],
             cid=data.get("cid", ""),
             medico_solicitante=data.get("medico_solicitante", ""),
             crm_medico=data.get("crm_medico", ""),
-            quantidade=int(data.get("quantidade", 1)),
+            quantidade=quantidade,
             valor_estimado=valor,
             status=GuiaAutorizacao.STATUS_SOLICITADA,
             prioridade_clinica=prioridade,
@@ -1336,8 +1551,26 @@ def api_ps_guia_detalhe(request, guia_id):
                 g.sugestao_seguida = None
         if "status" in data and "fila_status" not in data:
             g.fila_status = _fila_status_from_status(g.status)
+
+        # Autorizar exige prestador na rede credenciada ativa.
+        if g.status == GuiaAutorizacao.STATUS_AUTORIZADA:
+            ok, motivo = _prestador_credenciado_status(empresa, g.prestador)
+            if not ok:
+                return JsonResponse({"erro": motivo}, status=422)
+
         g.save()
-        return JsonResponse({"guia": _guia_dict(g)})
+
+        resp = {"guia": _guia_dict(g)}
+        # Cadeia autorização → conta: guia autorizada materializa o Sinistro (FK guia).
+        if g.status == GuiaAutorizacao.STATUS_AUTORIZADA:
+            sinistro, criado = _gerar_sinistro_de_guia(g)
+            resp["sinistro"] = {
+                "id": sinistro.id,
+                "numero_sinistro": sinistro.numero_sinistro,
+                "valor_total": float(sinistro.valor_total),
+                "criado": criado,
+            }
+        return JsonResponse(resp)
 
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
@@ -1391,10 +1624,28 @@ def api_ps_sinistros(request):
                 data_at = _dt.strptime(data["data_atendimento"], "%Y-%m-%d").date()
             except ValueError:
                 pass
+        # Vínculo opcional com a guia real (cadeia autorização → conta).
+        guia_obj = None
+        if data.get("guia_id"):
+            guia_obj = GuiaAutorizacao.objects.filter(
+                id=data.get("guia_id"), plano__empresa=empresa
+            ).first()
+            if not guia_obj:
+                return JsonResponse({"erro": "Guia não encontrada"}, status=404)
+        # Precificação TUSS: sem valor informado, se o código casar com o catálogo
+        # ProcedimentoTUSS da empresa, pré-preenche pelo valor_referencia.
+        valor_total = Decimal(str(data.get("valor_total") or 0))
+        codigo_proc = (data.get("codigo_procedimento") or data.get("codigo_tuss")
+                       or (guia_obj.codigo_procedimento if guia_obj else "") or "").strip()
+        if valor_total == 0 and codigo_proc:
+            ref = _valor_referencia_tuss(empresa, codigo_proc)
+            if ref is not None:
+                valor_total = ref
         s = Sinistro.objects.create(
             empresa=empresa,
             plano=plano,
             beneficiario=beneficiario,
+            guia=guia_obj,
             numero_sinistro=data.get("numero_sinistro") or f"S{_uuid.uuid4().hex[:8].upper()}",
             tipo=data.get("tipo", "consulta"),
             cid=data.get("cid", ""),
@@ -1402,7 +1653,7 @@ def api_ps_sinistros(request):
             prestador=data.get("prestador", ""),
             medico=data.get("medico", ""),
             data_atendimento=data_at,
-            valor_total=Decimal(str(data.get("valor_total") or 0)),
+            valor_total=valor_total,
             observacao=data.get("observacao", ""),
             status="aberto",
         )

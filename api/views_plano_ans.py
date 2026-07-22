@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
-from .models import CredenciaisIntegracoes, DIOPSDeclaracao, SIBRegistro
+from .models import CredenciaisIntegracoes, DIOPSDeclaracao, SIBRegistro, BeneficiarioPlano
 from .views_dashboard import _empresa_autenticada
 from .views_diops_real import gerar_diops_3_0
 
@@ -28,6 +28,43 @@ def _ps_auth(request):
     if get_setor(empresa) != "plano_saude":
         return None, JsonResponse({"erro": "Módulo Plano de Saúde não disponível para este plano."}, status=403)
     return empresa, None
+
+
+# ── Contagem de vidas real (BeneficiarioPlano), escopada por plano__empresa ────
+
+def _vidas_ativas(empresa):
+    """Vidas ativas reais da operadora — beneficiários ativos em qualquer plano da empresa."""
+    return BeneficiarioPlano.objects.filter(
+        plano__empresa=empresa, situacao=BeneficiarioPlano.SITUACAO_ATIVO
+    ).count()
+
+
+def _vidas_movimentacao_competencia(empresa, competencia):
+    """
+    Movimentação SIB derivada da carteira real na competência AAAAMM:
+      - incluídas: beneficiários com início de vigência no mês
+      - excluídas: beneficiários com fim de vigência no mês
+      - total:     vidas ativas atuais da operadora
+    Retorna None se a competência não estiver no formato AAAAMM.
+    """
+    if not re.fullmatch(r"\d{6}", competencia or ""):
+        return None
+    ano = int(competencia[:4])
+    mes = int(competencia[4:6])
+    if not (1 <= mes <= 12):
+        return None
+    base = BeneficiarioPlano.objects.filter(plano__empresa=empresa)
+    incluidas = base.filter(
+        data_inicio_vigencia__year=ano, data_inicio_vigencia__month=mes
+    ).count()
+    excluidas = base.filter(
+        data_fim_vigencia__year=ano, data_fim_vigencia__month=mes
+    ).count()
+    return {
+        "vidas_incluidas": incluidas,
+        "vidas_excluidas": excluidas,
+        "total_vidas": _vidas_ativas(empresa),
+    }
 
 
 def _diops_dict(d):
@@ -127,6 +164,10 @@ def api_diops_lista(request):
         if _MODAL_VALIDOS and modal_ass not in _MODAL_VALIDOS:
             return JsonResponse({"erro": f"modalidade_assistencial inválida. Valores aceitos: {sorted(_MODAL_VALIDOS)}"}, status=400)
 
+        # Vidas ativas: se não informado explicitamente, deriva da carteira real
+        # (BeneficiarioPlano ativos da empresa) em vez de contador manual.
+        _vidas_raw = data.get("vidas_ativas")
+        vidas_ativas = int(_vidas_raw) if _vidas_raw not in (None, "") else _vidas_ativas(empresa)
         d = DIOPSDeclaracao.objects.create(
             empresa=empresa,
             trimestre=trimestre,
@@ -135,7 +176,7 @@ def api_diops_lista(request):
             despesa_assistencial=float(data.get("despesa_assistencial") or 0),
             despesa_administrativa=float(data.get("despesa_administrativa") or 0),
             resultado_periodo=float(data.get("resultado_periodo") or 0),
-            vidas_ativas=int(data.get("vidas_ativas") or 0),
+            vidas_ativas=vidas_ativas,
             tipo_operadora=tipo_op,
             modalidade_assistencial=modal_ass,
             status=data.get("status", "em_elaboracao"),
@@ -241,10 +282,19 @@ def api_sib_lista(request):
         competencia = (data.get("competencia") or "").strip()
         if not competencia:
             return JsonResponse({"erro": "competencia obrigatória (AAAAMM)"}, status=400)
-        incluidas = int(data.get("vidas_incluidas") or 0)
-        excluidas = int(data.get("vidas_excluidas") or 0)
+        # Movimentação de vidas: se não informada explicitamente, deriva da carteira
+        # real (BeneficiarioPlano) na competência, em vez de contador manual.
+        derivado = _vidas_movimentacao_competencia(empresa, competencia)
+        campos_manuais = ("vidas_incluidas", "vidas_excluidas", "total_vidas")
+        if derivado is not None and not any(data.get(c) not in (None, "") for c in campos_manuais):
+            incluidas = derivado["vidas_incluidas"]
+            excluidas = derivado["vidas_excluidas"]
+            total_vidas = derivado["total_vidas"]
+        else:
+            incluidas = int(data.get("vidas_incluidas") or 0)
+            excluidas = int(data.get("vidas_excluidas") or 0)
+            total_vidas = int(data.get("total_vidas") or 0)
         alteradas = int(data.get("vidas_alteradas") or 0)
-        total_vidas = int(data.get("total_vidas") or 0)
         s = SIBRegistro.objects.create(
             empresa=empresa,
             competencia=competencia,

@@ -12,7 +12,7 @@ from django.db.models import Count, Avg
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
-from .models import IAAutorizacaoGuia
+from .models import IAAutorizacaoGuia, BeneficiarioPlano, GuiaAutorizacao
 from .views_dashboard import _empresa_autenticada
 from .views_ia_autorizacao_ml import inferir_autorizacao
 
@@ -31,6 +31,8 @@ def _ps_auth(request):
 def _ia_dict(ia):
     return {
         "id": ia.id,
+        "guia_id": ia.guia_id,
+        "beneficiario_plano_id": ia.beneficiario_plano_id,
         "numero_guia": ia.numero_guia,
         "beneficiario": ia.beneficiario,
         "procedimento": ia.procedimento,
@@ -105,6 +107,33 @@ def _analisar_guia(procedimento: str, cid10: str, codigo_tuss: str = "", benefic
         return _analisar_guia_fallback(procedimento, cid10)
 
 
+def _aplicar_decisao_guia(guia, decisao, justificativa=""):
+    """
+    Reflete uma decisão de IA (aprovada/negada) na guia real e, quando aprovada,
+    materializa o sinistro (Sinistro.guia) — fechando a cadeia autorização → conta.
+    Reusa os helpers canônicos de views_plano_saude (validação de rede + geração de
+    sinistro). Retorna um dict pra mesclar na resposta JSON.
+    """
+    from .views_plano_saude import _autorizar_guia_e_gerar_sinistro, _negar_guia
+    if decisao == "aprovada":
+        sinistro, erro = _autorizar_guia_e_gerar_sinistro(guia)
+        if erro:
+            # Prestador fora da rede ativa: não autoriza a guia; registra o aviso.
+            return {"guia_status": guia.status, "aviso": erro}
+        return {
+            "guia_status": guia.status,
+            "sinistro": {
+                "id": sinistro.id,
+                "numero_sinistro": sinistro.numero_sinistro,
+                "valor_total": float(sinistro.valor_total),
+            },
+        }
+    if decisao == "negada":
+        _negar_guia(guia, justificativa)
+        return {"guia_status": guia.status}
+    return {}
+
+
 # ── page ─────────────────────────────────────────────────────────────────────
 
 @ensure_csrf_cookie
@@ -168,12 +197,35 @@ def api_ia_analisar(request):
     numero_guia = (data.get("numero_guia") or "").strip()
     beneficiario = (data.get("beneficiario") or "").strip()
     procedimento = (data.get("procedimento") or "").strip()
+    cid10 = (data.get("cid10") or "").strip()
+    codigo_tuss = (data.get("codigo_tuss") or "").strip()
+
+    # ── Ligação com a guia real (cadeia autorização → conta) ──────────────────
+    # Aceita guia_id explícito; senão tenta casar pelo numero_guia dentro da
+    # empresa. Campos não informados são preenchidos a partir da guia real.
+    guia_obj = None
+    if data.get("guia_id"):
+        guia_obj = GuiaAutorizacao.objects.filter(
+            id=data.get("guia_id"), plano__empresa=empresa
+        ).select_related("plano", "beneficiario", "prestador").first()
+        if not guia_obj:
+            return JsonResponse({"erro": "Guia não encontrada"}, status=404)
+    elif numero_guia:
+        guia_obj = GuiaAutorizacao.objects.filter(
+            numero_guia=numero_guia, plano__empresa=empresa
+        ).select_related("plano", "beneficiario", "prestador").first()
+
+    beneficiario_obj = None
+    if guia_obj:
+        beneficiario_obj = guia_obj.beneficiario
+        numero_guia = numero_guia or guia_obj.numero_guia
+        procedimento = procedimento or guia_obj.descricao_procedimento
+        codigo_tuss = codigo_tuss or guia_obj.codigo_procedimento
+        cid10 = cid10 or guia_obj.cid
+        beneficiario = beneficiario or guia_obj.beneficiario.nome
 
     if not numero_guia or not procedimento:
         return JsonResponse({"erro": "numero_guia e procedimento são obrigatórios"}, status=400)
-
-    cid10 = (data.get("cid10") or "").strip()
-    codigo_tuss = (data.get("codigo_tuss") or "").strip()
 
     decisao, score, justificativa = _analisar_guia(
         procedimento, cid10, codigo_tuss=codigo_tuss, beneficiario=beneficiario, empresa_id=empresa.pk
@@ -181,6 +233,8 @@ def api_ia_analisar(request):
 
     ia = IAAutorizacaoGuia.objects.create(
         empresa=empresa,
+        guia=guia_obj,
+        beneficiario_plano=beneficiario_obj,
         numero_guia=numero_guia,
         beneficiario=beneficiario,
         procedimento=procedimento,
@@ -190,7 +244,13 @@ def api_ia_analisar(request):
         score_confianca=score,
         justificativa_ia=justificativa,
     )
-    return JsonResponse({"autorizacao": _ia_dict(ia)}, status=201)
+
+    resposta = {"autorizacao": _ia_dict(ia)}
+    # Decisão automática sobre a guia real: aprovada → autoriza e gera sinistro;
+    # negada → nega a guia. "revisao" aguarda auditor (api_ia_revisar).
+    if guia_obj:
+        resposta.update(_aplicar_decisao_guia(guia_obj, decisao, justificativa))
+    return JsonResponse(resposta, status=201)
 
 
 # ── API: revisão humana ───────────────────────────────────────────────────────
@@ -223,7 +283,20 @@ def api_ia_revisar(request, ia_id):
     ia.decisao_final = decisao_final
     ia.revisada_por = revisada_por
     ia.save()
-    return JsonResponse({"autorizacao": _ia_dict(ia)})
+
+    resposta = {"autorizacao": _ia_dict(ia)}
+    # Revisão humana da IA reflete na guia real: aprovada → autoriza e gera sinistro;
+    # negada → nega a guia. (Só quando há guia vinculada.)
+    if ia.guia_id:
+        guia = GuiaAutorizacao.objects.filter(
+            id=ia.guia_id, plano__empresa=empresa
+        ).select_related("plano", "beneficiario", "prestador").first()
+        if guia:
+            resposta.update(_aplicar_decisao_guia(
+                guia, decisao_final,
+                justificativa=f"Negada em revisão de auditoria (IA) por {revisada_por}.",
+            ))
+    return JsonResponse(resposta)
 
 
 # ── API: KPIs ─────────────────────────────────────────────────────────────────

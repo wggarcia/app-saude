@@ -7625,6 +7625,16 @@ class SIBRegistro(models.Model):
 class IAAutorizacaoGuia(models.Model):
     DECISAO_CHOICES = [("aprovada","Aprovada"),("negada","Negada"),("revisao","Revisão humana")]
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="ia_autorizacoes")
+    # Ligação com a guia real e o beneficiário cadastrado (a cadeia autorização→conta).
+    # Ficam null quando a análise IA é disparada como log isolado (sem guia vinculada).
+    guia = models.ForeignKey(
+        "GuiaAutorizacao", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="ia_autorizacoes",
+    )
+    beneficiario_plano = models.ForeignKey(
+        "BeneficiarioPlano", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="ia_autorizacoes",
+    )
     numero_guia = models.CharField(max_length=60)
     beneficiario = models.CharField(max_length=160)
     procedimento = models.CharField(max_length=200)
