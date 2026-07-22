@@ -13,7 +13,9 @@ GET      /api/farmacia/magistral/kpis
 import json
 import math
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -29,6 +31,68 @@ def _farm(request):
     if emp and get_setor(emp) == "farmacia":
         return emp
     return None
+
+
+def _dec(value, default=Decimal("0")):
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+
+
+def _consumir_materias_primas(empresa, om):
+    """Baixa as matérias-primas da fórmula ao iniciar a manipulação (RDC 67/2007).
+
+    DEVE rodar dentro de `transaction.atomic()`. Para cada item da composição da
+    fórmula: trava e decrementa `MateriaPrimaFarmacia.estoque_atual` e consome dos
+    `LoteMateriaPrima` aprovados por FEFO (validade mais próxima). As quantidades
+    são escalonadas pela razão entre a quantidade da OM e a quantidade padrão da
+    fórmula. Retorna a lista de consumos aplicados."""
+    from .models import MateriaPrimaFarmacia, LoteMateriaPrima
+
+    formula = om.formula
+    composicao = formula.composicao if isinstance(formula.composicao, list) else []
+
+    qtd_padrao = _dec(formula.quantidade_padrao)
+    fator = (_dec(om.quantidade) / qtd_padrao) if qtd_padrao > 0 else Decimal("1")
+
+    consumos = []
+    for comp in composicao:
+        mp_id = comp.get("materia_prima_id")
+        if not mp_id:
+            continue
+        consumo = _dec(comp.get("quantidade")) * fator
+        if consumo <= 0:
+            continue
+
+        mp = (MateriaPrimaFarmacia.objects.select_for_update()
+              .filter(id=mp_id, empresa=empresa).first())
+        if mp is None:
+            continue
+
+        mp.estoque_atual = max(_dec(mp.estoque_atual) - consumo, Decimal("0"))
+        mp.save(update_fields=["estoque_atual", "atualizado_em"])
+
+        # Consome dos lotes aprovados por FEFO.
+        restante = consumo
+        lotes = (LoteMateriaPrima.objects.select_for_update()
+                 .filter(empresa=empresa, materia_prima=mp, status="aprovado",
+                         quantidade_disponivel__gt=0)
+                 .order_by("data_validade"))
+        for lote in lotes:
+            if restante <= 0:
+                break
+            disp = _dec(lote.quantidade_disponivel)
+            usar = min(disp, restante)
+            lote.quantidade_disponivel = disp - usar
+            restante -= usar
+            if lote.quantidade_disponivel <= 0:
+                lote.status = "consumido"
+            lote.save(update_fields=["quantidade_disponivel", "status"])
+
+        consumos.append({"materia_prima_id": mp.id, "quantidade": float(consumo)})
+
+    return consumos
 
 
 @ensure_csrf_cookie
@@ -379,20 +443,33 @@ def api_magistral_ordem_status(request, om_id):
     if not novo_status or novo_status not in status_validos:
         return JsonResponse({"erro": f"Status inválido. Opções: {status_validos}"}, status=400)
 
-    om.status = novo_status
-    if body.get("manipulado_por"):
-        om.manipulado_por = body["manipulado_por"]
-    if body.get("aprovado_por"):
-        om.aprovado_por = body["aprovado_por"]
-    if body.get("numero_lote_produto"):
-        om.numero_lote_produto = body["numero_lote_produto"]
-    if novo_status == "em_manipulacao" and not om.data_manipulacao:
-        om.data_manipulacao = date.today()
-    if novo_status in ("aprovado", "entregue") and not om.data_validade_produto:
-        from datetime import timedelta
-        om.data_validade_produto = date.today() + timedelta(days=om.formula.prazo_validade_dias)
+    with transaction.atomic():
+        # Trava a OM para evitar consumo duplicado de matéria-prima em chamadas
+        # concorrentes de mudança de status.
+        om = OrdemManipulacao.objects.select_for_update().get(id=om.id, empresa=empresa)
 
-    om.save()
+        # A baixa de matéria-prima ocorre uma única vez, na primeira entrada em
+        # manipulação (guardada por data_manipulacao ainda não preenchida).
+        consumir_mp = (novo_status == "em_manipulacao" and not om.data_manipulacao)
+
+        om.status = novo_status
+        if body.get("manipulado_por"):
+            om.manipulado_por = body["manipulado_por"]
+        if body.get("aprovado_por"):
+            om.aprovado_por = body["aprovado_por"]
+        if body.get("numero_lote_produto"):
+            om.numero_lote_produto = body["numero_lote_produto"]
+        if novo_status == "em_manipulacao" and not om.data_manipulacao:
+            om.data_manipulacao = date.today()
+        if novo_status in ("aprovado", "entregue") and not om.data_validade_produto:
+            from datetime import timedelta
+            om.data_validade_produto = date.today() + timedelta(days=om.formula.prazo_validade_dias)
+
+        if consumir_mp:
+            _consumir_materias_primas(empresa, om)
+
+        om.save()
+
     return JsonResponse({"status": novo_status, "om_id": om.id, "numero_om": om.numero_om})
 
 

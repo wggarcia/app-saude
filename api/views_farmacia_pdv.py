@@ -19,6 +19,7 @@ from .utils import validar_cpf_cadastro
 from .models import (
     Empresa,
     LivroRegistroControlado,
+    LoteMedicamento,
     PDVSessao,
     PDVVenda,
     PDVItemVenda,
@@ -45,6 +46,93 @@ def _proximo_lote_fefo(empresa, medicamento):
     disponiveis = [s for s in saldos.values() if s["saldo"] > 0]
     disponiveis.sort(key=lambda s: s["data_validade"] or date.max)
     return disponiveis[0] if disponiveis else None
+
+
+def dar_baixa_estoque_medicamento(
+    empresa,
+    *,
+    medicamento_id=None,
+    codigo_barras="",
+    quantidade,
+    lote="",
+    motivo="",
+    responsavel="",
+    paciente_nome="",
+    paciente_cpf="",
+    prescricao_numero="",
+    medico_crm="",
+    dispensacao=None,
+):
+    """Baixa de estoque unificada de MedicamentoFarmacia — a mesma usada pelo PDV.
+
+    DEVE ser chamada dentro de um bloco `transaction.atomic()`. Trava a linha do
+    medicamento com `select_for_update()`, decrementa `quantidade_atual`, resolve o
+    lote (FEFO via histórico de EstoqueMovimento quando não informado), decrementa o
+    `LoteMedicamento` correspondente quando existir, cria um EstoqueMovimento de saída
+    e grava no Livro de Registro de Controlados quando o medicamento é da Portaria 344.
+
+    Retorna um dict com `medicamento`, `lote_usado` e `saldo_apos`, ou None se o
+    medicamento não for localizado na empresa."""
+    quantidade = _decimal(quantidade)
+    med = None
+    if medicamento_id:
+        med = (MedicamentoFarmacia.objects.select_for_update()
+               .filter(pk=medicamento_id, empresa=empresa).first())
+    elif codigo_barras:
+        med = (MedicamentoFarmacia.objects.select_for_update()
+               .filter(empresa=empresa, codigo_barras=codigo_barras, ativo=True).first())
+    if not med:
+        return None
+
+    med.quantidade_atual = max(med.quantidade_atual - quantidade, Decimal("0"))
+    med.save(update_fields=["quantidade_atual", "atualizado_em"])
+
+    # FEFO: se o lote não foi informado, escolhe o de validade mais próxima.
+    lote_usado = (lote or "").strip()
+    data_validade_usada = None
+    if not lote_usado:
+        proximo = _proximo_lote_fefo(empresa, med)
+        if proximo:
+            lote_usado = proximo["lote"]
+            data_validade_usada = proximo["data_validade"]
+
+    # Decrementa o LoteMedicamento correspondente (rastreabilidade de validade/recall).
+    lote_obj = None
+    if lote_usado:
+        lote_obj = (LoteMedicamento.objects.select_for_update()
+                    .filter(empresa=empresa, medicamento=med, numero_lote=lote_usado).first())
+        if lote_obj:
+            lote_obj.quantidade_atual = max(lote_obj.quantidade_atual - quantidade, Decimal("0"))
+            lote_obj.save(update_fields=["quantidade_atual", "atualizado_em"])
+            if data_validade_usada is None:
+                data_validade_usada = lote_obj.data_validade
+
+    EstoqueMovimento.objects.create(
+        empresa=empresa, medicamento=med, tipo="saida",
+        quantidade=quantidade, lote=lote_usado,
+        data_validade=data_validade_usada,
+        motivo=motivo, responsavel=responsavel,
+    )
+
+    # Portaria 344/98 — dispensação de controlado alimenta o Livro / SNGPC.
+    if med.controlado and med.lista_portaria_344:
+        LivroRegistroControlado.objects.create(
+            empresa=empresa,
+            medicamento=med,
+            lote=lote_obj,
+            dispensacao=dispensacao,
+            tipo="dispensacao",
+            quantidade=quantidade,
+            saldo_apos=med.quantidade_atual,
+            paciente_nome=paciente_nome,
+            paciente_cpf=paciente_cpf,
+            prescricao_numero=prescricao_numero,
+            medico_crm=medico_crm,
+            responsavel=responsavel,
+            observacao=motivo,
+        )
+
+    return {"medicamento": med, "lote_usado": lote_usado, "saldo_apos": med.quantidade_atual}
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -406,92 +494,57 @@ def api_pdv_registrar_venda(request, sessao_id):
     ok_cpf, erro_cpf = validar_cpf_cadastro((data.get("cpf_cliente") or "").strip(), empresa)
     if not ok_cpf:
         return JsonResponse({"erro": erro_cpf}, status=400)
-    venda = PDVVenda.objects.create(
-        sessao=sessao,
-        empresa=empresa,
-        numero_cupom=numero_cupom,
-        forma_pagamento=forma_pagamento,
-        subtotal=subtotal,
-        desconto=desconto_total,
-        total=total,
-        troco=troco,
-        cpf_cliente=(data.get("cpf_cliente") or "").strip(),
-        cancelada=False,
-    )
 
-    # Criar itens e descontar estoque
-    for item in itens_validados:
-        item_venda = PDVItemVenda.objects.create(
-            venda=venda,
-            codigo_barras=item["codigo_barras"],
-            descricao=item["descricao"],
-            lote=item["lote"],
-            quantidade=item["quantidade"],
-            preco_unitario=item["preco_unitario"],
-            desconto_item=item["desconto_item"],
-            total_item=item["total_item"],
-            controlado=item["controlado"],
-            receita_numero=item["receita_numero"],
+    cpf_cliente = (data.get("cpf_cliente") or "").strip()
+
+    with transaction.atomic():
+        venda = PDVVenda.objects.create(
+            sessao=sessao,
+            empresa=empresa,
+            numero_cupom=numero_cupom,
+            forma_pagamento=forma_pagamento,
+            subtotal=subtotal,
+            desconto=desconto_total,
+            total=total,
+            troco=troco,
+            cpf_cliente=cpf_cliente,
+            cancelada=False,
         )
 
-        # Descontar do estoque se houver medicamento vinculado
-        med_id = item.get("medicamento_id")
-        med = None
-        if med_id:
-            med = MedicamentoFarmacia.objects.filter(pk=med_id, empresa=empresa).first()
-        elif item["codigo_barras"]:
-            med = MedicamentoFarmacia.objects.filter(
-                empresa=empresa, codigo_barras=item["codigo_barras"], ativo=True,
-            ).first()
+        # Criar itens e descontar estoque (mesma baixa reutilizada por
+        # delivery/e-commerce, dispensação formal etc.)
+        for item in itens_validados:
+            item_venda = PDVItemVenda.objects.create(
+                venda=venda,
+                codigo_barras=item["codigo_barras"],
+                descricao=item["descricao"],
+                lote=item["lote"],
+                quantidade=item["quantidade"],
+                preco_unitario=item["preco_unitario"],
+                desconto_item=item["desconto_item"],
+                total_item=item["total_item"],
+                controlado=item["controlado"],
+                receita_numero=item["receita_numero"],
+            )
 
-        if med:
-            med.quantidade_atual = max(med.quantidade_atual - item["quantidade"], Decimal("0"))
-            med.save(update_fields=["quantidade_atual", "atualizado_em"])
+            resultado = dar_baixa_estoque_medicamento(
+                empresa,
+                medicamento_id=item.get("medicamento_id"),
+                codigo_barras=item["codigo_barras"],
+                quantidade=item["quantidade"],
+                lote=item["lote"],
+                motivo=f"Venda PDV — cupom {numero_cupom}",
+                responsavel=(sessao.operador or ""),
+                # Balcão: paciente normalmente não é coletado; o CPF do cliente,
+                # quando informado, é o que temos para o Livro de Controlados.
+                paciente_cpf=cpf_cliente,
+                prescricao_numero=item["receita_numero"],
+            )
 
-            # FEFO: se a tela não informou o lote, sai o de validade mais próxima
-            lote_usado = item["lote"]
-            data_validade_usada = None
-            if not lote_usado:
-                proximo = _proximo_lote_fefo(empresa, med)
-                if proximo:
-                    lote_usado = proximo["lote"]
-                    data_validade_usada = proximo["data_validade"]
-                    item_venda.lote = lote_usado
-                    item_venda.save(update_fields=["lote"])
-
-            if lote_usado:
-                EstoqueMovimento.objects.create(
-                    empresa=empresa, medicamento=med, tipo="saida",
-                    quantidade=item["quantidade"], lote=lote_usado,
-                    data_validade=data_validade_usada,
-                    motivo=f"Venda PDV — cupom {numero_cupom}",
-                )
-
-            # Bug 2 fix — Livro de Registro Controlado: obrigação ANVISA
-            # Portaria 344/98. Toda dispensação de medicamento controlado DEVE
-            # gerar um registro no livro para alimentar o SNGPC posteriormente.
-            # Anteriormente o PDV nunca criava esse registro — o livro ficava
-            # vazio para qualquer venda feita via caixa.
-            if med.controlado and med.lista_portaria_344:
-                LivroRegistroControlado.objects.create(
-                    empresa=empresa,
-                    medicamento=med,
-                    lote=None,           # lote via LoteMedicamento não é rastreado no PDV; FK opcional
-                    dispensacao=None,    # dispensação formal não existe no fluxo PDV
-                    tipo="dispensacao",
-                    quantidade=item["quantidade"],
-                    saldo_apos=med.quantidade_atual,
-                    # Em venda de balcão o nome do paciente não é coletado na
-                    # maioria dos casos; o CPF do cliente (se informado) é o que
-                    # temos. Para controlados com necessidade de receita, o
-                    # operador deve ter preenchido receita_numero no item.
-                    paciente_nome="",
-                    paciente_cpf=(venda.cpf_cliente or ""),
-                    prescricao_numero=item["receita_numero"],
-                    medico_crm="",
-                    responsavel=(sessao.operador or ""),
-                    observacao=f"Venda PDV — cupom {numero_cupom}",
-                )
+            # Reflete no item da venda o lote efetivamente usado (FEFO).
+            if resultado and resultado["lote_usado"] and not item_venda.lote:
+                item_venda.lote = resultado["lote_usado"]
+                item_venda.save(update_fields=["lote"])
 
     return JsonResponse({"ok": True, "venda": _venda_to_dict(venda), "desconto_pbm_aplicado": float(desconto_pbm)}, status=201)
 

@@ -8,13 +8,22 @@ PedidoDelivery automaticamente conforme o pedido avança no iFood.
 """
 import hmac
 import json
+from decimal import Decimal, InvalidOperation
 
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import IntegracaoIfood, PedidoDelivery
+from .models import IntegracaoIfood, PedidoDelivery, ItemPedidoDelivery, MedicamentoFarmacia
+from .views_farmacia_ecommerce import baixar_estoque_pedido, STATUS_CONFIRMA_BAIXA
 from .access_control import api_requer_gerencia, api_requer_feature
+
+
+def _decimal(value, default=Decimal("0")):
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
 
 STATUS_MAP_IFOOD = {
     "PLACED": "aguardando",
@@ -121,4 +130,36 @@ def api_ifood_webhook(request):
             "total": pedido_payload.get("totalPrice") or 0,
         },
     )
+
+    # Sincroniza os itens uma única vez (na primeira vez que o payload traz a
+    # lista). Cada item é casado com o catálogo MedicamentoFarmacia da farmácia
+    # por EAN (código de barras); itens sem correspondência ficam registrados
+    # mas não baixam estoque.
+    itens_payload = pedido_payload.get("items") or []
+    if isinstance(itens_payload, list) and itens_payload and not pedido.itens.exists():
+        for it in itens_payload:
+            ean = str(it.get("ean") or it.get("externalCode") or "").strip()
+            med = None
+            if ean:
+                med = MedicamentoFarmacia.objects.filter(
+                    empresa=config.empresa, codigo_barras=ean, ativo=True,
+                ).first()
+            quantidade = _decimal(it.get("quantity") or 1)
+            preco_unitario = _decimal(it.get("unitPrice") or it.get("price") or 0)
+            ItemPedidoDelivery.objects.create(
+                pedido=pedido,
+                empresa=config.empresa,
+                medicamento=med,
+                descricao=(it.get("name") or "").strip(),
+                codigo_barras=ean,
+                quantidade=quantidade,
+                preco_unitario=preco_unitario,
+                total_item=quantidade * preco_unitario,
+            )
+
+    # Baixa de estoque quando o pedido é confirmado no iFood (uma única vez).
+    if novo_status in STATUS_CONFIRMA_BAIXA and not pedido.estoque_baixado:
+        baixar_estoque_pedido(pedido)
+        pedido.refresh_from_db()
+
     return JsonResponse({"ok": True, "pedido_id": pedido.id, "criado": criado})

@@ -6,6 +6,7 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Sum, Q
 from django.http import JsonResponse
 from django.utils import timezone
@@ -22,6 +23,7 @@ from .models import (
     PedidoFarmacia,
     FarmaciaAuditLog,
 )
+from .views_farmacia_pdv import dar_baixa_estoque_medicamento
 from .access_control import api_requer_operacao_ou_gerencia, api_requer_setor, api_requer_feature
 
 
@@ -402,47 +404,46 @@ def api_farmacia_dispensacao(request):
         ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), empresa)
         if not ok_cpf:
             return JsonResponse({"erro": erro_cpf}, status=400)
-        disp = Dispensacao.objects.create(
-            empresa=empresa,
-            paciente_nome=paciente_nome,
-            paciente_cpf=data.get("paciente_cpf", ""),
-            prescricao_numero=prescricao_numero,
-            medico_crm=medico_crm,
-            medicamentos=medicamentos,
-            valor_total=_decimal(data.get("valor_total", 0), default=Decimal("0")),
-            convenio=data.get("convenio", ""),
-            status=data.get("status", "pendente"),
-            observacoes=data.get("observacoes", ""),
-        )
 
-        # Pós-criação: livro de registro + auditoria para controlados
-        for item in medicamentos:
-            med_id = item.get("medicamento_id")
-            if not med_id:
-                continue
-            try:
-                med = MedicamentoFarmacia.objects.get(pk=med_id, empresa=empresa)
-            except MedicamentoFarmacia.DoesNotExist:
-                continue
+        paciente_cpf = data.get("paciente_cpf", "")
 
-            if med.controlado and med.lista_portaria_344:
-                lote_obj = None
-                lote_numero = (item.get("lote") or "").strip()
-                if lote_numero:
-                    lote_obj = LoteMedicamento.objects.filter(numero_lote=lote_numero, empresa=empresa).first()
+        with transaction.atomic():
+            disp = Dispensacao.objects.create(
+                empresa=empresa,
+                paciente_nome=paciente_nome,
+                paciente_cpf=paciente_cpf,
+                prescricao_numero=prescricao_numero,
+                medico_crm=medico_crm,
+                medicamentos=medicamentos,
+                valor_total=_decimal(data.get("valor_total", 0), default=Decimal("0")),
+                convenio=data.get("convenio", ""),
+                status=data.get("status", "pendente"),
+                observacoes=data.get("observacoes", ""),
+            )
 
-                LivroRegistroControlado.objects.create(
-                    empresa=empresa,
-                    medicamento=med,
-                    lote=lote_obj,
-                    dispensacao=disp,
-                    tipo="dispensacao",
-                    quantidade=_decimal(item.get("quantidade", 0), default=Decimal("0")),
-                    saldo_apos=med.quantidade_atual,
+            # Pós-criação: baixa de estoque + movimento + livro de controlados.
+            # A baixa (mesma do PDV) decrementa o estoque ANTES de gravar o
+            # saldo no Livro, de modo que `saldo_apos` fique correto e o SNGPC
+            # reporte o saldo real. O Livro é gravado pela própria baixa quando
+            # o medicamento é da Portaria 344.
+            for item in medicamentos:
+                med_id = item.get("medicamento_id")
+                if not med_id:
+                    continue
+                quantidade = _decimal(item.get("quantidade", 0), default=Decimal("0"))
+                if quantidade <= 0:
+                    continue
+                dar_baixa_estoque_medicamento(
+                    empresa,
+                    medicamento_id=med_id,
+                    quantidade=quantidade,
+                    lote=(item.get("lote") or "").strip(),
+                    motivo=f"Dispensação #{disp.id}",
                     paciente_nome=paciente_nome,
-                    paciente_cpf=data.get("paciente_cpf", ""),
+                    paciente_cpf=paciente_cpf,
                     prescricao_numero=prescricao_numero,
                     medico_crm=medico_crm,
+                    dispensacao=disp,
                 )
 
         FarmaciaAuditLog.objects.create(
@@ -511,9 +512,7 @@ def api_farmacia_movimentos(request):
         if not medicamento_id:
             return JsonResponse({"erro": "Campo 'medicamento_id' é obrigatório"}, status=400)
 
-        try:
-            med = MedicamentoFarmacia.objects.get(pk=medicamento_id, empresa=empresa)
-        except MedicamentoFarmacia.DoesNotExist:
+        if not MedicamentoFarmacia.objects.filter(pk=medicamento_id, empresa=empresa).exists():
             return JsonResponse({"erro": "Medicamento não encontrado"}, status=404)
 
         tipo = data.get("tipo", "entrada")
@@ -524,24 +523,6 @@ def api_farmacia_movimentos(request):
         if quantidade <= 0:
             return JsonResponse({"erro": "Quantidade deve ser maior que zero"}, status=400)
 
-        # Atualiza estoque do medicamento
-        if tipo in ("entrada",):
-            med.quantidade_atual += quantidade
-        elif tipo in ("saida", "descarte"):
-            med.quantidade_atual -= quantidade
-        elif tipo == "ajuste":
-            # Sem default=Decimal("0") propositalmente: precisamos distinguir
-            # "nova_quantidade não foi enviada" (None → cai no delta abaixo)
-            # de "nova_quantidade enviada como 0" (zera o estoque de fato).
-            nova_quantidade = _decimal(data.get("nova_quantidade"))
-            if nova_quantidade is not None and nova_quantidade >= 0:
-                med.quantidade_atual = nova_quantidade
-            else:
-                med.quantidade_atual += quantidade
-        # transferencia não altera o estoque diretamente aqui
-
-        med.save(update_fields=["quantidade_atual", "atualizado_em"])
-
         # Resolve data_validade
         data_validade = None
         dv_str = (data.get("data_validade") or "").strip()
@@ -551,17 +532,65 @@ def api_farmacia_movimentos(request):
             except ValueError:
                 pass
 
-        mov = EstoqueMovimento.objects.create(
-            empresa=empresa,
-            medicamento=med,
-            tipo=tipo,
-            quantidade=quantidade,
-            motivo=data.get("motivo", ""),
-            lote=data.get("lote", ""),
-            data_validade=data_validade,
-            responsavel=data.get("responsavel", ""),
-            observacao=data.get("observacao", ""),
-        )
+        lote_numero = (data.get("lote") or "").strip()
+
+        with transaction.atomic():
+            # Trava a linha do medicamento — o estoque é debitado/creditado aqui.
+            med = MedicamentoFarmacia.objects.select_for_update().get(pk=medicamento_id, empresa=empresa)
+
+            # Atualiza estoque do medicamento
+            if tipo in ("entrada",):
+                med.quantidade_atual += quantidade
+            elif tipo in ("saida", "descarte"):
+                med.quantidade_atual -= quantidade
+            elif tipo == "ajuste":
+                # Sem default=Decimal("0") propositalmente: precisamos distinguir
+                # "nova_quantidade não foi enviada" (None → cai no delta abaixo)
+                # de "nova_quantidade enviada como 0" (zera o estoque de fato).
+                nova_quantidade = _decimal(data.get("nova_quantidade"))
+                if nova_quantidade is not None and nova_quantidade >= 0:
+                    med.quantidade_atual = nova_quantidade
+                else:
+                    med.quantidade_atual += quantidade
+            # transferencia não altera o estoque diretamente aqui
+
+            med.save(update_fields=["quantidade_atual", "atualizado_em"])
+
+            mov = EstoqueMovimento.objects.create(
+                empresa=empresa,
+                medicamento=med,
+                tipo=tipo,
+                quantidade=quantidade,
+                motivo=data.get("motivo", ""),
+                lote=lote_numero,
+                data_validade=data_validade,
+                responsavel=data.get("responsavel", ""),
+                observacao=data.get("observacao", ""),
+            )
+
+            # Rastreabilidade de lote: na entrada com lote+validade, cria/atualiza
+            # o LoteMedicamento do medicamento. É o que alimenta os painéis de
+            # validade/recall (fase1) e o bloqueio de lote na dispensação.
+            if tipo == "entrada" and lote_numero and data_validade:
+                lote_obj = (LoteMedicamento.objects.select_for_update()
+                            .filter(empresa=empresa, medicamento=med, numero_lote=lote_numero).first())
+                if lote_obj is None:
+                    LoteMedicamento.objects.create(
+                        empresa=empresa,
+                        item=None,
+                        medicamento=med,
+                        numero_lote=lote_numero,
+                        fabricante=(data.get("fabricante") or med.fabricante or "").strip(),
+                        data_validade=data_validade,
+                        quantidade_inicial=quantidade,
+                        quantidade_atual=quantidade,
+                    )
+                else:
+                    lote_obj.quantidade_inicial += quantidade
+                    lote_obj.quantidade_atual += quantidade
+                    lote_obj.data_validade = data_validade
+                    lote_obj.save(update_fields=["quantidade_inicial", "quantidade_atual",
+                                                 "data_validade", "atualizado_em"])
 
         return JsonResponse({"ok": True, "movimento": _mov_to_dict(mov)}, status=201)
 

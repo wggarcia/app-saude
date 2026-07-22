@@ -23,7 +23,8 @@ def _lote_to_dict(l):
     return {
         "id": l.id,
         "item_id": l.item_id,
-        "item_nome": l.item.nome,
+        "item_nome": l.item.nome if l.item else (l.medicamento.nome if l.medicamento else ""),
+        "medicamento_id": l.medicamento_id,
         "numero_lote": l.numero_lote,
         "fabricante": l.fabricante,
         "data_fabricacao": str(l.data_fabricacao) if l.data_fabricacao else None,
@@ -158,8 +159,10 @@ def api_lote_farmacia_detalhe(request, lote_id):
         return JsonResponse({"lote": _lote_to_dict(lote)})
 
     elif request.method == "DELETE":
-        # Estornar estoque se lote ainda tem quantidade
-        if lote.quantidade_atual > 0:
+        # Estornar estoque se lote ainda tem quantidade. Lotes de MedicamentoFarmacia
+        # não têm ItemFarmacia associado (item=None) — nesse caso não há estoque de
+        # item a estornar aqui.
+        if lote.quantidade_atual > 0 and lote.item_id:
             item = lote.item
             anterior = float(item.estoque_atual)
             item.estoque_atual = max(0, float(item.estoque_atual) - float(lote.quantidade_atual))

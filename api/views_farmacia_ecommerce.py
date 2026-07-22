@@ -7,13 +7,15 @@ import uuid
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Sum, Count, Q, Avg
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .models import PedidoDelivery
+from .models import PedidoDelivery, ItemPedidoDelivery, MedicamentoFarmacia
+from .views_farmacia_pdv import dar_baixa_estoque_medicamento
 from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 
@@ -24,6 +26,18 @@ def _decimal(value, default=Decimal("0")):
         return Decimal(str(value))
     except (InvalidOperation, TypeError, ValueError):
         return default
+
+
+def _item_to_dict(i):
+    return {
+        "id": i.id,
+        "medicamento_id": i.medicamento_id,
+        "descricao": i.descricao,
+        "codigo_barras": i.codigo_barras,
+        "quantidade": float(i.quantidade),
+        "preco_unitario": float(i.preco_unitario),
+        "total_item": float(i.total_item),
+    }
 
 
 def _pedido_to_dict(p):
@@ -37,12 +51,40 @@ def _pedido_to_dict(p):
         "origem": p.origem,
         "total": float(p.total),
         "observacoes": p.observacoes,
+        "estoque_baixado": p.estoque_baixado,
+        "itens": [_item_to_dict(i) for i in p.itens.all()],
         "criado_em": p.criado_em.isoformat(),
         "atualizado_em": p.atualizado_em.isoformat(),
     }
 
 
 STATUS_VALIDOS = ["aguardando", "confirmado", "em_preparo", "saiu", "entregue", "cancelado"]
+
+# Estados em que o pedido está confirmado/em atendimento e o estoque deve ser
+# baixado. A baixa acontece na primeira transição para qualquer um deles.
+STATUS_CONFIRMA_BAIXA = {"confirmado", "em_preparo", "saiu", "entregue"}
+
+
+def baixar_estoque_pedido(pedido):
+    """Dispara a mesma baixa de estoque do PDV para os itens de um PedidoDelivery.
+
+    Idempotente: trava o pedido, confere `estoque_baixado` e só baixa uma vez.
+    Reutilizada tanto pelo e-commerce/WhatsApp quanto pelo webhook do iFood."""
+    with transaction.atomic():
+        p = (PedidoDelivery.objects.select_for_update()
+             .filter(pk=pedido.pk, empresa=pedido.empresa_id).first())
+        if p is None or p.estoque_baixado:
+            return
+        for item in p.itens.filter(medicamento__isnull=False):
+            dar_baixa_estoque_medicamento(
+                p.empresa,
+                medicamento_id=item.medicamento_id,
+                codigo_barras=item.codigo_barras,
+                quantidade=item.quantidade,
+                motivo=f"Venda delivery — pedido {p.numero_pedido} ({p.origem})",
+            )
+        p.estoque_baixado = True
+        p.save(update_fields=["estoque_baixado", "atualizado_em"])
 
 
 # ─── Page view ────────────────────────────────────────────────────────────────
@@ -143,17 +185,70 @@ def api_delivery_novo(request):
     if status not in STATUS_VALIDOS:
         status = "aguardando"
 
-    pedido = PedidoDelivery.objects.create(
-        empresa=empresa,
-        numero_pedido=numero_pedido,
-        cliente_nome=cliente_nome,
-        cliente_telefone=cliente_telefone,
-        cliente_endereco=cliente_endereco,
-        status=status,
-        origem=data.get("origem", "whatsapp"),
-        total=_decimal(data.get("total", 0)),
-        observacoes=data.get("observacoes", ""),
-    )
+    # Resolve os itens contra o catálogo MedicamentoFarmacia da própria empresa.
+    itens_payload = data.get("itens", [])
+    if not isinstance(itens_payload, list):
+        itens_payload = []
+
+    itens_resolvidos = []
+    total_itens = Decimal("0")
+    for it in itens_payload:
+        med_id = it.get("medicamento_id")
+        med = None
+        if med_id:
+            med = MedicamentoFarmacia.objects.filter(pk=med_id, empresa=empresa, ativo=True).first()
+            if med is None:
+                return JsonResponse({"erro": f"Medicamento {med_id} não encontrado nesta empresa"}, status=400)
+        quantidade = _decimal(it.get("quantidade", 1))
+        if quantidade <= 0:
+            return JsonResponse({"erro": "Quantidade do item deve ser maior que zero"}, status=400)
+        preco_unitario = _decimal(it.get("preco_unitario", 0))
+        if preco_unitario <= 0 and med is not None:
+            preco_unitario = med.preco_venda
+        total_item = quantidade * preco_unitario
+        total_itens += total_item
+        itens_resolvidos.append({
+            "medicamento": med,
+            "descricao": (it.get("descricao") or (med.nome if med else "")).strip(),
+            "codigo_barras": (it.get("codigo_barras") or (med.codigo_barras if med else "")).strip(),
+            "quantidade": quantidade,
+            "preco_unitario": preco_unitario,
+            "total_item": total_item,
+        })
+
+    # Total explícito prevalece; senão, soma dos itens.
+    total_informado = _decimal(data.get("total", 0))
+    total = total_informado if total_informado > 0 else total_itens
+
+    with transaction.atomic():
+        pedido = PedidoDelivery.objects.create(
+            empresa=empresa,
+            numero_pedido=numero_pedido,
+            cliente_nome=cliente_nome,
+            cliente_telefone=cliente_telefone,
+            cliente_endereco=cliente_endereco,
+            status=status,
+            origem=data.get("origem", "whatsapp"),
+            total=total,
+            observacoes=data.get("observacoes", ""),
+        )
+        for r in itens_resolvidos:
+            ItemPedidoDelivery.objects.create(
+                pedido=pedido,
+                empresa=empresa,
+                medicamento=r["medicamento"],
+                descricao=r["descricao"],
+                codigo_barras=r["codigo_barras"],
+                quantidade=r["quantidade"],
+                preco_unitario=r["preco_unitario"],
+                total_item=r["total_item"],
+            )
+
+    # Se o pedido já nasce confirmado (ex.: criado manualmente pós-confirmação),
+    # baixa o estoque imediatamente.
+    if status in STATUS_CONFIRMA_BAIXA and itens_resolvidos:
+        baixar_estoque_pedido(pedido)
+        pedido.refresh_from_db()
 
     return JsonResponse({"ok": True, "pedido": _pedido_to_dict(pedido)}, status=201)
 
@@ -200,6 +295,11 @@ def api_delivery_atualizar_status(request, pedido_id):
     if "observacoes" in data:
         pedido.observacoes = data["observacoes"]
     pedido.save()
+
+    # Baixa de estoque na confirmação (uma única vez).
+    if novo_status in STATUS_CONFIRMA_BAIXA and not pedido.estoque_baixado:
+        baixar_estoque_pedido(pedido)
+        pedido.refresh_from_db()
 
     return JsonResponse({"ok": True, "pedido": _pedido_to_dict(pedido)})
 
