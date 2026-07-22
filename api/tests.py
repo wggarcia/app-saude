@@ -5858,20 +5858,22 @@ class AutorizacaoMLConsolidacaoTests(TestCase):
 
         self._tmpdir_plano = tempfile.TemporaryDirectory()
         self._tmpdir_hosp = tempfile.TemporaryDirectory()
+        self._plano_ml = plano_ml
+        self._hosp_ml = hosp_ml
+        # Isolamento por empresa: os modelos agora sao por empresa_id, entao
+        # patchamos o DIRETORIO (MODELS_DIR) — os caminhos por empresa derivam dele.
         self._patches = [
-            patch.object(plano_ml, "MODEL_PATH", Path(self._tmpdir_plano.name) / "model.joblib"),
-            patch.object(plano_ml, "ENCODER_PATH", Path(self._tmpdir_plano.name) / "encoder.joblib"),
-            patch.object(plano_ml, "META_PATH", Path(self._tmpdir_plano.name) / "meta.json"),
-            patch.object(hosp_ml, "MODEL_PATH", Path(self._tmpdir_hosp.name) / "model.joblib"),
-            patch.object(hosp_ml, "ENCODER_PATH", Path(self._tmpdir_hosp.name) / "encoder.joblib"),
-            patch.object(hosp_ml, "META_PATH", Path(self._tmpdir_hosp.name) / "meta.json"),
+            patch.object(plano_ml, "MODELS_DIR", Path(self._tmpdir_plano.name)),
+            patch.object(hosp_ml, "MODELS_DIR", Path(self._tmpdir_hosp.name)),
         ]
         for p in self._patches:
             p.start()
+        plano_ml._MODELO_CACHE.clear()
 
     def tearDown(self):
         for p in self._patches:
             p.stop()
+        self._plano_ml._MODELO_CACHE.clear()
         self._tmpdir_plano.cleanup()
         self._tmpdir_hosp.cleanup()
 
@@ -5879,7 +5881,7 @@ class AutorizacaoMLConsolidacaoTests(TestCase):
         from api.views_plano_ia import _analisar_guia
 
         decisao, score, justificativa = _analisar_guia(
-            "tratamento estético rejuvenescimento", "Z71", codigo_tuss="40814440", beneficiario="", empresa_id=None
+            "tratamento estético rejuvenescimento", "Z71", codigo_tuss="40814440", beneficiario="", empresa_id=1
         )
 
         self.assertEqual(decisao, "negada")
@@ -5899,7 +5901,7 @@ class AutorizacaoMLConsolidacaoTests(TestCase):
         from api.views_hospital_ia_autorizacao import _analisar_solicitacao
 
         decisao, score, justificativa = _analisar_solicitacao(
-            "internacao", "atendimento de urgencia", "R69", True, paciente_nome="Paciente Teste", empresa_id=None
+            "internacao", "atendimento de urgencia", "R69", True, paciente_nome="Paciente Teste", empresa_id=1
         )
 
         self.assertEqual(decisao, "aprovada")
@@ -5916,6 +5918,45 @@ class AutorizacaoMLConsolidacaoTests(TestCase):
 
         self.assertEqual(decisao, "negada")
         self.assertIn("fallback", justificativa)
+
+    # ── Isolamento por empresa (LGPD) ────────────────────────────────────────
+
+    def test_treinar_modelo_exige_empresa_id(self):
+        """Sem empresa_id o treino levantaria pooling cross-tenant — deve recusar."""
+        with self.assertRaises(ValueError):
+            self._plano_ml.treinar_modelo()
+        with self.assertRaises(ValueError):
+            self._hosp_ml.treinar_modelo()
+
+    def test_plano_e_hospital_geram_modelos_distintos_por_empresa(self):
+        """Empresa A e B treinam/usam ARQUIVOS de modelo distintos e isolados."""
+        for ml in (self._plano_ml, self._hosp_ml):
+            ml.treinar_modelo(empresa_id=101)
+            ml.treinar_modelo(empresa_id=202)
+
+            model_a, enc_a, meta_a = ml._paths(101)
+            model_b, enc_b, meta_b = ml._paths(202)
+
+            # caminhos diferentes por empresa
+            self.assertNotEqual(model_a, model_b)
+            self.assertNotEqual(enc_a, enc_b)
+            self.assertNotEqual(meta_a, meta_b)
+            # cada empresa tem o proprio arquivo persistido
+            for p in (model_a, enc_a, meta_a, model_b, enc_b, meta_b):
+                self.assertTrue(p.exists(), f"esperava arquivo isolado {p}")
+
+    def test_inferencia_sem_empresa_id_cai_no_fallback(self):
+        """empresa_id ausente ⇒ ValueError na inferência ⇒ chamador usa o
+        fallback de regras (revisão), nunca o modelo de outra empresa."""
+        from api.views_plano_ia import _analisar_guia
+        from api.views_hospital_ia_autorizacao import _analisar_solicitacao
+
+        # sem empresa_id (default None)
+        _, _, just_plano = _analisar_guia("tratamento estético", "Z71", codigo_tuss="40814440")
+        self.assertIn("fallback", just_plano)
+
+        _, _, just_hosp = _analisar_solicitacao("procedimento", "tratamento estetico", "Z71", False)
+        self.assertIn("fallback", just_hosp)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

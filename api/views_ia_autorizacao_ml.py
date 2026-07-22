@@ -46,9 +46,16 @@ except OSError:
     # a importacao do modulo so porque esse mkdir falhou nesse contexto.
     pass
 
-MODEL_PATH    = MODELS_DIR / "autorizacao_model.joblib"
-ENCODER_PATH  = MODELS_DIR / "autorizacao_encoder.joblib"
-META_PATH     = MODELS_DIR / "autorizacao_meta.json"
+# Isolamento por empresa (LGPD): cada tenant treina e usa o PROPRIO modelo,
+# persistido em arquivos separados por empresa_id. Nunca ha um modelo global
+# compartilhado — histórico de guias de uma empresa jamais influencia a
+# inferência de outra.
+def _paths(empresa_id):
+    return (
+        MODELS_DIR / f"autorizacao_model_{empresa_id}.joblib",
+        MODELS_DIR / f"autorizacao_encoder_{empresa_id}.joblib",
+        MODELS_DIR / f"autorizacao_meta_{empresa_id}.json",
+    )
 
 # Threshold de confiança para decisão automática (sem revisão humana)
 THRESHOLD_APROVAR = 0.82
@@ -168,16 +175,24 @@ def treinar_modelo(empresa_id: int = None):
     Label: decisao_final (aprovada/negada/revisao)
     Usa RandomForest + GradientBoosting em ensemble.
     """
+    # empresa_id e OBRIGATORIO: treinar sem filtro juntaria guias de todas as
+    # empresas num unico modelo (pooling cross-tenant / violacao LGPD).
+    if not empresa_id:
+        raise ValueError(
+            "treinar_modelo exige empresa_id: o modelo de autorizacao e isolado "
+            "por empresa (LGPD), nunca treinado sobre a base global."
+        )
+
     import re
     from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
     from sklearn.preprocessing import LabelEncoder
     from sklearn.model_selection import cross_val_score
     from sklearn.metrics import classification_report
 
-    # Busca guias com decisão final (revisadas por humano ou auto)
-    qs = IAAutorizacaoGuia.objects.filter(decisao_final__isnull=False)
-    if empresa_id:
-        qs = qs.filter(empresa_id=empresa_id)
+    # Busca guias com decisão final (revisadas por humano ou auto) DESTA empresa
+    qs = IAAutorizacaoGuia.objects.filter(
+        decisao_final__isnull=False, empresa_id=empresa_id
+    )
 
     guias = list(qs.values("cid10", "codigo_tuss", "procedimento", "beneficiario", "decisao_final"))
 
@@ -219,10 +234,11 @@ def treinar_modelo(empresa_id: int = None):
     # Cross-validation para métrica de qualidade
     cv_scores = cross_val_score(ensemble, X, y, cv=min(5, len(guias)//10 + 2), scoring="f1_weighted")
 
-    # Salva modelo e metadata
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(ensemble, MODEL_PATH)
-    joblib.dump(le, ENCODER_PATH)
+    # Salva modelo e metadata no caminho ISOLADO desta empresa
+    model_path, encoder_path, meta_path = _paths(empresa_id)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(ensemble, model_path)
+    joblib.dump(le, encoder_path)
 
     meta = {
         "treinado_em": datetime.now().isoformat(),
@@ -234,7 +250,7 @@ def treinar_modelo(empresa_id: int = None):
         "empresa_id": empresa_id,
         "dataset_sintetico": len(guias) < MIN_AMOSTRAS_TREINO,
     }
-    with open(META_PATH, "w") as f:
+    with open(meta_path, "w") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
 
     return meta
@@ -275,18 +291,28 @@ def _gerar_dataset_sintetico():
 
 # ─── Inferência ───────────────────────────────────────────────────────────────
 
-_MODELO_CACHE: dict = {}  # cache em memória por processo
+_MODELO_CACHE: dict = {}  # empresa_id -> {"model", "le", "mtime"} — cache por empresa
 
-def _carregar_modelo():
-    """Carrega modelo treinado (com cache em memória para evitar joblib.load por request)."""
-    if not MODEL_PATH.exists() or not ENCODER_PATH.exists():
-        treinar_modelo()
-    mtime = MODEL_PATH.stat().st_mtime
-    if _MODELO_CACHE.get("mtime") != mtime:
-        _MODELO_CACHE["model"] = joblib.load(MODEL_PATH)
-        _MODELO_CACHE["le"] = joblib.load(ENCODER_PATH)
-        _MODELO_CACHE["mtime"] = mtime
-    return _MODELO_CACHE["model"], _MODELO_CACHE["le"]
+def _carregar_modelo(empresa_id: int):
+    """Carrega o modelo treinado DESTA empresa (com cache em memória por empresa
+    para evitar joblib.load por request). Se a empresa ainda não tem modelo,
+    treina um novo (bootstrap sintético) exclusivo dela — nunca reaproveita o
+    modelo de outro tenant."""
+    if not empresa_id:
+        raise ValueError("_carregar_modelo exige empresa_id (isolamento por empresa / LGPD).")
+    model_path, encoder_path, _ = _paths(empresa_id)
+    if not model_path.exists() or not encoder_path.exists():
+        treinar_modelo(empresa_id)
+    mtime = model_path.stat().st_mtime
+    cached = _MODELO_CACHE.get(empresa_id)
+    if not cached or cached.get("mtime") != mtime:
+        cached = {
+            "model": joblib.load(model_path),
+            "le": joblib.load(encoder_path),
+            "mtime": mtime,
+        }
+        _MODELO_CACHE[empresa_id] = cached
+    return cached["model"], cached["le"]
 
 
 def inferir_autorizacao(dados: dict) -> dict:
@@ -295,7 +321,16 @@ def inferir_autorizacao(dados: dict) -> dict:
     Retorna: decisao, score_confianca, justificativa, features
     """
     import re
-    model, le = _carregar_modelo()
+    # Sem empresa_id não há isolamento possível: levanta erro para que o chamador
+    # caia no fallback seguro (motor de regras / revisão manual), nunca usando o
+    # modelo de outra empresa.
+    empresa_id = dados.get("empresa_id")
+    if not empresa_id:
+        raise ValueError(
+            "inferir_autorizacao exige empresa_id no payload para garantir "
+            "isolamento por empresa (LGPD)."
+        )
+    model, le = _carregar_modelo(empresa_id)
     features = _extrair_features(dados)
     X = np.array([[features[n] for n in FEATURE_NAMES]])
 
@@ -459,10 +494,11 @@ def api_ia_modelo_info(request):
     if isinstance(empresa, JsonResponse):
         return empresa
 
-    if not META_PATH.exists():
+    _, _, meta_path = _paths(empresa.pk)
+    if not meta_path.exists():
         return JsonResponse({"modelo_treinado": False, "mensagem": "Chame /retreinar/ para treinar o modelo."})
 
-    with open(META_PATH) as f:
+    with open(meta_path) as f:
         meta = json.load(f)
 
     # Conta guias disponíveis para treino

@@ -32,9 +32,16 @@ except OSError:
     # a importacao do modulo so porque esse mkdir falhou nesse contexto.
     pass
 
-MODEL_PATH = MODELS_DIR / "autorizacao_hospital_model.joblib"
-ENCODER_PATH = MODELS_DIR / "autorizacao_hospital_encoder.joblib"
-META_PATH = MODELS_DIR / "autorizacao_hospital_meta.json"
+# Isolamento por empresa (LGPD): cada tenant treina e usa o PROPRIO modelo,
+# persistido em arquivos separados por empresa_id. Nunca ha um modelo clinico
+# global compartilhado entre clientes — dado clinico de uma empresa jamais
+# influencia a inferencia de outra.
+def _paths(empresa_id):
+    return (
+        MODELS_DIR / f"autorizacao_hospital_model_{empresa_id}.joblib",
+        MODELS_DIR / f"autorizacao_hospital_encoder_{empresa_id}.joblib",
+        MODELS_DIR / f"autorizacao_hospital_meta_{empresa_id}.json",
+    )
 
 THRESHOLD_APROVAR = 0.82
 THRESHOLD_NEGAR = 0.80
@@ -132,13 +139,21 @@ def _gerar_dataset_sintetico():
 
 
 def treinar_modelo(empresa_id: int = None):
+    # empresa_id e OBRIGATORIO: treinar sem filtro juntaria decisoes clinicas de
+    # todas as empresas num unico modelo (pooling cross-tenant / violacao LGPD).
+    if not empresa_id:
+        raise ValueError(
+            "treinar_modelo exige empresa_id: o modelo de autorizacao clinica e "
+            "isolado por empresa (LGPD), nunca treinado sobre a base global."
+        )
+
     from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
     from sklearn.preprocessing import LabelEncoder
     from sklearn.model_selection import cross_val_score
 
-    qs = IAAutorizacaoClinica.objects.filter(decisao_final__isnull=False)
-    if empresa_id:
-        qs = qs.filter(empresa_id=empresa_id)
+    qs = IAAutorizacaoClinica.objects.filter(
+        decisao_final__isnull=False, empresa_id=empresa_id
+    )
 
     solicitacoes = list(qs.values("cid10", "procedimento", "tipo_solicitacao", "urgente", "paciente_nome", "decisao_final"))
 
@@ -160,9 +175,10 @@ def treinar_modelo(empresa_id: int = None):
 
     cv_scores = cross_val_score(ensemble, X, y, cv=min(5, len(solicitacoes) // 10 + 2), scoring="f1_weighted")
 
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(ensemble, MODEL_PATH)
-    joblib.dump(le, ENCODER_PATH)
+    model_path, encoder_path, meta_path = _paths(empresa_id)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(ensemble, model_path)
+    joblib.dump(le, encoder_path)
 
     meta = {
         "treinado_em": datetime.now().isoformat(),
@@ -174,19 +190,34 @@ def treinar_modelo(empresa_id: int = None):
         "empresa_id": empresa_id,
         "dataset_sintetico": dataset_sintetico,
     }
-    with open(META_PATH, "w") as f:
+    with open(meta_path, "w") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
     return meta
 
 
-def _carregar_modelo():
-    if not MODEL_PATH.exists() or not ENCODER_PATH.exists():
-        treinar_modelo()
-    return joblib.load(MODEL_PATH), joblib.load(ENCODER_PATH)
+def _carregar_modelo(empresa_id: int):
+    # Carrega SEMPRE o modelo da propria empresa. Se ela ainda nao tem modelo,
+    # treina um novo (com bootstrap sintetico) exclusivo dela — jamais reaproveita
+    # o modelo de outro tenant.
+    if not empresa_id:
+        raise ValueError("_carregar_modelo exige empresa_id (isolamento por empresa / LGPD).")
+    model_path, encoder_path, _ = _paths(empresa_id)
+    if not model_path.exists() or not encoder_path.exists():
+        treinar_modelo(empresa_id)
+    return joblib.load(model_path), joblib.load(encoder_path)
 
 
 def inferir_autorizacao_clinica(dados: dict) -> dict:
-    model, le = _carregar_modelo()
+    # Sem empresa_id nao ha isolamento possivel: levanta erro para que o chamador
+    # caia no fallback seguro (motor de regras / revisao manual), nunca usando o
+    # modelo de outra empresa.
+    empresa_id = dados.get("empresa_id")
+    if not empresa_id:
+        raise ValueError(
+            "inferir_autorizacao_clinica exige empresa_id no payload para garantir "
+            "isolamento por empresa (LGPD)."
+        )
+    model, le = _carregar_modelo(empresa_id)
     features = _extrair_features(dados)
     X = np.array([[features[n] for n in FEATURE_NAMES]])
 
