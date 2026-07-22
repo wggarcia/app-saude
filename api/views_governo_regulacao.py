@@ -1,6 +1,7 @@
 """
 views_governo_regulacao.py
 Regulação Assistencial — fila SISREG-like.
+GET /api/governo/regulacao-assistencial/cidadao-lookup  Busca cidadão por CNS (Governo isolado)
 """
 import json
 from datetime import date
@@ -93,6 +94,17 @@ def api_regulacao_nova(request):
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     data = json.loads(request.body or "{}")
+
+    # Pré-preenchimento por CNS: busca no ProntuarioCidadao do próprio município
+    cns_informado = (data.get("cns") or "").strip()
+    if cns_informado and not data.get("paciente_nome"):
+        from .models import ProntuarioCidadao
+        cidadao_ref = ProntuarioCidadao.objects.filter(
+            empresa=e, cns=cns_informado
+        ).first()
+        if cidadao_ref:
+            data["paciente_nome"] = cidadao_ref.nome_completo
+
     r = RegulacaoAssistencial.objects.create(
         empresa=e,
         paciente_nome=data.get("paciente_nome", ""),
@@ -130,6 +142,46 @@ def api_regulacao_atualizar(request, reg_id):
         r.unidade_destino = data["unidade_destino"]
     r.save()
     return JsonResponse({"ok": True})
+
+
+# ── Lookup de cidadão por CNS ─────────────────────────────────────────────────
+
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
+@require_http_methods(["GET"])
+def api_regulacao_cidadao_lookup(request):
+    """
+    GET /api/governo/regulacao-assistencial/cidadao-lookup?cns=<CNS>
+    Busca cidadão pelo CNS no cadastro do próprio município para pré-preenchimento
+    da solicitação de regulação. Isolado no segmento Governo.
+    """
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    cns = (request.GET.get("cns") or "").strip()
+    if not cns:
+        return JsonResponse({"erro": "Parâmetro 'cns' obrigatório"}, status=400)
+
+    from .models import ProntuarioCidadao
+
+    try:
+        cidadao = ProntuarioCidadao.objects.get(empresa=e, cns=cns)
+    except ProntuarioCidadao.DoesNotExist:
+        return JsonResponse({"encontrado": False, "cidadao": None})
+    except ProntuarioCidadao.MultipleObjectsReturned:
+        cidadao = ProntuarioCidadao.objects.filter(empresa=e, cns=cns).first()
+
+    return JsonResponse({
+        "encontrado": True,
+        "cidadao": {
+            "nome":            cidadao.nome_completo,
+            "data_nascimento": cidadao.data_nascimento.isoformat() if cidadao.data_nascimento else None,
+            "cpf":             cidadao.cpf,
+            "cns":             cidadao.cns,
+            "telefone":        cidadao.telefone,
+            "unidade_saude":   cidadao.unidade_saude,
+        },
+    })
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

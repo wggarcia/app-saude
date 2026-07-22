@@ -1,6 +1,7 @@
 """
 views_governo_tfd.py
 Gestão de Veículos e Agendamento de Viagens — TFD (Tratamento Fora de Domicílio), Governo.
+GET /api/governo/tfd/cidadao-lookup  Busca cidadão por CNS para pré-preenchimento (Governo isolado)
 """
 import json
 
@@ -136,6 +137,20 @@ def api_tfd_viagens(request):
         return JsonResponse({"total": qs.count(), "viagens": [_viagem_dict(v) for v in qs[:200]]})
 
     data = json.loads(request.body or "{}")
+
+    # Pré-preenchimento por CNS: busca no ProntuarioCidadao do próprio município
+    cns_informado = (data.get("paciente_cns") or "").strip()
+    if cns_informado and not data.get("paciente_nome"):
+        from .models import ProntuarioCidadao
+        cidadao_ref = ProntuarioCidadao.objects.filter(
+            empresa=e, cns=cns_informado
+        ).first()
+        if cidadao_ref:
+            if not data.get("paciente_nome"):
+                data["paciente_nome"] = cidadao_ref.nome_completo
+            if not data.get("paciente_cpf") and cidadao_ref.cpf:
+                data["paciente_cpf"] = cidadao_ref.cpf
+
     paciente_nome = data.get("paciente_nome", "").strip()
     destino_cidade = data.get("destino_cidade", "").strip()
     data_viagem = parse_datetime(data.get("data_viagem", ""))
@@ -205,6 +220,46 @@ def api_tfd_viagem_detalhe(request, viagem_id):
 
     viagem.save()
     return JsonResponse(_viagem_dict(viagem))
+
+
+# ── Lookup de cidadão por CNS ─────────────────────────────────────────────────
+
+@require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
+def api_tfd_cidadao_lookup(request):
+    """
+    GET /api/governo/tfd/cidadao-lookup?cns=<CNS>
+    Busca cidadão pelo CNS no cadastro do próprio município para pré-preenchimento
+    do agendamento de viagem TFD. Isolado no segmento Governo.
+    """
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    cns = (request.GET.get("cns") or "").strip()
+    if not cns:
+        return JsonResponse({"erro": "Parâmetro 'cns' obrigatório"}, status=400)
+
+    from .models import ProntuarioCidadao
+
+    try:
+        cidadao = ProntuarioCidadao.objects.get(empresa=e, cns=cns)
+    except ProntuarioCidadao.DoesNotExist:
+        return JsonResponse({"encontrado": False, "cidadao": None})
+    except ProntuarioCidadao.MultipleObjectsReturned:
+        cidadao = ProntuarioCidadao.objects.filter(empresa=e, cns=cns).first()
+
+    return JsonResponse({
+        "encontrado": True,
+        "cidadao": {
+            "nome":            cidadao.nome_completo,
+            "data_nascimento": cidadao.data_nascimento.isoformat() if cidadao.data_nascimento else None,
+            "cpf":             cidadao.cpf,
+            "cns":             cidadao.cns,
+            "telefone":        cidadao.telefone,
+            "unidade_saude":   cidadao.unidade_saude,
+        },
+    })
 
 
 def _veiculo_dict(v):

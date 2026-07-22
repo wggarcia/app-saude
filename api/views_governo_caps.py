@@ -5,6 +5,7 @@ GET/POST /api/governo/caps/atendimentos
 GET/POST /api/governo/caps/encaminhamentos
 GET      /api/governo/caps/kpis
 GET      /api/governo/caps/raas-exportar   Exporta produção para RAAS/DATASUS
+GET      /api/governo/caps/cidadao-lookup  Busca cidadão por CNS (Governo isolado)
 """
 import json
 import math
@@ -192,6 +193,21 @@ def api_caps_atendimentos(request):
         except UnidadeCAPS.DoesNotExist:
             return JsonResponse({"erro": "Unidade CAPS não encontrada"}, status=404)
 
+        # Pré-preenchimento por CNS: busca no ProntuarioCidadao do próprio município
+        cns_informado = (body.get("cns") or "").strip()
+        if cns_informado and not body.get("paciente_nome") and not body.get("data_nascimento"):
+            from .models import ProntuarioCidadao
+            cidadao_ref = ProntuarioCidadao.objects.filter(
+                empresa=empresa, cns=cns_informado
+            ).first()
+            if cidadao_ref:
+                if not body.get("paciente_nome"):
+                    body["paciente_nome"] = cidadao_ref.nome_completo
+                if not body.get("data_nascimento") and cidadao_ref.data_nascimento:
+                    body["data_nascimento"] = cidadao_ref.data_nascimento.isoformat()
+                if not body.get("cpf") and cidadao_ref.cpf:
+                    body["cpf"] = cidadao_ref.cpf
+
         paciente_nome = (body.get("paciente_nome") or "").strip()
         data_atendimento = body.get("data_atendimento")
         competencia      = body.get("competencia")
@@ -218,6 +234,7 @@ def api_caps_atendimentos(request):
             paciente_nome     = paciente_nome,
             cns               = (body.get("cns") or "").strip(),
             cpf               = (body.get("cpf") or "").strip().replace(".", "").replace("-", ""),
+            data_nascimento   = body.get("data_nascimento") or None,
             cid_principal     = (body.get("cid_principal") or "").strip().upper(),
             cid_secundario    = (body.get("cid_secundario") or "").strip().upper(),
             modalidade        = body.get("modalidade") or "individual",
@@ -422,6 +439,47 @@ def api_caps_raas_exportar(request):
             "Converta para o layout fixo .txt do RAAS antes de submeter ao DATASUS. "
             "O layout completo está em: http://datasus.saude.gov.br/sistemas-e-aplicativos/"
         ),
+    })
+
+
+# ── Lookup de cidadão por CNS ─────────────────────────────────────────────────
+
+@require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica")
+def api_caps_cidadao_lookup(request):
+    """
+    GET /api/governo/caps/cidadao-lookup?cns=<CNS>
+    Busca cidadão pelo Cartão Nacional de Saúde no cadastro de prontuários do
+    próprio município (ProntuarioCidadao). Retorna dados básicos para pré-preenchimento
+    do formulário de atendimento, sem cruzar dados com outros segmentos.
+    """
+    empresa = _gov(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito ao módulo Governo"}, status=403)
+
+    cns = (request.GET.get("cns") or "").strip()
+    if not cns:
+        return JsonResponse({"erro": "Parâmetro 'cns' obrigatório"}, status=400)
+
+    from .models import ProntuarioCidadao
+
+    try:
+        cidadao = ProntuarioCidadao.objects.get(empresa=empresa, cns=cns)
+    except ProntuarioCidadao.DoesNotExist:
+        return JsonResponse({"encontrado": False, "cidadao": None})
+    except ProntuarioCidadao.MultipleObjectsReturned:
+        cidadao = ProntuarioCidadao.objects.filter(empresa=empresa, cns=cns).first()
+
+    return JsonResponse({
+        "encontrado": True,
+        "cidadao": {
+            "nome":            cidadao.nome_completo,
+            "data_nascimento": cidadao.data_nascimento.isoformat() if cidadao.data_nascimento else None,
+            "cpf":             cidadao.cpf,
+            "cns":             cidadao.cns,
+            "telefone":        cidadao.telefone,
+            "unidade_saude":   cidadao.unidade_saude,
+        },
     })
 
 

@@ -1,6 +1,7 @@
 """
 views_governo_farmacia_basica.py
 Farmácia Básica UBS — estoque RENAME + dispensação.
+GET /api/governo/farmacia-basica/cidadao-lookup  Busca cidadão por CNS (Governo isolado)
 """
 import json
 from datetime import date
@@ -95,6 +96,17 @@ def api_farmacia_basica_dispensar(request):
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     data = json.loads(request.body or "{}")
+
+    # Pré-preenchimento por CNS: busca no ProntuarioCidadao do próprio município
+    cns_informado = (data.get("cns_cidadao") or "").strip()
+    if cns_informado and not data.get("paciente_nome"):
+        from .models import ProntuarioCidadao
+        cidadao_ref = ProntuarioCidadao.objects.filter(
+            empresa=e, cns=cns_informado
+        ).first()
+        if cidadao_ref:
+            data["paciente_nome"] = cidadao_ref.nome_completo
+
     item_id = data.get("item_id")
     if not item_id:
         return JsonResponse({"erro": "item_id obrigatório"}, status=400)
@@ -132,6 +144,46 @@ def api_farmacia_basica_dispensacoes(request):
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     qs = DispensacaoFarmaciaBasica.objects.filter(empresa=e).select_related("item")[:50]
     return JsonResponse({"dispensacoes": [_disp_dict(d) for d in qs]})
+
+
+# ── Lookup de cidadão por CNS ─────────────────────────────────────────────────
+
+@require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.atencao_clinica", "governo.farmacia")
+def api_farmacia_basica_cidadao_lookup(request):
+    """
+    GET /api/governo/farmacia-basica/cidadao-lookup?cns=<CNS>
+    Busca cidadão pelo CNS no cadastro do próprio município para pré-preenchimento
+    da dispensação de medicamentos. Isolado no segmento Governo.
+    """
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    cns = (request.GET.get("cns") or "").strip()
+    if not cns:
+        return JsonResponse({"erro": "Parâmetro 'cns' obrigatório"}, status=400)
+
+    from .models import ProntuarioCidadao
+
+    try:
+        cidadao = ProntuarioCidadao.objects.get(empresa=e, cns=cns)
+    except ProntuarioCidadao.DoesNotExist:
+        return JsonResponse({"encontrado": False, "cidadao": None})
+    except ProntuarioCidadao.MultipleObjectsReturned:
+        cidadao = ProntuarioCidadao.objects.filter(empresa=e, cns=cns).first()
+
+    return JsonResponse({
+        "encontrado": True,
+        "cidadao": {
+            "nome":            cidadao.nome_completo,
+            "data_nascimento": cidadao.data_nascimento.isoformat() if cidadao.data_nascimento else None,
+            "cpf":             cidadao.cpf,
+            "cns":             cidadao.cns,
+            "telefone":        cidadao.telefone,
+            "unidade_saude":   cidadao.unidade_saude,
+        },
+    })
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

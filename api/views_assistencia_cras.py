@@ -227,6 +227,28 @@ def api_ass_cras_familias(request):
         except UnidadeCRAS.DoesNotExist:
             return JsonResponse({"erro": "Unidade CRAS não encontrada"}, status=400)
 
+    # Pré-preenche com dados do CadÚnico quando NIS ou CPF é informado e os
+    # campos correspondentes não vieram no payload (não sobrescreve intencional).
+    nis = (data.get("responsavel_nis") or "").strip()
+    cpf = (data.get("responsavel_cpf") or "").strip()
+    if nis or cpf:
+        from .models import CadUnicoFamilia
+        from django.db.models import Q
+        cad = CadUnicoFamilia.objects.filter(empresa=empresa).filter(
+            Q(responsavel_nis=nis) if nis else Q() | Q(responsavel_cpf=cpf) if cpf else Q()
+        ).first()
+        if cad:
+            if not data.get("renda_familiar_total") and cad.renda_per_capita:
+                data["renda_familiar_total"] = float(cad.renda_per_capita) * cad.qtd_pessoas
+            if not data.get("num_integrantes"):
+                data["num_integrantes"] = cad.qtd_pessoas
+            if not data.get("cadUnico_numero_seq") and cad.numero_seq:
+                data["cadUnico_numero_seq"] = cad.numero_seq
+            if not data.get("marcador_pbf"):
+                data["marcador_pbf"] = cad.marcador_pbf
+            if not data.get("marcador_bpc"):
+                data["marcador_bpc"] = cad.marcador_bpc
+
     f = FamiliaCRAS.objects.create(
         empresa=empresa,
         unidade_cras=unidade_cras,
