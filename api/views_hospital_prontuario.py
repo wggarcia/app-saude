@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .utils import validar_cpf_cadastro
+from .services.identidade_paciente import resolver_identidade
 from .access_control import (
     api_requer_feature,
     api_requer_gerencia,
@@ -149,6 +150,9 @@ def api_prontuario_hospitalar_novo(request):
     ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), empresa)
     if not ok_cpf:
         return JsonResponse({"erro": erro_cpf}, status=400)
+    identidade = resolver_identidade(
+        empresa, nome=nome, cpf=data.get("paciente_cpf", ""), data_nascimento=nasc,
+    )
     p = ProntuarioHospitalar.objects.create(
         empresa=empresa,
         numero_prontuario=data.get("numero_prontuario", ""),
@@ -160,6 +164,7 @@ def api_prontuario_hospitalar_novo(request):
         alergias=data.get("alergias", ""),
         comorbidades=data.get("comorbidades", ""),
         observacoes=data.get("observacoes", ""),
+        identidade=identidade,
     )
     return JsonResponse({"ok": True, "prontuario": _pront_to_dict(p)}, status=201)
 
@@ -210,6 +215,12 @@ def api_prontuario_hospitalar_detalhe(request, pront_id):
             p.paciente_nascimento = datetime.strptime(data["paciente_nascimento"], "%Y-%m-%d").date()
         except ValueError:
             pass
+
+    if {"paciente_nome", "paciente_cpf", "paciente_nascimento"} & set(data):
+        p.identidade = resolver_identidade(
+            empresa, nome=p.paciente_nome, cpf=p.paciente_cpf,
+            data_nascimento=p.paciente_nascimento,
+        )
 
     p.save()
     return JsonResponse({"ok": True, "prontuario": _pront_to_dict(p)})

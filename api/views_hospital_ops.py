@@ -13,6 +13,7 @@ from .models import (
 )
 from .views_dashboard import _empresa_autenticada
 from .utils import validar_cpf_cadastro
+from .services.identidade_paciente import resolver_identidade
 from .access_control import (
     api_requer_operacao_ou_gerencia,
     api_requer_setor,
@@ -272,17 +273,35 @@ def api_internacoes_hospital(request):
 def _sincronizar_paciente_interno(empresa, pac_legado, internacao, status):
     """Mantém um PacienteInternado (sistema moderno) coerente com a internação
     feita pela tela legada — para que módulos como Equipe Multiprofissional,
-    Visitantes, Óbito e Dose Unitária encontrem o paciente certo."""
+    Visitantes, Óbito e Dose Unitária encontrem o paciente certo.
+
+    Também resolve a identidade única do paciente (MPI — IdentidadePaciente,
+    ver .services.identidade_paciente) para que o EMR (ProntuarioHospitalar)
+    reconheça o mesmo paciente. O match legado→moderno por cpf/nome cru é
+    mantido como fallback para não depender só do MPI enquanto o backfill
+    de dados antigos não roda."""
+    identidade = resolver_identidade(
+        empresa, nome=pac_legado.nome, cpf=pac_legado.cpf,
+        data_nascimento=pac_legado.data_nascimento,
+    )
+
     moderno = None
-    if pac_legado.cpf:
+    if identidade:
+        moderno = PacienteInternado.objects.filter(empresa=empresa, identidade=identidade).order_by("-id").first()
+    if not moderno and pac_legado.cpf:
         moderno = PacienteInternado.objects.filter(empresa=empresa, cpf=pac_legado.cpf).order_by("-id").first()
     if not moderno:
         moderno = PacienteInternado.objects.filter(empresa=empresa, nome=pac_legado.nome).order_by("-id").first()
+
     if moderno:
         moderno.status = status
         moderno.diagnostico_descricao = internacao.diagnostico or moderno.diagnostico_descricao
         moderno.medico_responsavel = internacao.medico_responsavel or moderno.medico_responsavel
-        moderno.save(update_fields=["status", "diagnostico_descricao", "medico_responsavel"])
+        campos = ["status", "diagnostico_descricao", "medico_responsavel"]
+        if identidade and moderno.identidade_id != identidade.id:
+            moderno.identidade = identidade
+            campos.append("identidade")
+        moderno.save(update_fields=campos)
         return moderno
     return PacienteInternado.objects.create(
         empresa=empresa,
@@ -295,6 +314,7 @@ def _sincronizar_paciente_interno(empresa, pac_legado, internacao, status):
         tipo_sanguineo=pac_legado.tipo_sanguineo,
         alergias=pac_legado.alergias,
         status=status,
+        identidade=identidade,
     )
 
 

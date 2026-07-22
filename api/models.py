@@ -4996,6 +4996,37 @@ class TriagemManchester(models.Model):
         return f"Triagem {self.paciente_nome} [{self.nivel}] {self.data_hora.date()}"
 
 
+class IdentidadePaciente(models.Model):
+    """MPI leve do segmento Hospital — hub de identidade que Moderna (PacienteInternado),
+    EMR (ProntuarioHospitalar) e, futuramente, CCIH/SAME/Hemoterapia referenciam via FK,
+    para não precisarem mais manter cadastro próprio de paciente.
+
+    Resolução/deduplicação fica no serviço `api.services.identidade_paciente` — este
+    model não impõe unicidade de CPF/nome no banco (fase "expand": dados legados têm
+    homônimos e CPF em formatos diferentes; forçar unique aqui quebraria backfill)."""
+
+    empresa         = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="identidades_paciente")
+    nome            = models.CharField(max_length=200)
+    cpf             = models.CharField(max_length=11, blank=True, default="",
+                                        help_text="Somente dígitos — normalizado via cpf_digitos()")
+    cns             = models.CharField(max_length=18, blank=True, default="", verbose_name="CNS")
+    data_nascimento = models.DateField(null=True, blank=True)
+    criado_em       = models.DateTimeField(auto_now_add=True)
+    atualizado_em   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Identidade de Paciente (MPI)"
+        verbose_name_plural = "Identidades de Paciente (MPI)"
+        ordering            = ["nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "cpf"], name="idx_identpac_empresa_cpf"),
+            models.Index(fields=["empresa", "nome"], name="idx_identpac_empresa_nome"),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} ({self.cpf or 'sem CPF'})"
+
+
 class PacienteInternado(models.Model):
     STATUS_CHOICES = [
         ("cadastrado", "Cadastrado — ainda não internado"),
@@ -5033,6 +5064,11 @@ class PacienteInternado(models.Model):
     status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="internado")
     prescricao_atual    = models.JSONField(default=dict)
     evolucao            = models.JSONField(default=list)
+    identidade          = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="perfis_internacao",
+        help_text="Vínculo com a identidade única do paciente (MPI) — populado por sync, não exposto na UI",
+    )
     criado_em           = models.DateTimeField(auto_now_add=True)
     atualizado_em       = models.DateTimeField(auto_now=True)
 
@@ -6736,6 +6772,11 @@ class ProntuarioHospitalar(models.Model):
     alergias = models.TextField(blank=True)
     comorbidades = models.TextField(blank=True)
     observacoes = models.TextField(blank=True)
+    identidade = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="prontuarios",
+        help_text="Vínculo com a identidade única do paciente (MPI) — populado por sync, não exposto na UI",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     class Meta:

@@ -25,6 +25,7 @@ from .access_control import (
     requer_permissao_modulo,
 )
 from .models import ExameRIS, InstanciaDicom
+from .services.identidade_paciente import resolver_identidade
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
 
 
@@ -160,9 +161,12 @@ def api_ris_solicitar(request):
         except ProntuarioHospitalar.DoesNotExist:
             pass
     if prontuario is None:
-        prontuario, _ = ProntuarioHospitalar.objects.get_or_create(
+        prontuario, criado = ProntuarioHospitalar.objects.get_or_create(
             empresa=empresa, paciente_nome=paciente_nome,
         )
+        if criado:
+            prontuario.identidade = resolver_identidade(empresa, nome=paciente_nome)
+            prontuario.save(update_fields=["identidade"])
 
     exame = ExameRIS.objects.create(
         empresa=empresa,
