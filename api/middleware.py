@@ -490,13 +490,14 @@ class SegmentoAccessMiddleware:
 
     # Mapa de prefixo URL → setor(es) permitido(s)
     _PREFIXO_SETOR = (
-        ("/api/hospital/",    {"hospital"}),
-        ("/api/farmacia/",    {"farmacia"}),
-        ("/api/governo/",     {"governo"}),
-        ("/api/plano-saude/", {"plano_saude"}),
-        ("/api/plano/",       {"plano_saude"}),
-        ("/api/sst/",         {"empresa"}),
-        ("/api/rede/",        {"rede", "hospital", "farmacia"}),
+        ("/api/hospital/",             {"hospital"}),
+        ("/api/farmacia/",             {"farmacia"}),
+        ("/api/governo/",              {"governo"}),
+        ("/api/plano-saude/",          {"plano_saude"}),
+        ("/api/plano/",                {"plano_saude"}),
+        ("/api/sst/",                  {"empresa"}),
+        ("/api/rede/",                 {"rede", "hospital", "farmacia"}),
+        ("/api/assistencia-social/",   {"assistencia_social"}),
     )
 
     # Subprefixos que são exceção dentro de /api/plano/. Eles servem ao

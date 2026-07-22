@@ -6,6 +6,7 @@ from django.db.models import Count
 from .utils import probabilidade_doenca
 
 from .models import RegistroSintoma, Empresa, AlertaGovernamental, DispositivoPushPublico, AceiteLegalPublico
+from .push_service import resolver_empresa_governo_por_geo
 from .utils_cidades import buscar_coordenada
 from .utils import obter_localizacao
 from django.conf import settings
@@ -3426,14 +3427,19 @@ def registrar_push_publico(request):
 
     DispositivoPushPublico.objects.filter(device_id=device_id[:120]).exclude(token=token).update(ativo=False)
 
+    estado = (dados.get("estado") or "").strip() or None
+    cidade = (dados.get("cidade") or "").strip() or None
+    empresa = resolver_empresa_governo_por_geo(estado, cidade)
+
     registro, _ = DispositivoPushPublico.objects.update_or_create(
         token=token,
         defaults={
             "device_id": device_id[:120],
             "plataforma": (dados.get("plataforma") or "unknown")[:20],
-            "estado": (dados.get("estado") or "").strip() or None,
-            "cidade": (dados.get("cidade") or "").strip() or None,
+            "estado": estado,
+            "cidade": cidade,
             "bairro": (dados.get("bairro") or "").strip() or None,
+            "empresa": empresa,
             "ativo": True,
         },
     )

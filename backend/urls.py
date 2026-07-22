@@ -1159,6 +1159,31 @@ from api.views_governo_suas_gestao import (
     api_suas_dashboard, api_suas_censo,
     api_suas_ia_inconsistencias, api_suas_relatorio_mensal,
 )
+from api.views_assistencia_cras import (
+    api_ass_cras_unidades, api_ass_cras_unidade_detalhe,
+    api_ass_cras_familias, api_ass_cras_familia_detalhe,
+    api_ass_cras_atendimentos, api_ass_cras_atendimento_detalhe,
+    api_ass_cras_visitas,
+    api_ass_prontuarios_paif, api_ass_prontuario_paif_detalhe,
+    api_ass_cras_kpis,
+)
+from api.views_assistencia_creas import (
+    api_ass_creas_unidades, api_ass_creas_unidade_detalhe,
+    api_ass_creas_atendimentos, api_ass_creas_atendimento_detalhe,
+    api_ass_creas_kpis,
+)
+from api.views_assistencia_cadun import (
+    api_ass_cadunico_familias, api_ass_cadunico_consultar_cpf, api_ass_cadunico_importar_lote,
+    api_ass_bpc_beneficiarios, api_ass_bpc_beneficiario_detalhe,
+    api_ass_sicon_condicionalidades,
+    api_ass_beneficios_eventuais, api_ass_beneficio_eventual_detalhe,
+)
+from api.views_assistencia_gestao import (
+    assistencia_social_dashboard_page, assistencia_social_gestao_page,
+    api_ass_suas_dashboard, api_ass_suas_censo,
+    api_ass_ia_inconsistencias, api_ass_ia_inconsistencia_resolver,
+    api_ass_suas_relatorio_mensal,
+)
 
 
 def service_worker(request):
@@ -3003,4 +3028,76 @@ urlpatterns = [
     path('api/governo/suas/beneficios-eventuais/',              api_beneficios_eventuais),
     path('api/governo/suas/beneficios-eventuais/<int:beneficio_id>',  api_beneficio_eventual_detalhe),
     path('api/governo/suas/beneficios-eventuais/<int:beneficio_id>/', api_beneficio_eventual_detalhe),
+
+    # ── ASSISTÊNCIA SOCIAL ───────────────────────────────────────────────────
+    # Páginas
+    path('assistencia-social/',         assistencia_social_dashboard_page),
+    path('dashboard-assistencia/',      assistencia_social_dashboard_page),
+    path('assistencia-social/gestao/',  assistencia_social_gestao_page),
+
+    # Dashboard e gestão SUAS
+    path('api/assistencia-social/dashboard',         api_ass_suas_dashboard),
+    path('api/assistencia-social/dashboard/',        api_ass_suas_dashboard),
+    path('api/assistencia-social/censo',             api_ass_suas_censo),
+    path('api/assistencia-social/censo/',            api_ass_suas_censo),
+    path('api/assistencia-social/relatorio-mensal',  api_ass_suas_relatorio_mensal),
+    path('api/assistencia-social/relatorio-mensal/', api_ass_suas_relatorio_mensal),
+
+    # IA — inconsistências cadastrais
+    path('api/assistencia-social/ia/inconsistencias',                             api_ass_ia_inconsistencias),
+    path('api/assistencia-social/ia/inconsistencias/',                            api_ass_ia_inconsistencias),
+    path('api/assistencia-social/ia/inconsistencias/<int:inconsistencia_id>',     api_ass_ia_inconsistencia_resolver),
+    path('api/assistencia-social/ia/inconsistencias/<int:inconsistencia_id>/',    api_ass_ia_inconsistencia_resolver),
+
+    # CRAS / PAIF
+    path('api/assistencia-social/cras',                                           api_ass_cras_unidades),
+    path('api/assistencia-social/cras/',                                          api_ass_cras_unidades),
+    path('api/assistencia-social/cras/<int:cras_id>',                             api_ass_cras_unidade_detalhe),
+    path('api/assistencia-social/cras/<int:cras_id>/',                            api_ass_cras_unidade_detalhe),
+    path('api/assistencia-social/cras/familias',                                  api_ass_cras_familias),
+    path('api/assistencia-social/cras/familias/',                                 api_ass_cras_familias),
+    path('api/assistencia-social/cras/familias/<int:familia_id>',                 api_ass_cras_familia_detalhe),
+    path('api/assistencia-social/cras/familias/<int:familia_id>/',                api_ass_cras_familia_detalhe),
+    path('api/assistencia-social/cras/atendimentos',                              api_ass_cras_atendimentos),
+    path('api/assistencia-social/cras/atendimentos/',                             api_ass_cras_atendimentos),
+    path('api/assistencia-social/cras/atendimentos/<int:atendimento_id>',         api_ass_cras_atendimento_detalhe),
+    path('api/assistencia-social/cras/atendimentos/<int:atendimento_id>/',        api_ass_cras_atendimento_detalhe),
+    path('api/assistencia-social/cras/visitas',                                   api_ass_cras_visitas),
+    path('api/assistencia-social/cras/visitas/',                                  api_ass_cras_visitas),
+    path('api/assistencia-social/cras/prontuarios-paif',                          api_ass_prontuarios_paif),
+    path('api/assistencia-social/cras/prontuarios-paif/',                         api_ass_prontuarios_paif),
+    path('api/assistencia-social/cras/prontuarios-paif/<int:prontuario_id>',      api_ass_prontuario_paif_detalhe),
+    path('api/assistencia-social/cras/prontuarios-paif/<int:prontuario_id>/',     api_ass_prontuario_paif_detalhe),
+    path('api/assistencia-social/cras/kpis',                                      api_ass_cras_kpis),
+    path('api/assistencia-social/cras/kpis/',                                     api_ass_cras_kpis),
+
+    # CREAS / PAEFI
+    path('api/assistencia-social/creas',                                          api_ass_creas_unidades),
+    path('api/assistencia-social/creas/',                                         api_ass_creas_unidades),
+    path('api/assistencia-social/creas/<int:creas_id>',                           api_ass_creas_unidade_detalhe),
+    path('api/assistencia-social/creas/<int:creas_id>/',                          api_ass_creas_unidade_detalhe),
+    path('api/assistencia-social/creas/atendimentos',                             api_ass_creas_atendimentos),
+    path('api/assistencia-social/creas/atendimentos/',                            api_ass_creas_atendimentos),
+    path('api/assistencia-social/creas/atendimentos/<int:atendimento_id>',        api_ass_creas_atendimento_detalhe),
+    path('api/assistencia-social/creas/atendimentos/<int:atendimento_id>/',       api_ass_creas_atendimento_detalhe),
+    path('api/assistencia-social/creas/kpis',                                     api_ass_creas_kpis),
+    path('api/assistencia-social/creas/kpis/',                                    api_ass_creas_kpis),
+
+    # CadÚnico / BPC / SICON / Benefícios Eventuais
+    path('api/assistencia-social/cadunico',                                       api_ass_cadunico_familias),
+    path('api/assistencia-social/cadunico/',                                      api_ass_cadunico_familias),
+    path('api/assistencia-social/cadunico/importar-lote',                         api_ass_cadunico_importar_lote),
+    path('api/assistencia-social/cadunico/importar-lote/',                        api_ass_cadunico_importar_lote),
+    path('api/assistencia-social/cadunico/cpf/<str:cpf>',                         api_ass_cadunico_consultar_cpf),
+    path('api/assistencia-social/cadunico/cpf/<str:cpf>/',                        api_ass_cadunico_consultar_cpf),
+    path('api/assistencia-social/bpc',                                            api_ass_bpc_beneficiarios),
+    path('api/assistencia-social/bpc/',                                           api_ass_bpc_beneficiarios),
+    path('api/assistencia-social/bpc/<int:bpc_id>',                               api_ass_bpc_beneficiario_detalhe),
+    path('api/assistencia-social/bpc/<int:bpc_id>/',                              api_ass_bpc_beneficiario_detalhe),
+    path('api/assistencia-social/sicon',                                          api_ass_sicon_condicionalidades),
+    path('api/assistencia-social/sicon/',                                         api_ass_sicon_condicionalidades),
+    path('api/assistencia-social/beneficios-eventuais',                           api_ass_beneficios_eventuais),
+    path('api/assistencia-social/beneficios-eventuais/',                          api_ass_beneficios_eventuais),
+    path('api/assistencia-social/beneficios-eventuais/<int:beneficio_id>',        api_ass_beneficio_eventual_detalhe),
+    path('api/assistencia-social/beneficios-eventuais/<int:beneficio_id>/',       api_ass_beneficio_eventual_detalhe),
 ]

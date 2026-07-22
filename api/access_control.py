@@ -8,7 +8,7 @@ from .services.auth_session import dono_autenticado_from_request
 
 logger = logging.getLogger(__name__)
 
-TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "plano_saude")
+TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "plano_saude", "assistencia_social")
 
 
 # ─── Feature gating ──────────────────────────────────────────────────────────
@@ -113,10 +113,11 @@ def get_setor(empresa):
 
 def _destino_correto(setor):
     destinos = {
-        "farmacia": "/farmacia/gestao/",
-        "hospital": "/hospital/gestao/",
-        "governo": "/dashboard-governo/",
-        "plano_saude": "/plano-saude/gestao/",
+        "farmacia":            "/farmacia/gestao/",
+        "hospital":            "/hospital/gestao/",
+        "governo":             "/dashboard-governo/",
+        "plano_saude":         "/plano-saude/gestao/",
+        "assistencia_social":  "/assistencia-social/gestao/",
     }
     return destinos.get(setor, "/dashboard-empresa/")
 
@@ -396,6 +397,20 @@ MODULOS_POR_SETOR = {
         {"codigo": "plano.compliance_ans", "label": "Compliance ANS",
          "funcao": "Compliance, Regulatório",
          "area": "Obrigações ANS, DIOPS, SIB"},
+    ],
+    "assistencia_social": [
+        {"codigo": "assistencia.cras_paif", "label": "CRAS / PAIF",
+         "funcao": "Assistente Social, Técnico CRAS",
+         "area": "Unidades CRAS, cadastro de famílias, atendimentos PAIF, visitas domiciliares, prontuário social"},
+        {"codigo": "assistencia.creas_paefi", "label": "CREAS / PAEFI",
+         "funcao": "Assistente Social, Técnico CREAS",
+         "area": "Unidades CREAS, acompanhamento PAEFI, registro de violações e vulnerabilidades"},
+        {"codigo": "assistencia.cadunico", "label": "CadÚnico / Transferência de Renda",
+         "funcao": "Técnico CadÚnico, Gestor de Benefícios",
+         "area": "CadÚnico Gov.br/MDS, BPC, condicionalidades SICON/Bolsa Família, benefícios eventuais"},
+        {"codigo": "assistencia.gestao_suas", "label": "Gestão SUAS",
+         "funcao": "Coordenador SUAS, Gestor Municipal",
+         "area": "Dashboard SUAS, Censo SUAS, IA de inconsistências cadastrais, relatórios MDS"},
     ],
 }
 
@@ -886,6 +901,31 @@ def modulos_plano_saude_visibilidade(request, setor_resolvido=None):
     return flags
 
 
+def modulos_assistencia_social_visibilidade(request, setor_resolvido=None):
+    """Flags de visibilidade do menu do setor assistencia_social, por módulo (RBAC granular)."""
+    empresa = getattr(request, "empresa", None)
+    setor = setor_resolvido or (get_setor(empresa) if empresa else None)
+    flags = {
+        "ass_ver_cras_paif": True,
+        "ass_ver_creas_paefi": True,
+        "ass_ver_cadunico": True,
+        "ass_ver_gestao_suas": True,
+    }
+    if not empresa or setor != "assistencia_social":
+        return flags
+    try:
+        ativos = set(meus_modulos(request))
+        flags = {
+            "ass_ver_cras_paif":    "assistencia.cras_paif" in ativos,
+            "ass_ver_creas_paefi":  "assistencia.creas_paefi" in ativos,
+            "ass_ver_cadunico":     "assistencia.cadunico" in ativos,
+            "ass_ver_gestao_suas":  "assistencia.gestao_suas" in ativos,
+        }
+    except Exception:
+        logger.exception("Falha ao calcular visibilidade de módulos de assistência social")
+    return flags
+
+
 def contexto_navegacao_setorial(request, setor=None):
     """
     Contexto padrão de navegação por perfil para templates setoriais.
@@ -919,6 +959,8 @@ def contexto_navegacao_setorial(request, setor=None):
         ctx.update(modulos_farmacia_visibilidade(request, setor_resolvido))
     elif setor_resolvido == "plano_saude":
         ctx.update(modulos_plano_saude_visibilidade(request, setor_resolvido))
+    elif setor_resolvido == "assistencia_social":
+        ctx.update(modulos_assistencia_social_visibilidade(request, setor_resolvido))
     return ctx
 
 

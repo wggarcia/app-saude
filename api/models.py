@@ -816,6 +816,18 @@ class AuditoriaInstitucional(models.Model):
 
 
 class DispositivoPushPublico(models.Model):
+    # Dispositivo do app público (cidadão) se cadastra de forma anônima/sem login,
+    # então o tenant (empresa=governo do município) só pode ser inferido por
+    # geolocalização (estado/cidade) no momento do cadastro — ver
+    # push_service.resolver_empresa_governo_por_geo. Pode ficar nulo quando não
+    # há município cliente correspondente; nesse caso o device fica de fora de
+    # qualquer alerta municipal (AlertaCidadao), mas continua alcançável pelo
+    # fluxo nacional/territorial (AlertaGovernamental), que já escopa por
+    # estado/cidade/bairro do próprio alerta.
+    empresa = models.ForeignKey(
+        Empresa, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="dispositivos_push_publico",
+    )
     device_id = models.CharField(max_length=120)
     token = models.CharField(max_length=255, unique=True)
     plataforma = models.CharField(max_length=20, default="unknown")
@@ -825,6 +837,9 @@ class DispositivoPushPublico(models.Model):
     ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["empresa", "ativo"])]
 
     def __str__(self):
         return f"{self.plataforma} - {self.device_id}"
@@ -2569,7 +2584,10 @@ class AgendamentoSST(models.Model):
 class LoteMedicamento(models.Model):
     """Rastreabilidade de lote de medicamento em estoque (FEFO)."""
     empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="lotes_medicamento")
-    item             = models.ForeignKey("ItemFarmacia", on_delete=models.CASCADE, related_name="lotes")
+    # item é opcional: lotes de MedicamentoFarmacia (catálogo com rastreabilidade
+    # ANVISA própria) são vinculados por `medicamento`, sem ItemFarmacia associado.
+    # Lotes de material/insumo continuam usando `item`.
+    item             = models.ForeignKey("ItemFarmacia", on_delete=models.CASCADE, null=True, blank=True, related_name="lotes")
     medicamento      = models.ForeignKey("MedicamentoFarmacia", on_delete=models.SET_NULL, null=True, blank=True, related_name="lotes")
     numero_lote      = models.CharField(max_length=100)
     fabricante       = models.CharField(max_length=200, blank=True, default="")
@@ -6731,10 +6749,35 @@ class PedidoDelivery(models.Model):
     id_externo = models.CharField(max_length=80, blank=True, default="", help_text="ID do pedido na plataforma de origem (ex: orderId do iFood)")
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     observacoes = models.TextField(blank=True)
+    # Marca que a baixa de estoque já foi disparada na confirmação do pedido —
+    # impede baixa duplicada quando o status é reenviado/avança várias vezes.
+    estoque_baixado = models.BooleanField(default=False)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     class Meta:
         ordering = ["-criado_em"]
+
+
+class ItemPedidoDelivery(models.Model):
+    """Item de um PedidoDelivery, vinculado ao catálogo MedicamentoFarmacia.
+
+    Sem estes itens o pedido guardava apenas `total` e a venda não baixava
+    estoque (venda-fantasma). A FK a MedicamentoFarmacia permite dar a mesma
+    baixa de estoque do PDV quando o pedido é confirmado."""
+    pedido         = models.ForeignKey(PedidoDelivery, on_delete=models.CASCADE, related_name="itens")
+    empresa        = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="itens_pedido_delivery")
+    medicamento    = models.ForeignKey(MedicamentoFarmacia, on_delete=models.SET_NULL, null=True, blank=True, related_name="itens_delivery")
+    descricao      = models.CharField(max_length=200, blank=True, default="")
+    codigo_barras  = models.CharField(max_length=50, blank=True, default="")
+    quantidade     = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    preco_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_item     = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.descricao or (self.medicamento.nome if self.medicamento else '?')} x{self.quantidade}"
 
 
 class IntegracaoIfood(models.Model):
@@ -11833,3 +11876,106 @@ class BeneficioEventual(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} — {self.beneficiario_nome} [{self.data_concessao}]"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SEGMENTO: ASSISTÊNCIA SOCIAL (setor "assistencia_social")
+# Modelos exclusivos do 6º segmento — LGPD isolado por empresa/tenant
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class InconsistenciaCadastral(models.Model):
+    """Inconsistência detectada pela IA cadastral do segmento Assistência Social."""
+    TIPO_CHOICES = [
+        ("nis_duplicado",           "NIS Duplicado"),
+        ("pbf_renda_acima_limite",  "PBF — Renda acima do limite CadÚnico"),
+        ("integrantes_implausivel", "Número de integrantes implausível"),
+        ("bpc_sem_marcador",        "BPC sem marcador no CadÚnico"),
+        ("familias_sem_cadunico",   "Família CRAS sem vínculo CadÚnico"),
+        ("creas_sem_vulnerabilidade","CREAS sem vulnerabilidade registrada"),
+        ("outro",                   "Outro"),
+    ]
+    SEVERIDADE_CHOICES = [
+        ("alta",  "Alta"),
+        ("media", "Média"),
+        ("baixa", "Baixa"),
+    ]
+    STATUS_CHOICES = [
+        ("pendente",   "Pendente"),
+        ("resolvida",  "Resolvida"),
+        ("descartada", "Descartada"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="assistencia_inconsistencias")
+    tipo             = models.CharField(max_length=40, choices=TIPO_CHOICES)
+    severidade       = models.CharField(max_length=10, choices=SEVERIDADE_CHOICES, default="media")
+    descricao        = models.TextField()
+    dados_extras     = models.JSONField(default=dict, blank=True)
+    status           = models.CharField(max_length=15, choices=STATUS_CHOICES, default="pendente")
+    resolvida_por    = models.CharField(max_length=160, blank=True, default="")
+    resolvida_em     = models.DateTimeField(null=True, blank=True)
+    observacao       = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Inconsistência Cadastral"
+        verbose_name_plural = "Inconsistências Cadastrais"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "severidade", "status"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.get_severidade_display()}] {self.get_tipo_display()} — {self.status}"
+
+
+class ProntuarioSocialPAIF(models.Model):
+    """Prontuário Social PAIF — registro ampliado do acompanhamento familiar no CRAS."""
+    MODALIDADE_CHOICES = [
+        ("recepcao_acolhida",       "Recepção/Acolhida"),
+        ("acompanhamento_paif",     "Acompanhamento PAIF"),
+        ("atividade_coletiva",      "Atividade Coletiva"),
+        ("encaminhamento",          "Encaminhamento"),
+        ("visita_domiciliar",       "Visita Domiciliar"),
+    ]
+    SITUACAO_VULNERABILIDADE_CHOICES = [
+        ("trabalho_infantil",      "Trabalho Infantil"),
+        ("violencia_domestica",    "Violência Doméstica"),
+        ("situacao_rua",           "Situação de Rua"),
+        ("uso_drogas",             "Uso/Dependência de Drogas"),
+        ("idoso_risco",            "Idoso em Situação de Risco"),
+        ("crianca_risco",          "Criança/Adolescente em Risco"),
+        ("extrema_pobreza",        "Extrema Pobreza"),
+        ("desemprego_longa_duracao","Desemprego de Longa Duração"),
+        ("sem_habitacao",          "Sem Habitação"),
+        ("outro",                  "Outro"),
+    ]
+
+    empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="assistencia_prontuarios_paif")
+    familia                  = models.ForeignKey(FamiliaCRAS, on_delete=models.CASCADE, related_name="prontuarios_paif")
+    unidade_cras             = models.ForeignKey(UnidadeCRAS, on_delete=models.SET_NULL, null=True, blank=True, related_name="prontuarios_paif")
+    tecnico_responsavel      = models.CharField(max_length=160)
+    data_abertura            = models.DateField()
+    data_encerramento        = models.DateField(null=True, blank=True)
+    modalidade               = models.CharField(max_length=30, choices=MODALIDADE_CHOICES, default="acompanhamento_paif")
+    situacoes_vulnerabilidade = models.JSONField(default=list, blank=True, help_text="Lista de códigos de SITUACAO_VULNERABILIDADE_CHOICES")
+    objetivos                = models.TextField(blank=True, default="")
+    evolucao                 = models.TextField(blank=True, default="")
+    encaminhamentos          = models.TextField(blank=True, default="")
+    plano_acao_familiar      = models.TextField(blank=True, default="")
+    ativo                    = models.BooleanField(default=True)
+    criado_em                = models.DateTimeField(auto_now_add=True)
+    atualizado_em            = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Prontuário Social PAIF"
+        verbose_name_plural = "Prontuários Sociais PAIF"
+        ordering            = ["-data_abertura"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["empresa", "data_abertura"]),
+        ]
+
+    def __str__(self):
+        return f"PAIF {self.familia.responsavel_nome} — {self.data_abertura}"

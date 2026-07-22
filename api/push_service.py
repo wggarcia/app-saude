@@ -11,7 +11,7 @@ except Exception:  # pragma: no cover
     credentials = None
     messaging = None
 
-from .models import DispositivoPushPublico, CredencialAppFuncionario
+from .models import DispositivoPushPublico, CredencialAppFuncionario, Empresa
 
 STATE_ALIASES = {
     "RJ": "Rio de Janeiro",
@@ -54,6 +54,45 @@ def _normalize_text(value):
 
 def _state_term_set(value):
     return {_normalize_text(term) for term in _state_terms(value)}
+
+
+_STATE_NAME_TO_UF = {_normalize_text(nome): uf for uf, nome in STATE_ALIASES.items()}
+
+
+def _to_uf(value):
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    if len(raw) == 2:
+        return raw.upper()
+    return _STATE_NAME_TO_UF.get(_normalize_text(raw), "")
+
+
+def resolver_empresa_governo_por_geo(estado, cidade):
+    """
+    Resolve o tenant (Empresa governo) responsável por um device do app público
+    a partir da cidade/estado informados no cadastro anônimo (sem login).
+    Só resolve quando há exatamente um município cliente correspondente —
+    ambiguidade ou ausência de match mantém o device sem tenant, fora do
+    alcance de qualquer alerta municipal (AlertaCidadao) até revisão manual.
+    """
+    cidade_norm = _normalize_text(cidade)
+    if not cidade_norm:
+        return None
+    uf_norm = _normalize_text(_to_uf(estado))
+
+    candidatos = Empresa.objects.filter(
+        tipo_conta=Empresa.TIPO_GOVERNO,
+        acesso_governo=True,
+    ).exclude(cidade="")
+    encontrados = [
+        e for e in candidatos
+        if _normalize_text(e.cidade) == cidade_norm
+        and (not uf_norm or _normalize_text(e.uf) == uf_norm)
+    ]
+    if len(encontrados) == 1:
+        return encontrados[0]
+    return None
 
 
 def _matches_direct_scope(token, alerta):
@@ -317,8 +356,10 @@ def enviar_alerta_governamental(alerta):
 
 def enviar_push_alerta_cidadao(alerta):
     """
-    Envia push FCM para todos os devices ativos do app da população
-    (DispositivoPushPublico) quando um AlertaCidadao é publicado pelo governo.
+    Envia push FCM para os devices ativos do app da população pertencentes ao
+    município/tenant do alerta (DispositivoPushPublico.empresa=alerta.empresa)
+    quando um AlertaCidadao é publicado pelo governo. Nunca alcança devices de
+    outro município — isolamento exigido por LGPD entre clientes.
     Retorna resumo de entrega para exibir na UI do gestor.
     """
     app = _firebase_app()
@@ -326,7 +367,7 @@ def enviar_push_alerta_cidadao(alerta):
         return {"status": "push_indisponivel", "enviados": 0, "destinatarios": 0}
 
     tokens = list(
-        DispositivoPushPublico.objects.filter(ativo=True)
+        DispositivoPushPublico.objects.filter(ativo=True, empresa=alerta.empresa)
         .values_list("token", flat=True)
         .distinct()
     )

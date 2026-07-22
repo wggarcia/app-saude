@@ -118,7 +118,7 @@ def api_alerta_cidadao_enviar(request, alerta_id):
     if alerta.status == "enviado":
         return JsonResponse({"erro": "Alerta já foi enviado"}, status=400)
 
-    devices_ativos = DispositivoPushPublico.objects.filter(ativo=True).count()
+    devices_ativos = DispositivoPushPublico.objects.filter(ativo=True, empresa=e).count()
     alerta.total_destinatarios_estimado = devices_ativos
     alerta.status = "enviado"
     alerta.enviado_em = timezone.now()
@@ -158,7 +158,7 @@ def api_app_cidadao_kpis(request):
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    total_cidadaos = DispositivoPushPublico.objects.filter(ativo=True).count()
+    total_cidadaos = DispositivoPushPublico.objects.filter(ativo=True, empresa=e).count()
     alertas = AlertaCidadao.objects.filter(empresa=e)
     por_tipo = list(
         alertas.filter(status="enviado").values("tipo").annotate(total=Count("id")).order_by("-total")

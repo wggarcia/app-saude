@@ -129,6 +129,20 @@ _GOVERNO_TODOS = [
     "governo.laboratorio",      # Laboratório municipal — LIS
 ]
 
+# ── Assistência Social ────────────────────────────────────────────────────────
+_ASSISTENCIA_TODOS = [
+    "assistencia.cras_paif",           # CRAS — unidades, famílias, atendimentos PAIF
+    "assistencia.creas_paefi",         # CREAS — unidades e atendimentos PAEFI
+    "assistencia.cadunico",            # CadÚnico — consulta, importação e pesquisa Gov.br/MDS
+    "assistencia.bpc",                 # BPC — Benefício de Prestação Continuada
+    "assistencia.sicon_pbf",           # SICON — Condicionalidades Bolsa Família
+    "assistencia.beneficios_eventuais",# Benefícios eventuais municipais
+    "assistencia.ia_inconsistencias",  # IA de detecção de inconsistências cadastrais
+    "assistencia.censo_suas",          # Censo SUAS — indicadores MDS por período
+    "assistencia.relatorio_mds",       # Relatório mensal para prestação de contas ao MDS
+    "assistencia.prontuario_paif",     # Prontuário Social PAIF enriquecido
+]
+
 # ── Plano de Saúde ───────────────────────────────────────────────────────────
 _PLANO_OPERADORA = [
     "plano.beneficiarios",      # Gestão de beneficiários
@@ -390,6 +404,46 @@ PACOTES_SAAS = {
         "setup_fee": 89700.00,
         "setup_fee_negociavel": True,
     },
+    # ── Assistência Social (contratos anuais via licitação) ───────────────────
+    "assistencia_municipio_pequeno": {
+        "label": "Assistência Social — Município Pequeno",
+        "setor": "assistencia_social",
+        "descricao": "Gestão SUAS completa para municípios até 100 mil hab: CRAS/PAIF, CREAS/PAEFI, CadÚnico, BPC, SICON/PBF, benefícios eventuais e IA de inconsistências. Contratação via licitação.",
+        "usuarios": 80,
+        "dispositivos": 80,
+        "mensal": 0.00,
+        "anual": 96000.00,
+        "ciclos": ["anual"],
+        "populacao_cobertura": "até 100 mil habitantes",
+        "features": _ASSISTENCIA_TODOS,
+        "limites": {"max_usuarios": 80, "max_municipios": 1},
+    },
+    "assistencia_municipio_medio": {
+        "label": "Assistência Social — Município Médio",
+        "setor": "assistencia_social",
+        "descricao": "Gestão SUAS para municípios de 100 mil a 500 mil hab: múltiplos CRAS/CREAS, CadÚnico em lote, SICON, BPC, benefícios eventuais e IA cadastral avançada. Contratação via licitação.",
+        "usuarios": 200,
+        "dispositivos": 200,
+        "mensal": 0.00,
+        "anual": 192000.00,
+        "ciclos": ["anual"],
+        "populacao_cobertura": "100 mil a 500 mil habitantes",
+        "features": _ASSISTENCIA_TODOS,
+        "limites": {"max_usuarios": 200, "max_municipios": 1},
+    },
+    "assistencia_estado": {
+        "label": "Assistência Social — Gestão Estadual",
+        "setor": "assistencia_social",
+        "descricao": "Coordenação estadual do SUAS: consolidação de dados CRAS/CREAS de múltiplos municípios, painel estadual de vulnerabilidade, Censo SUAS e relatórios MDS. Contratação via licitação.",
+        "usuarios": 400,
+        "dispositivos": 400,
+        "mensal": 0.00,
+        "anual": 480000.00,
+        "ciclos": ["anual"],
+        "populacao_cobertura": "cobertura estadual",
+        "features": _ASSISTENCIA_TODOS,
+        "limites": {"max_usuarios": 400, "max_municipios": 999},
+    },
 }
 
 LEGACY_PACOTE_MAP = {
@@ -413,6 +467,7 @@ LEGACY_PACOTE_MAP = {
     "farmacia": "farmacia_local",
     "rede": "farmacia_rede_regional",
     "plano_saude": "plano_saude_operadora",
+    "assistencia_social": "assistencia_municipio_pequeno",
 }
 
 
