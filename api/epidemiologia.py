@@ -4,6 +4,8 @@ from collections import defaultdict
 from datetime import timedelta
 import json
 import logging
+import os
+import sys
 from time import time
 
 logger = logging.getLogger(__name__)
@@ -167,6 +169,13 @@ _PANORAMA_CACHE_PAYLOAD_KEY = "epidemiologia:panorama:payload"
 _CACHE_TTL_SECONDS = 300
 _PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False, "next_retry": 0.0, "use_owner": True}
 _EMPRESA_MISS_RETRY_S = 30  # retry interval when empresa not found (cold-start guard)
+
+# Sob a suíte de testes cada caso roda numa transação isolada com rollback, então
+# uma Empresa (ou a flag use_owner) mantida em cache de módulo vaza entre casos e
+# derruba classes inteiras (objeto obsoleto ⇒ .filter(empresa=morta) ⇒ vazio;
+# use_owner=True obsoleto ⇒ .using("owner") em classe sem o alias ⇒ erro). Em
+# produção o cache continua permanente (Empresa pública é fixa).
+_TESTING = ("test" in sys.argv) or (os.environ.get("DJANGO_ENV", "").lower() == "test")
 _PANORAMA_CACHE_VERSION_KEY = "epidemiologia:panorama:version"
 PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
 
@@ -194,6 +203,11 @@ def clear_panorama_cache():
 
 def _public_population_empresa():
     from time import time as _time
+    if _TESTING:
+        # Nunca reaproveita entre casos de teste — força resolução fresca.
+        _PUBLIC_EMPRESA_CACHE.update(
+            {"obj": None, "loaded": False, "next_retry": 0.0, "use_owner": True}
+        )
     if _PUBLIC_EMPRESA_CACHE["loaded"]:
         return _PUBLIC_EMPRESA_CACHE["obj"]
     now = _time()

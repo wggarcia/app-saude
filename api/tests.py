@@ -3586,7 +3586,7 @@ class AssinaturaSSTApiTests(TestCase):
         self.funcionario = FuncionarioSST.objects.create(
             empresa=self.empresa,
             nome="João da Silva",
-            cpf="12345678900",
+            cpf="52998224725",
             data_nascimento="1990-01-01",
             cargo="Operador",
             setor="Produção",
@@ -3642,7 +3642,7 @@ class AssinaturaSSTApiTests(TestCase):
         self.assertEqual(assinatura["papel_signatario"], "funcionario")
         self.assertEqual(assinatura["finalidade_assinatura"], "ciencia_trabalhador")
         self.assertEqual(assinatura["signatario_nome"], "João da Silva")
-        self.assertEqual(assinatura["signatario_cpf"], "12345678900")
+        self.assertEqual(assinatura["signatario_cpf"], "52998224725")
         self.assertIn("trabalhador", assinatura["quem_deve_assinar"].lower())
         self.assertIn("não substitui", assinatura["orientacao_assinatura"].lower())
 
@@ -3672,7 +3672,7 @@ class AssinaturaSSTApiTests(TestCase):
 
         resp_assinar = self.client.post(
             f"/api/public/sst/assinar/{assinatura['token']}",
-            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "12345678900"}),
+            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "52998224725"}),
             content_type="application/json",
         )
         self.assertEqual(resp_assinar.status_code, 200)
@@ -5093,7 +5093,7 @@ class OdontologiaTests(PlanoSaudeEnterpriseBaseTests):
     def test_cadastrar_beneficiario_odonto(self):
         resp = self._post("/api/plano-saude/odontologia/", {
             "nome": "Pedro Odonto",
-            "cpf": "999.888.777-66",
+            "cpf": "529.982.247-25",
             "plano_odonto": "Odonto Básico",
             "data_inicio_vigencia": date.today().isoformat(),
         })
@@ -5414,7 +5414,7 @@ class AssinaturaSSTTests(TestCase):
         funcionario = FuncionarioSST.objects.create(
             empresa=empresa,
             nome="Colaborador Assinatura",
-            cpf="000",
+            cpf="52998224725",
             cargo="Operador",
             setor="Produção",
             ativo=True,

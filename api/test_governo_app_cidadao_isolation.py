@@ -23,6 +23,7 @@ class AppCidadaoTenantIsolationTests(TestCase):
             tipo_conta=Empresa.TIPO_GOVERNO,
             cidade="Guaruja",
             uf="SP",
+            pacote_codigo="governo_municipio_pequeno",
         )
         self.governo_b = Empresa.objects.create(
             nome="Prefeitura de Niterói",
@@ -33,6 +34,7 @@ class AppCidadaoTenantIsolationTests(TestCase):
             tipo_conta=Empresa.TIPO_GOVERNO,
             cidade="Niteroi",
             uf="RJ",
+            pacote_codigo="governo_municipio_pequeno",
         )
 
         self.client_a = Client()
