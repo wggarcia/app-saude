@@ -177,6 +177,18 @@ def api_ass_creas_atendimentos(request):
         except UnidadeCREAS.DoesNotExist:
             return JsonResponse({"erro": "Unidade CREAS não encontrada"}, status=400)
 
+    # Pré-preenche beneficiário com dados do CadÚnico quando NIS ou CPF é informado.
+    nis = (data.get("beneficiario_nis") or "").strip()
+    cpf = (data.get("beneficiario_cpf") or "").strip()
+    if (nis or cpf) and not data.get("beneficiario_nome"):
+        from .models import CadUnicoFamilia
+        from django.db.models import Q
+        cad = CadUnicoFamilia.objects.filter(empresa=empresa).filter(
+            Q(responsavel_nis=nis) if nis else Q() | Q(responsavel_cpf=cpf) if cpf else Q()
+        ).first()
+        if cad and not data.get("beneficiario_nome"):
+            data["beneficiario_nome"] = cad.responsavel_nome
+
     a = AtendimentoCREAS.objects.create(
         empresa=empresa,
         unidade_creas=unidade_creas,
