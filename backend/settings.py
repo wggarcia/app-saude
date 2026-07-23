@@ -85,6 +85,12 @@ SOLUSCRT_DEFAULT_HOSTS = [
     "app.soluscrt.com.br",
     ".soluscrt.com.br",
     ".soluscrtsaude.com.br",
+    "solocrt.com.br",
+    "empresa.solocrt.com.br",
+    "governo.solocrt.com.br",
+    "admin.solocrt.com.br",
+    "app.solocrt.com.br",
+    ".solocrt.com.br",
 ]
 ALLOWED_HOSTS = unique_list(
     env_list(
@@ -159,6 +165,11 @@ SOLUSCRT_DEFAULT_ORIGINS = [
     "https://governo.soluscrt.com.br",
     "https://admin.soluscrt.com.br",
     "https://app.soluscrt.com.br",
+    "https://solocrt.com.br",
+    "https://empresa.solocrt.com.br",
+    "https://governo.solocrt.com.br",
+    "https://admin.solocrt.com.br",
+    "https://app.solocrt.com.br",
 ]
 CORS_ALLOWED_ORIGINS = unique_list(
     env_list(
