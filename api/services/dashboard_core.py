@@ -263,7 +263,7 @@ def _resumo_vigilancia_publica(agora):
         "top_doencas": [], "top_estados": [],
     }
     try:
-        empresa = Empresa.objects.filter(email="populacao@soluscrt.com").first()
+        empresa = Empresa.objects.filter(email="populacao@solocrt.com").first()
         if not empresa:
             return vazio
         try:
@@ -897,7 +897,7 @@ def build_owner_saude_sistema(dono=None):
 
     # Frescor de dados públicos (app população)
     try:
-        emp_pub = Empresa.objects.filter(email="populacao@soluscrt.com").first()
+        emp_pub = Empresa.objects.filter(email="populacao@solocrt.com").first()
         if emp_pub:
             try:
                 from api.middleware import _rls_set_empresa

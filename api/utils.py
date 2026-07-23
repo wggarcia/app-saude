@@ -612,12 +612,12 @@ EXTENSOES_UPLOAD_PERMITIDAS = {
 # e regeocodificar_focos em api/views.py, e sanear_producao.py).
 EMAILS_CONTAS_DEMO = {
     "demo@govsoluscrt.com",
-    "demo.sst@soluscrt.com",
-    "demo.farmacia@soluscrt.com",
-    "demo.hospital@soluscrt.com",
-    "demo.governo@soluscrt.com",
-    "demo.plano@soluscrt.com",
-    "empresa.demo@soluscrt.com",
+    "demo.sst@solocrt.com",
+    "demo.farmacia@solocrt.com",
+    "demo.hospital@solocrt.com",
+    "demo.governo@solocrt.com",
+    "demo.plano@solocrt.com",
+    "empresa.demo@solocrt.com",
 }
 
 

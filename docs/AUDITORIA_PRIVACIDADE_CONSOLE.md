@@ -17,7 +17,7 @@ Data da auditoria: 2026-06-06 · Escopo: branch `main` (commit no momento da aud
 
 | Camada | Mecanismo | O que protege |
 |---|---|---|
-| Banco | **RLS (Row-Level Security)** por `empresa_id` | Conteúdo de cada cliente é isolado; um cliente nunca lê o do outro. A vigilância pública é escopada à empresa `populacao@soluscrt.com`. |
+| Banco | **RLS (Row-Level Security)** por `empresa_id` | Conteúdo de cada cliente é isolado; um cliente nunca lê o do outro. A vigilância pública é escopada à empresa `populacao@solocrt.com`. |
 | Autenticação | **owner_token (JWT)** em `owner_paths` | Só a equipe da SoloCRT acessa `/console-operacional/`, `/api/operacao-central/*`, `/financeiro/`, `/governanca/`, `/gtm/`. |
 | Autorização | **RBAC por papel** (admin/financeiro/suporte/leitura) | Restringe seção e ação por função; trava real no backend (403). |
 | Rastreabilidade | **DonoAuditoriaAcao** | Toda ação do operador é registrada (quem/o quê/quando). |

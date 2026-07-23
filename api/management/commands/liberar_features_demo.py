@@ -2,8 +2,8 @@
 Gerenciamento de features liberadas para contas de demo/trial.
 
 Uso:
-  python manage.py liberar_features_demo --email demo.sst@soluscrt.com --pacote empresa_profissional_25
-  python manage.py liberar_features_demo --email demo.sst@soluscrt.com  # usa empresa_nacional_1000
+  python manage.py liberar_features_demo --email demo.sst@solocrt.com --pacote empresa_profissional_25
+  python manage.py liberar_features_demo --email demo.sst@solocrt.com  # usa empresa_nacional_1000
   python manage.py liberar_features_demo --todos-demos                   # alinha todos os demos
 """
 from django.core.management.base import BaseCommand, CommandError
@@ -11,11 +11,11 @@ from django.contrib.auth.hashers import make_password
 
 
 DEMOS_PADRAO = {
-    "demo.sst@soluscrt.com":          "empresa_nacional_1000",
-    "demo.farmacia@soluscrt.com":     "farmacia_rede_1000",
-    "demo.hospital@soluscrt.com":     "hospital_grande_1000",
-    "demo.governo@soluscrt.com":      "governo_estado",
-    "demo.plano@soluscrt.com":        "plano_saude_enterprise",
+    "demo.sst@solocrt.com":          "empresa_nacional_1000",
+    "demo.farmacia@solocrt.com":     "farmacia_rede_1000",
+    "demo.hospital@solocrt.com":     "hospital_grande_1000",
+    "demo.governo@solocrt.com":      "governo_estado",
+    "demo.plano@solocrt.com":        "plano_saude_enterprise",
 }
 
 
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--email",
             type=str,
-            help="E-mail da empresa demo a atualizar (ex: demo.sst@soluscrt.com)",
+            help="E-mail da empresa demo a atualizar (ex: demo.sst@solocrt.com)",
         )
         parser.add_argument(
             "--pacote",

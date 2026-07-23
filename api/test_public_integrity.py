@@ -189,7 +189,7 @@ class PublicIntegrityTests(_OwnerSharesDefaultMixin, TestCase):
     def test_sanear_producao_remove_demo_and_sinteticos(self):
         demo = Empresa.objects.create(
             nome="Demo Legacy",
-            email="demo.sst@soluscrt.com",
+            email="demo.sst@solocrt.com",
             senha=make_password("Demo@SST2026"),
             tipo_conta=Empresa.TIPO_EMPRESA,
             ativo=True,
@@ -234,7 +234,7 @@ class PublicIntegrityTests(_OwnerSharesDefaultMixin, TestCase):
         out = StringIO()
         call_command("sanear_producao", apply=True, stdout=out)
 
-        self.assertFalse(Empresa.objects.filter(email="demo.sst@soluscrt.com").exists())
+        self.assertFalse(Empresa.objects.filter(email="demo.sst@solocrt.com").exists())
         self.assertFalse(AlertaGovernamental.objects.filter(protocolo="ALR-TEST-002").exists())
         self.assertFalse(RegistroSintoma.objects.filter(device_id="sim-br-001").exists())
         self.assertFalse(DispositivoAutorizado.objects.filter(device_id="demo-device-001").exists())

@@ -6,11 +6,11 @@ Uso:
   python manage.py demo_setup --apply   # aplica todas as mudanças
 
 Ambientes criados:
-  1. SST          — demo.sst@soluscrt.com        / Demo@SST2026
-  2. Farmácia     — demo.farmacia@soluscrt.com   / Demo@Farm2026
-  3. Hospital     — demo.hospital@soluscrt.com   / Demo@Hosp2026
-  4. Governo      — demo.governo@soluscrt.com    / Demo@Gov2026
-  5. Plano Saúde  — demo.plano@soluscrt.com      / Demo@Plano2026
+  1. SST          — demo.sst@solocrt.com        / Demo@SST2026
+  2. Farmácia     — demo.farmacia@solocrt.com   / Demo@Farm2026
+  3. Hospital     — demo.hospital@solocrt.com   / Demo@Hosp2026
+  4. Governo      — demo.governo@solocrt.com    / Demo@Gov2026
+  5. Plano Saúde  — demo.plano@solocrt.com      / Demo@Plano2026
 
 APP do trabalhador (SST):
   Funcionário Luiz Oliveira — luiz@app.local / Luiz@2026
@@ -116,7 +116,7 @@ class Command(BaseCommand):
         self.out(f"  • {CredencialAppFuncionario.objects.count()} credenciais app")
         self.out("")
         self.out("O que será CRIADO:")
-        self.out("  1. Demo SST            — demo.sst@soluscrt.com / Demo@SST2026")
+        self.out("  1. Demo SST            — demo.sst@solocrt.com / Demo@SST2026")
         self.out("     └─ Usuário admin:     ti@demo-sst.com")
         self.out("     └─ 12 funcionários SST | 35 EPIs c/ CAs válidos | 7 riscos PGR")
         self.out("     └─ 6 pedidos de exame | CIPA ativa | 3 clínicas credenciadas")
@@ -124,13 +124,13 @@ class Command(BaseCommand):
         self.out("     └─ Postos de trabalho + EPCs | Treinamentos NR | Afastamentos")
         self.out("     └─ APP trabalhador: Luiz Oliveira luiz@app.local / Luiz@2026")
         self.out("     └─ APP trabalhador: Carlos Lima   carlos@app.local / Carlos@2026")
-        self.out("  2. Demo Farmácia       — demo.farmacia@soluscrt.com / Demo@Farm2026")
+        self.out("  2. Demo Farmácia       — demo.farmacia@solocrt.com / Demo@Farm2026")
         self.out("     └─ Usuário admin:     ti@demo-farmacia.com")
-        self.out("  3. Demo Hospital       — demo.hospital@soluscrt.com / Demo@Hosp2026")
+        self.out("  3. Demo Hospital       — demo.hospital@solocrt.com / Demo@Hosp2026")
         self.out("     └─ Usuário admin:     ti@demo-hospital.com")
-        self.out("  4. Demo Governo        — demo.governo@soluscrt.com / Demo@Gov2026")
+        self.out("  4. Demo Governo        — demo.governo@solocrt.com / Demo@Gov2026")
         self.out("     └─ Usuário admin:     ti@demo-governo.com")
-        self.out("  5. Demo Plano de Saúde — demo.plano@soluscrt.com / Demo@Plano2026")
+        self.out("  5. Demo Plano de Saúde — demo.plano@solocrt.com / Demo@Plano2026")
         self.out("     └─ Usuário admin:     ti@demo-plano.com")
         self.out("")
         self.out("Execute com --apply para confirmar.", self.style.WARNING)
@@ -203,17 +203,17 @@ class Command(BaseCommand):
         from api.models import Empresa
 
         demos = [
-            ("demo.sst@soluscrt.com",     self._criar_empresa_sst,     self._criar_dados_sst),
-            ("demo.farmacia@soluscrt.com", self._criar_empresa_farmacia, self._criar_dados_farmacia),
-            ("demo.hospital@soluscrt.com", self._criar_empresa_hospital, self._criar_dados_hospital),
-            ("demo.governo@soluscrt.com",  self._criar_empresa_governo,  self._criar_dados_governo),
-            ("demo.plano@soluscrt.com",    self._criar_empresa_plano,    self._criar_dados_plano),
+            ("demo.sst@solocrt.com",     self._criar_empresa_sst,     self._criar_dados_sst),
+            ("demo.farmacia@solocrt.com", self._criar_empresa_farmacia, self._criar_dados_farmacia),
+            ("demo.hospital@solocrt.com", self._criar_empresa_hospital, self._criar_dados_hospital),
+            ("demo.governo@solocrt.com",  self._criar_empresa_governo,  self._criar_dados_governo),
+            ("demo.plano@solocrt.com",    self._criar_empresa_plano,    self._criar_dados_plano),
         ]
 
         criados = 0
         for email, criar_fn, dados_fn in demos:
             if Empresa.objects.filter(email=email).exists():
-                if email == "demo.sst@soluscrt.com":
+                if email == "demo.sst@solocrt.com":
                     self.out(f"  ↺  {email} já existe — normalizando pacote e dados SST")
                     e = criar_fn()
                     try:
@@ -262,7 +262,7 @@ class Command(BaseCommand):
         """
         from api.models import Empresa, FuncionarioSST, CredencialAppFuncionario
 
-        empresa = Empresa.objects.filter(email="demo.sst@soluscrt.com").first()
+        empresa = Empresa.objects.filter(email="demo.sst@solocrt.com").first()
         if not empresa:
             self.out("  ⚠ empresa demo SST inexistente — não há onde criar credenciais app", self.style.WARNING)
             return
@@ -359,7 +359,7 @@ class Command(BaseCommand):
             EPIItem, EntregaEPI, NotificacaoFuncionario,
         )
 
-        empresa = Empresa.objects.filter(email="demo.sst@soluscrt.com").first()
+        empresa = Empresa.objects.filter(email="demo.sst@solocrt.com").first()
         if not empresa:
             self.out("  ⚠ empresa demo SST inexistente — sem dados ocupacionais a criar", self.style.WARNING)
             return
@@ -634,11 +634,11 @@ class Command(BaseCommand):
                 pass
 
         demos_mapa = {
-            "demo.sst@soluscrt.com":      (_limpar_sst,      self._criar_dados_sst),
-            "demo.farmacia@soluscrt.com":  (_limpar_farmacia, self._criar_dados_farmacia),
-            "demo.hospital@soluscrt.com":  (_limpar_hospital, self._criar_dados_hospital),
-            "demo.governo@soluscrt.com":   (_limpar_governo,  self._criar_dados_governo),
-            "demo.plano@soluscrt.com":     (_limpar_plano,    self._criar_dados_plano),
+            "demo.sst@solocrt.com":      (_limpar_sst,      self._criar_dados_sst),
+            "demo.farmacia@solocrt.com":  (_limpar_farmacia, self._criar_dados_farmacia),
+            "demo.hospital@solocrt.com":  (_limpar_hospital, self._criar_dados_hospital),
+            "demo.governo@solocrt.com":   (_limpar_governo,  self._criar_dados_governo),
+            "demo.plano@solocrt.com":     (_limpar_plano,    self._criar_dados_plano),
         }
 
         for email, (limpar_fn, dados_fn) in demos_mapa.items():
@@ -672,7 +672,7 @@ class Command(BaseCommand):
         det = detalhes_pacote(pkg)
 
         e, _ = Empresa.objects.update_or_create(
-            email="demo.sst@soluscrt.com",
+            email="demo.sst@solocrt.com",
             defaults=dict(
                 nome="SoloCRT Demo SST",
                 senha=make_password(DEMO_SENHA_ADMIN),
@@ -744,7 +744,7 @@ class Command(BaseCommand):
 
         e = Empresa.objects.create(
             nome="SoloCRT Demo Farmácia",
-            email="demo.farmacia@soluscrt.com",
+            email="demo.farmacia@solocrt.com",
             senha=make_password(DEMO_SENHA_FARM),
             tipo_conta=Empresa.TIPO_EMPRESA,
             acesso_governo=False,
@@ -787,7 +787,7 @@ class Command(BaseCommand):
 
         e = Empresa.objects.create(
             nome="SoloCRT Demo Hospital",
-            email="demo.hospital@soluscrt.com",
+            email="demo.hospital@solocrt.com",
             senha=make_password(DEMO_SENHA_HOSP),
             tipo_conta=Empresa.TIPO_EMPRESA,
             acesso_governo=False,
@@ -830,7 +830,7 @@ class Command(BaseCommand):
 
         e = Empresa.objects.create(
             nome="SoloCRT Demo Governo",
-            email="demo.governo@soluscrt.com",
+            email="demo.governo@solocrt.com",
             senha=make_password(DEMO_SENHA_GOV),
             tipo_conta=Empresa.TIPO_GOVERNO,
             acesso_governo=True,
@@ -873,7 +873,7 @@ class Command(BaseCommand):
 
         e = Empresa.objects.create(
             nome="SoloCRT Demo Plano de Saúde",
-            email="demo.plano@soluscrt.com",
+            email="demo.plano@solocrt.com",
             senha=make_password(DEMO_SENHA_PLANO),
             tipo_conta=Empresa.TIPO_EMPRESA,
             acesso_governo=False,
@@ -2936,7 +2936,7 @@ class Command(BaseCommand):
     def _recria_dono_saas(self):
         from api.models import DonoSaaS
         dono, created = DonoSaaS.objects.get_or_create(
-            email="owner@soluscrt.com",
+            email="owner@solocrt.com",
             defaults={
                 "nome": "Operação SoloCRT",
                 "senha": make_password("Owner@SoloCRT2026"),
@@ -2959,12 +2959,12 @@ class Command(BaseCommand):
         self.out("┌──────────────────────────────────────────────────────────────┐")
         self.out("│  AMBIENTE           EMAIL                       SENHA        │")
         self.out("├──────────────────────────────────────────────────────────────┤")
-        self.out("│  SST (empresa)      demo.sst@soluscrt.com       Demo@SST2026 │")
-        self.out("│  Farmácia           demo.farmacia@soluscrt.com  Demo@Farm2026│")
-        self.out("│  Hospital           demo.hospital@soluscrt.com  Demo@Hosp2026│")
-        self.out("│  Governo            demo.governo@soluscrt.com   Demo@Gov2026 │")
-        self.out("│  Plano de Saúde     demo.plano@soluscrt.com     Demo@Plano2026│")
-        self.out("│  DonoSaaS           owner@soluscrt.com          Owner@...    │")
+        self.out("│  SST (empresa)      demo.sst@solocrt.com       Demo@SST2026 │")
+        self.out("│  Farmácia           demo.farmacia@solocrt.com  Demo@Farm2026│")
+        self.out("│  Hospital           demo.hospital@solocrt.com  Demo@Hosp2026│")
+        self.out("│  Governo            demo.governo@solocrt.com   Demo@Gov2026 │")
+        self.out("│  Plano de Saúde     demo.plano@solocrt.com     Demo@Plano2026│")
+        self.out("│  DonoSaaS           owner@solocrt.com          Owner@...    │")
         self.out("├──────────────────────────────────────────────────────────────┤")
         self.out("│  APP TRABALHADOR (SST)                                       │")
         self.out("│  Luiz Oliveira      luiz@app.local              Luiz@2026    │")

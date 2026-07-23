@@ -96,11 +96,11 @@ from .services.enterprise_dashboard import (
 
 
 _DEMO_EMPRESAS_EMAILS = {
-    "demo.sst@soluscrt.com",
-    "demo.farmacia@soluscrt.com",
-    "demo.hospital@soluscrt.com",
-    "demo.governo@soluscrt.com",
-    "demo.plano@soluscrt.com",
+    "demo.sst@solocrt.com",
+    "demo.farmacia@solocrt.com",
+    "demo.hospital@solocrt.com",
+    "demo.governo@solocrt.com",
+    "demo.plano@solocrt.com",
 }
 
 

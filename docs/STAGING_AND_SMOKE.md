@@ -55,7 +55,7 @@ export SMOKE_EMPRESA_PASSWORD="..."
 export SMOKE_GOVERNO_EMAIL="governo-staging@exemplo.com"
 export SMOKE_GOVERNO_PASSWORD="..."
 
-export SMOKE_OPERACAO_EMAIL="operacao-staging@soluscrt.com.br"
+export SMOKE_OPERACAO_EMAIL="operacao-staging@solocrt.com"
 export SMOKE_OPERACAO_PASSWORD="..."
 ```
 

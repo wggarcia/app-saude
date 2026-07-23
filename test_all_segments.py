@@ -11,11 +11,11 @@ import urllib.error
 BASE = "http://localhost:8099"
 
 ACCOUNTS = [
-    {"label": "SST/Empresa",    "email": "demo.sst@soluscrt.com",      "senha": "Demo@SST2026"},
-    {"label": "Farmácia",       "email": "demo.farmacia@soluscrt.com",  "senha": "Demo@Farm2026"},
-    {"label": "Hospital",       "email": "demo.hospital@soluscrt.com",  "senha": "Demo@Hosp2026"},
-    {"label": "Governo",        "email": "demo.governo@soluscrt.com",   "senha": "Demo@Gov2026"},
-    {"label": "Plano de Saúde", "email": "demo.plano@soluscrt.com",     "senha": "Demo@Plano2026"},
+    {"label": "SST/Empresa",    "email": "demo.sst@solocrt.com",      "senha": "Demo@SST2026"},
+    {"label": "Farmácia",       "email": "demo.farmacia@solocrt.com",  "senha": "Demo@Farm2026"},
+    {"label": "Hospital",       "email": "demo.hospital@solocrt.com",  "senha": "Demo@Hosp2026"},
+    {"label": "Governo",        "email": "demo.governo@solocrt.com",   "senha": "Demo@Gov2026"},
+    {"label": "Plano de Saúde", "email": "demo.plano@solocrt.com",     "senha": "Demo@Plano2026"},
 ]
 
 COMMON = [

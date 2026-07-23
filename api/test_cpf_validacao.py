@@ -32,7 +32,7 @@ class ValidarCpfCadastroTests(SimpleTestCase):
         self.assertIsNone(erro)
 
     def test_conta_demo_aceita_cpf_fake(self):
-        emp = _EmpresaFake("demo.sst@soluscrt.com")
+        emp = _EmpresaFake("demo.sst@solocrt.com")
         ok, erro = validar_cpf_cadastro("111.111.111-11", emp)
         self.assertTrue(ok)  # demo pode usar fake para demonstração
 

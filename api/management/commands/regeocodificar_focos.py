@@ -14,9 +14,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            emp = Empresa.objects.get(email="populacao@soluscrt.com")
+            emp = Empresa.objects.get(email="populacao@solocrt.com")
         except Empresa.DoesNotExist:
-            self.stderr.write("Empresa populacao@soluscrt.com não encontrada")
+            self.stderr.write("Empresa populacao@solocrt.com não encontrada")
             return
 
         qs = RegistroSintoma.objects.filter(

@@ -607,7 +607,7 @@ def _enviar_email_solicitacao(sol):
     # para evitar rejeições silenciosas por SPF/DMARC no destino.
     if "smtp.EmailBackend" in backend and smtp_user:
         from_email = f"SoloCRT <{smtp_user}>"
-    elif (not from_email or "noreply@soluscrt.com.br" in from_email) and smtp_user:
+    elif (not from_email or "noreply@solocrt.com" in from_email) and smtp_user:
         from_email = f"SoloCRT <{smtp_user}>"
     reply_to = []
     if getattr(empresa, "email", ""):
@@ -1043,7 +1043,7 @@ def api_link_resultado(request, sol_id: int):
                 subject=assunto,
                 body=corpo,
                 to=[sol.clinica_email_externo],
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@soluscrt.com.br"),
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@solocrt.com"),
             ).send()
         except Exception as exc:
             logger.warning("Link resultado: falha ao enviar email: %s", exc)

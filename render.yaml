@@ -45,10 +45,10 @@ services:
       - key: SECURE_SSL_REDIRECT
         value: "false"
       # ── Email transacional da plataforma SaaS ─────────────────────────────
-      # Um único remetente (noreply@soluscrt.com.br) envia em nome de TODOS os
+      # Um único remetente (noreply@solocrt.com) envia em nome de TODOS os
       # clientes. Os dados do cliente ficam no conteúdo do email.
       # Configure EMAIL_HOST_USER e EMAIL_HOST_PASSWORD no painel do Render
-      # com a conta noreply@soluscrt.com.br do Zoho Mail.
+      # com a conta noreply@solocrt.com do Zoho Mail.
       - key: EMAIL_HOST
         value: smtp.zoho.com
       - key: EMAIL_PORT
@@ -56,9 +56,9 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SoloCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@solocrt.com>"
       - key: EMAIL_HOST_USER
-        sync: false   # noreply@soluscrt.com.br  (configurar no painel Render)
+        sync: false   # noreply@solocrt.com  (configurar no painel Render)
       - key: EMAIL_HOST_PASSWORD
         sync: false   # senha da conta Zoho acima (configurar no painel Render)
       - key: DJANGO_SECRET_KEY
@@ -152,7 +152,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SoloCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@solocrt.com>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
@@ -196,7 +196,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SoloCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@solocrt.com>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
@@ -236,7 +236,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SoloCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@solocrt.com>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
@@ -276,7 +276,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SoloCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@solocrt.com>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD

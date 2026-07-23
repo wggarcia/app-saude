@@ -256,7 +256,7 @@ def api_laudo_pdf(request, laudo_id):
             f"Emissão: {laudo.data_emissao} &nbsp;|&nbsp; Status: {laudo.status.upper()}",
             sub))
         story.append(Paragraph(
-            "SolusCRT Tecnologia em Saúde Ltda. · CNPJ 66.940.015/0001-48 · contato@soluscrt.com.br",
+            "SolusCRT Tecnologia em Saúde Ltda. · CNPJ 66.940.015/0001-48 · contato@solocrt.com",
             sub))
         story.append(HRFlowable(width="100%", thickness=1.5, color=verde, spaceAfter=10))
 

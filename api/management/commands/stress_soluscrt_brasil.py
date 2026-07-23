@@ -80,8 +80,8 @@ class Command(BaseCommand):
             return
 
         empresa_app = self._empresa_app()
-        governo = self._conta("Governo Stress SoloCRT", "stress-governo@soluscrt.local", Empresa.TIPO_GOVERNO)
-        empresa = self._conta("Empresa Stress SoloCRT", "stress-empresa@soluscrt.local", Empresa.TIPO_EMPRESA)
+        governo = self._conta("Governo Stress SoloCRT", "stress-governo@solocrt.local", Empresa.TIPO_GOVERNO)
+        empresa = self._conta("Empresa Stress SoloCRT", "stress-empresa@solocrt.local", Empresa.TIPO_EMPRESA)
         self._alerta_governo(governo)
 
         client_publico = Client(HTTP_HOST="127.0.0.1:8000")
@@ -147,7 +147,7 @@ class Command(BaseCommand):
 
     def _empresa_app(self):
         empresa, _ = Empresa.objects.get_or_create(
-            email="populacao@soluscrt.com",
+            email="populacao@solocrt.com",
             defaults={
                 "nome": "SoloCRT Populacao",
                 "senha": make_password("publico_app"),

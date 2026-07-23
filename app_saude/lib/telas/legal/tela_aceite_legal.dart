@@ -139,7 +139,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                         'Sinais de saúde são usados preferencialmente de forma agregada, estatística e territorial, reduzindo exposição individual.',
                         'A localização é usada para registrar sinais no município correto, mostrar focos próximos e reduzir risco de informação falsa.',
                         'Você pode revogar permissões no iPhone a qualquer momento. Sem localização atual, algumas funções podem ser limitadas para proteger a confiabilidade do mapa.',
-                        'Conforme a LGPD (Lei 13.709/2018), você tem direito de solicitar acesso, correção ou exclusão dos seus dados a qualquer momento pelo e-mail privacidade@soluscrt.com.br.',
+                        'Conforme a LGPD (Lei 13.709/2018), você tem direito de solicitar acesso, correção ou exclusão dos seus dados a qualquer momento pelo e-mail privacidade@solocrt.com.',
                       ],
                     ),
                     const _LegalSection(

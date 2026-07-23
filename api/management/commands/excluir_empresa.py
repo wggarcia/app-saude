@@ -2,7 +2,7 @@
 Exclui uma conta Empresa e todos os seus dados vinculados.
 
 Uso:
-    python manage.py excluir_empresa --email=populacao@soluscrt.com
+    python manage.py excluir_empresa --email=populacao@solocrt.com
     python manage.py excluir_empresa --id=33
 
 Deleta objetos que fazem PROTECT sobre dados da empresa (cascata manual)

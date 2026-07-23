@@ -78,7 +78,7 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
         )
         self.empresa_publica = Empresa.objects.create(
             nome="SoloCRT Populacao",
-            email="populacao@soluscrt.com",
+            email="populacao@solocrt.com",
             senha=make_password("publico_app"),
             ativo=True,
             plano="publico",

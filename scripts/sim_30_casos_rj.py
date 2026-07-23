@@ -24,7 +24,7 @@ random.seed(42)
 
 # ── Empresa pública ───────────────────────────────────────────────────────────
 empresa, _ = Empresa.objects.get_or_create(
-    email="populacao@soluscrt.com",
+    email="populacao@solocrt.com",
     defaults={
         "nome": "SoloCRT Populacao",
         "senha": make_password("publico_app"),

@@ -11,11 +11,11 @@ from django.core.management.base import BaseCommand
 from api.models import Empresa
 
 DEMO_EMAILS = {
-    "demo.sst@soluscrt.com",
-    "demo.farmacia@soluscrt.com",
-    "demo.hospital@soluscrt.com",
-    "demo.governo@soluscrt.com",
-    "demo.plano@soluscrt.com",
+    "demo.sst@solocrt.com",
+    "demo.farmacia@solocrt.com",
+    "demo.hospital@solocrt.com",
+    "demo.governo@solocrt.com",
+    "demo.plano@solocrt.com",
 }
 
 

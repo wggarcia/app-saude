@@ -25,11 +25,11 @@ DEVICE_IDLE_TIMEOUT = SESSION_IDLE_TIMEOUT
 # recebe 409 "sessao_em_uso" / 403 "limite de dispositivos" e não consegue
 # logar (causa da rejeição Apple Guideline 2.1).
 DEMO_LOGIN_EMAILS = frozenset({
-    "demo.sst@soluscrt.com",
-    "demo.farmacia@soluscrt.com",
-    "demo.hospital@soluscrt.com",
-    "demo.governo@soluscrt.com",
-    "demo.plano@soluscrt.com",
+    "demo.sst@solocrt.com",
+    "demo.farmacia@solocrt.com",
+    "demo.hospital@solocrt.com",
+    "demo.governo@solocrt.com",
+    "demo.plano@solocrt.com",
 })
 
 

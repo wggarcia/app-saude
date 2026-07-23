@@ -167,7 +167,7 @@ class PlanosSaasTests(TestCase):
     def test_upgrade_opcoes_normaliza_pacote_legado_da_demo_sst(self):
         empresa = Empresa.objects.create(
             nome="Demo SST",
-            email="demo.sst@soluscrt.com",
+            email="demo.sst@solocrt.com",
             senha=make_password("Demo@SST2026"),
             ativo=True,
             tipo_conta=Empresa.TIPO_EMPRESA,
@@ -2756,7 +2756,7 @@ class GovernanceTests(TestCase):
         )
 
         alerta = AlertaGovernamental.objects.get(id=alerta_id)
-        empresa_publica = Empresa.objects.get(email="populacao@soluscrt.com")
+        empresa_publica = Empresa.objects.get(email="populacao@solocrt.com")
         espelho = AlertaGovernamental.objects.filter(
             empresa=empresa_publica,
             protocolo=alerta.protocolo,
@@ -3061,7 +3061,7 @@ class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
     def test_panorama_epidemiologico_usa_casos_ativos_temporais(self):
         from .views import _empresa_app_publico
 
-        # O panorama recorta pela empresa pública (populacao@soluscrt.com) via
+        # O panorama recorta pela empresa pública (populacao@solocrt.com) via
         # _scope_public_population_queryset. Dados semeados sob outra empresa
         # ficam invisíveis ao panorama.
         empresa = _empresa_app_publico()
@@ -3153,7 +3153,7 @@ class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
     def test_radar_local_e_mapa_publico_usam_o_mesmo_recorte_publico(self):
         empresa_publica = Empresa.objects.create(
             nome="SoloCRT Populacao",
-            email="populacao@soluscrt.com",
+            email="populacao@solocrt.com",
             senha=make_password("publico_app"),
             ativo=True,
             plano="publico",
@@ -3873,9 +3873,9 @@ class SolicitacaoExameEmailTests(TestCase):
 
     @override_settings(
         EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
-        EMAIL_HOST_USER="mailer@soluscrt.com.br",
+        EMAIL_HOST_USER="mailer@solocrt.com",
         EMAIL_HOST_PASSWORD="segredo-smtp",
-        DEFAULT_FROM_EMAIL="SoloCRT <noreply@soluscrt.com.br>",
+        DEFAULT_FROM_EMAIL="SoloCRT <noreply@solocrt.com>",
     )
     @patch("api.views_solicitacao_exame.EmailMessage")
     def test_envio_email_usa_remetente_da_conta_smtp(self, email_message_mock):
@@ -3889,7 +3889,7 @@ class SolicitacaoExameEmailTests(TestCase):
 
         self.assertEqual(resp.status_code, 201)
         _, kwargs = email_message_mock.call_args
-        self.assertEqual(kwargs["from_email"], "SoloCRT <mailer@soluscrt.com.br>")
+        self.assertEqual(kwargs["from_email"], "SoloCRT <mailer@solocrt.com>")
 
 
 def _owner_e_banco_distinto():

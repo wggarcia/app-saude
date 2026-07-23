@@ -177,7 +177,7 @@ _EMPRESA_MISS_RETRY_S = 30  # retry interval when empresa not found (cold-start 
 # produção o cache continua permanente (Empresa pública é fixa).
 _TESTING = ("test" in sys.argv) or (os.environ.get("DJANGO_ENV", "").lower() == "test")
 _PANORAMA_CACHE_VERSION_KEY = "epidemiologia:panorama:version"
-PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
+PUBLIC_APP_EMAIL = "populacao@solocrt.com"
 
 
 def _current_panorama_cache_version():

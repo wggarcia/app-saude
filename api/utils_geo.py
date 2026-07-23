@@ -222,7 +222,7 @@ def obter_endereco(lat, lon):
             f"https://nominatim.openstreetmap.org/reverse"
             f"?lat={lat}&lon={lon}&format=json&accept-language=pt-BR"
         )
-        headers = {"User-Agent": "SoloCRT-Saude/2.0 (contato@soluscrt.com.br)"}
+        headers = {"User-Agent": "SoloCRT-Saude/2.0 (contato@solocrt.com)"}
         res = requests.get(url, headers=headers, timeout=3)
         res.raise_for_status()
         data = res.json()
