@@ -275,7 +275,7 @@ def api_fatura_pdf(request, fatura_id):
         story.append(Spacer(1, 0.2*cm))
         story.append(Paragraph(
             f"SolusCRT Tecnologia em Saúde Ltda. · CNPJ 66.940.015/0001-48 · "
-            f"contato@solocrt.com · soluscrt.com.br", sub))
+            f"contato@solocrt.com · solocrt.com.br", sub))
         story.append(HRFlowable(width="100%", thickness=1.5, color=verde, spaceAfter=8))
 
         # PARTES

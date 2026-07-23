@@ -1,12 +1,14 @@
 """
 Email domain validation for B2B/B2G self-service registration.
 Blocks free/consumer email providers; allows corporate and government domains.
-Demo accounts (soluscrt.com / soluscrt.com.br / demo.local) bypass verification.
+Demo accounts (solocrt.com / solocrt.com.br / soluscrt.com / soluscrt.com.br / demo.local) bypass verification.
 """
 from __future__ import annotations
 
 # Domains that get immediate verification bypass (internal / demo)
 DEMO_DOMAINS = frozenset({
+    "solocrt.com",
+    "solocrt.com.br",
     "soluscrt.com",
     "soluscrt.com.br",
     "demo.local",

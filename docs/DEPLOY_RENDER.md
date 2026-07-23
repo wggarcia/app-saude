@@ -146,7 +146,7 @@ Cheque CORS:
 
 ```bash
 curl -sS -m 20 -D - -o /tmp/soluscrt-cors.json \
-  -H "Origin: https://app.soluscrt.com.br" \
+  -H "Origin: https://app.solocrt.com.br" \
   "$BASE_URL/api/public/resumo" | sed -n '1,40p'
 ```
 

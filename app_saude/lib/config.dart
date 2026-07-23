@@ -5,7 +5,7 @@ class Config {
     'API_BASE_URL',
     defaultValue: '',
   );
-  static const String productionBaseUrl = 'https://app.soluscrt.com.br';
+  static const String productionBaseUrl = 'https://app.solocrt.com.br';
   static const String localBaseUrl = 'http://127.0.0.1:8000';
   static const String androidEmulatorBaseUrl = 'http://10.0.2.2:8000';
   static const String mapboxPublicToken = String.fromEnvironment(

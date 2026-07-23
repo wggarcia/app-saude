@@ -196,7 +196,7 @@ def _montar_email(empresa_nome, alertas, hoje):
       {secoes_html}
       <div style="margin-top:24px;padding:16px;background:#f0f9ff;border-radius:8px;border-left:4px solid #00c9a7">
         <p style="margin:0;font-size:13px;color:#041018">
-          Acesse o <a href="https://empresa.soluscrt.com.br/dashboard-empresa/" style="color:#00c9a7;font-weight:700">painel SST</a>
+          Acesse o <a href="https://empresa.solocrt.com.br/dashboard-empresa/" style="color:#00c9a7;font-weight:700">painel SST</a>
           para gerenciar vencimentos, agendar exames e emitir documentos.
         </p>
       </div>
@@ -205,7 +205,7 @@ def _montar_email(empresa_nome, alertas, hoje):
     <div style="padding:16px 32px;background:#f4f8f7;border-top:1px solid #e8f4f1">
       <p style="margin:0;font-size:11px;color:#7a9fa0;text-align:center">
         SoloCRT · Plataforma de Saúde e Segurança do Trabalho ·
-        <a href="https://empresa.soluscrt.com.br/sst/configuracoes/" style="color:#7a9fa0">Gerenciar alertas</a>
+        <a href="https://empresa.solocrt.com.br/sst/configuracoes/" style="color:#7a9fa0">Gerenciar alertas</a>
       </p>
     </div>
   </div>
@@ -218,5 +218,5 @@ def _montar_email(empresa_nome, alertas, hoje):
         linhas.append(f"\n{a['icone']} {a['titulo']}")
         for item in a["itens"]:
             linhas.append(f"  • {item['nome']} ({item['cargo']}) — vence {item['vencimento']} ({item['dias']} dias)")
-    linhas.append("\nAcesse: https://empresa.soluscrt.com.br/dashboard-empresa/")
+    linhas.append("\nAcesse: https://empresa.solocrt.com.br/dashboard-empresa/")
     return "\n".join(linhas), html

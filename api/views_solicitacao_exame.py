@@ -642,7 +642,7 @@ Após a realização, a empresa pode importar o ASO pelo portal SoloCRT.
 
 --
 SoloCRT · Sistema de Gestão SST
-https://empresa.soluscrt.com.br
+https://empresa.solocrt.com.br
     """.strip()
 
     agora = timezone.now()

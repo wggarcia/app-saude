@@ -56,7 +56,7 @@ h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
       mais moderna do Brasil. Você está a poucos cliques de ter controle total sobre a saúde
       ocupacional da sua empresa.
     </p>
-    <a href="https://app.soluscrt.com.br/login-empresa/" class="btn">Acessar minha conta →</a>
+    <a href="https://app.solocrt.com.br/login-empresa/" class="btn">Acessar minha conta →</a>
     <div class="steps">
       <p style="font-size:13px;font-weight:700;color:#7b90b0;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px">
         Primeiros passos recomendados
@@ -87,8 +87,8 @@ h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
   <div class="footer">
     Precisa de ajuda? Entre em contato: <a href="mailto:suporte@solocrt.com" style="color:#00c9a7">suporte@solocrt.com</a><br>
     SoloCRT · Saúde Ocupacional e Inteligência Epidemiológica<br>
-    <a href="https://soluscrt.com.br/privacidade/" style="color:#7b90b0">Política de Privacidade</a> ·
-    <a href="https://soluscrt.com.br/termos/" style="color:#7b90b0">Termos de Uso</a>
+    <a href="https://solocrt.com.br/privacidade/" style="color:#7b90b0">Política de Privacidade</a> ·
+    <a href="https://solocrt.com.br/termos/" style="color:#7b90b0">Termos de Uso</a>
   </div>
 </div>
 </body>
@@ -97,7 +97,7 @@ h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
         body_text = (
             f"Olá, {nome}!\n\n"
             "Sua conta SoloCRT está ativa e pronta para uso.\n\n"
-            "Acesse: https://app.soluscrt.com.br/login-empresa/\n\n"
+            "Acesse: https://app.solocrt.com.br/login-empresa/\n\n"
             "Primeiros passos:\n"
             "1. Cadastre seus funcionários\n"
             "2. Configure os ASOs e exames ocupacionais\n"
@@ -256,7 +256,7 @@ h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
 
 def _base_url():
     from django.conf import settings
-    return getattr(settings, "PUBLIC_BASE_URL", "https://app.soluscrt.com.br").rstrip("/")
+    return getattr(settings, "PUBLIC_BASE_URL", "https://app.solocrt.com.br").rstrip("/")
 
 
 def enviar_email_confirmacao_pagamento(empresa, plano_nome, valor):
@@ -291,7 +291,7 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
     <div class="row"><span class="label">Status</span><span style="color:#00c9a7">✓ Ativo</span></div>
     <p style="margin-top:24px;font-size:14px;color:#b0c4d8">
       Sua conta está ativa. Acesse o painel em
-      <a href="https://app.soluscrt.com.br/login-empresa/" style="color:#00c9a7">app.soluscrt.com.br</a>.
+      <a href="https://app.solocrt.com.br/login-empresa/" style="color:#00c9a7">app.solocrt.com.br</a>.
     </p>
   </div>
   <div class="footer">Dúvidas? <a href="mailto:suporte@solocrt.com" style="color:#00c9a7">suporte@solocrt.com</a></div>
@@ -304,7 +304,7 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
             f"Empresa: {empresa.nome}\n"
             f"Valor: R$ {valor:,.2f}\n"
             "Sua conta está ativa.\n"
-            "Acesse: https://app.soluscrt.com.br/login-empresa/\n"
+            "Acesse: https://app.solocrt.com.br/login-empresa/\n"
         )
         send_mail(
             subject=subject,
@@ -366,8 +366,8 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px;line-height:1.3}}
   </div>
   <div class="footer">
     {titulo_rodape}<br>
-    <a href="https://soluscrt.com.br/privacidade/" style="color:#7b90b0">Privacidade</a> ·
-    <a href="https://soluscrt.com.br/termos/" style="color:#7b90b0">Termos</a> ·
+    <a href="https://solocrt.com.br/privacidade/" style="color:#7b90b0">Privacidade</a> ·
+    <a href="https://solocrt.com.br/termos/" style="color:#7b90b0">Termos</a> ·
     <a href="mailto:suporte@solocrt.com" style="color:#00c9a7">suporte@solocrt.com</a>
   </div>
 </div>
