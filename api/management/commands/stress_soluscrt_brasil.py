@@ -54,7 +54,7 @@ REGIOES_BRASIL = [
 
 
 class Command(BaseCommand):
-    help = "Executa stress test nacional SolusCRT simulando 30 dias em janelas de tempo configuráveis."
+    help = "Executa stress test nacional SoloCRT simulando 30 dias em janelas de tempo configuráveis."
 
     def add_arguments(self, parser):
         parser.add_argument("--minutes", type=int, default=30)
@@ -80,8 +80,8 @@ class Command(BaseCommand):
             return
 
         empresa_app = self._empresa_app()
-        governo = self._conta("Governo Stress SolusCRT", "stress-governo@soluscrt.local", Empresa.TIPO_GOVERNO)
-        empresa = self._conta("Empresa Stress SolusCRT", "stress-empresa@soluscrt.local", Empresa.TIPO_EMPRESA)
+        governo = self._conta("Governo Stress SoloCRT", "stress-governo@soluscrt.local", Empresa.TIPO_GOVERNO)
+        empresa = self._conta("Empresa Stress SoloCRT", "stress-empresa@soluscrt.local", Empresa.TIPO_EMPRESA)
         self._alerta_governo(governo)
 
         client_publico = Client(HTTP_HOST="127.0.0.1:8000")
@@ -149,7 +149,7 @@ class Command(BaseCommand):
         empresa, _ = Empresa.objects.get_or_create(
             email="populacao@soluscrt.com",
             defaults={
-                "nome": "SolusCRT Populacao",
+                "nome": "SoloCRT Populacao",
                 "senha": make_password("publico_app"),
                 "ativo": True,
                 "plano": "publico",
@@ -197,7 +197,7 @@ class Command(BaseCommand):
     def _alerta_governo(self, governo):
         AlertaGovernamental.objects.update_or_create(
             empresa=governo,
-            titulo="Stress nacional SolusCRT",
+            titulo="Stress nacional SoloCRT",
             defaults={
                 "mensagem": "Simulacao controlada de sala de controle epidemiologica nacional.",
                 "estado": "",
@@ -345,7 +345,7 @@ class Command(BaseCommand):
         media = round(statistics.mean(latencias), 2) if latencias else 0
         reducao_ok = final.get("retencao_pct", 100) <= 1.0
         linhas = [
-            "# Relatorio de Stress Test SolusCRT Brasil",
+            "# Relatorio de Stress Test SoloCRT Brasil",
             "",
             f"- Inicio: {started_at.strftime('%d/%m/%Y %H:%M:%S')}",
             f"- Registros sinteticos criados: {criados}",
@@ -438,4 +438,4 @@ class Command(BaseCommand):
 
     def _cleanup(self):
         RegistroSintoma.objects.filter(device_id__startswith=TEST_PREFIX)._raw_delete(RegistroSintoma.objects.db)
-        AlertaGovernamental.objects.filter(titulo="Stress nacional SolusCRT").delete()
+        AlertaGovernamental.objects.filter(titulo="Stress nacional SoloCRT").delete()

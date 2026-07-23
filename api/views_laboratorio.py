@@ -1,5 +1,5 @@
 """
-Integração com Laboratórios — SolusCRT SST
+Integração com Laboratórios — SoloCRT SST
 Resultados de exames importados diretamente na plataforma.
 Suporte a: HL7, FHIR, CSV, API REST parceiros.
 

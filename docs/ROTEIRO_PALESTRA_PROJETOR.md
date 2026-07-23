@@ -1,14 +1,14 @@
-# Roteiro de Palestra - SolusCRT Saude
+# Roteiro de Palestra - SoloCRT Saude
 
 ## Objetivo
 
-Apresentar o SolusCRT como uma sala de controle epidemiologica com IA para empresas, hospitais, farmacias, governo e populacao.
+Apresentar o SoloCRT como uma sala de controle epidemiologica com IA para empresas, hospitais, farmacias, governo e populacao.
 
 Tempo sugerido: 20 a 30 minutos.
 
 ## Slide 1 - Abertura
 
-Titulo: SolusCRT Saude
+Titulo: SoloCRT Saude
 
 Mensagem:
 
@@ -16,7 +16,7 @@ Mensagem:
 
 Fala:
 
-"Hoje, a velocidade com que uma doenca se espalha e maior do que a velocidade tradicional de resposta. O SolusCRT nasce para diminuir esse intervalo."
+"Hoje, a velocidade com que uma doenca se espalha e maior do que a velocidade tradicional de resposta. O SoloCRT nasce para diminuir esse intervalo."
 
 ## Slide 2 - O problema
 
@@ -149,7 +149,7 @@ Pontos:
 
 Mensagem:
 
-> O SolusCRT transforma sintomas da populacao e dados oficiais em decisao territorial antes que o risco vire crise.
+> O SoloCRT transforma sintomas da populacao e dados oficiais em decisao territorial antes que o risco vire crise.
 
 ## Slide 14 - Chamada para acao
 

@@ -142,7 +142,7 @@ def gerar_xml_sngpc(empresa: Empresa, registros, periodo_ini: date, periodo_fim:
     SubElement(header, "versao").text          = SNGPC_VERSAO
     SubElement(header, "dataGeracao").text     = _data_anvisa(date.today())
     SubElement(header, "totalRegistros").text  = str(len(registros))
-    SubElement(header, "sistema").text         = "SolusCRT v2.0"
+    SubElement(header, "sistema").text         = "SoloCRT v2.0"
 
     # Movimentos
     movimentos = SubElement(root, "Movimentos")
@@ -226,7 +226,7 @@ def transmitir_sngpc(empresa: Empresa, xml_content: str, usuario: str, senha: st
             files=files,
             data=data,
             auth=(usuario, senha),
-            headers={"User-Agent": "SolusCRT/2.0 SNGPC-Client"},
+            headers={"User-Agent": "SoloCRT/2.0 SNGPC-Client"},
             timeout=120,
             verify=True,
         )

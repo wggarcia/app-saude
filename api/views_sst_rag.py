@@ -535,7 +535,7 @@ def assistente_sst(request):
     api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
     if not api_key:
         return JsonResponse(
-            {"erro": "Assistente IA não configurado. Contate o suporte SolusCRT."},
+            {"erro": "Assistente IA não configurado. Contate o suporte SoloCRT."},
             status=503,
         )
 
@@ -556,7 +556,7 @@ def assistente_sst(request):
 
         hoje_str = date.today().strftime("%d/%m/%Y")
         system = (
-            f"Você é o Assistente SST da plataforma SolusCRT. "
+            f"Você é o Assistente SST da plataforma SoloCRT. "
             f"Hoje é {hoje_str}. "
             f"Responda sempre em português, de forma objetiva e profissional. "
             f"Use os dados retornados pelas ferramentas — nunca invente informações. "
@@ -688,10 +688,10 @@ def api_assistente_grafico_pdf_email(request):
 
     try:
         msg = EmailMessage(
-            subject=f"[SolusCRT] {grafico.get('titulo') or 'Relatório do Assistente IA SST'}",
+            subject=f"[SoloCRT] {grafico.get('titulo') or 'Relatório do Assistente IA SST'}",
             body=(
                 f"Segue em anexo o relatório gerado pelo Assistente IA SST — {empresa.nome}.\n\n"
-                "-- \nSolusCRT · Sistema de Gestão SST"
+                "-- \nSoloCRT · Sistema de Gestão SST"
             ),
             from_email=None,
             to=[destinatario],

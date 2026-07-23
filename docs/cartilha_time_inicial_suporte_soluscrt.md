@@ -1,4 +1,4 @@
-# SolusCRT Saude - Cartilha de Montagem do Time Inicial
+# SoloCRT Saude - Cartilha de Montagem do Time Inicial
 
 ## 1. Quantas pessoas contratar no inicio (realista)
 Para inicio comercial com controle de custo e qualidade:

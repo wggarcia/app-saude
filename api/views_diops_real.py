@@ -209,7 +209,7 @@ def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
     SubElement(cab, "DataFim").text       = dt_fim
     SubElement(cab, "VersaoLeiaute").text = VERSAO_DIOPS
     SubElement(cab, "DataEnvio").text     = date.today().isoformat()
-    SubElement(cab, "SistemaEmissor").text = "SolusCRT v2.0"
+    SubElement(cab, "SistemaEmissor").text = "SoloCRT v2.0"
     SubElement(cab, "CNPJEmissor").text   = cnpj
 
     # Campos específicos da declaração — vindos do banco (não hardcoded)

@@ -191,7 +191,7 @@ class AlertaInboxService {
         'bairro': data?['bairro'],
         'nivel': data?['nivel'],
         'gravidade': data?['gravidade'] ?? data?['nivel'],
-        'orgao': data?['orgao'] ?? 'Governo SolusCRT',
+        'orgao': data?['orgao'] ?? 'Governo SoloCRT',
         'criado_em': data?['criado_em'],
         'received_at': DateTime.now().toIso8601String(),
       },

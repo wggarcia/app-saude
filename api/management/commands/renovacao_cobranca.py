@@ -28,7 +28,7 @@ from api.models import Empresa, FinanceiroEventoSaaS, TrialEmpresa
 
 
 class Command(BaseCommand):
-    help = "Avisos de renovação e dunning para clientes pagantes SolusCRT"
+    help = "Avisos de renovação e dunning para clientes pagantes SoloCRT"
 
     def add_arguments(self, parser):
         parser.add_argument(

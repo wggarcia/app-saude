@@ -420,7 +420,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Abra Ajustes > SolusCRT Saúde > Localização e ative Localização Precisa.',
+                'Abra Ajustes > SoloCRT Saúde > Localização e ative Localização Precisa.',
               ),
               duration: Duration(seconds: 5),
             ),
@@ -539,7 +539,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
                   userAgentPackageName: 'com.soluscrt.saude',
                   tileProvider: NetworkTileProvider(
                     headers: {
-                      'User-Agent': 'SolusCRTSaude/1.0 (iOS; com.soluscrt.saude)',
+                      'User-Agent': 'SoloCRTSaude/1.0 (iOS; com.soluscrt.saude)',
                     },
                   ),
                   minNativeZoom: 2,

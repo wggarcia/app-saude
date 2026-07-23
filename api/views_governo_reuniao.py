@@ -366,7 +366,7 @@ def _ata_fallback(reuniao):
 ### Encerramento
 Reunião encerrada conforme agendado.
 
-*Ata gerada automaticamente pelo SolusCRT — para ata com IA configure ANTHROPIC_API_KEY.*"""
+*Ata gerada automaticamente pelo SoloCRT — para ata com IA configure ANTHROPIC_API_KEY.*"""
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

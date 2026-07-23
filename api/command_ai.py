@@ -830,7 +830,7 @@ def _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=6):
             "A leitura serve para prevenção, apoio e continuidade, não para disciplina ou vigilância individual.",
         ],
         "source": {
-            "engine": "SolusCRT corporativo",
+            "engine": "SoloCRT corporativo",
             "generated_from": "check-ins diários, check-ins semanais, pedidos de apoio, unidades, setores e sinais de saúde ocupacional",
         },
     }
@@ -876,7 +876,7 @@ def build_command_ai_payload(empresa, limit=6):
             "Usa sinais agregados para priorização operacional e planejamento setorial.",
         ],
         "source": {
-            "engine": "SolusCRT panorama epidemiológico",
+            "engine": "SoloCRT panorama epidemiológico",
             "generated_from": "sinais agregados, série temporal, sintomas dominantes e fontes oficiais quando disponíveis",
         },
     }

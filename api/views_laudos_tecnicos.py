@@ -1,5 +1,5 @@
 """
-Laudos Técnicos SST — SolusCRT
+Laudos Técnicos SST — SoloCRT
 LTCAT (Laudo Técnico das Condições Ambientais do Trabalho)
 LIP   (Laudo de Insalubridade e Periculosidade)
 LTIP  (Laudo Técnico de Insalubridade e Periculosidade)

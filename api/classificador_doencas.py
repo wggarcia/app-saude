@@ -2176,7 +2176,7 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
             "médico, prescrição, laudo ou parecer clínico. A hipótese é probabilística e "
             "pode estar incorreta. Não substitui avaliação por profissional de saúde "
             "habilitado. Em caso de sintomas graves ou agravamento, procure atendimento "
-            "imediatamente. SolusCRT Sistemas Integrados LTDA não assume responsabilidade "
+            "imediatamente. SoloCRT Sistemas Integrados LTDA não assume responsabilidade "
             "por decisões clínicas baseadas nesta triagem automática."
         ),
     }

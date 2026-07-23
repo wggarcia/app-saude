@@ -1,4 +1,4 @@
-# Pacote de Submissao Apple - SolusCRT Saude
+# Pacote de Submissao Apple - SoloCRT Saude
 
 Use este arquivo como fonte unica para preencher App Store Connect e responder a revisao.
 
@@ -23,7 +23,7 @@ Radar epidemiologico colaborativo para acompanhar sinais de sintomas, mapa publi
 
 ## Descricao
 
-O SolusCRT Saude e um aplicativo informativo de monitoramento epidemiologico colaborativo para a populacao.
+O SoloCRT Saude e um aplicativo informativo de monitoramento epidemiologico colaborativo para a populacao.
 
 Com ele, voce pode acompanhar o radar de sintomas da sua regiao, visualizar focos no mapa publico e enviar sinais sem cadastro nominal para apoiar a leitura territorial de riscos em saude.
 
@@ -36,11 +36,11 @@ Recursos principais:
 - Alertas publicos quando publicados por gestao autorizada.
 - Orientacoes preventivas sem substituir atendimento medico.
 
-Importante: o SolusCRT Saude nao realiza diagnostico medico, nao substitui consulta profissional, nao prescreve tratamento e nao deve ser usado para emergencias. Em caso de agravamento, procure atendimento medico ou servico de urgencia.
+Importante: o SoloCRT Saude nao realiza diagnostico medico, nao substitui consulta profissional, nao prescreve tratamento e nao deve ser usado para emergencias. Em caso de agravamento, procure atendimento medico ou servico de urgencia.
 
 ## Notas para App Review
 
-O SolusCRT Saude e um app informativo e colaborativo de monitoramento epidemiologico territorial.
+O SoloCRT Saude e um app informativo e colaborativo de monitoramento epidemiologico territorial.
 
 O app coleta sintomas informados voluntariamente e localizacao enquanto o app esta em uso para exibir radar regional, mapa publico e alertas. O app nao fornece diagnostico medico, nao substitui atendimento profissional, nao prescreve tratamento e nao e destinado a emergencias.
 
@@ -84,13 +84,13 @@ Dados vinculados ao usuario:
 Location purpose string:
 
 ```text
-O SolusCRT Saude usa sua localizacao enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.
+O SoloCRT Saude usa sua localizacao enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.
 ```
 
 Temporary precise location:
 
 ```text
-O SolusCRT Saude precisa confirmar sua localizacao precisa no momento do envio para nao registrar sintomas na cidade errada.
+O SoloCRT Saude precisa confirmar sua localizacao precisa no momento do envio para nao registrar sintomas na cidade errada.
 ```
 
 ## Checklist antes de enviar

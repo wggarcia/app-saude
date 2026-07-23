@@ -1750,7 +1750,7 @@ def api_convidar_app_funcionario(request, funcionario_id):
 
     return JsonResponse({
         "status": "ok",
-        "mensagem": f"Convite enviado para {email_destino}. O funcionário deve baixar o App Ocupacional SolusCRT e cadastrar-se com o CPF.",
+        "mensagem": f"Convite enviado para {email_destino}. O funcionário deve baixar o App Ocupacional SoloCRT e cadastrar-se com o CPF.",
     })
 
 
@@ -2129,11 +2129,11 @@ def api_treinamentos_homem_hora_email(request):
 
     try:
         msg = EmailMessage(
-            subject=f"[SolusCRT] Relatório de Homem-Hora — {empresa.nome}",
+            subject=f"[SoloCRT] Relatório de Homem-Hora — {empresa.nome}",
             body=(
                 f"Segue em anexo o relatório de homem-hora de treinamentos ({periodo_label}).\n\n"
                 f"Total geral: {total_geral} homem-hora.\n\n"
-                "-- \nSolusCRT · Sistema de Gestão SST"
+                "-- \nSoloCRT · Sistema de Gestão SST"
             ),
             from_email=None,
             to=[destinatario],

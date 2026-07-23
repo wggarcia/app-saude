@@ -1,5 +1,5 @@
 """
-Biometria Facial para confirmação de entrega de EPI — SolusCRT SST.
+Biometria Facial para confirmação de entrega de EPI — SoloCRT SST.
 Implementado como "confirmação por foto" (captura + armazena), sem ML/face recognition.
 
 Endpoints:

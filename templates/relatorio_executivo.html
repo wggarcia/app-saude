@@ -5,7 +5,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Relatório Executivo · SolusCRT Saúde</title>
+<title>Relatório Executivo · SoloCRT Saúde</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet">
 <style>
@@ -202,7 +202,7 @@ body{min-height:100vh;padding:0 0 80px}
 </div>
 
 <div class="topbar">
-  <a class="brand" href="/"><span class="mark">CRT</span> SolusCRT Saúde</a>
+  <a class="brand" href="/"><span class="mark">CRT</span> SoloCRT Saúde</a>
   <div class="topbar-right">
     <button class="pill-btn print-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
     <a class="pill-btn" href="/compliance/">Auditoria</a>
@@ -273,7 +273,7 @@ function renderRelatorio(d) {
     <!-- COVER -->
     <div class="cover">
       <div class="cover-left">
-        <div class="eyebrow">SolusCRT Saúde · Relatório Executivo</div>
+        <div class="eyebrow">SoloCRT Saúde · Relatório Executivo</div>
         <h1>Saúde &<br>Segurança<br>Corporativa</h1>
         <div class="subtitle">${escHtml(d.empresa)} · ${periodoLabel}<br>${fmtDate(d.desde)} → ${fmtDate(d.ate)}</div>
       </div>
@@ -308,7 +308,7 @@ function renderRelatorio(d) {
 
     <!-- FOOTER -->
     <div class="report-footer">
-      <div class="footer-brand"><span style="font-size:1.1rem">🏥</span> SolusCRT Saúde</div>
+      <div class="footer-brand"><span style="font-size:1.1rem">🏥</span> SoloCRT Saúde</div>
       <div class="footer-note">Relatório gerado em ${fmtDate(d.gerado_em)} · Dados confidenciais · Uso interno</div>
     </div>
   `;

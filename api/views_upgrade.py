@@ -1,5 +1,5 @@
 """
-Upgrade de plano self-service — SolusCRT
+Upgrade de plano self-service — SoloCRT
 A gerência pode fazer upgrade diretamente pela plataforma, sem ligar para o suporte.
 
 Endpoints:
@@ -225,7 +225,7 @@ def api_upgrade_checkout(request):
         payment_id, checkout_url = _asaas_criar_pagamento(
             empresa,
             valor,
-            f"SolusCRT — {pacote['label']} ({ciclo.upper()})",
+            f"SoloCRT — {pacote['label']} ({ciclo.upper()})",
             cpf_cnpj,
         )
 

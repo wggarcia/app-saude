@@ -1463,7 +1463,7 @@ def _suite_plano_saude(empresa):
 
     return {
         "headline": "Camada cooperativa para operadoras: carteira, regulacao, prestadores e radar epidemiologico no mesmo cockpit, sem substituir o core legado.",
-        "diferencial": "A SolusCRT entra acima do sistema que a operadora ja possui para organizar fila clinica, sinistralidade, rede, reembolso e risco territorial, preservando o core admin e amplificando a leitura epidemiologica da carteira.",
+        "diferencial": "A SoloCRT entra acima do sistema que a operadora ja possui para organizar fila clinica, sinistralidade, rede, reembolso e risco territorial, preservando o core admin e amplificando a leitura epidemiologica da carteira.",
         "processos": [
             {
                 "nome": "Operacao de operadora ponta a ponta",
@@ -1494,7 +1494,7 @@ def _suite_plano_saude(empresa):
             _capacidade("sinistralidade", "Sinistros, glosas e payment integrity", "Valor em risco, glosas, recursos e pagamento assistencial com rastreabilidade.", sinistros.count() + sinistros_pagos, 10, ["HealthEdge", "TriZetto", "Oracle Health"], "Fechar fluxo entre guia, sinistro, glosa e pagamento."),
             _capacidade("reembolso", "Reembolso e livre escolha", "Solicitacao, analise, aprovacao, pagamento e reconciliacao do beneficiario.", reembolsos.count() + reembolsos_pagos, 8, ["Benner", "Tasy", "TOTVS Saude"], "Estruturar esteira de livre escolha com data de pagamento e trilha de auditoria."),
             _capacidade("compliance", "Compliance ANS, TISS e governanca", "Registro ANS, dados clinicos, justificativas e trilha regulatoria auditavel.", planos_com_ans + guias_documentadas + reembolsos_com_data + guias_fora_sla, 10, ["Benner", "TOTVS Saude", "Tasy"], "Padronizar ANS, CID, medico solicitante e motivos de negativa/pagamento."),
-            _capacidade("epidemiologia", "Epidemiologia e saude populacional", "Cruza sinais territoriais, suspeitos e carteira para antecipar pressao assistencial.", registros_epi_total + suspeitos_epi, 8, ["SolusCRT AI", "Oracle Health"], "Usar sinais territoriais para antecipar demanda, comunicacao e custo em alta."),
+            _capacidade("epidemiologia", "Epidemiologia e saude populacional", "Cruza sinais territoriais, suspeitos e carteira para antecipar pressao assistencial.", registros_epi_total + suspeitos_epi, 8, ["SoloCRT AI", "Oracle Health"], "Usar sinais territoriais para antecipar demanda, comunicacao e custo em alta."),
         ],
     }
 

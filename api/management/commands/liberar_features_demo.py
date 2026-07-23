@@ -78,7 +78,7 @@ class Command(BaseCommand):
             if "sst.biometria" in features_novas:
                 self.stdout.write(self.style.SUCCESS("      🔓  sst.biometria ✔"))
 
-        self.stdout.write(self.style.HTTP_INFO("SolusCRT · Liberação de features demo"))
+        self.stdout.write(self.style.HTTP_INFO("SoloCRT · Liberação de features demo"))
         self.stdout.write("─" * 52)
 
         if options["todos_demos"]:

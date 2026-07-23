@@ -6,7 +6,7 @@ from api.maintenance import maintenance_report
 
 
 class Command(BaseCommand):
-    help = "Monitora e executa manutencao segura do SolusCRT sem tocar em dados operacionais sensiveis."
+    help = "Monitora e executa manutencao segura do SoloCRT sem tocar em dados operacionais sensiveis."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -51,7 +51,7 @@ class Command(BaseCommand):
             return
 
         before = report["before"]
-        self.stdout.write(self.style.MIGRATE_HEADING("SolusCRT Maintenance Report"))
+        self.stdout.write(self.style.MIGRATE_HEADING("SoloCRT Maintenance Report"))
         self.stdout.write(f"Modo: {report['mode']}")
         self.stdout.write(
             "Sessao ociosa limite: "

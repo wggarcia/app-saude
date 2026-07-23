@@ -4,7 +4,7 @@
 {% include "_favicon.html" %}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Solicitação de Exame — SolusCRT</title>
+<title>Solicitação de Exame — SoloCRT</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -118,7 +118,7 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);heigh
 
 <div class="topbar">
   <div style="display:flex;align-items:center">
-    <span class="logo">SolusCRT</span>
+    <span class="logo">SoloCRT</span>
     <span class="page-title">Solicitação de Exame</span>
   </div>
   <button class="btn btn-ghost" onclick="window.close()">← Fechar</button>
@@ -440,7 +440,7 @@ function montarImpressao(p) {
   document.getElementById('print-doc').innerHTML = `
     <div class="ph">
       <h1>Solicitação de Exame ${urgStamp}</h1>
-      <p>SolusCRT — Sistema Unificado de Saúde &nbsp;·&nbsp; ${hoje}</p>
+      <p>SoloCRT — Sistema Unificado de Saúde &nbsp;·&nbsp; ${hoje}</p>
     </div>
     <table>
       <tr><th colspan="2">Paciente</th></tr>

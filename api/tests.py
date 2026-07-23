@@ -1875,7 +1875,7 @@ class AuthDeviceTests(TestCase):
 
     def test_login_operacao_permite_console_operacional(self):
         DonoSaaS.objects.create(
-            nome="Operacao SolusCRT",
+            nome="Operacao SoloCRT",
             email="owner@teste.com",
             senha=make_password("123456"),
             ativo=True,
@@ -1895,7 +1895,7 @@ class AuthDeviceTests(TestCase):
         response = self.client.get("/console-operacional/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Operacao SolusCRT")
+        self.assertContains(response, "Operacao SoloCRT")
         self.assertContains(response, "Readiness Enterprise")
         self.assertContains(response, "Fila de Sucesso do Cliente")
         self.assertContains(response, "Implantação e Go-live")
@@ -2134,7 +2134,7 @@ class AuthDeviceTests(TestCase):
         self.assertNotContains(response, "governo.soluscrt.com.br")
         self.assertContains(response, "/apresentacao/")
         self.assertContains(response, "https://apps.apple.com/br/app/soluscrt-ocupacional/id6774676681")
-        self.assertContains(response, "Confiança SolusCRT")
+        self.assertContains(response, "Confiança SoloCRT")
 
     def test_subdominios_raiz_separam_ambientes(self):
         empresa = Client(HTTP_HOST="empresa.soluscrt.com.br").get("/")
@@ -2153,7 +2153,7 @@ class AuthDeviceTests(TestCase):
             ("/privacidade/", "Politica de Privacidade"),
             ("/termos/", "Termos de Uso"),
             ("/seguranca-lgpd/", "Seguranca, LGPD e Governanca"),
-            ("/metodologia/", "Como o SolusCRT separa sinal precoce"),
+            ("/metodologia/", "Como o SoloCRT separa sinal precoce"),
             ("/suporte/", "Suporte e Atendimento"),
         ]:
             response = Client(HTTP_HOST="soluscrt.com.br").get(rota)
@@ -2322,7 +2322,7 @@ class MaintenanceTests(TestCase):
         call_command("manter_soluscrt", stdout=buffer)
 
         output = buffer.getvalue()
-        self.assertIn("SolusCRT Maintenance Report", output)
+        self.assertIn("SoloCRT Maintenance Report", output)
         self.assertIn("Nenhuma alteracao aplicada", output)
 
 
@@ -2355,7 +2355,7 @@ class PublicApiTests(_OwnerSharesDefaultMixin, TestCase):
     def test_aceite_legal_publico_registra_auditoria(self):
         response = Client(
             HTTP_X_DEVICE_ID="device-legal",
-            HTTP_USER_AGENT="SolusCRT-Test",
+            HTTP_USER_AGENT="SoloCRT-Test",
             REMOTE_ADDR="127.0.0.1",
         ).post(
             "/api/public/legal-consent",
@@ -3152,7 +3152,7 @@ class TemporalDecayTests(_OwnerSharesDefaultMixin, TestCase):
 
     def test_radar_local_e_mapa_publico_usam_o_mesmo_recorte_publico(self):
         empresa_publica = Empresa.objects.create(
-            nome="SolusCRT Populacao",
+            nome="SoloCRT Populacao",
             email="populacao@soluscrt.com",
             senha=make_password("publico_app"),
             ativo=True,
@@ -3875,7 +3875,7 @@ class SolicitacaoExameEmailTests(TestCase):
         EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
         EMAIL_HOST_USER="mailer@soluscrt.com.br",
         EMAIL_HOST_PASSWORD="segredo-smtp",
-        DEFAULT_FROM_EMAIL="SolusCRT <noreply@soluscrt.com.br>",
+        DEFAULT_FROM_EMAIL="SoloCRT <noreply@soluscrt.com.br>",
     )
     @patch("api.views_solicitacao_exame.EmailMessage")
     def test_envio_email_usa_remetente_da_conta_smtp(self, email_message_mock):
@@ -3889,7 +3889,7 @@ class SolicitacaoExameEmailTests(TestCase):
 
         self.assertEqual(resp.status_code, 201)
         _, kwargs = email_message_mock.call_args
-        self.assertEqual(kwargs["from_email"], "SolusCRT <mailer@soluscrt.com.br>")
+        self.assertEqual(kwargs["from_email"], "SoloCRT <mailer@soluscrt.com.br>")
 
 
 def _owner_e_banco_distinto():
@@ -6705,7 +6705,7 @@ class EsocialXMLTests(TestCase):
         xml = _gerar_xml_s2210(cat, self.cfg)
         self.assertTrue(xml.startswith("<?xml version"))
         self.assertIn("evtCAT", xml)
-        self.assertIn("SolusCRT_1.0", xml)
+        self.assertIn("SoloCRT_1.0", xml)
         self.assertIn("2026-06-01", xml)
 
     def test_s2210_fuga_xml_em_descricao(self):
@@ -6938,7 +6938,7 @@ class EsocialXMLTests(TestCase):
         from api.views_esocial_sst import _gerar_xml_s2240
         xml = _gerar_xml_s2240(self.empresa, self.cfg, periodo="2026-06")
         self.assertIn("evtCondicAmb", xml)
-        self.assertIn("SolusCRT_1.0", xml)
+        self.assertIn("SoloCRT_1.0", xml)
 
     def test_s2240_namespace_correto(self):
         from api.views_esocial_sst import _gerar_xml_s2240

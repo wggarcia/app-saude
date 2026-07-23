@@ -4,7 +4,7 @@
 {% include "_favicon.html" %}
 
   <meta charset="UTF-8">
-  <title>Escalas Operacionais · SolusCRT</title>
+  <title>Escalas Operacionais · SoloCRT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -300,8 +300,8 @@ async function carregarResumo() {
 }
 function _mostrarErroResumo(msg) {
   ['kpiEscalas','kpiEmb','kpiFolg'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
-  if (msg.indexOf("🔒") !== -1 && window.SolusCRT && window.SolusCRT.upgrade) {
-    window.SolusCRT.upgrade.abrir();
+  if (msg.indexOf("🔒") !== -1 && window.SoloCRT && window.SoloCRT.upgrade) {
+    window.SoloCRT.upgrade.abrir();
   }
   console.error(msg);
 }

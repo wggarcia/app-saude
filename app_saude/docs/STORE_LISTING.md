@@ -1,4 +1,4 @@
-# SolusCRT Saude
+# SoloCRT Saude
 
 ## Posicionamento
 Aplicativo publico de monitoramento epidemiologico territorial com envio anonimo de sintomas, radar regional e mapa publico de hotspots.
@@ -6,7 +6,7 @@ Aplicativo publico de monitoramento epidemiologico territorial com envio anonimo
 ## App Store
 
 ### Nome
-SolusCRT Saude
+SoloCRT Saude
 
 ### Subtitulo
 Radar publico de saude regional
@@ -18,7 +18,7 @@ Monitore sua regiao, acompanhe sinais recentes e envie sintomas anonimos para fo
 Acompanhe o radar da sua regiao, visualize hotspots recentes e envie sintomas anonimos com protecao contra repeticao e abuso.
 
 ### Descricao completa
-SolusCRT Saude e o aplicativo publico do ecossistema SolusCRT para monitoramento epidemiologico territorial.
+SoloCRT Saude e o aplicativo publico do ecossistema SoloCRT para monitoramento epidemiologico territorial.
 
 Com ele, a populacao pode:
 - acompanhar sinais recentes da propria regiao
@@ -35,13 +35,13 @@ saude,epidemiologia,sintomas,mapa,monitoramento,surto,territorio,risco,radaresau
 ## Play Store
 
 ### Titulo
-SolusCRT Saude
+SoloCRT Saude
 
 ### Short description
 Radar publico da sua regiao com sintomas anonimos, hotspots e fontes oficiais.
 
 ### Full description
-SolusCRT Saude entrega uma leitura publica e acessivel do monitoramento epidemiologico regional.
+SoloCRT Saude entrega uma leitura publica e acessivel do monitoramento epidemiologico regional.
 
 Veja o que esta acontecendo na sua regiao, acompanhe sinais recentes, consulte hotspots no mapa e envie sintomas anonimos com protecoes contra repeticao e abuso.
 

@@ -129,7 +129,7 @@ function bullets(slide, items, x, y, w, gap = 54) {
 }
 
 function footer(slide, n) {
-  text(slide, `SolusCRT Saude | ${n}`, 70, 665, 260, 30, { size: 13, color: "#6F91A6" });
+  text(slide, `SoloCRT Saude | ${n}`, 70, 665, 260, 30, { size: 13, color: "#6F91A6" });
 }
 
 function addSlide(n, headline, subtitle, content) {
@@ -140,7 +140,7 @@ function addSlide(n, headline, subtitle, content) {
   footer(slide, n);
 }
 
-addSlide(1, "SolusCRT Saude", "Sala de controle epidemiologica com IA para antecipar riscos e orientar decisoes.", (s) => {
+addSlide(1, "SoloCRT Saude", "Sala de controle epidemiologica com IA para antecipar riscos e orientar decisoes.", (s) => {
   pill(s, "App populacional", 78, 238);
   pill(s, "IA epidemiologica", 290, 238, COLORS.blue);
   pill(s, "Fontes oficiais", 502, 238, COLORS.yellow);
@@ -216,7 +216,7 @@ addSlide(12, "Modelo comercial", "Preco por valor entregue, setor e cobertura.",
 });
 
 addSlide(13, "Frase de impacto", "Para fechar a apresentacao.", (s) => {
-  text(s, "O SolusCRT transforma sintomas da populacao e dados oficiais em decisao territorial antes que o risco vire crise.", 110, 250, 1020, 160, { size: 42, bold: true, typeface: FONT.title, align: "center" });
+  text(s, "O SoloCRT transforma sintomas da populacao e dados oficiais em decisao territorial antes que o risco vire crise.", 110, 250, 1020, 160, { size: 42, bold: true, typeface: FONT.title, align: "center" });
   pill(s, "Antecipar", 330, 470, COLORS.cyan);
   pill(s, "Coordenar", 545, 470, COLORS.blue);
   pill(s, "Proteger", 760, 470, COLORS.yellow);

@@ -10,7 +10,7 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 
 	<key>CFBundleDisplayName</key>
-	<string>SolusCRT Saude</string>
+	<string>SoloCRT Saude</string>
 
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -22,7 +22,7 @@
 	<string>6.0</string>
 
 	<key>CFBundleName</key>
-	<string>SolusCRTSaude</string>
+	<string>SoloCRTSaude</string>
 
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
@@ -65,18 +65,18 @@
 	</dict>
 
 	<key>NSLocationWhenInUseUsageDescription</key>
-		<string>O SolusCRT Saude usa sua localizacao enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
+		<string>O SoloCRT Saude usa sua localizacao enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
 
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-		<string>O SolusCRT Saude usa sua localizacao para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial. A localizacao e usada somente enquanto o app esta em uso.</string>
+		<string>O SoloCRT Saude usa sua localizacao para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial. A localizacao e usada somente enquanto o app esta em uso.</string>
 
 	<key>NSLocationAlwaysUsageDescription</key>
-		<string>O SolusCRT Saude usa sua localizacao para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
+		<string>O SoloCRT Saude usa sua localizacao para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
 
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>
 		<key>RegistrarSintomaAtual</key>
-		<string>O SolusCRT Saude precisa confirmar sua localizacao precisa no momento do envio para nao registrar sintomas na cidade errada.</string>
+		<string>O SoloCRT Saude precisa confirmar sua localizacao precisa no momento do envio para nao registrar sintomas na cidade errada.</string>
 	</dict>
 
 	<key>FirebaseAppDelegateProxyEnabled</key>

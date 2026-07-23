@@ -70,7 +70,7 @@ def registrar_auditoria_institucional(request, acao, objeto=None, detalhes=None)
 
 def api_metodologia_epidemiologica(request):
     return JsonResponse({
-        "nome": "SolusCRT Saude - metodologia de sala de controle",
+        "nome": "SoloCRT Saude - metodologia de sala de controle",
         "principio": "Separar sinal precoce, fonte oficial, estimativa IA e alerta confirmado.",
         "camadas_de_dados": DADOLOGIA_CAMADAS,
         "regras_de_confianca": [

@@ -273,13 +273,13 @@ def build_empresa_corporativo_payload(empresa):
 
     return {
         "product": {
-            "name": "SolusCRT Corporativo",
+            "name": "SoloCRT Corporativo",
             "subtitle": "Saude ocupacional, escalas, cultura, lideranca e continuidade operacional",
             "company": company_label,
             "package_label": pacote["label"],
         },
         "ecosystem": {
-            "name": "Ecossistema Institucional SolusCRT",
+            "name": "Ecossistema Institucional SoloCRT",
             "segments": ["Healthtech empresarial", "Farmacia", "Hospital", "Operacao territorial"],
             "promise": (
                 "Uma unica camada institucional para autenticar operacoes setoriais e abrir "

@@ -1,4 +1,4 @@
-# Relatorio de Stress Test SolusCRT Brasil
+# Relatorio de Stress Test SoloCRT Brasil
 
 - Inicio: 22/04/2026 06:22:07
 - Registros sinteticos criados: 1350

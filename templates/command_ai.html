@@ -5,7 +5,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% if setor_conta == "empresa" %}Sala de Decisão Saúde Corporativa | SolusCRT{% else %}Sala de Decisão IA | SolusCRT{% endif %}</title>
+<title>{% if setor_conta == "empresa" %}Sala de Decisão Saúde Corporativa | SoloCRT{% else %}Sala de Decisão IA | SoloCRT{% endif %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
 <body data-setor="{{ setor_conta|default:'empresa' }}">
 <main class="shell">
   <nav class="nav">
-    <a class="brand" id="returnBrand" href="{{ return_url }}"><span class="mark">IA</span><span>{% if setor_conta == "empresa" %}SolusCRT Sala de Decisão Saúde Corporativa{% else %}SolusCRT Sala de Decisão IA{% endif %}</span></a>
+    <a class="brand" id="returnBrand" href="{{ return_url }}"><span class="mark">IA</span><span>{% if setor_conta == "empresa" %}SoloCRT Sala de Decisão Saúde Corporativa{% else %}SoloCRT Sala de Decisão IA{% endif %}</span></a>
     <div class="nav-actions">
       <button class="btn" id="refreshBtn">{% if setor_conta == "empresa" %}Atualizar leitura corporativa{% else %}Atualizar sala{% endif %}</button>
       <button class="btn gold" id="printBtn">Gerar relatório</button>

@@ -5,7 +5,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Plataforma TI Governamental | SolusCRT</title>
+<title>Plataforma TI Governamental | SoloCRT</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -628,7 +628,7 @@ select option{background:#0b1822}
       <div class="section-head">
         <div>
           <div class="section-title">Sistemas Governamentais de Saúde</div>
-          <div class="section-sub">Conecte o SolusCRT aos sistemas federais, estaduais e municipais do SUS</div>
+          <div class="section-sub">Conecte o SoloCRT aos sistemas federais, estaduais e municipais do SUS</div>
         </div>
         <button class="btn sm" onclick="loadIntegracoes()">🔄 Atualizar</button>
       </div>
@@ -895,7 +895,7 @@ select option{background:#0b1822}
         <div class="section-head">
           <div>
             <div class="section-title">Chaves de API Governamentais</div>
-            <div class="section-sub">Acesso programático ao SolusCRT via REST API</div>
+            <div class="section-sub">Acesso programático ao SoloCRT via REST API</div>
           </div>
           <button class="btn sm" onclick="loadChaves()">🔄 Atualizar</button>
         </div>
@@ -980,7 +980,7 @@ select option{background:#0b1822}
 
       <div class="card glass">
         <div class="section-title">Adicionar Webhook</div>
-        <div class="section-sub">Receba eventos do SolusCRT em sua plataforma governamental</div>
+        <div class="section-sub">Receba eventos do SoloCRT em sua plataforma governamental</div>
         <form class="form-grid" id="formWebhook" onsubmit="criarWebhook(event)" style="margin-top:4px">
           <div class="field">
             <label>URL de Destino</label>
@@ -1018,7 +1018,7 @@ select option{background:#0b1822}
 
     <div class="card glass">
       <div class="section-title">Payload de Exemplo</div>
-      <div class="section-sub">Estrutura JSON enviada pelo SolusCRT nos eventos de webhook</div>
+      <div class="section-sub">Estrutura JSON enviada pelo SoloCRT nos eventos de webhook</div>
       <div style="background:rgba(0,0,0,.3);border-radius:14px;padding:16px;border:1px solid var(--soft);overflow-x:auto">
 <pre style="font-size:.78rem;color:#a0dfff;white-space:pre-wrap">{
   "evento": "notificacao_compulsoria",
@@ -1153,7 +1153,7 @@ select option{background:#0b1822}
         <p style="font-size:.82rem;color:var(--muted);margin:10px 0 0">
           Os frameworks abaixo (LGPD, IN SGD/ME, ISO 27001, Decreto 8.771/2016, Portaria GM/MS 1.434/2020, CFM)
           são os que a plataforma acompanha — mas nenhum score de aderência é calculado automaticamente
-          ainda. Fale com o time SolusCRT pra habilitar a auditoria de conformidade real deste ambiente.
+          ainda. Fale com o time SoloCRT pra habilitar a auditoria de conformidade real deste ambiente.
         </p>
       </div>
 
@@ -1679,11 +1679,11 @@ function fecharConfigurar(){
 
 async function salvarIntegracao(e){
   e.preventDefault();
-  showToast('toastIntegracao','⚠️ Esta integração ainda não está disponível na plataforma. Fale com o time SolusCRT para priorizá-la.','err');
+  showToast('toastIntegracao','⚠️ Esta integração ainda não está disponível na plataforma. Fale com o time SoloCRT para priorizá-la.','err');
 }
 
 async function testarConexao(){
-  showToast('toastIntegracao','⚠️ Esta integração ainda não está disponível na plataforma. Fale com o time SolusCRT para priorizá-la.','err');
+  showToast('toastIntegracao','⚠️ Esta integração ainda não está disponível na plataforma. Fale com o time SoloCRT para priorizá-la.','err');
 }
 
 // ── API KEYS ──────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 """
-Relatórios PDF SST — SolusCRT
+Relatórios PDF SST — SoloCRT
 Endpoints que geram PDFs com ReportLab para módulo SST.
 """
 import io
@@ -81,7 +81,7 @@ def _build_header_footer(canvas, doc, empresa_nome, titulo):
     canvas.rect(0, PAGE_H - 70, 5, 70, fill=1, stroke=0)
     canvas.setFillColor(WHITE)
     canvas.setFont("Helvetica-Bold", 14)
-    canvas.drawString(MARGIN + 4, PAGE_H - 30, "SolusCRT SST")
+    canvas.drawString(MARGIN + 4, PAGE_H - 30, "SoloCRT SST")
     canvas.setFont("Helvetica", 9)
     canvas.setFillColor(colors.HexColor("#94a3b8"))
     canvas.drawString(MARGIN + 4, PAGE_H - 48, empresa_nome)
@@ -99,7 +99,7 @@ def _build_header_footer(canvas, doc, empresa_nome, titulo):
     today_str = date.today().strftime("%d/%m/%Y")
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(GREY_TEXT)
-    canvas.drawString(MARGIN, 18, f"Gerado em {today_str}  •  Gerado pelo SolusCRT SST")
+    canvas.drawString(MARGIN, 18, f"Gerado em {today_str}  •  Gerado pelo SoloCRT SST")
     canvas.drawRightString(PAGE_W - MARGIN, 18, "Documento confidencial — uso interno")
     canvas.restoreState()
 

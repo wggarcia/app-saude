@@ -351,7 +351,7 @@ select option{background:#0b1822}
     <div class="two-col">
       <div class="card glass">
         <div class="section-title">Plano atual</div>
-        <div class="section-sub">Resumo do seu acesso à plataforma SolusCRT</div>
+        <div class="section-sub">Resumo do seu acesso à plataforma SoloCRT</div>
         <div class="trial-box" id="trialBox">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
@@ -368,7 +368,7 @@ select option{background:#0b1822}
           </div>
           <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn primary" id="btnAtivarTrial" onclick="ativarTrial()" style="display:none">Ativar Trial Gratuito 15 dias</button>
-            <a class="btn" style="border-color:rgba(240,191,107,.3);color:var(--gold)" href="mailto:comercial@soluscrt.com?subject=Quero+assinar+o+SolusCRT">Falar com Vendas</a>
+            <a class="btn" style="border-color:rgba(240,191,107,.3);color:var(--gold)" href="mailto:comercial@soluscrt.com?subject=Quero+assinar+o+SoloCRT">Falar com Vendas</a>
           </div>
         </div>
       </div>
@@ -784,7 +784,7 @@ select option{background:#0b1822}
       <div class="section-head">
         <div>
           <div class="section-title">Sistemas corporativos, clínicas e eSocial</div>
-          <div class="section-sub">Conecte o SolusCRT a ERPs, RH, medicina do trabalho, parceiros clínicos e fluxos oficiais de SST</div>
+          <div class="section-sub">Conecte o SoloCRT a ERPs, RH, medicina do trabalho, parceiros clínicos e fluxos oficiais de SST</div>
         </div>
         <button class="btn sm" onclick="loadIntegracoes()">🔄 Atualizar</button>
       </div>
@@ -1064,7 +1064,7 @@ select option{background:#0b1822}
         <div class="section-head">
           <div>
             <div class="section-title">Chaves de API</div>
-            <div class="section-sub">Acesso programático ao SolusCRT via API REST</div>
+            <div class="section-sub">Acesso programático ao SoloCRT via API REST</div>
           </div>
           <button class="btn sm" onclick="loadChaves()">🔄 Atualizar</button>
         </div>
@@ -1159,7 +1159,7 @@ select option{background:#0b1822}
 
       <div class="card glass">
         <div class="section-title">Adicionar Webhook</div>
-        <div class="section-sub">Receba eventos SST do SolusCRT na sua plataforma</div>
+        <div class="section-sub">Receba eventos SST do SoloCRT na sua plataforma</div>
         <form class="form-grid" id="formWebhook" onsubmit="criarWebhook(event)" style="margin-top:4px">
           <div class="field">
             <label>URL de Destino</label>
@@ -1186,7 +1186,7 @@ select option{background:#0b1822}
 
     <div class="card glass">
       <div class="section-title">Payload de Exemplo — <code style="font-size:.82rem;color:var(--accent)">aso_emitido</code></div>
-      <div class="section-sub">Estrutura JSON enviada pelo SolusCRT quando um ASO é emitido e assinado</div>
+      <div class="section-sub">Estrutura JSON enviada pelo SoloCRT quando um ASO é emitido e assinado</div>
       <div style="background:rgba(0,0,0,.3);border-radius:14px;padding:16px;border:1px solid var(--soft);overflow-x:auto">
 <pre style="font-size:.78rem;color:#a0dfff;white-space:pre-wrap">{
   "evento": "aso_emitido",
@@ -1811,7 +1811,7 @@ async function loadTrial() {
 
   const trial = d.trial;
   if (trial) {
-    set("trialNome", "Trial SolusCRT");
+    set("trialNome", "Trial SoloCRT");
     const diasRest = trial.dias_restantes || 0;
     const diasTotal = 14;
     const pct = Math.max(0, Math.min(100, Math.round((diasTotal - diasRest) / diasTotal * 100)));

@@ -1,8 +1,8 @@
-# SolusCRT Saude - Precificacao por setor
+# SoloCRT Saude - Precificacao por setor
 
 ## Posicionamento
 
-O SolusCRT deve ser vendido como sala de controle epidemiologica com IA, app populacional, mapa de risco, fontes oficiais brasileiras, alertas territoriais e governanca LGPD. Nao deve ser apresentado como apenas um mapa.
+O SoloCRT deve ser vendido como sala de controle epidemiologica com IA, app populacional, mapa de risco, fontes oficiais brasileiras, alertas territoriais e governanca LGPD. Nao deve ser apresentado como apenas um mapa.
 
 ## Empresas B2B
 

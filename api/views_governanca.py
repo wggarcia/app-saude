@@ -314,7 +314,7 @@ def api_governanca_semanal(request):
         pauta.append({"prioridade": 3, "topico": "Métricas dentro do esperado", "acao": "Manter cadência de crescimento e execução", "owner": "Time"})
 
     return JsonResponse({
-        "plataforma": "SolusCRT",
+        "plataforma": "SoloCRT",
         "semana": f"S{semana}/{hoje.year}",
         "gerado_em": str(hoje),
         "kpis_semana": {

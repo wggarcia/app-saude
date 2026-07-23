@@ -39,24 +39,24 @@ def _criar_token(empresa, usuario):
 
 def _enviar_email_reset(email, nome, token_obj):
     link = f"{settings.PUBLIC_BASE_URL}/redefinir-senha/{token_obj.token}/"
-    assunto = "Redefinição de senha — SolusCRT"
+    assunto = "Redefinição de senha — SoloCRT"
     corpo_text = (
         f"Olá, {nome}!\n\n"
-        f"Recebemos uma solicitação para redefinir a senha da sua conta SolusCRT.\n\n"
+        f"Recebemos uma solicitação para redefinir a senha da sua conta SoloCRT.\n\n"
         f"Clique no link abaixo para criar uma nova senha (válido por {_TOKEN_TTL_HOURS}h):\n"
         f"{link}\n\n"
         f"Se você não solicitou isso, ignore este e-mail — sua senha não será alterada.\n\n"
-        f"Equipe SolusCRT"
+        f"Equipe SoloCRT"
     )
     corpo_html = f"""
     <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#1a2840">
       <div style="background:linear-gradient(135deg,#03111d,#0e2840);padding:28px 32px;border-radius:16px 16px 0 0;text-align:center">
-        <span style="font-size:1.5rem;font-weight:800;color:#50e0d0">SolusCRT</span>
+        <span style="font-size:1.5rem;font-weight:800;color:#50e0d0">SoloCRT</span>
       </div>
       <div style="background:#f7faff;padding:32px;border-radius:0 0 16px 16px;border:1px solid #dce8f5">
         <p style="margin:0 0 16px;font-size:1rem">Olá, <strong>{nome}</strong>!</p>
         <p style="margin:0 0 24px;color:#4a6080">
-          Recebemos uma solicitação para redefinir a senha da sua conta SolusCRT.
+          Recebemos uma solicitação para redefinir a senha da sua conta SoloCRT.
           Clique no botão abaixo para criar uma nova senha.
         </p>
         <div style="text-align:center;margin:24px 0">

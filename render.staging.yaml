@@ -33,7 +33,7 @@ services:
       - key: ASAAS_BASE_URL
         value: https://sandbox.asaas.com/api/v3
       - key: ASAAS_USER_AGENT
-        value: SolusCRT-Saude-Staging/1.0
+        value: SoloCRT-Saude-Staging/1.0
       - key: SOLUSCRT_BOOTSTRAP_RESET_PASSWORDS
         value: "false"
       - key: DJANGO_ALLOWED_HOSTS

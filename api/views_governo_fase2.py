@@ -1274,7 +1274,7 @@ def api_governo_plataforma_webhook_testar(request, webhook_id):
     payload = {
         "evento": "teste.webhook",
         "empresa_id": empresa.id,
-        "mensagem": "Payload de teste disparado manualmente pela Plataforma TI do SolusCRT.",
+        "mensagem": "Payload de teste disparado manualmente pela Plataforma TI do SoloCRT.",
         "disparado_em": timezone.now().isoformat(),
     }
     try:

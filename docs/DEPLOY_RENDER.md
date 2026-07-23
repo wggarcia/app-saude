@@ -1,4 +1,4 @@
-# Deploy Render - SolusCRT Saude
+# Deploy Render - SoloCRT Saude
 
 Runbook de deploy seguro no Render. Use este arquivo como roteiro operacional; nao cole segredos em commits, prints ou issues.
 

@@ -272,7 +272,7 @@ EOF
   fi
 }
 
-echo "=== SolusCRT • Remote Smoke Test ==="
+echo "=== SoloCRT • Remote Smoke Test ==="
 echo "BASE_URL: $BASE_URL"
 echo "STRICT_AUTH: $STRICT_AUTH"
 

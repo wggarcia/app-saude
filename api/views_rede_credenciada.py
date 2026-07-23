@@ -1,5 +1,5 @@
 """
-Rede Credenciada SolusCRT — Clínicas Parceiras
+Rede Credenciada SoloCRT — Clínicas Parceiras
 Mapa nacional de clínicas, SESI, SESC, AMEs, laboratórios parceiros.
 Meta: superar a rede do SOC (3.000+ clínicas).
 
@@ -164,7 +164,7 @@ def api_rede_credenciada_detalhe(request, clinica_id):
 
 
 def api_rede_credenciar(request):
-    """Clínica solicita credenciamento na rede SolusCRT."""
+    """Clínica solicita credenciamento na rede SoloCRT."""
     if request.method != "POST":
         return JsonResponse({"erro": "Use POST"}, status=405)
     data = _json(request)

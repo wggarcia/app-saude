@@ -1,4 +1,4 @@
-# Executive Scorecard - SolusCRT Saude
+# Executive Scorecard - SoloCRT Saude
 
 Use este scorecard semanal para parar de avaliar o produto por volume de feature e passar a avaliar por capacidade de escala.
 

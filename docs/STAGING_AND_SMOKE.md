@@ -1,4 +1,4 @@
-# Staging And Smoke - SolusCRT Saude
+# Staging And Smoke - SoloCRT Saude
 
 Este arquivo define o caminho minimo para ter um ambiente de staging separado e um smoke test remoto reproduzivel.
 

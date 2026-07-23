@@ -149,7 +149,7 @@ def _gerar_xml_nfe(nota: NotaFiscalEletronica, cred: CredenciaisIntegracoes) -> 
     _tx(ide, ns, "indFinal","1")  # consumidor final
     _tx(ide, ns, "indPres", "1")  # presencial
     _tx(ide, ns, "procEmi", "0")
-    _tx(ide, ns, "verProc", "SolusCRT 1.0")
+    _tx(ide, ns, "verProc", "SoloCRT 1.0")
 
     # ── emit ─────────────────────────────────────────────────────────────────
     emit = etree.SubElement(inf, f"{{{ns}}}emit")
@@ -250,7 +250,7 @@ def _gerar_xml_nfe(nota: NotaFiscalEletronica, cred: CredenciaisIntegracoes) -> 
 
     # ── infAdic ───────────────────────────────────────────────────────────────
     infadic = etree.SubElement(inf, f"{{{ns}}}infAdic")
-    _tx(infadic, ns, "infCpl", "Documento emitido pela plataforma SolusCRT")
+    _tx(infadic, ns, "infCpl", "Documento emitido pela plataforma SoloCRT")
 
     return etree.tostring(nfe, encoding="unicode", xml_declaration=False)
 

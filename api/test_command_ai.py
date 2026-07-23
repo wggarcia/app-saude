@@ -77,7 +77,7 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
             sessao_ativa_chave="sessao-command-ai",
         )
         self.empresa_publica = Empresa.objects.create(
-            nome="SolusCRT Populacao",
+            nome="SoloCRT Populacao",
             email="populacao@soluscrt.com",
             senha=make_password("publico_app"),
             ativo=True,
@@ -232,7 +232,7 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
         response = self.client.get("/sala-decisao-ia/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SolusCRT Sala de Decisão IA")
+        self.assertContains(response, "SoloCRT Sala de Decisão IA")
         self.assertContains(response, "Ambiente Hospital")
         self.assertContains(response, "Ecossistema operacional")
         self.assertContains(response, "Radar concorrencial")
@@ -330,7 +330,7 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
         payload = build_command_ai_payload(empresa)
 
         self.assertEqual(payload["summary"]["setor"], "empresa")
-        self.assertEqual(payload["source"]["engine"], "SolusCRT corporativo")
+        self.assertEqual(payload["source"]["engine"], "SoloCRT corporativo")
         self.assertEqual(payload["enterprise_command_center"]["setor"], "empresa")
         self.assertIn("check-ins", payload["source"]["generated_from"])
         self.assertEqual(payload["recommendations"][0]["territory"], "Matriz")

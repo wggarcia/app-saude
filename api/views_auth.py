@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 def _provisionar_dono_por_ambiente(email, senha):
     env_email = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_EMAIL", "").strip().lower()
     env_senha = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_PASSWORD", "").strip()
-    env_nome = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_NOME", "Operacao SolusCRT").strip()
+    env_nome = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_NOME", "Operacao SoloCRT").strip()
 
     if email.strip().lower() != env_email or senha != env_senha:
         return None
@@ -45,7 +45,7 @@ def _provisionar_dono_por_ambiente(email, senha):
     dono, _ = DonoSaaS.objects.get_or_create(
         email=env_email,
         defaults={
-            "nome": env_nome or "Operacao SolusCRT",
+            "nome": env_nome or "Operacao SoloCRT",
             "senha": make_password(env_senha),
             "ativo": True,
         },

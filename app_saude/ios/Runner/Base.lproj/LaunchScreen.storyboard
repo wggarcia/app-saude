@@ -32,7 +32,7 @@
                                     <constraint firstItem="E1n-Jn-Ms9" firstAttribute="centerY" secondItem="Brd-Z1-Wx1" secondAttribute="centerY" id="2z8-zY-yRU"/>
                                 </constraints>
                             </view>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="SolusCRT Saude" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="iPf-Qj-TnA">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="SoloCRT Saude" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="iPf-Qj-TnA">
                                 <rect key="frame" x="110" y="466" width="195" height="30"/>
                                 <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="24"/>
                                 <color key="textColor" red="0.93333333329999998" green="0.97254901960000005" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

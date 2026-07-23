@@ -121,7 +121,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       icon: Icons.verified_user_outlined,
                       title: 'Termos de Uso',
                       summary:
-                          'O SolusCRT Saúde é um aplicativo privado e gratuito da SolusCRT para acompanhamento de sinais de saúde da comunidade. O app permite envio voluntário de sinais de saúde para apoiar uma leitura territorial de tendências.',
+                          'O SoloCRT Saúde é um aplicativo privado e gratuito da SoloCRT para acompanhamento de sinais de saúde da comunidade. O app permite envio voluntário de sinais de saúde para apoiar uma leitura territorial de tendências.',
                       items: [
                         'Use o app de boa-fé, com informações verdadeiras e sem tentar manipular focos, volumes ou localidades.',
                         'O app não substitui consulta médica, diagnóstico, prescrição, emergência, SAMU, pronto atendimento ou orientação de profissional de saúde.',
@@ -149,7 +149,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                           'Dados de saúde e localização são sensíveis. Ao continuar, você autoriza o tratamento necessário para o funcionamento do radar de sinais de saúde.',
                       items: [
                         'O envio de sintomas é voluntário e deve representar a sua situação real no momento do envio.',
-                        'O SolusCRT pode aplicar filtros antifraude por aparelho, rede, repetição, qualidade de GPS e padrões de uso.',
+                        'O SoloCRT pode aplicar filtros antifraude por aparelho, rede, repetição, qualidade de GPS e padrões de uso.',
                         'Casos suspeitos exibidos no mapa não significam diagnóstico confirmado; dados oficiais e sinais colaborativos são camadas diferentes.',
                         'Em caso de falta de ar intensa, dor forte, confusão, agravamento ou emergência, procure atendimento médico imediatamente.',
                       ],
@@ -161,7 +161,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                           'A plataforma busca apoiar decisão responsável, mas depende de conectividade, permissões, disponibilidade de fontes, qualidade dos envios e validações técnicas.',
                       items: [
                         'Podemos atualizar controles, regras antifraude, formas de exibição, termos e políticas para melhorar segurança e conformidade.',
-                        'A SolusCRT pode exibir indicadores agregados e anônimos conforme finalidade adequada, permissão e perfil contratado.',
+                        'A SoloCRT pode exibir indicadores agregados e anônimos conforme finalidade adequada, permissão e perfil contratado.',
                         'Incidentes, abuso, fraude ou risco de segurança podem gerar bloqueio, auditoria, descarte de sinais e comunicações cabíveis.',
                         'Versão dos termos: ${LegalConsentService.currentVersion}.',
                       ],
@@ -170,7 +170,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                     _ConsentCheckbox(
                       value: _terms,
                       onChanged: (value) => setState(() => _terms = value),
-                      text: 'Li e aceito os Termos de Uso do SolusCRT Saúde.',
+                      text: 'Li e aceito os Termos de Uso do SoloCRT Saúde.',
                     ),
                     _ConsentCheckbox(
                       value: _privacy,
@@ -255,7 +255,7 @@ class _LegalHero extends StatelessWidget {
           ),
           SizedBox(height: 10),
           Text(
-            'Leia e aceite os termos para usar o SolusCRT Saúde com segurança, transparência e responsabilidade.',
+            'Leia e aceite os termos para usar o SoloCRT Saúde com segurança, transparência e responsabilidade.',
             style: TextStyle(
               color: Color(0xFFC1D6E2),
               fontSize: 16,

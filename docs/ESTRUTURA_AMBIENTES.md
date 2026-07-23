@@ -1,4 +1,4 @@
-# Estrutura dos ambientes SolusCRT
+# Estrutura dos ambientes SoloCRT
 
 Este repositório mantém três superfícies separadas. A regra é simples: código de um ambiente não deve nascer dentro do outro.
 

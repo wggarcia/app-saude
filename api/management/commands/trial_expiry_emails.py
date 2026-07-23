@@ -19,7 +19,7 @@ from api.models import Empresa, TrialEmpresa
 
 
 class Command(BaseCommand):
-    help = "Envia emails de aviso/expiração de trial para empresas SolusCRT"
+    help = "Envia emails de aviso/expiração de trial para empresas SoloCRT"
 
     def add_arguments(self, parser):
         parser.add_argument(

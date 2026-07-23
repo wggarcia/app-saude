@@ -890,7 +890,7 @@ def funcionario_minha_biometria(request):
 def funcionario_exportar_dados(request):
     """
     GET /api/funcionario/exportar-dados
-    Exporta, em um único JSON, todos os dados pessoais que o SolusCRT mantém
+    Exporta, em um único JSON, todos os dados pessoais que o SoloCRT mantém
     sobre o funcionário autenticado (LGPD Art. 18, direito de portabilidade).
     """
     if request.method != "GET":

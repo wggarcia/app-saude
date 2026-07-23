@@ -1,5 +1,5 @@
 """
-Email service — transactional emails sent by SolusCRT.
+Email service — transactional emails sent by SoloCRT.
 All calls are wrapped in try/except so email failures never break core flows.
 """
 import logging
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def _from():
-    return getattr(settings, "DEFAULT_FROM_EMAIL", "SolusCRT <noreply@soluscrt.com.br>")
+    return getattr(settings, "DEFAULT_FROM_EMAIL", "SoloCRT <noreply@soluscrt.com.br>")
 
 
 def enviar_email_boas_vindas(empresa):
@@ -19,7 +19,7 @@ def enviar_email_boas_vindas(empresa):
     try:
         nome = empresa.nome
         email = empresa.email
-        subject = "Bem-vindo ao SolusCRT — sua conta está pronta 🎉"
+        subject = "Bem-vindo ao SoloCRT — sua conta está pronta 🎉"
         body_html = f"""
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -47,10 +47,10 @@ h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">SolusCRT</div>
+  <div class="logo">SoloCRT</div>
   <div class="card">
     <h1>Olá, {nome}! 👋</h1>
-    <p class="sub">Sua conta SolusCRT está ativa e pronta para uso.</p>
+    <p class="sub">Sua conta SoloCRT está ativa e pronta para uso.</p>
     <p style="font-size:15px;line-height:1.6;color:#b0c4d8">
       Seja bem-vindo à plataforma de Saúde, Segurança do Trabalho e Inteligência Epidemiológica
       mais moderna do Brasil. Você está a poucos cliques de ter controle total sobre a saúde
@@ -86,7 +86,7 @@ h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
   </div>
   <div class="footer">
     Precisa de ajuda? Entre em contato: <a href="mailto:suporte@soluscrt.com.br" style="color:#00c9a7">suporte@soluscrt.com.br</a><br>
-    SolusCRT · Saúde Ocupacional e Inteligência Epidemiológica<br>
+    SoloCRT · Saúde Ocupacional e Inteligência Epidemiológica<br>
     <a href="https://soluscrt.com.br/privacidade/" style="color:#7b90b0">Política de Privacidade</a> ·
     <a href="https://soluscrt.com.br/termos/" style="color:#7b90b0">Termos de Uso</a>
   </div>
@@ -96,7 +96,7 @@ h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
 """
         body_text = (
             f"Olá, {nome}!\n\n"
-            "Sua conta SolusCRT está ativa e pronta para uso.\n\n"
+            "Sua conta SoloCRT está ativa e pronta para uso.\n\n"
             "Acesse: https://app.soluscrt.com.br/login-empresa/\n\n"
             "Primeiros passos:\n"
             "1. Cadastre seus funcionários\n"
@@ -121,7 +121,7 @@ def enviar_email_trial_expirando(empresa, dias_restantes):
     try:
         base_url = _base_url()
         urgencia = "🔴 Urgente — " if dias_restantes <= 1 else "⏳ "
-        subject = f"{urgencia}Seu trial SolusCRT expira em {dias_restantes} dia{'s' if dias_restantes != 1 else ''}"
+        subject = f"{urgencia}Seu trial SoloCRT expira em {dias_restantes} dia{'s' if dias_restantes != 1 else ''}"
         corpo_dias = (
             "Seu período de teste expira <strong>hoje</strong>."
             if dias_restantes <= 1
@@ -149,12 +149,12 @@ h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">SolusCRT</div>
+  <div class="logo">SoloCRT</div>
   <div class="card">
     <div class="warn-bar">⏰ {corpo_dias}</div>
     <h1>Não perca o acesso, {empresa.nome}!</h1>
     <p style="font-size:14px;color:#b0c4d8;line-height:1.7;margin-bottom:16px">
-      Você explorou o SolusCRT durante o período de teste. Para continuar com acesso completo
+      Você explorou o SoloCRT durante o período de teste. Para continuar com acesso completo
       à plataforma — EPIs, ASOs, eSocial, exames, dashboards e muito mais — ative sua assinatura agora.
     </p>
     <div class="features">
@@ -168,12 +168,12 @@ h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
       Ou entre em contato: <a href="mailto:comercial@soluscrt.com.br" style="color:#00c9a7">comercial@soluscrt.com.br</a>
     </p>
   </div>
-  <div class="footer">SolusCRT · <a href="mailto:suporte@soluscrt.com.br" style="color:#7b90b0">suporte@soluscrt.com.br</a></div>
+  <div class="footer">SoloCRT · <a href="mailto:suporte@soluscrt.com.br" style="color:#7b90b0">suporte@soluscrt.com.br</a></div>
 </div>
 </body>
 </html>"""
         body_text = (
-            f"SolusCRT — trial expira em {dias_restantes} dia(s)\n"
+            f"SoloCRT — trial expira em {dias_restantes} dia(s)\n"
             f"Olá, {empresa.nome}!\n"
             f"Ative sua assinatura em: {base_url}/pagamento/\n"
             "Dúvidas: comercial@soluscrt.com.br\n"
@@ -194,7 +194,7 @@ def enviar_email_trial_expirado(empresa):
     """Send email when trial has just expired."""
     try:
         base_url = _base_url()
-        subject = "🔒 Seu acesso SolusCRT foi suspenso — reative agora"
+        subject = "🔒 Seu acesso SoloCRT foi suspenso — reative agora"
         body_html = f"""
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -215,12 +215,12 @@ h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">SolusCRT</div>
+  <div class="logo">SoloCRT</div>
   <div class="card">
     <div class="danger-bar">🔒 Período de trial encerrado — acesso suspenso</div>
     <h1>Seus dados estão seguros, {empresa.nome}</h1>
     <p style="font-size:14px;color:#b0c4d8;line-height:1.7">
-      Seu período de avaliação gratuita do SolusCRT encerrou. Seus dados continuam armazenados
+      Seu período de avaliação gratuita do SoloCRT encerrou. Seus dados continuam armazenados
       e seguros — basta reativar a assinatura para retomar o acesso imediatamente.
     </p>
     <a href="{base_url}/pagamento/" class="btn">Reativar minha conta →</a>
@@ -231,12 +231,12 @@ h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
       <a href="mailto:comercial@soluscrt.com.br" style="color:#00c9a7">comercial@soluscrt.com.br</a>
     </p>
   </div>
-  <div class="footer">SolusCRT · <a href="mailto:suporte@soluscrt.com.br" style="color:#7b90b0">suporte@soluscrt.com.br</a></div>
+  <div class="footer">SoloCRT · <a href="mailto:suporte@soluscrt.com.br" style="color:#7b90b0">suporte@soluscrt.com.br</a></div>
 </div>
 </body>
 </html>"""
         body_text = (
-            f"SolusCRT — trial expirado\n"
+            f"SoloCRT — trial expirado\n"
             f"Olá, {empresa.nome}!\n"
             "Seu período de avaliação encerrou. Seus dados estão seguros por 30 dias.\n"
             f"Reative em: {base_url}/pagamento/\n"
@@ -281,7 +281,7 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">SolusCRT</div>
+  <div class="logo">SoloCRT</div>
   <div class="card">
     <h1>✅ Pagamento confirmado</h1>
     <p style="color:#7b90b0;font-size:14px;margin-bottom:20px">Sua assinatura está ativa.</p>
@@ -322,7 +322,7 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
 #  PLANO DE SAÚDE — Emails transacionais enterprise
 # ════════════════════════════════════════════════════════════════════════════════
 
-def _html_base(conteudo_card: str, titulo_rodape: str = "SolusCRT · Plano de Saúde") -> str:
+def _html_base(conteudo_card: str, titulo_rodape: str = "SoloCRT · Plano de Saúde") -> str:
     """Wrapper HTML com design system dark-mode usado em todos os emails."""
     return f"""<!DOCTYPE html>
 <html lang="pt-br">
@@ -360,7 +360,7 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px;line-height:1.3}}
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">SolusCRT</div>
+  <div class="logo">SoloCRT</div>
   <div class="card">
     {conteudo_card}
   </div>
@@ -428,7 +428,7 @@ def enviar_email_novo_contrato(contrato) -> None:
     </div>
     <a href="{base_url}/plano-saude/gestao/" class="btn">Ver no painel →</a>
     """
-    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    html = _html_base(card, f"SoloCRT · Operadora — {empresa.nome}")
     text = (
         f"Novo contrato corporativo cadastrado\n"
         f"Empresa: {contrato.razao_social}\n"
@@ -494,7 +494,7 @@ def enviar_email_teleconsulta_autorizada(tele) -> None:
       <a href="mailto:suporte@soluscrt.com.br" style="color:#00c9a7">suporte@soluscrt.com.br</a>
     </p>
     """
-    html = _html_base(card, "SolusCRT · Plano de Saúde — Telemedicina")
+    html = _html_base(card, "SoloCRT · Plano de Saúde — Telemedicina")
     text = (
         f"Teleconsulta autorizada!\n"
         f"Beneficiário: {beneficiario.nome}\n"
@@ -538,7 +538,7 @@ def enviar_email_guia_odonto_aprovada(guia) -> None:
       A guia tem validade de <strong>30 dias</strong> a partir desta data.
     </div>
     """
-    html = _html_base(card, "SolusCRT · Plano de Saúde — Odontologia")
+    html = _html_base(card, "SoloCRT · Plano de Saúde — Odontologia")
     text = (
         f"Guia odontológica autorizada\n"
         f"Beneficiário: {guia.beneficiario.nome}\n"
@@ -586,7 +586,7 @@ def enviar_email_guia_odonto_negada(guia) -> None:
       <a href="mailto:autorizacao@soluscrt.com.br" style="color:#00c9a7">autorizacao@soluscrt.com.br</a>
     </p>
     """
-    html = _html_base(card, "SolusCRT · Plano de Saúde — Odontologia")
+    html = _html_base(card, "SoloCRT · Plano de Saúde — Odontologia")
     text = (
         f"Guia odontológica não autorizada\n"
         f"Beneficiário: {guia.beneficiario.nome}\n"
@@ -648,7 +648,7 @@ def enviar_email_sla_breach_critico(empresa, breaches: list) -> None:
       Acesse a aba <strong>Regulação &amp; SLA</strong> no painel para ver todas as guias e tomar ação.
     </p>
     """
-    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    html = _html_base(card, f"SoloCRT · Operadora — {empresa.nome}")
     text = (
         f"ALERTA SLA — {qtd} guia(s) com prazo ANS violado\n"
         f"Operadora: {empresa.nome}\n\n"
@@ -706,7 +706,7 @@ def enviar_email_auditoria_alerta(empresa, nome_benef: str, score: int, fatores:
       Acesse a aba <strong>Auditoria Médica IA</strong> para ver o dossiê completo.
     </p>
     """
-    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    html = _html_base(card, f"SoloCRT · Operadora — {empresa.nome}")
     text = (
         f"ALERTA AUDITORIA — Risco {nivel}\n"
         f"Operadora: {empresa.nome}\n"
@@ -764,7 +764,7 @@ def enviar_email_novo_beneficiario(empresa, beneficiario) -> None:
       Dúvidas? Fale com a operadora: <a href="mailto:{empresa.email}" style="color:#00c9a7">{empresa.email}</a>
     </p>
     """
-    html = _html_base(card, f"SolusCRT · {empresa.nome} — Plano de Saúde")
+    html = _html_base(card, f"SoloCRT · {empresa.nome} — Plano de Saúde")
     text = (
         f"Bem-vindo ao plano de saúde!\n"
         f"Nome: {beneficiario.nome}\n"
@@ -785,7 +785,7 @@ def enviar_email_novo_beneficiario(empresa, beneficiario) -> None:
 
 def enviar_convite_app_funcionario(funcionario, empresa, email_destino: str) -> None:
     """
-    Envia ao funcionário um convite para registrar-se no App Ocupacional SolusCRT.
+    Envia ao funcionário um convite para registrar-se no App Ocupacional SoloCRT.
     O email inclui instruções de cadastro e link para download.
 
     Args:
@@ -822,11 +822,11 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">SolusCRT</div>
+  <div class="logo">SoloCRT</div>
   <div class="card">
     <h1>📱 Acesse seu App Ocupacional</h1>
     <p class="sub">
-      <strong>{nome_empresa}</strong> convidou você a acessar o <strong>App Ocupacional SolusCRT</strong>
+      <strong>{nome_empresa}</strong> convidou você a acessar o <strong>App Ocupacional SoloCRT</strong>
       — veja seus ASOs, exames, EPIs e treinamentos diretamente no celular.
     </p>
 
@@ -837,8 +837,8 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
     <div class="step">
       <div class="step-num">1</div>
       <div>
-        <div class="step-title">Baixe o App Ocupacional SolusCRT</div>
-        <div class="step-desc">Disponível na App Store (iOS). Procure por <em>"SolusCRT Ocupacional"</em>.</div>
+        <div class="step-title">Baixe o App Ocupacional SoloCRT</div>
+        <div class="step-desc">Disponível na App Store (iOS). Procure por <em>"SoloCRT Ocupacional"</em>.</div>
       </div>
     </div>
     <div class="step">
@@ -871,7 +871,7 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
     </div>
 
     <div class="footer">
-      Este convite foi enviado pela empresa <strong>{nome_empresa}</strong> via SolusCRT.<br>
+      Este convite foi enviado pela empresa <strong>{nome_empresa}</strong> via SoloCRT.<br>
       Se você não esperava este email, ignore-o com segurança.
     </div>
   </div>
@@ -881,17 +881,17 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
 
     text = (
         f"Olá, {nome_func}!\n\n"
-        f"{nome_empresa} convidou você a acessar o App Ocupacional SolusCRT.\n\n"
+        f"{nome_empresa} convidou você a acessar o App Ocupacional SoloCRT.\n\n"
         f"COMO CADASTRAR:\n"
-        f"1. Baixe o App Ocupacional SolusCRT na App Store.\n"
+        f"1. Baixe o App Ocupacional SoloCRT na App Store.\n"
         f"2. Toque em 'Primeiro acesso' e informe seu CPF: {cpf_formatado}\n"
         f"3. Crie um e-mail e senha de acesso.\n"
         f"4. Pronto! Consulte seus ASOs, exames, EPIs e treinamentos.\n\n"
         f"Dúvidas? Fale com o RH de {nome_empresa}.\n\n"
-        f"— SolusCRT"
+        f"— SoloCRT"
     )
     _send(
-        subject=f"📱 {nome_empresa} convidou você para o App Ocupacional SolusCRT",
+        subject=f"📱 {nome_empresa} convidou você para o App Ocupacional SoloCRT",
         to=email_destino,
         html=html,
         text=text,
@@ -908,7 +908,7 @@ def enviar_email_renovacao_proxima(empresa, dias_restantes):
     )
     card = f"""
     <span class="badge-warn">Renovação</span>
-    <h1>Seu plano SolusCRT vence {quando}</h1>
+    <h1>Seu plano SoloCRT vence {quando}</h1>
     <div class="sub">Olá, {empresa.nome}!</div>
     <div class="warn-bar">Para manter seu acesso ativo e sem interrupção, renove
     seu plano antes do vencimento.</div>
@@ -917,11 +917,11 @@ def enviar_email_renovacao_proxima(empresa, dias_restantes):
     <a class="btn" href="{base_url}/pagamento/">Renovar agora</a>
     <p style="font-size:12px;color:#7b90b0">Dúvidas? comercial@soluscrt.com.br</p>
     """
-    html = _html_base(card, "SolusCRT · Gestão de Contrato")
-    text = (f"SolusCRT — seu plano vence {quando}.\n"
+    html = _html_base(card, "SoloCRT · Gestão de Contrato")
+    text = (f"SoloCRT — seu plano vence {quando}.\n"
             f"Renove em: {base_url}/pagamento/\n"
             "Dúvidas: comercial@soluscrt.com.br\n")
-    _send(f"{urg}Seu plano SolusCRT vence {quando}", empresa.email, html, text)
+    _send(f"{urg}Seu plano SoloCRT vence {quando}", empresa.email, html, text)
 
 
 def enviar_email_contrato_vencido(empresa):
@@ -936,11 +936,11 @@ def enviar_email_contrato_vencido(empresa):
     <a class="btn" href="{base_url}/pagamento/">Reativar meu acesso</a>
     <p style="font-size:12px;color:#7b90b0">Precisa de ajuda? comercial@soluscrt.com.br</p>
     """
-    html = _html_base(card, "SolusCRT · Gestão de Contrato")
-    text = ("SolusCRT — seu plano venceu e o acesso foi pausado.\n"
+    html = _html_base(card, "SoloCRT · Gestão de Contrato")
+    text = ("SoloCRT — seu plano venceu e o acesso foi pausado.\n"
             f"Reative em: {base_url}/pagamento/\n"
             "Ajuda: comercial@soluscrt.com.br\n")
-    _send("🔴 Seu acesso SolusCRT foi pausado — renove para reativar", empresa.email, html, text)
+    _send("🔴 Seu acesso SoloCRT foi pausado — renove para reativar", empresa.email, html, text)
 
 
 def enviar_codigo_verificacao(email: str, nome: str, codigo: str) -> None:
@@ -951,7 +951,7 @@ def enviar_codigo_verificacao(email: str, nome: str, codigo: str) -> None:
     <h1>Confirme seu e-mail</h1>
     <div class="sub">Olá, {nome}!</div>
     <p style="font-size:15px;line-height:1.6;color:#b0c4d8">
-      Para ativar sua conta SolusCRT insira o código abaixo na tela de verificação.
+      Para ativar sua conta SoloCRT insira o código abaixo na tela de verificação.
     </p>
     <div style="margin:28px auto;text-align:center;background:rgba(0,201,167,.08);
       border:1px solid rgba(0,201,167,.25);border-radius:16px;padding:28px 20px;
@@ -961,21 +961,21 @@ def enviar_codigo_verificacao(email: str, nome: str, codigo: str) -> None:
       <div style="color:#7b90b0;font-size:.8rem;margin-top:10px;">Válido por 15 minutos</div>
     </div>
     <p style="font-size:13px;color:#7b90b0">
-      Se você não criou uma conta no SolusCRT ignore este e-mail com segurança.
+      Se você não criou uma conta no SoloCRT ignore este e-mail com segurança.
     </p>
     <a class="btn" href="{base_url}/verificar-email/">Verificar meu e-mail</a>
     <p style="font-size:12px;color:#7b90b0;margin-top:18px;">
       Precisa de ajuda? <a href="mailto:suporte@soluscrt.com.br" style="color:#00c9a7">suporte@soluscrt.com.br</a>
     </p>
         """
-        html = _html_base(card, "SolusCRT · Verificação de E-mail")
+        html = _html_base(card, "SoloCRT · Verificação de E-mail")
         text = (
-            f"SolusCRT — confirme seu e-mail\n\n"
+            f"SoloCRT — confirme seu e-mail\n\n"
             f"Código: {codigo}\n"
             f"Válido por 15 minutos.\n\n"
             f"Acesse: {base_url}/verificar-email/\n"
             "Suporte: suporte@soluscrt.com.br\n"
         )
-        _send("Seu código de verificação SolusCRT", email, html, text)
+        _send("Seu código de verificação SoloCRT", email, html, text)
     except Exception as exc:
         logger.error("email codigo_verificacao falhou para %s: %s", email, exc)

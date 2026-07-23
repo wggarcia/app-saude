@@ -1,5 +1,5 @@
 """
-Módulo Financeiro para Clínicas — SolusCRT SST
+Módulo Financeiro para Clínicas — SoloCRT SST
 Faturamento, contas a pagar/receber, TISS, glosas, relatórios.
 
 Endpoints:

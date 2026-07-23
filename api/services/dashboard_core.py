@@ -444,7 +444,7 @@ def build_owner_resumo_payload(dono):
 
     # ── Carteira por SEGMENTO real (setor do pacote): empresa(SST)/farmacia/
     # hospital/governo/rede/plano_saude — visão que faltava no console.
-    # 5 segmentos reais da SolusCRT. "rede" NÃO é um segmento próprio — é a
+    # 5 segmentos reais da SoloCRT. "rede" NÃO é um segmento próprio — é a
     # camada multiunidades (rede hospitalar / rede de farmácias) acessada de
     # dentro de Hospital/Farmácia; por isso é consolidada em Hospital aqui.
     SEGMENTO_META = {

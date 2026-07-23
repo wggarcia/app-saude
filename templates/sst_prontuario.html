@@ -4,7 +4,7 @@
 {% include "_favicon.html" %}
 
 <meta charset="UTF-8">
-<title>SolusCRT · Prontuário — {{ funcionario_nome }}</title>
+<title>SoloCRT · Prontuário — {{ funcionario_nome }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -457,7 +457,7 @@ function setHTML(id, value) {
 }
 
 function renderFuncionario(f) {
-  document.title = 'SolusCRT · Prontuário — ' + f.nome;
+  document.title = 'SoloCRT · Prontuário — ' + f.nome;
   setText('bc-nome', f.nome);
   setText('id-nome', f.nome);
   setText('id-cargo', f.cargo + (f.setor ? ' · ' + f.setor : ''));

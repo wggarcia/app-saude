@@ -629,7 +629,7 @@ def panorama_brasil_oficial_payload(force=False):
         "fontes": FONTES_OFICIAIS,
         "camadas": {
             "colaborativa_tempo_real": {
-                "origem": "App SolusCRT Saude",
+                "origem": "App SoloCRT Saude",
                 "uso": "captar sinais iniciais por bairro, municipio e estado",
                 "controle": "antifraude, limite por rede/aparelho e confianca do sinal",
             },

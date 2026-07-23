@@ -44,7 +44,7 @@ class _TelaHomeState extends State<TelaHome> {
     final abrirAjustes = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Ativar localização do SolusCRT'),
+            title: const Text('Ativar localização do SoloCRT'),
             content: const Text(
               'O app precisa pedir permissão de localização ao iPhone para mostrar focos perto de você e enviar sintomas no município correto. Toque em Permitir quando o iPhone solicitar.',
             ),
@@ -432,7 +432,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
       slivers: [
         SliverAppBar.large(
           pinned: true,
-          title: const Text('SolusCRT Saúde'),
+          title: const Text('SoloCRT Saúde'),
           backgroundColor: const Color(0xFF04131F),
           foregroundColor: Colors.white,
           actions: [

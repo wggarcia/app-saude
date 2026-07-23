@@ -88,7 +88,7 @@ def _gerar_xml_s2210(cat, cfg):
     SubElement(ide, "indRetif").text = "1"
     SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
-    SubElement(ide, "verProc").text = "SolusCRT_1.0"
+    SubElement(ide, "verProc").text = "SoloCRT_1.0"
 
     # ideEmpregador
     emp = SubElement(evt, "ideEmpregador")
@@ -163,7 +163,7 @@ def _gerar_xml_s2220(aso, cfg):
     SubElement(ide, "indRetif").text = "1"
     SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
-    SubElement(ide, "verProc").text = "SolusCRT_1.0"
+    SubElement(ide, "verProc").text = "SoloCRT_1.0"
 
     emp = SubElement(evt, "ideEmpregador")
     SubElement(emp, "tpInsc").text = "1"
@@ -223,7 +223,7 @@ def _gerar_xml_s2230(afastamento, cfg):
     SubElement(ide, "indRetif").text = "1"
     SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
-    SubElement(ide, "verProc").text = "SolusCRT_1.0"
+    SubElement(ide, "verProc").text = "SoloCRT_1.0"
 
     emp = SubElement(evt, "ideEmpregador")
     SubElement(emp, "tpInsc").text = "1"
@@ -270,7 +270,7 @@ def _gerar_xml_s2240(empresa, cfg, periodo=None, posto=None):
     SubElement(ide, "indRetif").text = "1"
     SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
-    SubElement(ide, "verProc").text = "SolusCRT_1.0"
+    SubElement(ide, "verProc").text = "SoloCRT_1.0"
     SubElement(ide, "perApur").text = periodo
 
     emp = SubElement(evt, "ideEmpregador")

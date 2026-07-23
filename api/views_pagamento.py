@@ -235,7 +235,7 @@ def _asaas_request(method, path, payload=None, query=None):
         raise RuntimeError("ASAAS_API_KEY nao configurada.")
 
     base_url = (getattr(settings, "ASAAS_BASE_URL", "https://api.asaas.com/v3") or "").strip().rstrip("/")
-    user_agent = (getattr(settings, "ASAAS_USER_AGENT", "") or "SolusCRT-Saude/1.0").strip()
+    user_agent = (getattr(settings, "ASAAS_USER_AGENT", "") or "SoloCRT-Saude/1.0").strip()
     url = f"{base_url}{path}"
     if query:
         url = f"{url}?{urlencode(query)}"
@@ -434,7 +434,7 @@ def criar_pagamento(request, empresa_id=None):
     try:
         payment_id, checkout_url = _asaas_criar_pagamento(
             empresa, valor,
-            f"{pacote['label']} - {plano.upper()} SolusCRT",
+            f"{pacote['label']} - {plano.upper()} SoloCRT",
             cpf_cnpj,
         )
         _registrar_evento_financeiro(

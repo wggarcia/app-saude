@@ -1,10 +1,10 @@
-# SolusCRT Corporativo
+# SoloCRT Corporativo
 
 Blueprint do produto `empresa` como um ambiente proprio de saude ocupacional, desenvolvimento humano e continuidade operacional, preservando os ambientes epidemiologicos existentes (`governo`, `hospital`, `farmacia`).
 
 ## 1. Decisao de produto
 
-O ambiente `empresa` deixa de ser uma variacao do dashboard epidemiologico setorial e passa a ser um segundo produto forte dentro do ecossistema SolusCRT.
+O ambiente `empresa` deixa de ser uma variacao do dashboard epidemiologico setorial e passa a ser um segundo produto forte dentro do ecossistema SoloCRT.
 
 ### Permanecem como estao
 
@@ -146,7 +146,7 @@ Responsabilidade:
 
 ## 6. Mapa dos modulos do produto
 
-Os modulos abaixo definem o coracao do SolusCRT Corporativo.
+Os modulos abaixo definem o coracao do SoloCRT Corporativo.
 
 ### 6.1 Saude Ocupacional
 
@@ -638,7 +638,7 @@ O modulo corporativo deve produzir recomendacoes com explicacao, nao apenas scor
 - o ecossistema ganha um segundo produto premium de verdade
 - a empresa passa a ter ferramentas reais de saude ocupacional e desenvolvimento
 - os colaboradores ganham um produto proprio, util e discreto
-- o SolusCRT amplia valor sem quebrar o epidemiologico
+- o SoloCRT amplia valor sem quebrar o epidemiologico
 
 ## 16. Decisao final
 

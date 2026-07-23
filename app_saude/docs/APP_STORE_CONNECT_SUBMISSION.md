@@ -1,12 +1,12 @@
-# SolusCRT Saude - App Store Connect
+# SoloCRT Saude - App Store Connect
 
 Guia operacional para preencher o App Store Connect da primeira versao iOS.
 
 ## Identificacao
 
-- Nome do app: SolusCRT Saude
+- Nome do app: SoloCRT Saude
 - Bundle ID: com.soluscrt.saude
-- SKU: SOLUSCRT-SAUDE-IOS-001
+- SKU: SOLOCRT-SAUDE-IOS-001
 - Idioma principal: Portugues (Brasil)
 - Versao: 1.0.0
 - Build recomendado para novo upload: 2
@@ -25,7 +25,7 @@ Acompanhe sinais de sintomas na sua regiao, visualize focos no mapa e receba ale
 
 ### Descricao
 
-O SolusCRT Saude e um aplicativo de monitoramento epidemiologico colaborativo para a populacao.
+O SoloCRT Saude e um aplicativo de monitoramento epidemiologico colaborativo para a populacao.
 
 Com ele, voce pode acompanhar o radar de sintomas da sua regiao, visualizar focos no mapa publico e enviar sinais sem cadastro nominal para apoiar a leitura territorial de riscos em saude.
 
@@ -38,7 +38,7 @@ Recursos principais:
 - Alertas publicos quando publicados por gestao autorizada.
 - Orientacoes preventivas sem substituir atendimento medico.
 
-Importante: o SolusCRT Saude nao realiza diagnostico medico, nao substitui consulta profissional e nao deve ser usado para emergencias. Em caso de agravamento, procure atendimento medico ou servico de urgencia.
+Importante: o SoloCRT Saude nao realiza diagnostico medico, nao substitui consulta profissional e nao deve ser usado para emergencias. Em caso de agravamento, procure atendimento medico ou servico de urgencia.
 
 ### Palavras-chave
 
@@ -73,7 +73,7 @@ Preencher com dados reais do responsavel pelo app.
 
 ### Notas para revisao
 
-O SolusCRT Saude e um app informativo e colaborativo de monitoramento epidemiologico territorial.
+O SoloCRT Saude e um app informativo e colaborativo de monitoramento epidemiologico territorial.
 
 O app coleta sintomas informados voluntariamente e localizacao enquanto o app esta em uso para exibir radar regional, mapa publico e alertas. O app nao fornece diagnostico medico, nao substitui atendimento profissional e nao e destinado a emergencias.
 

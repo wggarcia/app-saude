@@ -47,7 +47,7 @@ class DashboardCorporativoTests(TestCase):
         response = client.get("/dashboard-empresa/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SolusCRT")
+        self.assertContains(response, "SoloCRT")
         self.assertContains(response, "Saúde e Segurança do Trabalho")
         self.assertContains(response, 'href="/logout/"')
 
@@ -67,7 +67,7 @@ class DashboardCorporativoTests(TestCase):
         response = client.get("/api/empresa/resumo")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["product"]["name"], "SolusCRT Corporativo")
+        self.assertEqual(response.json()["product"]["name"], "SoloCRT Corporativo")
 
     def test_api_empresa_corporativo_resumo_expone_snapshot_de_competencia(self):
         empresa = self._empresa("Empresa Competencia", "empresa-competencia@example.com", "empresa_profissional_25")
@@ -103,7 +103,7 @@ class DashboardCorporativoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Check-ins seguros")
-        self.assertContains(response, "SolusCRT Colaborador")
+        self.assertContains(response, "SoloCRT Colaborador")
 
     def test_checkin_diario_alimenta_resumo_corporativo(self):
         empresa = self._empresa("Empresa Corporativa", "empresa-checkin@example.com", "empresa_profissional_25")

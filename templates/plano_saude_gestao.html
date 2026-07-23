@@ -670,7 +670,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div id="cpLockBanner" class="card" style="display:none;padding:28px;text-align:center;margin-bottom:18px">
       <div style="font-size:28px;margin-bottom:8px">&#128274;</div>
       <div style="font-size:14px;font-weight:800;margin-bottom:6px">Coparticipação é exclusivo do plano Enterprise</div>
-      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Fale com o time SolusCRT para liberar este módulo.</div>
+      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Fale com o time SoloCRT para liberar este módulo.</div>
     </div>
     <div id="cpConteudo">
     <div class="card">
@@ -696,7 +696,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div id="ftLockBanner" class="card" style="display:none;padding:28px;text-align:center;margin-bottom:18px">
       <div style="font-size:28px;margin-bottom:8px">&#128274;</div>
       <div style="font-size:14px;font-weight:800;margin-bottom:6px">Faturamento é exclusivo do plano Enterprise</div>
-      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Fale com o time SolusCRT para liberar este módulo.</div>
+      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Fale com o time SoloCRT para liberar este módulo.</div>
     </div>
     <div id="ftConteudo">
     <div class="summary-grid" id="faturSummary" style="margin-bottom:18px">
@@ -756,7 +756,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div id="siaLockBanner" class="card" style="display:none;padding:28px;text-align:center;margin-bottom:18px">
       <div style="font-size:28px;margin-bottom:8px">&#128274;</div>
       <div style="font-size:14px;font-weight:800;margin-bottom:6px">Sinistralidade IA é exclusivo do plano Enterprise</div>
-      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Cruzamento de sinistralidade por segmento/produto com radar epidemiológico em tempo real. Fale com o time SolusCRT para liberar este módulo.</div>
+      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Cruzamento de sinistralidade por segmento/produto com radar epidemiológico em tempo real. Fale com o time SoloCRT para liberar este módulo.</div>
     </div>
     <div id="siaConteudo">
     <!-- KPIs principais -->
@@ -3135,7 +3135,7 @@ async function carregarEpidemiologia() {
   if (!r.ok) {
     var err = await r.json().catch(function(){ return {}; });
     if (r.status === 403 && err.upgrade_necessario) {
-      document.getElementById('epiConteudo').innerHTML = '<div class="card" style="padding:28px;text-align:center"><div style="font-size:28px;margin-bottom:8px">&#128274;</div><div style="font-size:14px;font-weight:800;margin-bottom:6px">Radar Epidemiológico não disponível no plano atual</div><div style="font-size:12px;color:var(--muted)">Fale com o time SolusCRT para liberar este módulo.</div></div>';
+      document.getElementById('epiConteudo').innerHTML = '<div class="card" style="padding:28px;text-align:center"><div style="font-size:28px;margin-bottom:8px">&#128274;</div><div style="font-size:14px;font-weight:800;margin-bottom:6px">Radar Epidemiológico não disponível no plano atual</div><div style="font-size:12px;color:var(--muted)">Fale com o time SoloCRT para liberar este módulo.</div></div>';
     }
     return;
   }
@@ -3498,7 +3498,7 @@ function exportarDashboard() {
 </head>
 <body>
   <h1>📊 Relatório Executivo — Plano de Saúde</h1>
-  <div class="sub">Gerado em ${dataHora} &nbsp;|&nbsp; ${nomeOp} &nbsp;|&nbsp; SolusCRT Saude</div>
+  <div class="sub">Gerado em ${dataHora} &nbsp;|&nbsp; ${nomeOp} &nbsp;|&nbsp; SoloCRT Saude</div>
 
   <div class="kpi-grid">
     <div class="kpi-box"><div class="lbl">MLR (Sinistralidade)</div><div class="val">${mlr}</div></div>
@@ -3524,14 +3524,14 @@ function exportarDashboard() {
   <div class="section">
     <h2>Observações Gerais</h2>
     <p style="color:#555;font-size:11px">
-      Este relatório é gerado a partir dos dados exibidos na plataforma SolusCRT no momento da exportação.
+      Este relatório é gerado a partir dos dados exibidos na plataforma SoloCRT no momento da exportação.
       Para relatórios regulatórios oficiais (DIOPS, TISS, SIB), utilize a aba <strong>Regulatório ANS</strong>.
       MLR recomendado pela ANS: abaixo de 85%. Valores acima indicam atenção à sinistralidade.
     </p>
   </div>
 
   <div class="footer">
-    SolusCRT Saude &nbsp;|&nbsp; soluscrt.com.br &nbsp;|&nbsp; Documento gerado eletronicamente em ${dataHora}
+    SoloCRT Saude &nbsp;|&nbsp; soluscrt.com.br &nbsp;|&nbsp; Documento gerado eletronicamente em ${dataHora}
     <br>Este documento tem finalidade gerencial interna. Não substitui relatórios regulatórios ANS.
   </div>
 
@@ -4310,7 +4310,7 @@ function showToastPS(msg, tipo='ok') {
 </style>
 <div class="ops-panel" id="opsPanel">
   <div class="ops-ph">
-    <span class="ops-ph-logo">SolusCRT</span>
+    <span class="ops-ph-logo">SoloCRT</span>
     <span class="ops-ph-sep"></span>
     <span class="ops-ph-title" id="opsPanelTitle">Operacional</span>
     <button class="ops-back" onclick="closeOpsPanel()">← Voltar à Gestão</button>
@@ -4379,7 +4379,7 @@ function showToastPS(msg, tipo='ok') {
 <div class="mod-backdrop" id="modBackdrop"></div>
 <aside class="mod-panel" id="modPanel">
   <div class="mod-header">
-    <span class="mod-header-logo">SolusCRT</span>
+    <span class="mod-header-logo">SoloCRT</span>
     <span class="mod-header-sep"></span>
     <span class="mod-header-title" id="modPanelTitle">Módulo</span>
     <button class="mod-btn-back" onclick="closeModulePanel()">← Voltar à Gestão</button>

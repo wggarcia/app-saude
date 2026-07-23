@@ -4,7 +4,7 @@
 {% include "_favicon.html" %}
 
 <meta charset="UTF-8">
-<title>SolusCRT · ASO & Pedidos de Exame</title>
+<title>SoloCRT · ASO & Pedidos de Exame</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -421,13 +421,13 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="modo-tabs" style="grid-template-columns:repeat(5,1fr)">
         <div class="modo-card active" id="modo-sistema" onclick="setModo('sistema')">
           <div class="mc-icon">🏥</div>
-          <div class="mc-title">Clínica SolusCRT</div>
+          <div class="mc-title">Clínica SoloCRT</div>
           <div class="mc-sub">Clínica vinculada recebe digitalmente</div>
         </div>
         <div class="modo-card" id="modo-email" onclick="setModo('email')">
           <div class="mc-icon">📧</div>
           <div class="mc-title">Email para Clínica</div>
-          <div class="mc-sub">Clínica sem SolusCRT recebe por email</div>
+          <div class="mc-sub">Clínica sem SoloCRT recebe por email</div>
         </div>
         <div class="modo-card" id="modo-interno" onclick="setModo('interno')">
           <div class="mc-icon">🏢</div>
@@ -461,7 +461,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
           <div class="mf"><label>Email da clínica *</label><input type="email" id="p-clinica-email" placeholder="contato@clinica.com.br"></div>
         </div>
         <div class="aviso aviso-info">
-          <span>📧</span><div>A clínica receberá um email com dados do funcionário, exames solicitados e um <strong>link para enviar os resultados</strong> diretamente ao sistema. <strong>Não precisa estar no SolusCRT.</strong></div>
+          <span>📧</span><div>A clínica receberá um email com dados do funcionário, exames solicitados e um <strong>link para enviar os resultados</strong> diretamente ao sistema. <strong>Não precisa estar no SoloCRT.</strong></div>
         </div>
       </div>
       <div id="campos-interno" style="display:none">
@@ -477,7 +477,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       </div>
       <div id="campos-app" style="display:none">
         <div class="aviso aviso-info">
-          <span>📱</span><div>O funcionário receberá uma <strong>notificação no APP SolusCRT</strong> com a lista de exames, orientações de preparo e prazo para realização. Disponível no APP do Trabalhador.</div>
+          <span>📱</span><div>O funcionário receberá uma <strong>notificação no APP SoloCRT</strong> com a lista de exames, orientações de preparo e prazo para realização. Disponível no APP do Trabalhador.</div>
         </div>
         <div class="mf-check" style="margin-top:8px"><input type="checkbox" id="p-guia-app" checked><label for="p-guia-app">Incluir guia em PDF também no APP (para apresentar à clínica)</label></div>
       </div>
@@ -501,7 +501,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 <div class="modal-bg" id="modal-link-resultado">
   <div class="modal">
     <h3>🔗 Link de Resultado para Clínica</h3>
-    <div class="modal-sub">Gere um link seguro para a clínica enviar os laudos dos exames diretamente ao sistema — sem precisar ter conta no SolusCRT.</div>
+    <div class="modal-sub">Gere um link seguro para a clínica enviar os laudos dos exames diretamente ao sistema — sem precisar ter conta no SoloCRT.</div>
     <div id="link-resultado-form">
       <div class="aviso aviso-info" style="margin-bottom:12px">
         <span>📋</span><div>A clínica acessa o link, preenche os resultados de cada exame e o laudo fica disponível automaticamente na página do funcionário.</div>

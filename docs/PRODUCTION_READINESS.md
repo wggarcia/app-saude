@@ -1,4 +1,4 @@
-# SolusCRT Saude - Checklist de Producao
+# SoloCRT Saude - Checklist de Producao
 
 Este checklist separa o que o codigo ja exige do que precisa ser configurado fora do repositorio antes de vender a plataforma healthtech.
 

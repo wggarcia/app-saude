@@ -15,7 +15,7 @@ Este documento e um ponto de partida operacional. Antes de publicar, revise com 
 
 Texto recomendado:
 
-"O SolusCRT Saude acompanha sinais regionais de saude publica. As informacoes exibidas sao estimativas epidemiologicas e nao substituem diagnostico, consulta medica ou orientacao oficial de autoridades de saude. Em caso de sintomas graves, procure atendimento imediatamente."
+"O SoloCRT Saude acompanha sinais regionais de saude publica. As informacoes exibidas sao estimativas epidemiologicas e nao substituem diagnostico, consulta medica ou orientacao oficial de autoridades de saude. Em caso de sintomas graves, procure atendimento imediatamente."
 
 ## Operacao minima de seguranca
 

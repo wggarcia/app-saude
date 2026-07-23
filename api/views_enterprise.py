@@ -1551,7 +1551,7 @@ def _seed_empresa(empresa):
                         "empresa_nome": clinica_demo.nome,
                         "empresa_email_convite": clinica_demo.email,
                         "status": "ativo",
-                        "observacoes": "Clínica credenciada demo — SolusCRT",
+                        "observacoes": "Clínica credenciada demo — SoloCRT",
                     },
                 )
                 criados.append("vinculo_clinica")

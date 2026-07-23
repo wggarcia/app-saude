@@ -1,7 +1,7 @@
 # Release Checklist
 
 ## Identidade
-- Confirmar nome final `SolusCRT Saude`
+- Confirmar nome final `SoloCRT Saude`
 - Definir icone final em alta resolucao
 - Definir splash final com arte proprietaria
 

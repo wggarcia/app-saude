@@ -1,7 +1,7 @@
-# Auditoria de Privacidade — Console Operação Central (SolusCRT)
+# Auditoria de Privacidade — Console Operação Central (SoloCRT)
 
 **Objetivo:** verificar, endpoint por endpoint e campo por campo, se o console
-administrativo do dono da SolusCRT (Operação Central) expõe **dados internos
+administrativo do dono da SoloCRT (Operação Central) expõe **dados internos
 privados dos clientes** ou apenas **metadados de gestão do contrato**.
 
 **Resultado geral:** ✅ **Aprovado.** Nenhum endpoint do dono expõe dado pessoal
@@ -18,7 +18,7 @@ Data da auditoria: 2026-06-06 · Escopo: branch `main` (commit no momento da aud
 | Camada | Mecanismo | O que protege |
 |---|---|---|
 | Banco | **RLS (Row-Level Security)** por `empresa_id` | Conteúdo de cada cliente é isolado; um cliente nunca lê o do outro. A vigilância pública é escopada à empresa `populacao@soluscrt.com`. |
-| Autenticação | **owner_token (JWT)** em `owner_paths` | Só a equipe da SolusCRT acessa `/console-operacional/`, `/api/operacao-central/*`, `/financeiro/`, `/governanca/`, `/gtm/`. |
+| Autenticação | **owner_token (JWT)** em `owner_paths` | Só a equipe da SoloCRT acessa `/console-operacional/`, `/api/operacao-central/*`, `/financeiro/`, `/governanca/`, `/gtm/`. |
 | Autorização | **RBAC por papel** (admin/financeiro/suporte/leitura) | Restringe seção e ação por função; trava real no backend (403). |
 | Rastreabilidade | **DonoAuditoriaAcao** | Toda ação do operador é registrada (quem/o quê/quando). |
 
@@ -74,7 +74,7 @@ ranking **por empresa** (nome da empresa + contagens). **Sem nome/CPF de
 trabalhador individual.** ✅
 
 ### 3.5 `GET /api/operacao-central/operadores`
-Lista os **operadores da própria SolusCRT** (equipe interna da plataforma healthtech), não
+Lista os **operadores da própria SoloCRT** (equipe interna da plataforma healthtech), não
 clientes. Campos: nome, e-mail, papel, status, última sessão. ✅
 
 ### 3.6 `GET /api/operacao-central/exportar` (CSV)
@@ -124,7 +124,7 @@ Busca por termos sensíveis (`cpf`, `paciente`, `prontuario`, `aso`, `exame`,
 
 ## 5. Enquadramento LGPD
 
-- **Papéis:** no console, a SolusCRT atua como **operadora**, tratando apenas
+- **Papéis:** no console, a SoloCRT atua como **operadora**, tratando apenas
   metadados de gestão do contrato. Cada **cliente é o controlador** dos dados
   pessoais dos seus titulares (pacientes/trabalhadores/beneficiários/cidadãos).
 - **Dado sensível de saúde (Art. 11):** nunca trafega para o console; permanece
@@ -139,7 +139,7 @@ Busca por termos sensíveis (`cpf`, `paciente`, `prontuario`, `aso`, `exame`,
 ## 6. Conclusão
 
 ✅ O console **Operação Central** respeita o isolamento multi-tenant. O dono da
-SolusCRT administra o **negócio** (contratos, uso, cobrança, capacidade,
+SoloCRT administra o **negócio** (contratos, uso, cobrança, capacidade,
 crescimento) sem acesso ao **conteúdo** privado dos clientes. A separação é
 sustentada por RLS (banco), autenticação de operador, RBAC por papel e trilha de
 auditoria — postura adequada para compromissos de LGPD e para clientes

@@ -457,7 +457,7 @@ def _gerar_cds_fichas_visita(visitas, empresa):
         # dataEnvio em ms (timestamp Unix)
         "dataEnvio":            int(time.time() * 1000),
         "versaoEsusab":         "3.2",
-        "sistemaOrigem":        "SolusCRT",
+        "sistemaOrigem":        "SoloCRT",
         "fichasVisitaDomiciliarChild": filhos,
     }
 

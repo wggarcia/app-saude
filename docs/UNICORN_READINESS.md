@@ -1,4 +1,4 @@
-# Unicorn Readiness - SolusCRT Saude
+# Unicorn Readiness - SoloCRT Saude
 
 Este documento transforma "virar um unicornio" em trabalho objetivo, com prioridades concretas de produto, engenharia e operacao.
 

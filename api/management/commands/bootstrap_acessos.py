@@ -25,7 +25,7 @@ class Command(BaseCommand):
             tipo_conta=Empresa.TIPO_EMPRESA,
             acesso_governo=False,
             pacote_default=pacote_padrao(),
-            nome_default="Empresa Piloto SolusCRT",
+            nome_default="Empresa Piloto SoloCRT",
             plano_default="mensal",
             reset_passwords=reset_passwords,
             criados=criados,
@@ -37,7 +37,7 @@ class Command(BaseCommand):
             tipo_conta=Empresa.TIPO_EMPRESA,
             acesso_governo=False,
             pacote_default="farmacia_rede_regional",
-            nome_default="Farmacia Piloto SolusCRT",
+            nome_default="Farmacia Piloto SoloCRT",
             plano_default="mensal",
             reset_passwords=reset_passwords,
             criados=criados,
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             tipo_conta=Empresa.TIPO_EMPRESA,
             acesso_governo=False,
             pacote_default="hospital_medio",
-            nome_default="Hospital Piloto SolusCRT",
+            nome_default="Hospital Piloto SoloCRT",
             plano_default="mensal",
             reset_passwords=reset_passwords,
             criados=criados,
@@ -61,7 +61,7 @@ class Command(BaseCommand):
             tipo_conta=Empresa.TIPO_GOVERNO,
             acesso_governo=True,
             pacote_default=pacote_governo_padrao(),
-            nome_default="Governo SolusCRT",
+            nome_default="Governo SoloCRT",
             plano_default="anual",
             reset_passwords=reset_passwords,
             criados=criados,
@@ -154,7 +154,7 @@ class Command(BaseCommand):
     def _bootstrap_dono(self, reset_passwords, criados, atualizados, ignorados):
         email = _env("SOLUSCRT_BOOTSTRAP_OWNER_EMAIL").lower()
         senha = _env("SOLUSCRT_BOOTSTRAP_OWNER_PASSWORD")
-        nome = _env("SOLUSCRT_BOOTSTRAP_OWNER_NOME", "Operacao SolusCRT")
+        nome = _env("SOLUSCRT_BOOTSTRAP_OWNER_NOME", "Operacao SoloCRT")
 
         if not email or not senha:
             ignorados.append("SOLUSCRT_BOOTSTRAP_OWNER: email/senha ausentes")

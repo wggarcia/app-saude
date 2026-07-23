@@ -705,7 +705,7 @@ class FinanceiroEventoSaaS(models.Model):
 
 class CaixaPlataformaSaaS(models.Model):
     """
-    Saldo de caixa real da plataforma SolusCRT — inserido manualmente pelo DonoSaaS.
+    Saldo de caixa real da plataforma SoloCRT — inserido manualmente pelo DonoSaaS.
     Usado pelo painel de governança para calcular runway real em vez de estimativa.
     """
     saldo = models.DecimalField(max_digits=14, decimal_places=2, help_text="Saldo total em caixa (R$)")
@@ -1343,7 +1343,7 @@ class VinculoClinicaEmpresa(models.Model):
     )
     empresa_contratante = models.ForeignKey(
         Empresa, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="vinculos_como_empresa", verbose_name="Empresa contratante (conta SolusCRT)",
+        related_name="vinculos_como_empresa", verbose_name="Empresa contratante (conta SoloCRT)",
     )
     empresa_cnpj = models.CharField(max_length=18, blank=True, default="", verbose_name="CNPJ da empresa")
     empresa_nome = models.CharField(max_length=200, blank=True, default="", verbose_name="Nome da empresa")
@@ -1368,7 +1368,7 @@ class VinculoClinicaEmpresa(models.Model):
 
 
 class ASOEnviadoClinica(models.Model):
-    """Registro de um ASO enviado pela clínica diretamente para a conta da empresa no SolusCRT."""
+    """Registro de um ASO enviado pela clínica diretamente para a conta da empresa no SoloCRT."""
     STATUS = [
         ("enviado", "Enviado"),
         ("visualizado", "Visualizado"),
@@ -1425,7 +1425,7 @@ class SolicitacaoExame(models.Model):
     urgente = models.BooleanField(default=False)
     observacoes = models.TextField(blank=True, default="")
     status = models.CharField(max_length=20, choices=STATUS, default="pendente")
-    # Clínica externa (não cadastrada no SolusCRT)
+    # Clínica externa (não cadastrada no SoloCRT)
     clinica_nome_externo = models.CharField(max_length=200, blank=True, default="")
     clinica_email_externo = models.EmailField(blank=True, default="")
     email_enviado = models.BooleanField(default=False)
@@ -6112,7 +6112,7 @@ class LaudoTecnicoSST(models.Model):
 
 
 class ClinicaCredenciada(models.Model):
-    """Rede nacional de clínicas credenciadas SolusCRT."""
+    """Rede nacional de clínicas credenciadas SoloCRT."""
     STATUS_CRED = [("pendente", "Pendente"), ("ativo", "Ativo"), ("suspenso", "Suspenso"), ("cancelado", "Cancelado")]
     TIPOS = [
         ("clinica_ocupacional", "Clínica de Medicina Ocupacional"),
@@ -7746,7 +7746,7 @@ class IAAutorizacaoGuia(models.Model):
     scores_por_classe = models.JSONField(default=dict, blank=True)
     justificativa_ia = models.TextField(blank=True)
     features_utilizadas = models.JSONField(default=dict, blank=True)
-    modelo_versao = models.CharField(max_length=80, blank=True, default="Ensemble RF+GB SolusCRT v2")
+    modelo_versao = models.CharField(max_length=80, blank=True, default="Ensemble RF+GB SoloCRT v2")
     revisada_por = models.CharField(max_length=120, blank=True)
     decisao_final = models.CharField(max_length=20, choices=DECISAO_CHOICES, null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -7781,7 +7781,7 @@ class IAAutorizacaoClinica(models.Model):
     decisao = models.CharField(max_length=20, choices=DECISAO_CHOICES, default="revisao")
     score_confianca = models.FloatField(default=0.0)
     justificativa_ia = models.TextField(blank=True)
-    modelo_versao = models.CharField(max_length=80, blank=True, default="Ensemble RF+GB SolusCRT v2")
+    modelo_versao = models.CharField(max_length=80, blank=True, default="Ensemble RF+GB SoloCRT v2")
     revisada_por = models.CharField(max_length=120, blank=True)
     decisao_final = models.CharField(max_length=20, choices=DECISAO_CHOICES, null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -7827,8 +7827,8 @@ class CredenciaisIntegracoes(models.Model):
     SEGURANÇA: campos de senha são armazenados criptografados com Fernet
     (chave derivada do SECRET_KEY do Django). Nunca em plain text.
 
-    Quem cadastra: o próprio cliente, no painel da SolusCRT.
-    Quem usa: SolusCRT na hora de transmitir (SNGPC, DIOPS, eSocial).
+    Quem cadastra: o próprio cliente, no painel da SoloCRT.
+    Quem usa: SoloCRT na hora de transmitir (SNGPC, DIOPS, eSocial).
     """
 
     empresa = models.OneToOneField(

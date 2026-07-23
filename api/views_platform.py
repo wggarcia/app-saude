@@ -1,5 +1,5 @@
 """
-Páginas e API de status/SLA da plataforma SolusCRT.
+Páginas e API de status/SLA da plataforma SoloCRT.
 """
 import time
 

@@ -122,15 +122,15 @@ def _cooperacao_operadora_payload(empresa, planos, beneficiarios, guias, prestad
 
     return {
         "modelo": "camada_cooperativa",
-        "headline": "A SolusCRT coopera com o sistema que a operadora ja possui e adiciona comando operacional, regulatorio e epidemiologico.",
-        "descricao": "O ambiente de plano de saude funciona como cockpit de orquestracao: a operadora pode manter core admin, ERP, faturamento e integrações proprias enquanto a SolusCRT organiza carteira, fila clinica, rede credenciada, sinistralidade e territorio.",
+        "headline": "A SoloCRT coopera com o sistema que a operadora ja possui e adiciona comando operacional, regulatorio e epidemiologico.",
+        "descricao": "O ambiente de plano de saude funciona como cockpit de orquestracao: a operadora pode manter core admin, ERP, faturamento e integrações proprias enquanto a SoloCRT organiza carteira, fila clinica, rede credenciada, sinistralidade e territorio.",
         "promessa": "Sem rip-and-replace: entre como camada de cooperacao, enxergue risco assistencial mais cedo e devolva decisao melhor para o que a operadora ja tem.",
         "frentes": [
             _frente_cooperacao(
                 "core_legado",
                 "Core legado e carteira da operadora",
                 "operando" if beneficiarios_ativos else ("implantacao" if total_planos else "prioridade"),
-                "Mantem o cadastro mestre e a esteira principal no legado enquanto a SolusCRT organiza elegibilidade, vigencia e leitura operacional da carteira.",
+                "Mantem o cadastro mestre e a esteira principal no legado enquanto a SoloCRT organiza elegibilidade, vigencia e leitura operacional da carteira.",
                 f"{total_planos} plano(s) e {beneficiarios_ativos} beneficiario(s) ativo(s) espelhados no cockpit.",
                 "Conectar elegibilidade, faturamento e status do beneficiario ao core existente via API, arquivo ou rotina de carga.",
             ),

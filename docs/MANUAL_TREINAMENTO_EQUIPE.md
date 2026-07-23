@@ -1,12 +1,12 @@
-# Manual de Treinamento Interno - SolusCRT Saude
+# Manual de Treinamento Interno - SoloCRT Saude
 
-## 1. O que e o SolusCRT
+## 1. O que e o SoloCRT
 
-O SolusCRT Saude e uma plataforma healthtech de sala de controle epidemiologica. Ela combina app populacional, mapas de risco, IA, fontes oficiais brasileiras, alertas territoriais e paineis separados para empresas, farmacias, hospitais, governo e operacao interna.
+O SoloCRT Saude e uma plataforma healthtech de sala de controle epidemiologica. Ela combina app populacional, mapas de risco, IA, fontes oficiais brasileiras, alertas territoriais e paineis separados para empresas, farmacias, hospitais, governo e operacao interna.
 
 O produto nao deve ser explicado como "um mapa". A forma correta e:
 
-> SolusCRT e uma sala de controle epidemiologica com IA para antecipar focos de sintomas, apoiar decisoes de saude e conectar populacao, empresas, hospitais, farmacias e governo.
+> SoloCRT e uma sala de controle epidemiologica com IA para antecipar focos de sintomas, apoiar decisoes de saude e conectar populacao, empresas, hospitais, farmacias e governo.
 
 ## 2. Publicos do projeto
 
@@ -53,7 +53,7 @@ Usa ambiente dedicado e separado para:
 - Apoio a decisoes de vigilancia em saude.
 - Contrato anual fechado, sem mensalidade simples.
 
-### Operacao interna SolusCRT
+### Operacao interna SoloCRT
 
 Ambiente da empresa dona da healthtech para:
 
@@ -99,11 +99,11 @@ Valor anual do contrato. Muito importante para governo e grandes empresas.
 
 ### LGPD
 
-Lei Geral de Protecao de Dados. Define regras para tratamento de dados pessoais e dados sensiveis. No SolusCRT, a comunicacao deve reforcar dados agregados, finalidade de saude publica/epidemiologica, seguranca e governanca.
+Lei Geral de Protecao de Dados. Define regras para tratamento de dados pessoais e dados sensiveis. No SoloCRT, a comunicacao deve reforcar dados agregados, finalidade de saude publica/epidemiologica, seguranca e governanca.
 
 ### IA
 
-Inteligencia Artificial. No SolusCRT, a IA ajuda a classificar sinais, estimar risco, comparar crescimento, sugerir atencao territorial e apoiar decisao. Nao substitui medico, vigilancia oficial ou diagnostico laboratorial.
+Inteligencia Artificial. No SoloCRT, a IA ajuda a classificar sinais, estimar risco, comparar crescimento, sugerir atencao territorial e apoiar decisao. Nao substitui medico, vigilancia oficial ou diagnostico laboratorial.
 
 ### Epidemiologia
 
@@ -167,7 +167,7 @@ Area com concentracao de sinais/casos.
 
 ### Decaimento temporal
 
-Regra do SolusCRT: se nao houver novos envios, o foco nao cai imediatamente. Ele fica preservado por 10 dias e depois reduz gradualmente ate 30 dias. Isso evita uma falsa sensacao de melhora.
+Regra do SoloCRT: se nao houver novos envios, o foco nao cai imediatamente. Ele fica preservado por 10 dias e depois reduz gradualmente ate 30 dias. Isso evita uma falsa sensacao de melhora.
 
 ## 5. Fontes oficiais brasileiras
 
@@ -285,7 +285,7 @@ Governo e somente contrato anual fechado:
 
 ## 11. Perguntas frequentes internas
 
-### O SolusCRT ja substitui sistemas oficiais?
+### O SoloCRT ja substitui sistemas oficiais?
 
 Nao. Ele complementa e antecipa sinais. Fontes oficiais validam e contextualizam.
 

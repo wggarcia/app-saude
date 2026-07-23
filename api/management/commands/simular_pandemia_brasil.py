@@ -1,5 +1,5 @@
 """
-Simulação de pandemia em 3 fases — SolusCRT Demo
+Simulação de pandemia em 3 fases — SoloCRT Demo
 
 Uso no Render Shell:
     python manage.py simular_pandemia_brasil            # 5000 casos, 10 min
@@ -132,7 +132,7 @@ class Command(BaseCommand):
         _set_rls(empresa.id)
 
         self.stdout.write("\n" + "═" * 58)
-        self.stdout.write("  SIMULAÇÃO DE PANDEMIA — SolusCRT")
+        self.stdout.write("  SIMULAÇÃO DE PANDEMIA — SoloCRT")
         self.stdout.write(f"  {total} casos · {duracao} minutos · 3 fases")
         self.stdout.write(f"  Empresa: {empresa.nome} (id={empresa.id})")
         self.stdout.write("═" * 58)

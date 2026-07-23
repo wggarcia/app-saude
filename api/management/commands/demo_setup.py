@@ -488,7 +488,7 @@ class Command(BaseCommand):
                             TreinamentoNR.objects.create(
                                 empresa=empresa, funcionario=func, nr=nr, titulo=titulo,
                                 carga_horaria=horas, data_realizacao=realiz, data_validade=validade,
-                                status=status_t, instrutor="SolusCRT Treinamentos Ltda",
+                                status=status_t, instrutor="SoloCRT Treinamentos Ltda",
                             )
             except Exception as exc:  # noqa: BLE001
                 self.out(f"  ⚠ treinamentos {func.nome} falhou: {exc}", self.style.WARNING)
@@ -674,7 +674,7 @@ class Command(BaseCommand):
         e, _ = Empresa.objects.update_or_create(
             email="demo.sst@soluscrt.com",
             defaults=dict(
-                nome="SolusCRT Demo SST",
+                nome="SoloCRT Demo SST",
                 senha=make_password(DEMO_SENHA_ADMIN),
                 tipo_conta=Empresa.TIPO_EMPRESA,
                 acesso_governo=False,
@@ -687,7 +687,7 @@ class Command(BaseCommand):
         )
         # Garante que a conta fique sempre alinhada ao pacote mais completo
         # da linha SST, mesmo quando o banco já possuía a versão antiga.
-        e.nome = "SolusCRT Demo SST"
+        e.nome = "SoloCRT Demo SST"
         e.senha = make_password(DEMO_SENHA_ADMIN)
         e.tipo_conta = Empresa.TIPO_EMPRESA
         e.acesso_governo = False
@@ -743,7 +743,7 @@ class Command(BaseCommand):
             det = {"dispositivos": 20, "usuarios": 5}
 
         e = Empresa.objects.create(
-            nome="SolusCRT Demo Farmácia",
+            nome="SoloCRT Demo Farmácia",
             email="demo.farmacia@soluscrt.com",
             senha=make_password(DEMO_SENHA_FARM),
             tipo_conta=Empresa.TIPO_EMPRESA,
@@ -786,7 +786,7 @@ class Command(BaseCommand):
             det = {"dispositivos": 100, "usuarios": 20}
 
         e = Empresa.objects.create(
-            nome="SolusCRT Demo Hospital",
+            nome="SoloCRT Demo Hospital",
             email="demo.hospital@soluscrt.com",
             senha=make_password(DEMO_SENHA_HOSP),
             tipo_conta=Empresa.TIPO_EMPRESA,
@@ -829,7 +829,7 @@ class Command(BaseCommand):
             det = {"dispositivos": 200, "usuarios": 50}
 
         e = Empresa.objects.create(
-            nome="SolusCRT Demo Governo",
+            nome="SoloCRT Demo Governo",
             email="demo.governo@soluscrt.com",
             senha=make_password(DEMO_SENHA_GOV),
             tipo_conta=Empresa.TIPO_GOVERNO,
@@ -872,7 +872,7 @@ class Command(BaseCommand):
             det = {"dispositivos": 50, "usuarios": 15}
 
         e = Empresa.objects.create(
-            nome="SolusCRT Demo Plano de Saúde",
+            nome="SoloCRT Demo Plano de Saúde",
             email="demo.plano@soluscrt.com",
             senha=make_password(DEMO_SENHA_PLANO),
             tipo_conta=Empresa.TIPO_EMPRESA,
@@ -1134,7 +1134,7 @@ class Command(BaseCommand):
                     carga_horaria=horas,
                     data_realizacao=realiz, data_validade=valid_t,
                     status=status_t,
-                    instrutor="SolusCRT Treinamentos Ltda",
+                    instrutor="SoloCRT Treinamentos Ltda",
                 )
             except Exception:
                 pass
@@ -1564,7 +1564,7 @@ class Command(BaseCommand):
 
         # ── 12. Clínicas credenciadas (rede nacional) ────────────────────────
         clinicas_credenciadas = [
-            dict(nome="Clínica de Medicina Ocupacional SolusCRT SP",
+            dict(nome="Clínica de Medicina Ocupacional SoloCRT SP",
                  cnpj="11.222.333/0001-44",
                  tipo="clinica_ocupacional",
                  especialidades=["audiometria","espirometria","hemograma","acuidade_visual","ecg","raio_x"],
@@ -1635,7 +1635,7 @@ class Command(BaseCommand):
                     empresa_nome=clin_cred.nome,
                     empresa_email_convite=clin_cred.email,
                     status="ativo",
-                    observacoes=f"Clínica credenciada SolusCRT — {clin_cred.cidade}/{clin_cred.uf}",
+                    observacoes=f"Clínica credenciada SoloCRT — {clin_cred.cidade}/{clin_cred.uf}",
                 )
                 vinculos_clinica.append(v)
             except Exception:
@@ -2065,7 +2065,7 @@ class Command(BaseCommand):
             from api.models import MedicamentoFarmacia, Rede, UnidadeRede
 
             rede, _ = Rede.objects.get_or_create(
-                nome="Rede Demo SolusCRT",
+                nome="Rede Demo SoloCRT",
                 defaults={"tipo": "farmacia", "descricao": "Rede de demonstração"},
             )
             UnidadeRede.objects.update_or_create(
@@ -2938,8 +2938,8 @@ class Command(BaseCommand):
         dono, created = DonoSaaS.objects.get_or_create(
             email="owner@soluscrt.com",
             defaults={
-                "nome": "Operação SolusCRT",
-                "senha": make_password("Owner@SolusCRT2026"),
+                "nome": "Operação SoloCRT",
+                "senha": make_password("Owner@SoloCRT2026"),
                 "ativo": True,
             },
         )

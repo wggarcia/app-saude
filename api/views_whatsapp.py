@@ -135,7 +135,7 @@ def api_whatsapp_enviar(request):
     if not numero:
         return JsonResponse({"erro": "Informe o número de destino."}, status=400)
     if not mensagem:
-        mensagem = f"✅ Teste de integração WhatsApp — SolusCRT · {empresa.nome}"
+        mensagem = f"✅ Teste de integração WhatsApp — SoloCRT · {empresa.nome}"
 
     try:
         cfg = empresa.integracao_whatsapp

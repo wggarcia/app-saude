@@ -99,7 +99,7 @@ def validar_dominio_corporativo(email: str) -> tuple[bool, str]:
 
     if is_free_email(email):
         return False, (
-            "O SolusCRT é uma plataforma B2B e só aceita e-mails corporativos. "
+            "O SoloCRT é uma plataforma B2B e só aceita e-mails corporativos. "
             "Utilize o e-mail da sua empresa ou instituição."
         )
 

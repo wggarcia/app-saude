@@ -1,6 +1,6 @@
 """
 Solicitações de exames ocupacionais: empresa emite pedido → clínica recebe
-(via SolusCRT ou por email). Suporta clínicas cadastradas no sistema e
+(via SoloCRT ou por email). Suporta clínicas cadastradas no sistema e
 clínicas externas (recebem por email com link de acompanhamento).
 """
 import hashlib
@@ -606,9 +606,9 @@ def _enviar_email_solicitacao(sol):
     # Para SMTP autenticado, use sempre o remetente real da conta autenticada
     # para evitar rejeições silenciosas por SPF/DMARC no destino.
     if "smtp.EmailBackend" in backend and smtp_user:
-        from_email = f"SolusCRT <{smtp_user}>"
+        from_email = f"SoloCRT <{smtp_user}>"
     elif (not from_email or "noreply@soluscrt.com.br" in from_email) and smtp_user:
-        from_email = f"SolusCRT <{smtp_user}>"
+        from_email = f"SoloCRT <{smtp_user}>"
     reply_to = []
     if getattr(empresa, "email", ""):
         reply_to = [empresa.email]
@@ -616,7 +616,7 @@ def _enviar_email_solicitacao(sol):
     corpo = f"""
 Olá, {sol.clinica_nome_externo or 'Clínica'},
 
-A empresa **{empresa.nome}** enviou um pedido de exame ocupacional pelo sistema SolusCRT.
+A empresa **{empresa.nome}** enviou um pedido de exame ocupacional pelo sistema SoloCRT.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PEDIDO DE EXAME — {sol.get_tipo_aso_display().upper()}
@@ -638,17 +638,17 @@ Para confirmar o agendamento, entre em contato com a empresa:
   Empresa: {empresa.nome}
   Email: {empresa.email if hasattr(empresa, 'email') else ''}
 
-Após a realização, a empresa pode importar o ASO pelo portal SolusCRT.
+Após a realização, a empresa pode importar o ASO pelo portal SoloCRT.
 
 --
-SolusCRT · Sistema de Gestão SST
+SoloCRT · Sistema de Gestão SST
 https://empresa.soluscrt.com.br
     """.strip()
 
     agora = timezone.now()
     try:
         msg = EmailMessage(
-            subject=f"[SolusCRT] Pedido de Exame — {func.nome} — {empresa.nome}",
+            subject=f"[SoloCRT] Pedido de Exame — {func.nome} — {empresa.nome}",
             body=corpo,
             from_email=from_email,
             to=[sol.clinica_email_externo],
@@ -1027,7 +1027,7 @@ def api_link_resultado(request, sol_id: int):
     if notificar and sol.clinica_email_externo:
         try:
             assunto = (
-                f"[SolusCRT] Link de resultado — {sol.funcionario.nome} — "
+                f"[SoloCRT] Link de resultado — {sol.funcionario.nome} — "
                 f"{sol.get_tipo_aso_display()}"
             )
             corpo = (
@@ -1037,7 +1037,7 @@ def api_link_resultado(request, sol_id: int):
                 f"{link}\n\n"
                 f"Este link expira em {dias} dias.\n\n"
                 f"Dúvidas: entre em contato com a empresa solicitante.\n\n"
-                f"SolusCRT — Saúde Ocupacional Inteligente"
+                f"SoloCRT — Saúde Ocupacional Inteligente"
             )
             EmailMessage(
                 subject=assunto,

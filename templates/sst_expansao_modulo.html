@@ -4,7 +4,7 @@
 {% include "_favicon.html" %}
 
   <meta charset="UTF-8">
-  <title>{{ modulo_titulo }} — SolusCRT SST</title>
+  <title>{{ modulo_titulo }} — SoloCRT SST</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -204,7 +204,7 @@ function _mostrarErroModulo(msg) {
   const strip = document.getElementById("kpiStrip");
   const isLock = msg.indexOf("🔒") !== -1;
   const btnUpgrade = isLock
-    ? '<button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir()" style="margin-left:10px;padding:6px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.75rem;font-weight:800;cursor:pointer">Fazer Upgrade →</button>'
+    ? '<button onclick="window.SoloCRT&&window.SoloCRT.upgrade.abrir()" style="margin-left:10px;padding:6px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.75rem;font-weight:800;cursor:pointer">Fazer Upgrade →</button>'
     : "";
   if (strip) strip.innerHTML = '<div style="padding:12px;color:' + (isLock ? "var(--amber,#f59e0b)" : "#e57373") + '">' + msg + btnUpgrade + '</div>';
   else console.error(msg);

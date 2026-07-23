@@ -1,4 +1,4 @@
-# Roteiro de Homologação Produção — SST SolusCRT
+# Roteiro de Homologação Produção — SST SoloCRT
 
 Data base: 26/05/2026
 

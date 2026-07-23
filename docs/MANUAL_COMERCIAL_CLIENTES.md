@@ -1,8 +1,8 @@
-# Manual Comercial para Clientes - SolusCRT Saude
+# Manual Comercial para Clientes - SoloCRT Saude
 
 ## Visao geral
 
-O SolusCRT Saude e uma plataforma de monitoramento epidemiologico com IA que ajuda empresas, farmacias, hospitais e governos a enxergar riscos de saude por territorio.
+O SoloCRT Saude e uma plataforma de monitoramento epidemiologico com IA que ajuda empresas, farmacias, hospitais e governos a enxergar riscos de saude por territorio.
 
 A plataforma une:
 
@@ -17,7 +17,7 @@ A plataforma une:
 
 Surtos e aumentos de sintomas costumam ser percebidos tarde. Empresas sentem afastamentos, farmacias perdem previsibilidade de estoque, hospitais recebem aumento inesperado de demanda e governos precisam responder com velocidade.
 
-O SolusCRT transforma sinais populacionais e dados oficiais em inteligencia territorial.
+O SoloCRT transforma sinais populacionais e dados oficiais em inteligencia territorial.
 
 ## Como funciona
 
@@ -91,7 +91,7 @@ O SolusCRT transforma sinais populacionais e dados oficiais em inteligencia terr
 
 ## Seguranca e LGPD
 
-O SolusCRT foi pensado para trabalhar com dados agregados e finalidade epidemiologica. O objetivo e monitorar risco territorial, nao expor individuos.
+O SoloCRT foi pensado para trabalhar com dados agregados e finalidade epidemiologica. O objetivo e monitorar risco territorial, nao expor individuos.
 
 Recursos de seguranca:
 
@@ -141,7 +141,7 @@ Governo nao e vendido como mensalidade simples. O modelo e contrato anual fechad
 
 ### "Isso substitui notificacao oficial?"
 
-Nao. O SolusCRT antecipa sinais e apoia decisao. A notificacao oficial continua seguindo os fluxos institucionais.
+Nao. O SoloCRT antecipa sinais e apoia decisao. A notificacao oficial continua seguindo os fluxos institucionais.
 
 ### "A IA diagnostica pessoas?"
 
@@ -157,7 +157,7 @@ Porque governo exige escopo, SLA, seguranca, implantacao, governanca, treinament
 
 ## Frase de venda
 
-> O SolusCRT ajuda sua organizacao a enxergar sinais epidemiologicos antes que eles virem crise, transformando sintomas da populacao e fontes oficiais em decisao territorial.
+> O SoloCRT ajuda sua organizacao a enxergar sinais epidemiologicos antes que eles virem crise, transformando sintomas da populacao e fontes oficiais em decisao territorial.
 
 ## Proximo passo recomendado
 

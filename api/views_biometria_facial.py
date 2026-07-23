@@ -1,5 +1,5 @@
 """
-Biometria Facial Real — SolusCRT SST.
+Biometria Facial Real — SoloCRT SST.
 
 Substitui a foto-confirmação por reconhecimento facial real usando DeepFace.
 

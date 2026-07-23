@@ -26,7 +26,7 @@ random.seed(42)
 empresa, _ = Empresa.objects.get_or_create(
     email="populacao@soluscrt.com",
     defaults={
-        "nome": "SolusCRT Populacao",
+        "nome": "SoloCRT Populacao",
         "senha": make_password("publico_app"),
         "ativo": True,
         "plano": "publico",

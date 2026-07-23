@@ -1,5 +1,5 @@
 """
-Psicossocial NR-01 — Avaliação de riscos psicossociais no trabalho — SolusCRT SST.
+Psicossocial NR-01 — Avaliação de riscos psicossociais no trabalho — SoloCRT SST.
 Baseado na NR-01 (atualização 2024) e metodologia Copenhagen Psychosocial Questionnaire.
 
 Endpoints:
@@ -514,7 +514,7 @@ def api_psicossocial_pdf(request, av_id):
 
         # Cabeçalho
         header_data = [[
-            Paragraph("<b>SolusCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL, leading=18)),
+            Paragraph("<b>SoloCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL, leading=18)),
             Paragraph(empresa.nome, ParagraphStyle("en", fontName="Helvetica", fontSize=9, textColor=MUTED, leading=13, alignment=2)),
         ]]
         ht = Table(header_data, colWidths=[W * 0.5 - 2 * cm, W * 0.5 - 2 * cm])
@@ -598,7 +598,7 @@ def api_psicossocial_pdf(request, av_id):
         # Rodapé
         story.append(HRFlowable(width="100%", thickness=0.5, color=LGREY, spaceAfter=6))
         story.append(Paragraph(
-            f"Gerado por SolusCRT em {date.today().strftime('%d/%m/%Y')} · Relatório Psicossocial — NR-01 / Portaria MTE 1.419/2024",
+            f"Gerado por SoloCRT em {date.today().strftime('%d/%m/%Y')} · Relatório Psicossocial — NR-01 / Portaria MTE 1.419/2024",
             styles["center"]
         ))
 

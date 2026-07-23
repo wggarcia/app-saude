@@ -104,7 +104,7 @@ class TelaFontes extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           const Text(
-            'O SolusCRT Saúde combina sinais colaborativos da população com '
+            'O SoloCRT Saúde combina sinais colaborativos da população com '
             'dados de fontes públicas oficiais. As informações de saúde e os '
             'alertas têm como base as fontes abaixo. Toque para abrir a fonte.',
             style: TextStyle(fontSize: 14, height: 1.4),
@@ -135,7 +135,7 @@ class TelaFontes extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'O SolusCRT Saúde é uma plataforma privada da SolusCRT '
+                    'O SoloCRT Saúde é uma plataforma privada da SoloCRT '
                     'Sistemas Integrados LTDA. Não é um aplicativo oficial do '
                     'governo e não possui vínculo ou autorização de qualquer '
                     'entidade governamental.\n\n'

@@ -78,7 +78,7 @@ def api_farmacia_relatorio_ia(request):
     api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
     if not api_key:
         return JsonResponse(
-            {"erro": "Relatório com IA não configurado. Contate o suporte SolusCRT."},
+            {"erro": "Relatório com IA não configurado. Contate o suporte SoloCRT."},
             status=503,
         )
 
@@ -89,7 +89,7 @@ def api_farmacia_relatorio_ia(request):
         client = anthropic.Anthropic(api_key=api_key)
 
         system = (
-            "Você é o assistente de gestão da plataforma SolusCRT Farmácia. "
+            "Você é o assistente de gestão da plataforma SoloCRT Farmácia. "
             "Receberá dados reais de vendas e estoque dos últimos 30 dias de uma farmácia. "
             "Escreva um relatório executivo curto em português, com 3 seções: "
             "1) Tendências de venda, 2) Alertas de ruptura de estoque, 3) Recomendações práticas. "

@@ -135,7 +135,7 @@ def _linha_bpa_i(cnes, competencia, cns_prof, cbo, data_atend, folha, seq,
 
 def gerar_arquivo_bpa(*, competencia, cnes, atendimentos, orgao_origem,
                       sigla_origem="", cnpj="", orgao_destino="SECRETARIA MUNICIPAL DE SAUDE",
-                      indicador_destino="M", codigo_ibge="", versao="SOLUSCRT"):
+                      indicador_destino="M", codigo_ibge="", versao="SOLOCRT"):
     """
     Gera o conteúdo (str) do arquivo BPA-Magnético.
 

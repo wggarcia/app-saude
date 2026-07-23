@@ -1,4 +1,4 @@
-# Auditoria Estrutural Profunda — SolusCRT SaaS
+# Auditoria Estrutural Profunda — SoloCRT SaaS
 Data: 24/05/2026
 Escopo: SST, Farmacia, Hospital, Plano de Saude, Governo, TI, RH, Gerencia, Operacao
 

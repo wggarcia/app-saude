@@ -48,9 +48,9 @@ SITE_LANGUAGE_META = {
 
 SITE_TRANSLATIONS = {
     "pt": {
-        "title": "SolusCRT Saude | monitoramento epidemiologico com IA em ambientes isolados",
+        "title": "SoloCRT Saude | monitoramento epidemiologico com IA em ambientes isolados",
         "description": "Monitoramento epidemiologico com IA para antecipar risco, apoiar decisao e gerar assinatura em cinco ambientes isolados, protegidos e vendidos separadamente.",
-        "brand": "SolusCRT Saúde",
+        "brand": "SoloCRT Saúde",
         "nav": {
             "diferencial": "Por que assinam",
             "ecossistema": "Ambientes",
@@ -64,7 +64,7 @@ SITE_TRANSLATIONS = {
         "hero_title": "Monitoramento epidemiologico com IA que antecipa decisao.",
         "hero_title_desktop_lines": ["Monitoramento", "epidemiologico", "com IA que", "antecipa decisao."],
         "hero_title_lines": ["Monitoramento", "epidemiologico", "com IA que", "antecipa decisao."],
-        "hero_lead": "O SolusCRT cruza sinais da populacao, fontes oficiais e IA para mostrar onde o risco cresce primeiro e onde agir antes do pico. Governo, Farmacia, Hospital, SST e Plano de Saude nao compartilham a mesma base: cada um recebe seu proprio ambiente isolado, protegido e vendido ao seu proprio cliente.",
+        "hero_lead": "O SoloCRT cruza sinais da populacao, fontes oficiais e IA para mostrar onde o risco cresce primeiro e onde agir antes do pico. Governo, Farmacia, Hospital, SST e Plano de Saude nao compartilham a mesma base: cada um recebe seu proprio ambiente isolado, protegido e vendido ao seu proprio cliente.",
         "actions": {
             "presentation": "Ver apresentacao comercial",
             "app": "Conhecer os apps",
@@ -89,7 +89,7 @@ SITE_TRANSLATIONS = {
             {"value": "LGPD por arquitetura", "text": "Segregacao, auditoria e controle de acesso tratados como parte central da confianca"},
         ],
         "differential": {
-            "title": "A IA da SolusCRT transforma sinais dispersos em decisao antes do pico.",
+            "title": "A IA da SoloCRT transforma sinais dispersos em decisao antes do pico.",
             "lead": "A forca do produto esta em ler milhares de sinais fracos, cruzar territorio, sintomas, fontes brasileiras e comportamento temporal para mostrar onde agir primeiro. Os cinco segmentos entram depois como ambientes isolados onde essa inteligencia vira receita, sem mistura de dados ou acesso compartilhado.",
             "traditional_title": "Vigilancia tradicional",
             "traditional_items": [
@@ -97,7 +97,7 @@ SITE_TRANSLATIONS = {
                 "Entrega historico e confirmacao, mas chega tarde para compras, escala, comunicacao e resposta local.",
                 "Sem IA e sem cruzamento territorial, o comprador nao enxerga a janela de acao com a mesma clareza.",
             ],
-            "solus_title": "Capa SolusCRT com IA",
+            "solus_title": "Capa SoloCRT com IA",
             "solus_items": [
                 "Recebe sinais sem cadastro nominal pela populacao, com localizacao atual e controle antifraude.",
                 "Identifica crescimento, predominancia de sintomas e risco territorial antes da confirmacao oficial.",
@@ -144,7 +144,7 @@ SITE_TRANSLATIONS = {
                 {
                     "title": "Governo & Vigilancia Publica",
                     "badge": "Contrato institucional",
-                    "text": "Escolha a SolusCRT Saude para integrar vigilancia territorial, IA, e-SUS/RNDS, faturamento SUS, auditoria e governanca LGPD em um ambiente publico isolado e confiavel.",
+                    "text": "Escolha a SoloCRT Saude para integrar vigilancia territorial, IA, e-SUS/RNDS, faturamento SUS, auditoria e governanca LGPD em um ambiente publico isolado e confiavel.",
                     "price": "Sob proposta",
                     "caption": "licitacao e proposta tecnica institucional",
                     "cta": "Falar com especialista",
@@ -185,16 +185,16 @@ SITE_TRANSLATIONS = {
             {"label": "Privacidade", "title": "Confianca por segregacao", "text": "Cada ambiente tem login, permissao, dados e auditoria proprios. Governo, farmacia, hospital, SST e plano de saude nao compartilham base operacional entre si."},
         ],
         "values": {
-            "eyebrow": "Confiança SolusCRT",
+            "eyebrow": "Confiança SoloCRT",
             "title": "Confiança para assinar, implantar e renovar.",
-            "lead": "A SolusCRT nasceu de uma pergunta que incomodava: por que a informação de saúde sempre chega tarde? Tarde para o gestor agir, tarde para o hospital se preparar, tarde para o trabalhador ser amparado. Cada decisão de produto, privacidade e governança começa daqui — do compromisso de que tecnologia de saúde existe para chegar a tempo e proteger vidas reais.",
+            "lead": "A SoloCRT nasceu de uma pergunta que incomodava: por que a informação de saúde sempre chega tarde? Tarde para o gestor agir, tarde para o hospital se preparar, tarde para o trabalhador ser amparado. Cada decisão de produto, privacidade e governança começa daqui — do compromisso de que tecnologia de saúde existe para chegar a tempo e proteger vidas reais.",
             "items": [
                 {"title": "Vida em primeiro lugar", "text": "Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisões que preservem pessoas."},
                 {"title": "Verdade antes de impacto", "text": "Separar sinal precoce, dado oficial e inferência de IA é um compromisso para evitar conclusões falsas."},
                 {"title": "Privacidade como fundamento", "text": "Dados de saúde exigem minimização, segurança, transparência e exibição adequada ao perfil autorizado. Cada ambiente tem sua própria segregação."},
                 {"title": "Cooperação institucional", "text": "O sistema foi pensado para unir população, empresas, hospitais, farmácias e governo sem confundir responsabilidades nem misturar dados."},
                 {"title": "Acesso social", "text": "O app da população deve ser gratuito, simples e útil, porque vigilância inteligente começa quando todos podem contribuir."},
-                {"title": "Coragem operacional", "text": "A SolusCRT existe para antecipar problemas difíceis, mostrar territórios críticos e ajudar líderes a agir antes do pico."},
+                {"title": "Coragem operacional", "text": "A SoloCRT existe para antecipar problemas difíceis, mostrar territórios críticos e ajudar líderes a agir antes do pico."},
             ],
         },
         "app": {
@@ -213,9 +213,9 @@ SITE_TRANSLATIONS = {
         },
         "cta": {
             "title": "Quando o monitoramento mostra o risco primeiro, a compra avanca mais rapido.",
-            "lead": "Se o seu cliente quer IA epidemiologica para governo, farmacia, hospital, SST ou operadora, o SolusCRT ja chega com narrativa, produto e governanca coerentes. Os cinco ambientes entram como formas de monetizar essa inteligencia, sempre de forma isolada e protegida.",
+            "lead": "Se o seu cliente quer IA epidemiologica para governo, farmacia, hospital, SST ou operadora, o SoloCRT ja chega com narrativa, produto e governanca coerentes. Os cinco ambientes entram como formas de monetizar essa inteligencia, sempre de forma isolada e protegida.",
         },
-        "footer": "SolusCRT Saude. Monitoramento epidemiologico com IA em ambientes privados, isolados e protegidos.",
+        "footer": "SoloCRT Saude. Monitoramento epidemiologico com IA em ambientes privados, isolados e protegidos.",
         "footer_links": {
             "privacy": "Privacidade",
             "terms": "Termos",
@@ -225,9 +225,9 @@ SITE_TRANSLATIONS = {
         },
     },
     "en": {
-        "title": "SolusCRT Health | 5 environments for Government, Pharmacy, Hospital, OSH and Health Plan",
+        "title": "SoloCRT Health | 5 environments for Government, Pharmacy, Hospital, OSH and Health Plan",
         "description": "Five private environments for Government, Pharmacy, Hospital, OSH and Health Plan, with distinct apps, territorial AI and a commercial structure ready for subscription, proposal or institutional contract.",
-        "brand": "SolusCRT Health",
+        "brand": "SoloCRT Health",
         "nav": {
             "diferencial": "Why it sells",
             "ecossistema": "Environments",
@@ -241,7 +241,7 @@ SITE_TRANSLATIONS = {
         "hero_title": "Five private environments for every health decision-maker.",
         "hero_title_desktop_lines": ["Five private", "environments for", "every health", "decision-maker."],
         "hero_title_lines": ["Five private", "environments for", "every health", "decision-maker."],
-        "hero_lead": "SolusCRT Health does not force every buyer into the same generic dashboard. It presents five independent commercial environments: Government, Pharmacy, Hospital, OSH and Health Plan. Each one has its own language, workflow, privacy and offer. The first impression feels mature, credible and ready to sign.",
+        "hero_lead": "SoloCRT Health does not force every buyer into the same generic dashboard. It presents five independent commercial environments: Government, Pharmacy, Hospital, OSH and Health Plan. Each one has its own language, workflow, privacy and offer. The first impression feels mature, credible and ready to sign.",
         "actions": {
             "presentation": "View commercial presentation",
             "app": "Explore the apps",
@@ -266,7 +266,7 @@ SITE_TRANSLATIONS = {
             {"value": "LGPD by architecture", "text": "Segregation, audit trail and access control treated as a core trust layer"},
         ],
         "differential": {
-            "title": "SolusCRT AI turns scattered signals into decisions before the peak.",
+            "title": "SoloCRT AI turns scattered signals into decisions before the peak.",
             "lead": "It does not try to replace official surveillance or medical diagnosis. Its strength is reading thousands of weak signals, crossing territory, growth, symptoms, Brazilian sources and time behavior to show where to act first — and delivering that view to the right environment: government, pharmacy, hospital or company.",
             "traditional_title": "Traditional surveillance",
             "traditional_items": [
@@ -274,7 +274,7 @@ SITE_TRANSLATIONS = {
                 "Excellent for confirmation, history and public policy, but naturally subject to delay.",
                 "May arrive late for stock planning, staffing, communication and local response.",
             ],
-            "solus_title": "SolusCRT AI layer",
+            "solus_title": "SoloCRT AI layer",
             "solus_items": [
                 "Receives population signals without nominal registration through the phone, with current location and anti-fraud controls.",
                 "Identifies growth, symptom predominance and territorial risk before official confirmation.",
@@ -293,7 +293,7 @@ SITE_TRANSLATIONS = {
         "enterprise": {
             "eyebrow": "OSH Environment — Companies and Occupational Clinics",
             "title": "Complete OSH management, team wellness and employee app in one dashboard.",
-            "lead": "SolusCRT's OSH environment is focused on pure organizational management: companies of any size and occupational health clinics that need legal compliance, employee engagement and real visibility of team wellness — without epidemiology, without external data, with full privacy.",
+            "lead": "SoloCRT's OSH environment is focused on pure organizational management: companies of any size and occupational health clinics that need legal compliance, employee engagement and real visibility of team wellness — without epidemiology, without external data, with full privacy.",
             "items": [
                 {"title": "Complete OSH and eSocial", "text": "Digital medical certificates, incident reports, leave management, exams, NR training, PPE/EPC, S-2240 workstation profiles, hazards and PGR, documents and compliance. eSocial OSH integration with real-time status dashboard."},
                 {"title": "Anonymous Team Wellness", "text": "Anonymous check-ins on mood, physical health, mental health, stress and job satisfaction. The company sees aggregated trends. Employee names only appear if they voluntarily request support contact."},
@@ -314,16 +314,16 @@ SITE_TRANSLATIONS = {
             {"label": "Privacy", "title": "Segment segregation", "text": "Each environment has its own login, permissions, data and audit trail. Government, pharmacy, hospital, OSH and health plan do not share the same operational base."},
         ],
         "values": {
-            "eyebrow": "SolusCRT Values",
+            "eyebrow": "SoloCRT Values",
             "title": "Technology to protect people, not just sell software.",
-            "lead": "SolusCRT was born with a clear responsibility: turn data into care, anticipate risks without empty alarm and help companies, governments, pharmacies and hospitals act with more awareness, speed and humanity.",
+            "lead": "SoloCRT was born with a clear responsibility: turn data into care, anticipate risks without empty alarm and help companies, governments, pharmacies and hospitals act with more awareness, speed and humanity.",
             "items": [
                 {"title": "Life first", "text": "Every indicator, alert and map exists to reduce delay, guide care and support decisions that preserve people."},
                 {"title": "Truth before impact", "text": "Separating early signal, official data and AI inference is a commitment to avoid false conclusions."},
                 {"title": "Privacy as foundation", "text": "Health data requires minimization, security, transparency and display appropriate to each authorized profile. Each environment has its own segregation."},
                 {"title": "Institutional cooperation", "text": "The system was designed to connect people, companies, hospitals, pharmacies and government without blurring responsibilities or mixing data."},
                 {"title": "Social access", "text": "The population app should be free, simple and useful, because intelligent surveillance begins when everyone can contribute."},
-                {"title": "Operational courage", "text": "SolusCRT exists to anticipate hard problems, reveal critical territories and help leaders act before the peak."},
+                {"title": "Operational courage", "text": "SoloCRT exists to anticipate hard problems, reveal critical territories and help leaders act before the peak."},
             ],
         },
         "app": {
@@ -342,7 +342,7 @@ SITE_TRANSLATIONS = {
         },
         "cta": {
             "title": "When each environment speaks the right language, the buying decision moves faster.",
-            "lead": "If your buyer is government, pharmacy, hospital, OSH or a health plan operator, SolusCRT already arrives with coherent narrative, product and governance. The commercial deck shows how each front supports the right subscription or contract model.",
+            "lead": "If your buyer is government, pharmacy, hospital, OSH or a health plan operator, SoloCRT already arrives with coherent narrative, product and governance. The commercial deck shows how each front supports the right subscription or contract model.",
         },
         "platform": {
             "title_html": "One platform.<br>Five entry points that make sense.",
@@ -375,7 +375,7 @@ SITE_TRANSLATIONS = {
                 {
                     "title": "Government & Public Surveillance",
                     "badge": "Institutional contract",
-                    "text": "Choose SolusCRT Health to unify territorial surveillance, e-SUS/RNDS, SUS billing, audit trails and LGPD governance in one trusted public-health platform.",
+                    "text": "Choose SoloCRT Health to unify territorial surveillance, e-SUS/RNDS, SUS billing, audit trails and LGPD governance in one trusted public-health platform.",
                     "price": "Custom proposal",
                     "caption": "public procurement and technical proposal",
                     "cta": "Talk to a specialist",
@@ -390,7 +390,7 @@ SITE_TRANSLATIONS = {
                 },
             ],
         },
-        "footer": "SolusCRT Health. Five private environments for Government, Pharmacy, Hospital, OSH, Health Plan and two apps with distinct roles.",
+        "footer": "SoloCRT Health. Five private environments for Government, Pharmacy, Hospital, OSH, Health Plan and two apps with distinct roles.",
         "footer_links": {
             "privacy": "Privacy",
             "terms": "Terms",
@@ -400,9 +400,9 @@ SITE_TRANSLATIONS = {
         },
     },
     "es": {
-        "title": "SolusCRT Salud | 5 ambientes para Gobierno, Farmacia, Hospital, SST y Plan de Salud",
+        "title": "SoloCRT Salud | 5 ambientes para Gobierno, Farmacia, Hospital, SST y Plan de Salud",
         "description": "Cinco ambientes privados para Gobierno, Farmacia, Hospital, SST y Plan de Salud, con apps distintos, IA territorial y una estructura comercial lista para suscripcion, propuesta o contrato institucional.",
-        "brand": "SolusCRT Salud",
+        "brand": "SoloCRT Salud",
         "nav": {
             "diferencial": "Por que vende",
             "ecossistema": "Ambientes",
@@ -416,7 +416,7 @@ SITE_TRANSLATIONS = {
         "hero_title": "Cinco ambientes privados para cada decisor en salud.",
         "hero_title_desktop_lines": ["Cinco ambientes", "privados para", "cada decisor", "en salud."],
         "hero_title_lines": ["Cinco ambientes", "privados para", "cada decisor", "en salud."],
-        "hero_lead": "SolusCRT Salud no obliga a todos a entrar en el mismo panel generico. Presenta cinco ambientes comerciales independientes: Gobierno, Farmacia, Hospital, SST y Plan de Salud. Cada uno tiene su propio lenguaje, flujo, privacidad y oferta. La primera impresion se siente madura, creible y lista para firma.",
+        "hero_lead": "SoloCRT Salud no obliga a todos a entrar en el mismo panel generico. Presenta cinco ambientes comerciales independientes: Gobierno, Farmacia, Hospital, SST y Plan de Salud. Cada uno tiene su propio lenguaje, flujo, privacidad y oferta. La primera impresion se siente madura, creible y lista para firma.",
         "actions": {
             "presentation": "Ver presentacion comercial",
             "app": "Conocer las apps",
@@ -441,7 +441,7 @@ SITE_TRANSLATIONS = {
             {"value": "LGPD por arquitectura", "text": "Segregacion, auditoria y control de acceso tratados como capa central de confianza"},
         ],
         "differential": {
-            "title": "La IA de SolusCRT transforma senales dispersas en decision antes del pico.",
+            "title": "La IA de SoloCRT transforma senales dispersas en decision antes del pico.",
             "lead": "No intenta sustituir vigilancia oficial ni diagnostico medico. Su fuerza esta en leer miles de senales debiles, cruzar territorio, crecimiento, sintomas, fuentes brasilenas y comportamiento temporal para mostrar donde actuar primero — y entregar esa vision al ambiente correcto: gobierno, farmacia, hospital o empresa.",
             "traditional_title": "Vigilancia tradicional",
             "traditional_items": [
@@ -449,7 +449,7 @@ SITE_TRANSLATIONS = {
                 "Excelente para confirmacion, historico y politica publica, pero naturalmente sujeta a retraso.",
                 "Puede llegar tarde para stock, escala de equipo, comunicacion y respuesta local.",
             ],
-            "solus_title": "Capa SolusCRT con IA",
+            "solus_title": "Capa SoloCRT con IA",
             "solus_items": [
                 "Recibe senales sin registro nominal de la poblacion por celular, con ubicacion actual y control antifraude.",
                 "Identifica crecimiento, predominancia de sintomas y riesgo territorial antes de la confirmacion oficial.",
@@ -468,7 +468,7 @@ SITE_TRANSLATIONS = {
         "enterprise": {
             "eyebrow": "Ambiente SST — Empresas y Clinicas Ocupacionales",
             "title": "Gestion SST completa, bienestar del equipo y app del trabajador en un panel.",
-            "lead": "El ambiente SST de SolusCRT esta orientado a la gestion organizacional pura: empresas de cualquier tamano y clinicas de salud ocupacional que necesitan conformidad legal, compromiso del trabajador y visibilidad real del bienestar del equipo — sin epidemiologia, sin datos externos, con total privacidad.",
+            "lead": "El ambiente SST de SoloCRT esta orientado a la gestion organizacional pura: empresas de cualquier tamano y clinicas de salud ocupacional que necesitan conformidad legal, compromiso del trabajador y visibilidad real del bienestar del equipo — sin epidemiologia, sin datos externos, con total privacidad.",
             "items": [
                 {"title": "SST completo y eSocial", "text": "Certificados medicos digitales, registros de accidente, ausencias, examenes, capacitaciones NR, EPI/EPC, puestos S-2240, riesgos y PGR, documentos y conformidad. Integracion eSocial SST con panel de estado en tiempo real."},
                 {"title": "Bienestar Anonimo del Equipo", "text": "Check-ins anonimos de humor, salud fisica, salud mental, estres y satisfaccion laboral. La empresa ve tendencias agregadas. El nombre del trabajador solo aparece si voluntariamente solicita contacto de apoyo."},
@@ -489,16 +489,16 @@ SITE_TRANSLATIONS = {
             {"label": "Privacidad", "title": "Segregacion por segmento", "text": "Cada ambiente tiene login, permisos, datos y auditoria propios. Gobierno, farmacia, hospital, SST y plan de salud no comparten la misma base operativa."},
         ],
         "values": {
-            "eyebrow": "Valores SolusCRT",
+            "eyebrow": "Valores SoloCRT",
             "title": "Tecnologia para proteger personas, no solo vender software.",
-            "lead": "SolusCRT nace con una responsabilidad clara: transformar datos en cuidado, anticipar riesgos sin alarma vacia y ayudar a empresas, gobiernos, farmacias y hospitales a actuar con mas conciencia, velocidad y humanidad.",
+            "lead": "SoloCRT nace con una responsabilidad clara: transformar datos en cuidado, anticipar riesgos sin alarma vacia y ayudar a empresas, gobiernos, farmacias y hospitales a actuar con mas conciencia, velocidad y humanidad.",
             "items": [
                 {"title": "Vida en primer lugar", "text": "Todo indicador, alerta y mapa existe para reducir retraso, orientar cuidado y apoyar decisiones que preserven personas."},
                 {"title": "Verdad antes que impacto", "text": "Separar senal temprana, dato oficial e inferencia de IA es un compromiso para evitar conclusiones falsas."},
                 {"title": "Privacidad como fundamento", "text": "Los datos de salud exigen minimizacion, seguridad, transparencia y exhibicion adecuada al perfil autorizado. Cada ambiente tiene su propia segregacion."},
                 {"title": "Cooperacion institucional", "text": "El sistema fue pensado para unir poblacion, empresas, hospitales, farmacias y gobierno sin confundir responsabilidades ni mezclar datos."},
                 {"title": "Acceso social", "text": "La app poblacional debe ser gratuita, simple y util, porque la vigilancia inteligente comienza cuando todos pueden contribuir."},
-                {"title": "Coraje operacional", "text": "SolusCRT existe para anticipar problemas dificiles, mostrar territorios criticos y ayudar a lideres a actuar antes del pico."},
+                {"title": "Coraje operacional", "text": "SoloCRT existe para anticipar problemas dificiles, mostrar territorios criticos y ayudar a lideres a actuar antes del pico."},
             ],
         },
         "app": {
@@ -517,7 +517,7 @@ SITE_TRANSLATIONS = {
         },
         "cta": {
             "title": "Cuando cada ambiente habla el idioma correcto, la decision de compra avanza mas rapido.",
-            "lead": "Si su comprador es gobierno, farmacia, hospital, SST o una operadora, SolusCRT ya llega con narrativa, producto y gobernanza coherentes. La presentacion comercial muestra como cada frente sostiene el modelo correcto de suscripcion o contrato.",
+            "lead": "Si su comprador es gobierno, farmacia, hospital, SST o una operadora, SoloCRT ya llega con narrativa, producto y gobernanza coherentes. La presentacion comercial muestra como cada frente sostiene el modelo correcto de suscripcion o contrato.",
         },
         "platform": {
             "title_html": "Una plataforma.<br>Cinco puertas de entrada con sentido.",
@@ -550,7 +550,7 @@ SITE_TRANSLATIONS = {
                 {
                     "title": "Gobierno y Vigilancia Publica",
                     "badge": "Contrato institucional",
-                    "text": "Elija SolusCRT Salud para unificar vigilancia territorial, e-SUS/RNDS, facturacion SUS, auditoria y gobernanza LGPD en una plataforma publica confiable.",
+                    "text": "Elija SoloCRT Salud para unificar vigilancia territorial, e-SUS/RNDS, facturacion SUS, auditoria y gobernanza LGPD en una plataforma publica confiable.",
                     "price": "Bajo propuesta",
                     "caption": "licitacion y propuesta tecnica institucional",
                     "cta": "Hablar con especialista",
@@ -565,7 +565,7 @@ SITE_TRANSLATIONS = {
                 },
             ],
         },
-        "footer": "SolusCRT Salud. Cinco ambientes privados para Gobierno, Farmacia, Hospital, SST, Plan de Salud y dos apps con funciones distintas.",
+        "footer": "SoloCRT Salud. Cinco ambientes privados para Gobierno, Farmacia, Hospital, SST, Plan de Salud y dos apps con funciones distintas.",
         "footer_links": {
             "privacy": "Privacidad",
             "terms": "Terminos",
@@ -579,8 +579,8 @@ SITE_TRANSLATIONS = {
 
 PRESENTATION_TRANSLATIONS = {
     "pt": {
-        "title": "Apresentacao SolusCRT Saude",
-        "brand": "SolusCRT Saúde",
+        "title": "Apresentacao SoloCRT Saude",
+        "brand": "SoloCRT Saúde",
         "site": "Site",
         "contact": "Contato",
         "language_aria": "Selecionar idioma",
@@ -588,7 +588,7 @@ PRESENTATION_TRANSLATIONS = {
         "vision": {
             "eyebrow": "Visão",
             "title": "Monitoramento epidemiologico com IA que antecipa o pico.",
-            "body": "O SolusCRT cruza sinais da populacao, fontes oficiais e inferencia de IA para mostrar onde o risco cresce primeiro e onde agir antes da curva subir. Governo, Farmacia, Hospital, SST e Plano de Saude entram depois como os cinco mercados que compram essa inteligencia e a transformam em assinatura ou contrato.",
+            "body": "O SoloCRT cruza sinais da populacao, fontes oficiais e inferencia de IA para mostrar onde o risco cresce primeiro e onde agir antes da curva subir. Governo, Farmacia, Hospital, SST e Plano de Saude entram depois como os cinco mercados que compram essa inteligencia e a transformam em assinatura ou contrato.",
             "labels": {"resp": "Sinais", "deng": "IA", "covid": "Risco"},
         },
         "problem": {
@@ -604,7 +604,7 @@ PRESENTATION_TRANSLATIONS = {
         "solution": {
             "eyebrow": "Solução",
             "title": "A IA transforma sinais dispersos em decisao antes do pico.",
-            "body": "O SolusCRT separa contratos, acessos, indicadores e experiencia por segmento. Governo, farmacia e hospital usam inteligencia epidemiologica territorial com a linguagem do seu setor. SST opera como ambiente independente de gestao ocupacional, com assinatura propria, trial de 15 dias e app do funcionario.",
+            "body": "O SoloCRT separa contratos, acessos, indicadores e experiencia por segmento. Governo, farmacia e hospital usam inteligencia epidemiologica territorial com a linguagem do seu setor. SST opera como ambiente independente de gestao ocupacional, com assinatura propria, trial de 15 dias e app do funcionario.",
             "cards": [
                 {"title": "Governo", "text": "Sala de situacao, alertas, auditoria, matriz de decisao e leitura territorial para uniao, estados e municipios."},
                 {"title": "Farmacia", "text": "Estoque, FEFO, lotes, compras e previsao de demanda ligados ao risco epidemiologico regional."},
@@ -625,8 +625,8 @@ PRESENTATION_TRANSLATIONS = {
         },
         "differential": {
             "eyebrow": "Diferencial",
-            "title": "A IA da SolusCRT transforma sinais dispersos em decisao antes do pico.",
-            "body": "O SolusCRT cruza milhares de sinais fracos, territorio, sintomas, fontes brasileiras e comportamento temporal para mostrar onde agir primeiro. Governo, Farmacia, Hospital, SST e Plano de Saude entram depois como mercados que monetizam essa inteligencia.",
+            "title": "A IA da SoloCRT transforma sinais dispersos em decisao antes do pico.",
+            "body": "O SoloCRT cruza milhares de sinais fracos, territorio, sintomas, fontes brasileiras e comportamento temporal para mostrar onde agir primeiro. Governo, Farmacia, Hospital, SST e Plano de Saude entram depois como mercados que monetizam essa inteligencia.",
             "quote": "Sinais viram risco. Risco vira decisao. Decisao vira contrato.",
         },
         "governance": {
@@ -642,7 +642,7 @@ PRESENTATION_TRANSLATIONS = {
         "values": {
             "eyebrow": "Valores",
             "title": "Valores que fazem a tecnologia merecer confiança",
-            "body": "O SolusCRT foi pensado para cooperar com pessoas e instituições: proteger vidas, antecipar riscos, respeitar privacidade, comunicar com responsabilidade e ajudar líderes a agir sem distorcer a verdade.",
+            "body": "O SoloCRT foi pensado para cooperar com pessoas e instituições: proteger vidas, antecipar riscos, respeitar privacidade, comunicar com responsabilidade e ajudar líderes a agir sem distorcer a verdade.",
             "cards": [
                 {"title": "Vida primeiro", "text": "SST, bem-estar e IA existem para reduzir dano real a pessoas reais."},
                 {"title": "Verdade antes de impacto", "text": "Sinal precoce, dado oficial e IA sempre separados e identificados."},
@@ -665,8 +665,8 @@ PRESENTATION_TRANSLATIONS = {
         },
     },
     "en": {
-        "title": "SolusCRT Health Presentation",
-        "brand": "SolusCRT Health",
+        "title": "SoloCRT Health Presentation",
+        "brand": "SoloCRT Health",
         "site": "Website",
         "contact": "Contact",
         "language_aria": "Select language",
@@ -674,7 +674,7 @@ PRESENTATION_TRANSLATIONS = {
         "vision": {
             "eyebrow": "Vision",
             "title": "One health platform with five private environments.",
-            "body": "SolusCRT Health was designed as a sector ecosystem: Government with an epidemiological situation room for federal, state and municipal use; Pharmacy with management and demand radar; Hospital with care management and pressure anticipation; OSH with occupational compliance, an employee app and anonymous wellness; and Health Plan operators with complete beneficiary, claims and reimbursement management. The population app feeds epidemiological intelligence for government, pharmacy and hospital without mixing data with OSH or health plan.",
+            "body": "SoloCRT Health was designed as a sector ecosystem: Government with an epidemiological situation room for federal, state and municipal use; Pharmacy with management and demand radar; Hospital with care management and pressure anticipation; OSH with occupational compliance, an employee app and anonymous wellness; and Health Plan operators with complete beneficiary, claims and reimbursement management. The population app feeds epidemiological intelligence for government, pharmacy and hospital without mixing data with OSH or health plan.",
             "labels": {"resp": "Respiratory", "deng": "Arbovirus", "covid": "Viral"},
         },
         "problem": {
@@ -690,7 +690,7 @@ PRESENTATION_TRANSLATIONS = {
         "solution": {
             "eyebrow": "Solution",
             "title": "An architecture that delivers the right operation with the right privacy.",
-            "body": "SolusCRT separates contracts, logins, indicators and operations by segment. Government, pharmacy and hospital use territorial epidemiological intelligence in the language of their own sector. OSH runs as an independent occupational management environment, with its own subscription, 15-day trial and employee app.",
+            "body": "SoloCRT separates contracts, logins, indicators and operations by segment. Government, pharmacy and hospital use territorial epidemiological intelligence in the language of their own sector. OSH runs as an independent occupational management environment, with its own subscription, 15-day trial and employee app.",
             "cards": [
                 {"title": "Government", "text": "Situation room, alerts, audit trail, decision matrix and territorial reading for federal, state and municipal managers."},
                 {"title": "Pharmacy", "text": "Inventory, FEFO, lots, purchasing and demand forecasting tied to regional epidemiological risk."},
@@ -712,7 +712,7 @@ PRESENTATION_TRANSLATIONS = {
         "differential": {
             "eyebrow": "Differentiator",
             "title": "This is not one product forced on everyone. It is an ecosystem built for five coordinated paths.",
-            "body": "SolusCRT respects the logic of each segment: institutional contract and governance for government; expansion by store or network for pharmacy; care capacity for hospital; recurring subscription, fast implementation and proof of value for OSH and occupational clinics; specialized beneficiary, claims and reimbursement management for health plan operators.",
+            "body": "SoloCRT respects the logic of each segment: institutional contract and governance for government; expansion by store or network for pharmacy; care capacity for hospital; recurring subscription, fast implementation and proof of value for OSH and occupational clinics; specialized beneficiary, claims and reimbursement management for health plan operators.",
             "quote": "Government buys territorial intelligence. Pharmacy buys future demand. Hospital buys care readiness. OSH buys compliance, app and engagement. Health Plan buys operator management with epidemiology.",
         },
         "governance": {
@@ -728,7 +728,7 @@ PRESENTATION_TRANSLATIONS = {
         "values": {
             "eyebrow": "Values",
             "title": "Values that make technology worthy of trust.",
-            "body": "SolusCRT was designed to cooperate with people and institutions: protect lives, anticipate risks, respect privacy, communicate responsibly and help leaders act without distorting the truth.",
+            "body": "SoloCRT was designed to cooperate with people and institutions: protect lives, anticipate risks, respect privacy, communicate responsibly and help leaders act without distorting the truth.",
             "cards": [
                 {"title": "Life first", "text": "OSH, wellness and AI exist to reduce real harm to real people."},
                 {"title": "Truth before impact", "text": "Early signal, official data and AI always separated and identified."},
@@ -745,14 +745,14 @@ PRESENTATION_TRANSLATIONS = {
         "closing": {
             "eyebrow": "Closing",
             "title": "A strong market story. A clear product for subscription and contract.",
-            "body": "In the demo, each buyer sees their own value: government with institutional contract and situation room; pharmacy and hospital with expansion by unit or network; OSH with recurring subscription, 15-day trial and fast implementation. SolusCRT grows without mixing operations, privacy or institutional purpose.",
+            "body": "In the demo, each buyer sees their own value: government with institutional contract and situation room; pharmacy and hospital with expansion by unit or network; OSH with recurring subscription, 15-day trial and fast implementation. SoloCRT grows without mixing operations, privacy or institutional purpose.",
             "meeting": "Request a sales demo",
             "back": "Back to main website",
         },
     },
     "es": {
-        "title": "Presentacion SolusCRT Salud",
-        "brand": "SolusCRT Salud",
+        "title": "Presentacion SoloCRT Salud",
+        "brand": "SoloCRT Salud",
         "site": "Sitio",
         "contact": "Contacto",
         "language_aria": "Seleccionar idioma",
@@ -760,7 +760,7 @@ PRESENTATION_TRANSLATIONS = {
         "vision": {
             "eyebrow": "Vision",
             "title": "Una plataforma de salud con cinco ambientes privados.",
-            "body": "SolusCRT Salud fue disenado como un ecosistema sectorial: Gobierno con sala de situacion epidemiologica para nivel federal, estadual y municipal; Farmacia con gestion y radar de demanda; Hospital con gestion asistencial y anticipacion de presion; SST con conformidad ocupacional, app del trabajador y bienestar anonimo; y Plan de Salud con gestion completa de beneficiarios, siniestros, reembolsos y dashboard epidemiologico. La app poblacional alimenta la inteligencia de los tres primeros sin mezclar datos con SST ni plan de salud.",
+            "body": "SoloCRT Salud fue disenado como un ecosistema sectorial: Gobierno con sala de situacion epidemiologica para nivel federal, estadual y municipal; Farmacia con gestion y radar de demanda; Hospital con gestion asistencial y anticipacion de presion; SST con conformidad ocupacional, app del trabajador y bienestar anonimo; y Plan de Salud con gestion completa de beneficiarios, siniestros, reembolsos y dashboard epidemiologico. La app poblacional alimenta la inteligencia de los tres primeros sin mezclar datos con SST ni plan de salud.",
             "labels": {"resp": "Respiratorio", "deng": "Arbovirosis", "covid": "Viral"},
         },
         "problem": {
@@ -776,7 +776,7 @@ PRESENTATION_TRANSLATIONS = {
         "solution": {
             "eyebrow": "Solucion",
             "title": "Una arquitectura que entrega la operacion correcta con la privacidad correcta.",
-            "body": "SolusCRT separa contratos, logins, indicadores y operacion por segmento. Gobierno, farmacia y hospital usan inteligencia epidemiologica territorial en el lenguaje de su propio sector. SST funciona como ambiente independiente de gestion ocupacional, con suscripcion propia, prueba de 15 dias y app del trabajador.",
+            "body": "SoloCRT separa contratos, logins, indicadores y operacion por segmento. Gobierno, farmacia y hospital usan inteligencia epidemiologica territorial en el lenguaje de su propio sector. SST funciona como ambiente independiente de gestion ocupacional, con suscripcion propia, prueba de 15 dias y app del trabajador.",
             "cards": [
                 {"title": "Gobierno", "text": "Sala de situacion, alertas, auditoria, matriz de decision y lectura territorial para union, estados y municipios."},
                 {"title": "Farmacia", "text": "Inventario, FEFO, lotes, compras y prevision de demanda ligadas al riesgo epidemiologico regional."},
@@ -798,7 +798,7 @@ PRESENTATION_TRANSLATIONS = {
         "differential": {
             "eyebrow": "Diferencial",
             "title": "No es un unico producto empujado para todos. Es un ecosistema listo para cinco frentes que colaboran entre si.",
-            "body": "SolusCRT respeta la logica de cada segmento: contrato institucional y gobernanza para gobierno; expansion por tienda o red para farmacia; capacidad asistencial para hospital; suscripcion recurrente, implantacion rapida y prueba de valor para SST y clinicas ocupacionales; gestion especializada de beneficiarios, siniestros y reembolsos para operadoras de plan de salud.",
+            "body": "SoloCRT respeta la logica de cada segmento: contrato institucional y gobernanza para gobierno; expansion por tienda o red para farmacia; capacidad asistencial para hospital; suscripcion recurrente, implantacion rapida y prueba de valor para SST y clinicas ocupacionales; gestion especializada de beneficiarios, siniestros y reembolsos para operadoras de plan de salud.",
             "quote": "Gobierno compra inteligencia territorial. Farmacia compra demanda futura. Hospital compra preparacion asistencial. SST compra conformidad, app y compromiso. Plan de Salud compra gestion de operadora con epidemiologia.",
         },
         "governance": {
@@ -814,7 +814,7 @@ PRESENTATION_TRANSLATIONS = {
         "values": {
             "eyebrow": "Valores",
             "title": "Valores que hacen que la tecnologia merezca confianza.",
-            "body": "SolusCRT fue pensado para cooperar con personas e instituciones: proteger vidas, anticipar riesgos, respetar privacidad, comunicar con responsabilidad y ayudar a lideres a actuar sin distorsionar la verdad.",
+            "body": "SoloCRT fue pensado para cooperar con personas e instituciones: proteger vidas, anticipar riesgos, respetar privacidad, comunicar con responsabilidad y ayudar a lideres a actuar sin distorsionar la verdad.",
             "cards": [
                 {"title": "Vida primero", "text": "SST, bienestar e IA existen para reducir dano real a personas reales."},
                 {"title": "Verdad antes que impacto", "text": "Senal temprana, dato oficial e IA siempre separados e identificados."},
@@ -831,7 +831,7 @@ PRESENTATION_TRANSLATIONS = {
         "closing": {
             "eyebrow": "Cierre",
             "title": "Un relato fuerte para mercado. Un producto claro para suscripcion y contrato.",
-            "body": "En la demostracion, cada comprador ve su propio valor: gobierno con contrato institucional y sala de situacion; farmacia y hospital con expansion por unidad o red; SST con suscripcion recurrente, prueba de 15 dias e implantacion rapida. SolusCRT crece sin mezclar operacion, privacidad ni proposito institucional.",
+            "body": "En la demostracion, cada comprador ve su propio valor: gobierno con contrato institucional y sala de situacion; farmacia y hospital con expansion por unidad o red; SST con suscripcion recurrente, prueba de 15 dias e implantacion rapida. SoloCRT crece sin mezclar operacion, privacidad ni proposito institucional.",
             "meeting": "Solicitar demostracion comercial",
             "back": "Volver al sitio principal",
         },
@@ -843,7 +843,7 @@ def _commercial_site_copy(language, site):
     if language != "pt":
         return site
     site = deepcopy(site)
-    site["title"] = "SolusCRT Saúde | healthtech de inteligência em saúde com IA para Governo, Farmácia, Hospital, SST e Plano de Saúde"
+    site["title"] = "SoloCRT Saúde | healthtech de inteligência em saúde com IA para Governo, Farmácia, Hospital, SST e Plano de Saúde"
     site["description"] = "Healthtech brasileira de inteligência em saúde com IA. Cinco ambientes privados por segmento — Governo, Farmácia, Hospital, SST e Plano de Saúde — com dois apps e governança LGPD."
     site["nav"]["diferencial"] = "Por que comprar"
     site["nav"]["ecossistema"] = "Segmentos"
@@ -866,7 +866,7 @@ def _commercial_site_copy(language, site):
         "em saúde.",
     ]
     site["hero_lead"] = (
-        "A SolusCRT é uma healthtech brasileira de inteligência em saúde com IA. Em vez de um painel único e técnico, a home mostra cinco ambientes que o cliente reconhece de imediato: "
+        "A SoloCRT é uma healthtech brasileira de inteligência em saúde com IA. Em vez de um painel único e técnico, a home mostra cinco ambientes que o cliente reconhece de imediato: "
         "Governo, Farmácia, Hospital, SST e Plano de Saúde. Cada setor entra com linguagem própria, proposta clara "
         "e caminho de compra objetivo."
     )
@@ -929,7 +929,7 @@ def _commercial_site_copy(language, site):
         "Quando a IA fala a linguagem do segmento certo, a conversa encurta e a compra avança."
     )
     site["differential"]["lead"] = (
-        "A proposta certa reduz explicação, diminui objeção e acelera demo, negociação e assinatura. O SolusCRT "
+        "A proposta certa reduz explicação, diminui objeção e acelera demo, negociação e assinatura. O SoloCRT "
         "organiza a conversa por segmento para que cada cliente veja uma IA desenhada para o próprio contexto, sem "
         "precisar traduzir a plataforma."
     )
@@ -939,7 +939,7 @@ def _commercial_site_copy(language, site):
         "O comprador precisa traduzir sozinho onde está o valor para sua rotina e seu contrato.",
         "Quando a proposta parece improvisada, a venda perde força antes da demo ficar memorável.",
     ]
-    site["differential"]["solus_title"] = "Arquitetura comercial SolusCRT"
+    site["differential"]["solus_title"] = "Arquitetura comercial SoloCRT"
     site["differential"]["solus_items"] = [
         "Cada segmento abre um ambiente com linguagem, rotina e IA próprias.",
         "A prova de valor aparece no ponto certo: Governo, Farmácia, Hospital, SST e Plano de Saúde.",
@@ -1081,7 +1081,7 @@ def _commercial_site_copy(language, site):
     ]
     site["values"]["title"] = "Valores que fazem a tecnologia merecer confiança"
     site["values"]["lead"] = (
-        "A SolusCRT nasceu de uma pergunta que incomodava: por que a informação de saúde sempre chega tarde? "
+        "A SoloCRT nasceu de uma pergunta que incomodava: por que a informação de saúde sempre chega tarde? "
         "Tarde para o gestor agir, tarde para o hospital se preparar, tarde para o trabalhador ser amparado. "
         "Cada decisão de produto, privacidade e governança começa daqui — do compromisso de que tecnologia "
         "de saúde existe para chegar a tempo e proteger vidas reais."
@@ -1100,10 +1100,10 @@ def _commercial_site_copy(language, site):
     ]
     site["cta"]["title"] = "Quando cada segmento se reconhece no produto, a decisão avança mais rápido."
     site["cta"]["lead"] = (
-        "Se o seu cliente é Governo, Farmácia, Hospital, SST ou Plano de Saúde, o SolusCRT já chega com narrativa "
+        "Se o seu cliente é Governo, Farmácia, Hospital, SST ou Plano de Saúde, o SoloCRT já chega com narrativa "
         "comercial, oferta e governança coerentes."
     )
-    site["footer"] = "SolusCRT Saúde · healthtech de inteligência em saúde com IA. Cinco ambientes privados para Governo, Farmácia, Hospital, SST e Plano de Saúde."
+    site["footer"] = "SoloCRT Saúde · healthtech de inteligência em saúde com IA. Cinco ambientes privados para Governo, Farmácia, Hospital, SST e Plano de Saúde."
     return site
 
 
@@ -1111,10 +1111,10 @@ def _commercial_presentation_copy(language, deck):
     if language != "pt":
         return deck
     deck = deepcopy(deck)
-    deck["title"] = "Apresentação comercial SolusCRT Saúde"
+    deck["title"] = "Apresentação comercial SoloCRT Saúde"
     deck["vision"]["title"] = "Healthtech de monitoramento epidemiológico com IA em cinco ambientes privados e isolados."
     deck["vision"]["body"] = (
-        "A SolusCRT Saúde é uma healthtech brasileira de inteligência em saúde com IA. Organiza a conversa por segmento, mas nunca mistura clientes: Governo, Farmácia, Hospital, "
+        "A SoloCRT Saúde é uma healthtech brasileira de inteligência em saúde com IA. Organiza a conversa por segmento, mas nunca mistura clientes: Governo, Farmácia, Hospital, "
         "SST e Plano de Saúde entram em jornadas distintas, com ambiente, acesso e privacidade próprios. A IA é "
         "desenhada para cada ambiente, com contexto, leitura e recomendação próprios para cada contrato."
     )
@@ -1140,7 +1140,7 @@ def _commercial_presentation_copy(language, deck):
     ]
     deck["solution"]["title"] = "Cada segmento entra no ambiente certo, com isolamento, privacidade e proposta própria."
     deck["solution"]["body"] = (
-        "SolusCRT separa contratos, acesso e narrativa por segmento. Governo, Farmácia e Hospital usam inteligência "
+        "SoloCRT separa contratos, acesso e narrativa por segmento. Governo, Farmácia e Hospital usam inteligência "
         "territorial com linguagem de negócio dentro do seu próprio espaço; SST opera como ambiente independente de "
         "gestão ocupacional, com assinatura própria, trial e app do trabalhador, sem compartilhamento de base entre clientes."
     )
@@ -1162,7 +1162,7 @@ def _commercial_presentation_copy(language, deck):
     deck["differential"]["eyebrow"] = "Diferencial"
     deck["differential"]["title"] = "Não é uma IA genérica. É inteligência epidemiológica desenhada por segmento."
     deck["differential"]["body"] = (
-        "SolusCRT respeita a forma como cada segmento decide: Governo compra clareza e governança; Farmácia compra "
+        "SoloCRT respeita a forma como cada segmento decide: Governo compra clareza e governança; Farmácia compra "
         "previsibilidade; Hospital compra capacidade; SST compra adesão e recorrência; Plano de Saúde compra operação "
         "especializada. Cada um entra no seu próprio ambiente com uma IA ajustada ao contexto, com dados segregados e "
         "experiência protegida."
@@ -1171,7 +1171,7 @@ def _commercial_presentation_copy(language, deck):
     deck["governance"]["title"] = "Privacidade e segregação fazem parte de cada ambiente."
     deck["values"]["title"] = "Valores que fazem a tecnologia merecer confiança"
     deck["values"]["body"] = (
-        "SolusCRT foi pensado para cooperar com pessoas e instituições: proteger vidas, antecipar riscos, respeitar "
+        "SoloCRT foi pensado para cooperar com pessoas e instituições: proteger vidas, antecipar riscos, respeitar "
         "privacidade, comunicar com responsabilidade e ajudar líderes a agir sem distorcer a verdade ou misturar "
         "clientes."
     )
@@ -1275,22 +1275,22 @@ def apresentacao_comercial(request):
 
 LEGAL_COMMON = {
     "pt": {
-        "brand": "SolusCRT Saúde",
+        "brand": "SoloCRT Saúde",
         "back": "Voltar ao site",
         "language_aria": "Selecionar idioma",
-        "notice": "O SolusCRT Saude mantem compromisso continuo com transparencia, seguranca, minimizacao de dados e governanca responsavel. A documentacao institucional e mantida atualizada para refletir melhorias da plataforma, requisitos regulatorios e necessidades contratuais.",
+        "notice": "O SoloCRT Saude mantem compromisso continuo com transparencia, seguranca, minimizacao de dados e governanca responsavel. A documentacao institucional e mantida atualizada para refletir melhorias da plataforma, requisitos regulatorios e necessidades contratuais.",
     },
     "en": {
-        "brand": "SolusCRT Health",
+        "brand": "SoloCRT Health",
         "back": "Back to website",
         "language_aria": "Select language",
-        "notice": "SolusCRT Health maintains an ongoing commitment to transparency, security, data minimization and responsible governance. Institutional documentation is kept current to reflect platform improvements, regulatory requirements and contractual needs.",
+        "notice": "SoloCRT Health maintains an ongoing commitment to transparency, security, data minimization and responsible governance. Institutional documentation is kept current to reflect platform improvements, regulatory requirements and contractual needs.",
     },
     "es": {
-        "brand": "SolusCRT Salud",
+        "brand": "SoloCRT Salud",
         "back": "Volver al sitio",
         "language_aria": "Seleccionar idioma",
-        "notice": "SolusCRT Salud mantiene un compromiso continuo con la transparencia, la seguridad, la minimizacion de datos y la gobernanza responsable. La documentacion institucional se mantiene actualizada para reflejar mejoras de la plataforma, requisitos regulatorios y necesidades contractuales.",
+        "notice": "SoloCRT Salud mantiene un compromiso continuo con la transparencia, la seguridad, la minimizacion de datos y la gobernanza responsable. La documentacion institucional se mantiene actualizada para reflejar mejoras de la plataforma, requisitos regulatorios y necesidades contractuales.",
     },
 }
 
@@ -1299,9 +1299,9 @@ LEGAL_DOCUMENTS = {
     "pt": {
         "privacidade": {
             "title": "Politica de Privacidade",
-            "subtitle": "Como o SolusCRT Saude trata dados no app da populacao, no app do funcionario e nos ambientes de Governo, Farmacia, Hospital, SST e Plano de Saude.",
+            "subtitle": "Como o SoloCRT Saude trata dados no app da populacao, no app do funcionario e nos ambientes de Governo, Farmacia, Hospital, SST e Plano de Saude.",
             "sections": [
-                ("Quem somos e escopo", "O SolusCRT Saude e uma plataforma healthtech completa de gestao em saude, com ambiente SST para empresas, gestao farmaceutica, gestao hospitalar, sala de situacao para governo, ambiente dedicado para operadoras de plano de saude e dois apps: o app da populacao (gratuito e anonimo) e o app do funcionario (vinculado a conta empresarial). Esta politica explica o tratamento de dados em todos esses contextos."),
+                ("Quem somos e escopo", "O SoloCRT Saude e uma plataforma healthtech completa de gestao em saude, com ambiente SST para empresas, gestao farmaceutica, gestao hospitalar, sala de situacao para governo, ambiente dedicado para operadoras de plano de saude e dois apps: o app da populacao (gratuito e anonimo) e o app do funcionario (vinculado a conta empresarial). Esta politica explica o tratamento de dados em todos esses contextos."),
                 ("Resumo para usuarios do app da populacao", "No app publico, voce pode consultar radar, mapa e alertas e, se desejar, enviar sintomas de forma voluntaria e anonima. O app nao oferece diagnostico medico, prescricao, triagem individual, atendimento de emergencia ou substituicao de consulta profissional."),
                 ("Resumo para usuarios do app do funcionario", "O app do funcionario e vinculado a conta empresarial contratante. Por meio dele, o funcionario acessa o proprio ASO digital, faz solicitacoes, recebe notificacoes de exames e treinamentos e envia check-ins de bem-estar. Check-ins de bem-estar sao anonimos por padrao — a empresa ve apenas dados agregados, nunca o nome associado ao check-in individual, salvo quando o proprio funcionario solicita contato de apoio."),
                 ("Cinco ambientes, cinco contextos de tratamento", "Governo trata indicadores territoriais, alertas, auditoria e operacao institucional. Farmacia trata catalogo, estoque, lotes, fornecedores, demanda e rastreabilidade. Hospital trata triagem, leitos, internacoes, prescricoes e operacao assistencial. SST trata ASO, CAT, exames, afastamentos, eSocial, treinamentos e bem-estar anonimo. Plano de Saude trata cadastros de beneficiarios, contratos, guias de autorizacao, sinistros, reembolsos e dados epidemiologicos territoriais. O app da populacao alimenta apenas a inteligencia epidemiologica territorial; o app do funcionario pertence ao ambiente SST."),
@@ -1325,7 +1325,7 @@ LEGAL_DOCUMENTS = {
             "title": "Termos de Uso",
             "subtitle": "Regras de uso do app da populacao, do app do funcionario e dos ambientes privados de Governo, Farmacia, Hospital, SST e Plano de Saude.",
             "sections": [
-                ("Natureza da plataforma", "O SolusCRT Saude e uma plataforma healthtech de gestao em saude com cinco ambientes privados e independentes: Governo, Farmacia, Hospital, SST e Plano de Saude. O app da populacao oferece inteligencia epidemiologica informativa. O app do funcionario atende o ambiente SST. Nenhum dos recursos substitui diagnostico medico, prescricao, triagem clinica individual ou atendimento de emergencia."),
+                ("Natureza da plataforma", "O SoloCRT Saude e uma plataforma healthtech de gestao em saude com cinco ambientes privados e independentes: Governo, Farmacia, Hospital, SST e Plano de Saude. O app da populacao oferece inteligencia epidemiologica informativa. O app do funcionario atende o ambiente SST. Nenhum dos recursos substitui diagnostico medico, prescricao, triagem clinica individual ou atendimento de emergencia."),
                 ("Envio responsavel no app da populacao", "Usuarios devem enviar sintomas reais, de boa-fe e apenas quando houver relacao com sua condicao atual. Envios repetidos, automatizados ou fraudulentos podem ser filtrados ou bloqueados."),
                 ("App do funcionario — uso adequado", "O app do funcionario e de uso exclusivo do trabalhador vinculado ao contrato da empresa. E proibido compartilhar credenciais, acessar dados de outros funcionarios sem autorizacao ou usar o app para fins alheios a gestao de saude ocupacional e bem-estar."),
                 ("Bem-estar — submissao voluntaria", "Check-ins de bem-estar sao voluntarios. O funcionario nao e obrigado a responder e pode omitir qualquer campo. A empresa ve apenas dados agregados. O funcionario consente explicitamente ao solicitar contato de apoio."),
@@ -1336,7 +1336,7 @@ LEGAL_DOCUMENTS = {
                 ("Contas e credenciais", "Credenciais sao pessoais ou institucionais conforme contrato. O usuario ou cliente e responsavel por preservar senhas, dispositivos autorizados e politicas internas de acesso."),
                 ("Disponibilidade", "A plataforma depende de internet, servicos de nuvem, APIs, fontes oficiais e permissao de localizacao. Podem ocorrer indisponibilidades temporarias ou degradacao de dados externos."),
                 ("Responsabilidade decisoria", "Decisoes operacionais, clinicas e institucionais devem considerar contexto tecnico, validacao humana e protocolos aplicaveis de saude publica e saude ocupacional."),
-                ("Propriedade intelectual", "Marcas, interfaces, modelos, organizacao da plataforma, documentos, codigos, paineis e materiais do SolusCRT Saude pertencem aos seus titulares e sao licenciados nos limites contratados."),
+                ("Propriedade intelectual", "Marcas, interfaces, modelos, organizacao da plataforma, documentos, codigos, paineis e materiais do SoloCRT Saude pertencem aos seus titulares e sao licenciados nos limites contratados."),
                 ("Contratacao B2B e B2G", "Assinaturas privadas, trial, implantacao, expansao por unidade ou rede, limites de usuarios, dispositivos, suporte, integracoes, SLA e valores podem ser definidos em proposta, contrato, termo de adesao ou instrumento especifico. Contratos governamentais e institucionais podem seguir regras proprias de B2G."),
             ],
         },
@@ -1354,12 +1354,12 @@ LEGAL_DOCUMENTS = {
                 ("Tokens de notificacao e dispositivos", "Tokens FCM e dispositivos autorizados sao gerenciados por contrato. Revogacao de acesso do funcionario implica revogacao de token e desativacao do dispositivo na plataforma."),
                 ("Auditoria", "Acoes institucionais, alertas governamentais, operacoes SST e operacoes administrativas devem ter rastreabilidade, usuario responsavel, data e contexto."),
                 ("Incidentes", "Eventos de seguranca podem acionar processos de investigacao, mitigacao, registro, comunicacao a clientes e titulares quando aplicavel, e melhoria de controles."),
-                ("Compromisso continuo", "A governanca do SolusCRT Saude e mantida como um processo permanente, com melhoria de controles, revisao de acessos, atualizacao documental e alinhamento aos requisitos aplicaveis de protecao de dados, saude digital, SST e contratos institucionais."),
+                ("Compromisso continuo", "A governanca do SoloCRT Saude e mantida como um processo permanente, com melhoria de controles, revisao de acessos, atualizacao documental e alinhamento aos requisitos aplicaveis de protecao de dados, saude digital, SST e contratos institucionais."),
             ],
         },
         "metodologia": {
             "title": "Metodologia",
-            "subtitle": "Como o SolusCRT separa sinal precoce, fonte oficial, operacao setorial e decisao responsavel.",
+            "subtitle": "Como o SoloCRT separa sinal precoce, fonte oficial, operacao setorial e decisao responsavel.",
             "sections": [
                 ("Sinal colaborativo epidemiologico", "O app da populacao coleta sinais de sintomas em tempo real. Esses sinais indicam tendencia e risco territorial, mas nao equivalem a caso confirmado. Sao exibidos como camada de sinal precoce, separados de fontes oficiais e inferencias de IA."),
                 ("Fonte oficial brasileira", "Dados oficiais — IBGE/SIDRA, InfoDengue, InfoGripe, OpenDataSUS/DATASUS — sao tratados separadamente, preferencialmente em agregados, com data de coleta, fonte, versao e regra de processamento. Nunca sao misturados com sinais colaborativos sem identificacao de camada."),
@@ -1375,14 +1375,14 @@ LEGAL_DOCUMENTS = {
         },
         "suporte": {
             "title": "Suporte e Atendimento",
-            "subtitle": "Canal institucional para suporte do app da populacao, app do funcionario, ambiente SST, privacidade e orientacoes gerais do SolusCRT Saude.",
+            "subtitle": "Canal institucional para suporte do app da populacao, app do funcionario, ambiente SST, privacidade e orientacoes gerais do SoloCRT Saude.",
             "sections": [
-                ("Atendimento ao usuario do app da populacao", "Para suporte geral do app da populacao, dificuldades de uso, orientacoes sobre alertas, problemas de mapa ou envio de sintomas, entre em contato por comercial@soluscrt.com.br com o assunto Suporte App SolusCRT."),
+                ("Atendimento ao usuario do app da populacao", "Para suporte geral do app da populacao, dificuldades de uso, orientacoes sobre alertas, problemas de mapa ou envio de sintomas, entre em contato por comercial@soluscrt.com.br com o assunto Suporte App SoloCRT."),
                 ("Atendimento ao funcionario — app do funcionario", "Para duvidas sobre acesso ao ASO digital, notificacoes, check-in de bem-estar ou funcionamento do app do funcionario, o trabalhador deve contatar o RH ou gestor SST da empresa contratante. Para problemas tecnicos nao resolvidos internamente, a empresa pode acionar o suporte institucional pelo canal abaixo."),
-                ("Suporte SST e gestao empresarial", "Empresas com duvidas sobre configuracao SST, integracao eSocial, cadastro de funcionarios, NRs, EPI/EPC, PGR, postos de trabalho ou painel de conformidade podem solicitar suporte tecnico por comercial@soluscrt.com.br com o assunto Suporte SST SolusCRT."),
-                ("Privacidade e dados pessoais", "Para pedidos relacionados a privacidade, esclarecimentos sobre tratamento de dados SST ou bem-estar, direitos do titular, exclusao quando aplicavel e temas de LGPD, utilize o canal comercial@soluscrt.com.br com o assunto Privacidade SolusCRT."),
+                ("Suporte SST e gestao empresarial", "Empresas com duvidas sobre configuracao SST, integracao eSocial, cadastro de funcionarios, NRs, EPI/EPC, PGR, postos de trabalho ou painel de conformidade podem solicitar suporte tecnico por comercial@soluscrt.com.br com o assunto Suporte SST SoloCRT."),
+                ("Privacidade e dados pessoais", "Para pedidos relacionados a privacidade, esclarecimentos sobre tratamento de dados SST ou bem-estar, direitos do titular, exclusao quando aplicavel e temas de LGPD, utilize o canal comercial@soluscrt.com.br com o assunto Privacidade SoloCRT."),
                 ("Suporte institucional — farmacia, hospital, governo e plano de saude", "Farmacias, hospitais, municipios, governos e operadoras de plano de saude que precisem de apoio operacional, contratual ou tecnico em seus ambientes especificos podem solicitar atendimento por comercial@soluscrt.com.br."),
-                ("Escopo do atendimento", "O suporte do SolusCRT Saude atende questoes sobre plataforma, apps, acesso, alertas, SST, privacidade e funcionamento do servico. O atendimento nao substitui orientacao medica, emergencia, SAMU, hospital, UPA ou consulta clinica."),
+                ("Escopo do atendimento", "O suporte do SoloCRT Saude atende questoes sobre plataforma, apps, acesso, alertas, SST, privacidade e funcionamento do servico. O atendimento nao substitui orientacao medica, emergencia, SAMU, hospital, UPA ou consulta clinica."),
                 ("Tempo de resposta", "Solicitacoes institucionais e de suporte geral sao recebidas por canal oficial e tratadas conforme criticidade, natureza do pedido, fila operacional e disponibilidade da equipe."),
                 ("Base publica de documentos", "Para revisao documental, consulte tambem a Politica de Privacidade, os Termos de Uso, a pagina de Seguranca e LGPD e a Metodologia publicadas no site institucional."),
             ],
@@ -1391,9 +1391,9 @@ LEGAL_DOCUMENTS = {
     "en": {
         "privacidade": {
             "title": "Privacy Policy",
-            "subtitle": "How SolusCRT Health handles data in the population app, the employee app and the Government, Pharmacy, Hospital, OSH and Health Plan environments.",
+            "subtitle": "How SoloCRT Health handles data in the population app, the employee app and the Government, Pharmacy, Hospital, OSH and Health Plan environments.",
             "sections": [
-                ("Who we are and scope", "SolusCRT Health is a complete healthtech platform for health management, with an OSH environment for companies, pharmaceutical management, hospital management, a situation room for government, a dedicated environment for health plan operators and two apps: the population app (free and anonymous) and the employee app (linked to the company account). This policy explains data handling across all these contexts."),
+                ("Who we are and scope", "SoloCRT Health is a complete healthtech platform for health management, with an OSH environment for companies, pharmaceutical management, hospital management, a situation room for government, a dedicated environment for health plan operators and two apps: the population app (free and anonymous) and the employee app (linked to the company account). This policy explains data handling across all these contexts."),
                 ("Summary for population app users", "In the public app, you can view the radar, map and alerts and, if you choose, voluntarily and anonymously submit symptoms. The app does not provide medical diagnosis, prescription, individual triage, emergency care or a replacement for professional consultation."),
                 ("Summary for employee app users", "The employee app is linked to the contracting company account. Through it, employees access their own digital medical certificate, make requests, receive exam and training notifications and submit wellness check-ins. Wellness check-ins are anonymous by default — the company sees only aggregated data, never a name associated with an individual check-in, unless the employee voluntarily requests support contact."),
                 ("Five environments, five processing contexts", "Government handles territorial indicators, alerts, audit trail and institutional operations. Pharmacy handles catalog, inventory, lots, suppliers, demand and traceability. Hospital handles triage, beds, admissions, prescriptions and care operations. OSH handles medical certificates, incident reports, exams, leave, eSocial, training and anonymous wellness. Health Plan handles beneficiary records, contracts, authorization guides, claims, reimbursements and territorial epidemiological data. The population app feeds only territorial epidemiological intelligence; the employee app belongs to the OSH environment."),
@@ -1409,7 +1409,7 @@ LEGAL_DOCUMENTS = {
                 ("Data subject rights", "Data subjects may request information, access, correction, deletion when applicable, clarification about sharing, consent review and guidance about data processing through the official privacy channel."),
                 ("Minors", "The population app is informational and should not be used by children without guidance from guardians. The employee app is intended for adult workers linked to the company contract."),
                 ("Security", "We use HTTPS, environment variables for secrets, managed production database, secure cookies, CORS/CSRF restriction, session control, device limits by contract, audit trails, segregation by environment and profile and good practices to reduce unauthorized access, manipulation and unnecessary exposure. Government, pharmacy, hospital, OSH and health plan have their own access controls and operational context."),
-                ("Privacy contact", "Privacy requests, data subject rights, LGPD or privacy questions and requests related to data processing may be sent to comercial@soluscrt.com.br with the subject Privacy SolusCRT."),
+                ("Privacy contact", "Privacy requests, data subject rights, LGPD or privacy questions and requests related to data processing may be sent to comercial@soluscrt.com.br with the subject Privacy SoloCRT."),
                 ("Updates", "This policy may be updated to reflect platform improvements, new legal requirements, App Store adjustments, institutional contracts and changes to security controls."),
             ],
         },
@@ -1417,7 +1417,7 @@ LEGAL_DOCUMENTS = {
             "title": "Terms of Use",
             "subtitle": "Rules for using the population app, the employee app and the private Government, Pharmacy, Hospital, OSH and Health Plan environments.",
             "sections": [
-                ("Nature of the platform", "SolusCRT Health is a healthtech platform with five private and independent environments: Government, Pharmacy, Hospital, OSH and Health Plan. The population app provides informational epidemiological intelligence. The employee app serves the OSH environment. None of these resources replaces medical diagnosis, prescription, individual clinical triage or emergency care."),
+                ("Nature of the platform", "SoloCRT Health is a healthtech platform with five private and independent environments: Government, Pharmacy, Hospital, OSH and Health Plan. The population app provides informational epidemiological intelligence. The employee app serves the OSH environment. None of these resources replaces medical diagnosis, prescription, individual clinical triage or emergency care."),
                 ("Responsible submission in the population app", "Users should submit real symptoms, in good faith and only when related to their current condition. Repeated, automated or fraudulent submissions may be filtered or blocked."),
                 ("Employee app — proper use", "The employee app is for exclusive use by workers linked to the company contract. It is prohibited to share credentials, access other employees' data without authorization or use the app for purposes unrelated to occupational health management and wellness."),
                 ("Wellness — voluntary submission", "Wellness check-ins are voluntary. The employee is not required to respond and may omit any field. The company sees only aggregated data. The employee explicitly consents when requesting support contact."),
@@ -1428,7 +1428,7 @@ LEGAL_DOCUMENTS = {
                 ("Accounts and credentials", "Credentials are personal or institutional according to contract. The user or client is responsible for protecting passwords, authorized devices and internal access policies."),
                 ("Availability", "The platform depends on internet access, cloud services, APIs, official sources and location permission. Temporary unavailability or degradation of external data may occur."),
                 ("Decision responsibility", "Operational, clinical and institutional decisions must consider technical context, human validation and applicable public health and occupational health protocols."),
-                ("Intellectual property", "Brands, interfaces, models, platform organization, documents, code, dashboards and SolusCRT Health materials belong to their owners and are licensed only within contracted limits."),
+                ("Intellectual property", "Brands, interfaces, models, platform organization, documents, code, dashboards and SoloCRT Health materials belong to their owners and are licensed only within contracted limits."),
                 ("B2B and B2G contracting", "Private subscriptions, trials, implementation, expansion by unit or network, user limits, devices, support, integrations, SLA and pricing may be defined in proposal, contract, order form or specific instrument. Government and institutional contracts may follow their own B2G rules."),
             ],
         },
@@ -1446,12 +1446,12 @@ LEGAL_DOCUMENTS = {
                 ("Notification tokens and devices", "FCM tokens and authorized devices are managed by contract. Revoking an employee's access implies token revocation and device deactivation on the platform."),
                 ("Audit", "Institutional actions, government alerts, OSH operations and administrative operations should have traceability, responsible user, date and context."),
                 ("Incidents", "Security events may trigger investigation, mitigation, recordkeeping, communication to clients and data subjects when applicable, and improvement of controls."),
-                ("Continuous commitment", "SolusCRT Health governance is maintained as an ongoing process, with control improvement, access review, documentation updates and alignment with applicable data protection, digital health, OSH and institutional contract requirements."),
+                ("Continuous commitment", "SoloCRT Health governance is maintained as an ongoing process, with control improvement, access review, documentation updates and alignment with applicable data protection, digital health, OSH and institutional contract requirements."),
             ],
         },
         "metodologia": {
             "title": "Methodology",
-            "subtitle": "How SolusCRT separates early signal, official source, sector operation and responsible decision-making.",
+            "subtitle": "How SoloCRT separates early signal, official source, sector operation and responsible decision-making.",
             "sections": [
                 ("Epidemiological collaborative signal", "The population app collects symptom signals in real time. These signals indicate trend and territorial risk, but they are not confirmed cases. They are displayed as an early signal layer, separated from official sources and AI inferences."),
                 ("Official Brazilian source", "Official data — IBGE/SIDRA, InfoDengue, InfoGripe, OpenDataSUS/DATASUS — are handled separately, preferably in aggregated form, with collection date, source, version and processing rule. They are never mixed with collaborative signals without layer identification."),
@@ -1467,14 +1467,14 @@ LEGAL_DOCUMENTS = {
         },
         "suporte": {
             "title": "Support and Service",
-            "subtitle": "Institutional channel for population app support, employee app support, OSH environment, privacy and general SolusCRT Health guidance.",
+            "subtitle": "Institutional channel for population app support, employee app support, OSH environment, privacy and general SoloCRT Health guidance.",
             "sections": [
-                ("Population app user support", "For general population app support, difficulty using the app, guidance about alerts, map issues or symptom submission, contact comercial@soluscrt.com.br with the subject SolusCRT App Support."),
+                ("Population app user support", "For general population app support, difficulty using the app, guidance about alerts, map issues or symptom submission, contact comercial@soluscrt.com.br with the subject SoloCRT App Support."),
                 ("Employee app support", "For questions about accessing the digital medical certificate, notifications, wellness check-ins or employee app operation, workers should contact their company's HR or OSH manager. For unresolved technical issues, the company may contact institutional support through the channel below."),
-                ("OSH and company management support", "Companies with questions about OSH configuration, eSocial integration, employee records, NR compliance, PPE/EPC, PGR, workstations or compliance dashboards may request technical support at comercial@soluscrt.com.br with the subject SolusCRT OSH Support."),
-                ("Privacy and personal data", "For privacy requests, clarification about OSH or wellness data processing, data subject rights, deletion when applicable and LGPD matters, use comercial@soluscrt.com.br with the subject Privacy SolusCRT."),
+                ("OSH and company management support", "Companies with questions about OSH configuration, eSocial integration, employee records, NR compliance, PPE/EPC, PGR, workstations or compliance dashboards may request technical support at comercial@soluscrt.com.br with the subject SoloCRT OSH Support."),
+                ("Privacy and personal data", "For privacy requests, clarification about OSH or wellness data processing, data subject rights, deletion when applicable and LGPD matters, use comercial@soluscrt.com.br with the subject Privacy SoloCRT."),
                 ("Institutional support — pharmacy, hospital, government and health plan", "Pharmacies, hospitals, municipalities, governments and health plan operators that need operational, contractual or technical support in their specific environments may contact comercial@soluscrt.com.br."),
-                ("Scope of support", "SolusCRT Health support covers questions about the platform, apps, access, alerts, OSH, privacy and service operation. Support does not replace medical guidance, emergency care, ambulance services, hospital, urgent care unit or clinical consultation."),
+                ("Scope of support", "SoloCRT Health support covers questions about the platform, apps, access, alerts, OSH, privacy and service operation. Support does not replace medical guidance, emergency care, ambulance services, hospital, urgent care unit or clinical consultation."),
                 ("Response time", "Institutional and general support requests are received through the official channel and handled according to criticality, request type, operational queue and team availability."),
                 ("Public document base", "For document review, also consult the Privacy Policy, Terms of Use, Security and LGPD page and Methodology published on the institutional website."),
             ],
@@ -1483,9 +1483,9 @@ LEGAL_DOCUMENTS = {
     "es": {
         "privacidade": {
             "title": "Politica de Privacidad",
-            "subtitle": "Como SolusCRT Salud trata datos en la app poblacional, la app del trabajador y en los ambientes de Gobierno, Farmacia, Hospital, SST y Plan de Salud.",
+            "subtitle": "Como SoloCRT Salud trata datos en la app poblacional, la app del trabajador y en los ambientes de Gobierno, Farmacia, Hospital, SST y Plan de Salud.",
             "sections": [
-                ("Quienes somos y alcance", "SolusCRT Salud es una plataforma healthtech completa de gestion en salud, con ambiente SST para empresas, gestion farmaceutica, gestion hospitalaria, sala de situacion para gobierno, ambiente dedicado para operadoras de plan de salud y dos apps: la app poblacional (gratuita y anonima) y la app del trabajador (vinculada a la cuenta empresarial). Esta politica explica el tratamiento de datos en todos estos contextos."),
+                ("Quienes somos y alcance", "SoloCRT Salud es una plataforma healthtech completa de gestion en salud, con ambiente SST para empresas, gestion farmaceutica, gestion hospitalaria, sala de situacion para gobierno, ambiente dedicado para operadoras de plan de salud y dos apps: la app poblacional (gratuita y anonima) y la app del trabajador (vinculada a la cuenta empresarial). Esta politica explica el tratamiento de datos en todos estos contextos."),
                 ("Resumen para usuarios de la app poblacional", "En la app publica, puedes consultar radar, mapa y alertas y, si lo deseas, enviar sintomas de forma voluntaria y anonima. La app no ofrece diagnostico medico, prescripcion, triaje individual, atencion de emergencia ni sustitucion de una consulta profesional."),
                 ("Resumen para usuarios de la app del trabajador", "La app del trabajador esta vinculada a la cuenta de la empresa contratante. A traves de ella, el trabajador accede a su certificado medico digital, realiza solicitudes, recibe notificaciones de examenes y capacitaciones y envia check-ins de bienestar. Los check-ins de bienestar son anonimos por defecto — la empresa ve solo datos agregados, nunca el nombre asociado a un check-in individual, salvo cuando el propio trabajador solicita voluntariamente contacto de apoyo."),
                 ("Cinco ambientes, cinco contextos de tratamiento", "Gobierno trata indicadores territoriales, alertas, auditoria y operacion institucional. Farmacia trata catalogo, inventario, lotes, proveedores, demanda y trazabilidad. Hospital trata triaje, camas, internaciones, prescripciones y operacion asistencial. SST trata certificados medicos, accidentes, examenes, ausencias, eSocial, capacitaciones y bienestar anonimo. Plan de Salud trata beneficiarios, contratos, guias de autorizacion, siniestros, reembolsos y datos epidemiologicos territoriales. La app poblacional alimenta solo la inteligencia epidemiologica territorial; la app del trabajador pertenece al ambiente SST."),
@@ -1501,7 +1501,7 @@ LEGAL_DOCUMENTS = {
                 ("Derechos del titular", "Los titulares pueden solicitar informacion, acceso, correccion, eliminacion cuando corresponda, aclaraciones sobre intercambio, revision de consentimiento y orientacion sobre tratamiento de datos por el canal oficial de privacidad."),
                 ("Menores de edad", "La app poblacional es informativa y no debe ser usada por ninos sin orientacion de responsables. La app del trabajador esta destinada a trabajadores mayores de edad vinculados al contrato empresarial."),
                 ("Seguridad", "Usamos HTTPS, variables de entorno para secretos, base de datos gestionada en produccion, cookies seguras, restriccion CORS/CSRF, control de sesion, limite de dispositivos por contrato, trazas de auditoria, segregacion por ambiente y perfil y buenas practicas para reducir acceso indebido, manipulacion y exposicion innecesaria. Gobierno, farmacia, hospital, SST y plan de salud tienen controles de acceso y contexto operativo propios."),
-                ("Contacto de privacidad", "Pedidos de privacidad, derechos del titular, dudas sobre LGPD o privacidad y solicitudes relacionadas con tratamiento de datos pueden enviarse a comercial@soluscrt.com.br con el asunto Privacidad SolusCRT."),
+                ("Contacto de privacidad", "Pedidos de privacidad, derechos del titular, dudas sobre LGPD o privacidad y solicitudes relacionadas con tratamiento de datos pueden enviarse a comercial@soluscrt.com.br con el asunto Privacidad SoloCRT."),
                 ("Actualizaciones", "Esta politica puede actualizarse para reflejar mejoras de la plataforma, nuevas exigencias legales, ajustes de App Store, contratos institucionales y cambios en controles de seguridad."),
             ],
         },
@@ -1509,7 +1509,7 @@ LEGAL_DOCUMENTS = {
             "title": "Terminos de Uso",
             "subtitle": "Reglas de uso de la app poblacional, la app del trabajador y de los ambientes privados de Gobierno, Farmacia, Hospital, SST y Plan de Salud.",
             "sections": [
-                ("Naturaleza de la plataforma", "SolusCRT Salud es una plataforma healthtech de gestion en salud con cinco ambientes privados e independientes: Gobierno, Farmacia, Hospital, SST y Plan de Salud. La app poblacional ofrece inteligencia epidemiologica informativa. La app del trabajador sirve al ambiente SST. Ningun recurso sustituye diagnostico medico, prescripcion, triaje clinico individual ni atencion de emergencia."),
+                ("Naturaleza de la plataforma", "SoloCRT Salud es una plataforma healthtech de gestion en salud con cinco ambientes privados e independientes: Gobierno, Farmacia, Hospital, SST y Plan de Salud. La app poblacional ofrece inteligencia epidemiologica informativa. La app del trabajador sirve al ambiente SST. Ningun recurso sustituye diagnostico medico, prescripcion, triaje clinico individual ni atencion de emergencia."),
                 ("Envio responsable en la app poblacional", "Los usuarios deben enviar sintomas reales, de buena fe y solo cuando tengan relacion con su condicion actual. Envios repetidos, automatizados o fraudulentos pueden ser filtrados o bloqueados."),
                 ("App del trabajador — uso adecuado", "La app del trabajador es de uso exclusivo del trabajador vinculado al contrato de la empresa. Esta prohibido compartir credenciales, acceder a datos de otros trabajadores sin autorizacion o usar la app para fines ajenos a la gestion de salud ocupacional y bienestar."),
                 ("Bienestar — envio voluntario", "Los check-ins de bienestar son voluntarios. El trabajador no esta obligado a responder y puede omitir cualquier campo. La empresa ve solo datos agregados. El trabajador consiente explicitamente al solicitar contacto de apoyo."),
@@ -1520,7 +1520,7 @@ LEGAL_DOCUMENTS = {
                 ("Cuentas y credenciales", "Las credenciales son personales o institucionales segun contrato. El usuario o cliente es responsable de preservar contrasenas, dispositivos autorizados y politicas internas de acceso."),
                 ("Disponibilidad", "La plataforma depende de internet, servicios de nube, APIs, fuentes oficiales y permiso de ubicacion. Pueden ocurrir indisponibilidades temporales o degradacion de datos externos."),
                 ("Responsabilidad de decision", "Las decisiones operativas, clinicas e institucionales deben considerar contexto tecnico, validacion humana y protocolos aplicables de salud publica y salud ocupacional."),
-                ("Propiedad intelectual", "Marcas, interfaces, modelos, organizacion de la plataforma, documentos, codigos, paneles y materiales de SolusCRT Salud pertenecen a sus titulares y se licencian dentro de los limites contratados."),
+                ("Propiedad intelectual", "Marcas, interfaces, modelos, organizacion de la plataforma, documentos, codigos, paneles y materiales de SoloCRT Salud pertenecen a sus titulares y se licencian dentro de los limites contratados."),
                 ("Contratacion B2B y B2G", "Suscripciones privadas, prueba, implantacion, expansion por unidad o red, limites de usuarios, dispositivos, soporte, integraciones, SLA y valores pueden definirse en propuesta, contrato, termino de adhesion o instrumento especifico. Los contratos gubernamentales e institucionales pueden seguir sus propias reglas B2G."),
             ],
         },
@@ -1538,12 +1538,12 @@ LEGAL_DOCUMENTS = {
                 ("Tokens de notificacion y dispositivos", "Los tokens FCM y dispositivos autorizados se gestionan por contrato. La revocacion del acceso del trabajador implica revocacion del token y desactivacion del dispositivo en la plataforma."),
                 ("Auditoria", "Acciones institucionales, alertas gubernamentales, operaciones SST y operaciones administrativas deben tener trazabilidad, usuario responsable, fecha y contexto."),
                 ("Incidentes", "Eventos de seguridad pueden activar investigacion, mitigacion, registro, comunicacion a clientes y titulares cuando corresponda, y mejora de controles."),
-                ("Compromiso continuo", "La gobernanza de SolusCRT Salud se mantiene como un proceso permanente, con mejora de controles, revision de accesos, actualizacion documental y alineacion con requisitos aplicables de proteccion de datos, salud digital, SST y contratos institucionales."),
+                ("Compromiso continuo", "La gobernanza de SoloCRT Salud se mantiene como un proceso permanente, con mejora de controles, revision de accesos, actualizacion documental y alineacion con requisitos aplicables de proteccion de datos, salud digital, SST y contratos institucionales."),
             ],
         },
         "metodologia": {
             "title": "Metodologia",
-            "subtitle": "Como SolusCRT separa senal temprana, fuente oficial, operacion sectorial y decision responsable.",
+            "subtitle": "Como SoloCRT separa senal temprana, fuente oficial, operacion sectorial y decision responsable.",
             "sections": [
                 ("Senal colaborativa epidemiologica", "La app poblacional recopila senales de sintomas en tiempo real. Estas senales indican tendencia y riesgo territorial, pero no equivalen a caso confirmado. Se muestran como capa de senal temprana, separadas de fuentes oficiales e inferencias de IA."),
                 ("Fuente oficial brasilena", "Datos oficiales — IBGE/SIDRA, InfoDengue, InfoGripe, OpenDataSUS/DATASUS — se tratan por separado, preferentemente en agregados, con fecha de recoleccion, fuente, version y regla de procesamiento. Nunca se mezclan con senales colaborativas sin identificacion de capa."),
@@ -1559,14 +1559,14 @@ LEGAL_DOCUMENTS = {
         },
         "suporte": {
             "title": "Soporte y Atencion",
-            "subtitle": "Canal institucional para soporte de la app poblacional, app del trabajador, ambiente SST, privacidad y orientaciones generales de SolusCRT Salud.",
+            "subtitle": "Canal institucional para soporte de la app poblacional, app del trabajador, ambiente SST, privacidad y orientaciones generales de SoloCRT Salud.",
             "sections": [
-                ("Atencion al usuario de la app poblacional", "Para soporte general de la app poblacional, dificultades de uso, orientaciones sobre alertas, problemas de mapa o envio de sintomas, contacta comercial@soluscrt.com.br con el asunto Soporte App SolusCRT."),
+                ("Atencion al usuario de la app poblacional", "Para soporte general de la app poblacional, dificultades de uso, orientaciones sobre alertas, problemas de mapa o envio de sintomas, contacta comercial@soluscrt.com.br con el asunto Soporte App SoloCRT."),
                 ("Soporte al trabajador — app del trabajador", "Para dudas sobre acceso al certificado medico digital, notificaciones, check-in de bienestar o funcionamiento de la app del trabajador, el trabajador debe contactar al departamento de RRHH o al gestor SST de la empresa contratante. Para problemas tecnicos no resueltos internamente, la empresa puede activar el soporte institucional por el canal indicado abajo."),
-                ("Soporte SST y gestion empresarial", "Empresas con dudas sobre configuracion SST, integracion eSocial, registro de trabajadores, NRs, EPI/EPC, PGR, puestos de trabajo o panel de conformidad pueden solicitar soporte tecnico a comercial@soluscrt.com.br con el asunto Soporte SST SolusCRT."),
-                ("Privacidad y datos personales", "Para pedidos relacionados con privacidad, aclaraciones sobre tratamiento de datos SST o bienestar, derechos del titular, eliminacion cuando corresponda y temas de LGPD, usa comercial@soluscrt.com.br con el asunto Privacidad SolusCRT."),
+                ("Soporte SST y gestion empresarial", "Empresas con dudas sobre configuracion SST, integracion eSocial, registro de trabajadores, NRs, EPI/EPC, PGR, puestos de trabajo o panel de conformidad pueden solicitar soporte tecnico a comercial@soluscrt.com.br con el asunto Soporte SST SoloCRT."),
+                ("Privacidad y datos personales", "Para pedidos relacionados con privacidad, aclaraciones sobre tratamiento de datos SST o bienestar, derechos del titular, eliminacion cuando corresponda y temas de LGPD, usa comercial@soluscrt.com.br con el asunto Privacidad SoloCRT."),
                 ("Soporte institucional — farmacia, hospital, gobierno y plan de salud", "Farmacias, hospitales, municipios, gobiernos y operadoras de plan de salud que necesiten apoyo operativo, contractual o tecnico en sus ambientes especificos pueden contactar comercial@soluscrt.com.br."),
-                ("Alcance de atencion", "El soporte de SolusCRT Salud atiende cuestiones sobre plataforma, apps, acceso, alertas, SST, privacidad y funcionamiento del servicio. La atencion no sustituye orientacion medica, emergencia, ambulancia, hospital, unidad de urgencia o consulta clinica."),
+                ("Alcance de atencion", "El soporte de SoloCRT Salud atiende cuestiones sobre plataforma, apps, acceso, alertas, SST, privacidad y funcionamiento del servicio. La atencion no sustituye orientacion medica, emergencia, ambulancia, hospital, unidad de urgencia o consulta clinica."),
                 ("Tiempo de respuesta", "Solicitudes institucionales y de soporte general se reciben por canal oficial y se tratan segun criticidad, naturaleza del pedido, fila operacional y disponibilidad del equipo."),
                 ("Base publica de documentos", "Para revision documental, consulta tambien la Politica de Privacidad, los Terminos de Uso, la pagina de Seguridad y LGPD y la Metodologia publicadas en el sitio institucional."),
             ],
@@ -1921,7 +1921,7 @@ def _empresa_app_publico():
     empresa, _ = Empresa.objects.get_or_create(
         email="populacao@soluscrt.com",
         defaults={
-            "nome": "SolusCRT Populacao",
+            "nome": "SoloCRT Populacao",
             "senha": make_password("publico_app"),
             "ativo": True,
             "plano": "publico",

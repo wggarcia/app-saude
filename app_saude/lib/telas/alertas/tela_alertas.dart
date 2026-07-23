@@ -187,7 +187,7 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
                 _InfoLine(icon: Icons.place_outlined, text: recorte),
               _InfoLine(
                 icon: Icons.account_balance_outlined,
-                text: alerta['orgao']?.toString() ?? 'Governo SolusCRT',
+                text: alerta['orgao']?.toString() ?? 'Governo SoloCRT',
               ),
               _InfoLine(
                 icon: Icons.schedule_outlined,

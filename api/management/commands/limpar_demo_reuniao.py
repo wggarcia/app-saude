@@ -12,7 +12,7 @@ SOURCE_MARKER = "reuniao-soluscrt-brasil"
 
 
 class Command(BaseCommand):
-    help = "Remove focos simulados da demo de reuniao SolusCRT."
+    help = "Remove focos simulados da demo de reuniao SoloCRT."
 
     def add_arguments(self, parser):
         parser.add_argument("--yes", action="store_true", help="Confirma a limpeza da demo.")

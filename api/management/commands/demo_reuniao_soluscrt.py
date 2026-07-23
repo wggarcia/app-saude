@@ -59,7 +59,7 @@ def _sintomas_por_perfil(perfil):
 
 class Command(BaseCommand):
     help = (
-        "Simula uma demonstracao nacional do app SolusCRT com foco ativo "
+        "Simula uma demonstracao nacional do app SoloCRT com foco ativo "
         "caindo ao longo de 30 dias e distribuicao por todo o Brasil."
     )
 

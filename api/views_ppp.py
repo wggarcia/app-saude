@@ -1,5 +1,5 @@
 """
-PPP — Perfil Profissiográfico Previdenciário (SolusCRT SST)
+PPP — Perfil Profissiográfico Previdenciário (SoloCRT SST)
 Geração automatizada conforme IN INSS 128/2022 e eSocial S-2240.
 
 Endpoints:

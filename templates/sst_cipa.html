@@ -4,7 +4,7 @@
 {% include "_favicon.html" %}
 
 <meta charset="UTF-8">
-<title>SolusCRT · CIPA — NR-5</title>
+<title>SoloCRT · CIPA — NR-5</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -130,7 +130,7 @@ function statusBadge(s) {
 function showKpiErro(msg, upgrade) {
   const cor = upgrade ? "var(--amber)" : "var(--red)";
   const btnUpgrade = upgrade
-    ? `<button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir('CIPA — Módulo NR-5')" style="margin-top:10px;padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.78rem;font-weight:800;cursor:pointer">Fazer Upgrade →</button>`
+    ? `<button onclick="window.SoloCRT&&window.SoloCRT.upgrade.abrir('CIPA — Módulo NR-5')" style="margin-top:10px;padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.78rem;font-weight:800;cursor:pointer">Fazer Upgrade →</button>`
     : "";
   document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:${cor};font-size:.82rem;border:1px solid ${cor};border-radius:10px;background:rgba(0,0,0,.2)">${upgrade ? "🔒" : "⚠️"} ${msg}${btnUpgrade}</div>`;
 }

@@ -334,7 +334,7 @@ EMAIL_PORT = env_int("EMAIL_PORT", 587)
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "SolusCRT <admin@soluscrt.com.br>")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "SoloCRT <admin@soluscrt.com.br>")
 
 PUBLIC_BASE_URL = os.environ.get(
     "PUBLIC_BASE_URL",
@@ -361,7 +361,7 @@ JITSI_PRIVATE_KEY_B64 = os.environ.get("JITSI_PRIVATE_KEY_B64", "")   # alternat
 JITSI_SECRET = os.environ.get("JITSI_SECRET", "")  # legado HS256 — não usado com JaaS
 if IS_PRODUCTION and not ASAAS_WEBHOOK_TOKEN:
     raise RuntimeError("Configure ASAAS_WEBHOOK_TOKEN em producao para validar webhooks de pagamento.")
-ASAAS_USER_AGENT = (os.environ.get("ASAAS_USER_AGENT", "SolusCRT-Saude/1.0") or "SolusCRT-Saude/1.0").strip()
+ASAAS_USER_AGENT = (os.environ.get("ASAAS_USER_AGENT", "SoloCRT-Saude/1.0") or "SoloCRT-Saude/1.0").strip()
 FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get(
     "FIREBASE_SERVICE_ACCOUNT_PATH",
     str(BASE_DIR / "secrets" / "firebase-service-account.json"),

@@ -1,5 +1,5 @@
 """
-Teste sistêmico do classificador de doenças — SolusCRT
+Teste sistêmico do classificador de doenças — SoloCRT
 
 USO NO RENDER SHELL:
     python manage.py testar_classificador_brasil               # relatório puro (sem DB)
@@ -487,7 +487,7 @@ class Command(BaseCommand):
             return
 
         self.stdout.write("\n" + "═" * 72)
-        self.stdout.write("  TESTE SISTÊMICO — CLASSIFICADOR DE DOENÇAS SolusCRT")
+        self.stdout.write("  TESTE SISTÊMICO — CLASSIFICADOR DE DOENÇAS SoloCRT")
         self.stdout.write(f"  {len(PERFIS)} doenças · sintomas 100% · priors por UF")
         self.stdout.write("═" * 72)
 

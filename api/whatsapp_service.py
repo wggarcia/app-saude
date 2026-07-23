@@ -1,5 +1,5 @@
 """
-WhatsApp notification service for SolusCRT.
+WhatsApp notification service for SoloCRT.
 
 Supports:
   - Z-API  (https://developer.z-api.io/)
@@ -156,7 +156,7 @@ class WhatsAppService:
         base = (self.integracao.instance_id or "").rstrip("/")
         if not base.startswith("http"):
             return False, "Evolution API: instance_id deve ser a URL base"
-        instance_name = self.integracao.numero_remetente or "SolusCRT"
+        instance_name = self.integracao.numero_remetente or "SoloCRT"
         url = f"{base}/instance/connectionState/{instance_name}"
         headers = {"apikey": self.integracao.token}
         r = requests.get(url, headers=headers, timeout=_HTTP_TIMEOUT)
@@ -186,45 +186,45 @@ class WhatsAppService:
 
 def msg_aso_vencendo(nome_func: str, dias: int, empresa: str) -> str:
     return (
-        f"⚠️ *{empresa}* — SolusCRT SST\n\n"
+        f"⚠️ *{empresa}* — SoloCRT SST\n\n"
         f"O ASO do(a) funcionário(a) *{nome_func}* vence em *{dias} dia(s)*.\n"
         "Agende o exame periódico com antecedência para manter a conformidade.\n\n"
-        "_Mensagem automática — SolusCRT_"
+        "_Mensagem automática — SoloCRT_"
     )
 
 
 def msg_treinamento_vencendo(nome_func: str, treinamento: str, dias: int, empresa: str) -> str:
     return (
-        f"📋 *{empresa}* — SolusCRT SST\n\n"
+        f"📋 *{empresa}* — SoloCRT SST\n\n"
         f"O treinamento *{treinamento}* do(a) funcionário(a) *{nome_func}* "
         f"vence em *{dias} dia(s)*.\n"
         "Providencie a renovação para conformidade com as NRs.\n\n"
-        "_Mensagem automática — SolusCRT_"
+        "_Mensagem automática — SoloCRT_"
     )
 
 
 def msg_epi_pendente(nome_func: str, epi: str, empresa: str) -> str:
     return (
-        f"🦺 *{empresa}* — SolusCRT SST\n\n"
+        f"🦺 *{empresa}* — SoloCRT SST\n\n"
         f"O(a) funcionário(a) *{nome_func}* possui entrega de EPI pendente: *{epi}*.\n"
         "Regularize a entrega e obtenha a assinatura digital.\n\n"
-        "_Mensagem automática — SolusCRT_"
+        "_Mensagem automática — SoloCRT_"
     )
 
 
 def msg_cat_registrada(nome_func: str, data_acidente: str, empresa: str) -> str:
     return (
-        f"🚨 *{empresa}* — SolusCRT SST\n\n"
+        f"🚨 *{empresa}* — SoloCRT SST\n\n"
         f"CAT registrada para *{nome_func}* — acidente em *{data_acidente}*.\n"
         "Verifique o módulo CAT/Acidentes para acompanhamento e envio ao eSocial.\n\n"
-        "_Mensagem automática — SolusCRT_"
+        "_Mensagem automática — SoloCRT_"
     )
 
 
 def msg_psicossocial_disponivel(avaliacao_titulo: str, empresa: str) -> str:
     return (
-        f"🧠 *{empresa}* — SolusCRT SST\n\n"
+        f"🧠 *{empresa}* — SoloCRT SST\n\n"
         f"A avaliação psicossocial *{avaliacao_titulo}* está disponível para resposta.\n"
         "Incentive os colaboradores a participarem — prazo limitado.\n\n"
-        "_Mensagem automática — SolusCRT_"
+        "_Mensagem automática — SoloCRT_"
     )

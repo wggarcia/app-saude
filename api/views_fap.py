@@ -1,5 +1,5 @@
 """
-Gestão FAP — Fator Acidentário de Prevenção · SolusCRT SST
+Gestão FAP — Fator Acidentário de Prevenção · SoloCRT SST
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 O que é o FAP?

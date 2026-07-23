@@ -57,7 +57,7 @@ def _styles():
 def _header_empresa(story, empresa_nome, titulo, subtitulo, styles):
     # Logotipo/cabeçalho
     header_data = [[
-        Paragraph(f"<b>SolusCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL)),
+        Paragraph(f"<b>SoloCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL)),
         Paragraph(empresa_nome, ParagraphStyle("en", fontName="Helvetica", fontSize=9, textColor=MUTED, alignment=TA_RIGHT)),
     ]]
     ht = Table(header_data, colWidths=[W*0.5 - 2*cm, W*0.5 - 2*cm])
@@ -75,7 +75,7 @@ def _header_empresa(story, empresa_nome, titulo, subtitulo, styles):
 def _footer_text(styles):
     hoje = date.today().strftime("%d/%m/%Y")
     return Paragraph(
-        f"Gerado por SolusCRT em {hoje} · Documento eletrônico — NR-7 / CLT art. 168",
+        f"Gerado por SoloCRT em {hoje} · Documento eletrônico — NR-7 / CLT art. 168",
         styles["center"]
     )
 
@@ -972,7 +972,7 @@ def gerar_pdf_grafico_assistente(grafico, resposta_texto, empresa_nome):
     )
     styles = _styles()
     story = []
-    _header_empresa(story, empresa_nome, titulo, "Gerado pelo Assistente IA — SolusCRT SST", styles)
+    _header_empresa(story, empresa_nome, titulo, "Gerado pelo Assistente IA — SoloCRT SST", styles)
 
     labels = [str(l) for l in (grafico.get("labels") or [])]
     valores = [float(v) for v in (grafico.get("valores") or [])]

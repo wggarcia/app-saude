@@ -1,4 +1,4 @@
-# Sala de Controle Epidemiologica SolusCRT
+# Sala de Controle Epidemiologica SoloCRT
 
 Esta camada define o que diferencia o produto de um dashboard comum: confianca institucional, metodo, governanca e decisao operacional.
 
@@ -54,6 +54,6 @@ O painel deve responder rapidamente:
 
 ## 6. Mensagem comercial honesta
 
-O SolusCRT Saude nao deve ser vendido como diagnostico medico. A proposta forte e:
+O SoloCRT Saude nao deve ser vendido como diagnostico medico. A proposta forte e:
 
 "Plataforma de inteligencia epidemiologica e sala de controle territorial que combina sinais anonimos da populacao, fontes oficiais e IA para antecipar focos, orientar decisoes e apoiar governos, empresas, hospitais, farmacias e cidadaos."

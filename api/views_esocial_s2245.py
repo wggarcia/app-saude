@@ -129,7 +129,7 @@ def gerar_xml_s2245(treinamento: TreinamentoNR, cfg) -> str:
     SubElement(ide_evt, "indRetif").text = "1"        # 1=original, 2=retificação
     SubElement(ide_evt, "tpAmb").text    = _tp_amb(cfg)
     SubElement(ide_evt, "procEmi").text  = "1"        # 1=aplicativo do empregador
-    SubElement(ide_evt, "verProc").text  = "SolusCRT-1.0"
+    SubElement(ide_evt, "verProc").text  = "SoloCRT-1.0"
 
     # ideEmpregador
     ide_emp = SubElement(evt, "ideEmpregador")

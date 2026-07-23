@@ -4,7 +4,7 @@
 {% include "_favicon.html" %}
 
 <meta charset="UTF-8">
-<title>SolusCRT · Configurações SST</title>
+<title>SoloCRT · Configurações SST</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -295,7 +295,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
         <div class="section-label">Identidade Visual</div>
         <div class="form-grid">
           <div class="mf form-col-full">
-            <label>Nome da Marca <span class="mf-optional">deixe em branco para usar "SolusCRT"</span></label>
+            <label>Nome da Marca <span class="mf-optional">deixe em branco para usar "SoloCRT"</span></label>
             <input type="text" id="marca_nome" placeholder="Ex: MedSafe SST, SeguraTech...">
           </div>
           <div class="mf form-col-full">
@@ -330,7 +330,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
         <div class="section-label">Opções</div>
         <div class="check-row">
           <input type="checkbox" id="marca_powered_by" checked>
-          <label for="marca_powered_by">Exibir "Powered by SolusCRT" no rodapé dos documentos</label>
+          <label for="marca_powered_by">Exibir "Powered by SoloCRT" no rodapé dos documentos</label>
         </div>
 
         <div class="info-card alerta" style="margin-top:16px">
@@ -798,7 +798,7 @@ async function salvarMarca() {
 }
 
 async function redefinirMarca() {
-  if (!confirm('Restaurar cores e nome padrão SolusCRT?')) return;
+  if (!confirm('Restaurar cores e nome padrão SoloCRT?')) return;
   document.getElementById('marca_nome').value = '';
   document.getElementById('marca_logo_url').value = '';
   document.getElementById('marca_cor_primaria').value = '#00c9a7';

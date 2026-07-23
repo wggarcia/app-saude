@@ -1,4 +1,4 @@
-# Go-Live Execucao - SolusCRT Saude
+# Go-Live Execucao - SoloCRT Saude
 
 Checklist copiavel para executar o go-live controlado em producao.
 
@@ -154,7 +154,7 @@ https://app-saude-p9n8.onrender.com/privacidade/
 3. Notas de revisao sugeridas:
 
 ```text
-O SolusCRT Saude e um app de monitoramento epidemiologico populacional e alertas publicos. O app nao fornece diagnostico medico, prescricao ou atendimento de emergencia. A localizacao e usada para registrar sinais de saude de forma territorial, reduzir fraude e exibir alertas proximos. A politica de privacidade esta publicada em https://app-saude-p9n8.onrender.com/privacidade/.
+O SoloCRT Saude e um app de monitoramento epidemiologico populacional e alertas publicos. O app nao fornece diagnostico medico, prescricao ou atendimento de emergencia. A localizacao e usada para registrar sinais de saude de forma territorial, reduzir fraude e exibir alertas proximos. A politica de privacidade esta publicada em https://app-saude-p9n8.onrender.com/privacidade/.
 ```
 
 4. Antes de enviar build:

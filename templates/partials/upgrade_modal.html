@@ -1,7 +1,7 @@
 {% comment %}
 Partial: upgrade_modal.html
 Incluir em qualquer template de gerência.
-Ativa via JS: window.SolusCRT.upgrade.abrir(featureLabel, planoAtual)
+Ativa via JS: window.SoloCRT.upgrade.abrir(featureLabel, planoAtual)
 Ou automaticamente quando qualquer fetch retorna {upgrade_necessario: true}
 {% endcomment %}
 
@@ -28,7 +28,7 @@ Ou automaticamente quando qualquer fetch retorna {upgrade_necessario: true}
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">
         <div>
           <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#00c9a7;margin-bottom:6px">
-            SolusCRT · Upgrade de Plano
+            SoloCRT · Upgrade de Plano
           </div>
           <div style="font-size:1.35rem;font-weight:900;color:#e2eeff;line-height:1.2" id="upgradeModalTitulo">
             Desbloqueie mais recursos
@@ -169,7 +169,7 @@ Ou automaticamente quando qualquer fetch retorna {upgrade_necessario: true}
         <input type="checkbox" id="upgAceiteTermos" style="margin-top:2px;accent-color:#00c9a7;width:16px;height:16px;flex-shrink:0" onchange="_upgradeAtualizarBotao()">
         <span style="font-size:.8rem;color:#7b90b0;line-height:1.5">
           Declaro que sou o responsável legal pela contratação e autorizo o débito do valor acima no documento informado.
-          Estou ciente que o plano será ativado após a confirmação do pagamento e que os Termos de Uso da SolusCRT se aplicam a esta contratação.
+          Estou ciente que o plano será ativado após a confirmação do pagamento e que os Termos de Uso da SoloCRT se aplicam a esta contratação.
         </span>
       </label>
 
@@ -440,8 +440,8 @@ Ou automaticamente quando qualquer fetch retorna {upgrade_necessario: true}
   window._upgradeFechar = fechar;
 
   // ── API pública global ──────────────────────────────────────────────────
-  window.SolusCRT = window.SolusCRT || {};
-  window.SolusCRT.upgrade = { abrir: abrir, fechar: fechar };
+  window.SoloCRT = window.SoloCRT || {};
+  window.SoloCRT.upgrade = { abrir: abrir, fechar: fechar };
 
 })();
 </script>

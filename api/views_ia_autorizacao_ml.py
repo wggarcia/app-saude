@@ -357,7 +357,7 @@ def inferir_autorizacao(dados: dict) -> dict:
         "scores_por_classe": {k: round(v, 4) for k, v in scores.items()},
         "justificativa_ia": justificativa,
         "features_utilizadas": features,
-        "modelo": "Ensemble RF+GB SolusCRT v2",
+        "modelo": "Ensemble RF+GB SoloCRT v2",
     }
 
 

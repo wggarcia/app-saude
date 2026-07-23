@@ -1,6 +1,6 @@
 """
 CIPA — Comissão Interna de Prevenção de Acidentes (NR-5)
-Gestão completa de comissões, membros, reuniões e atas — SolusCRT SST.
+Gestão completa de comissões, membros, reuniões e atas — SoloCRT SST.
 
 Endpoints:
   GET  /api/sst/cipa/comissoes/                    — lista comissões
@@ -404,7 +404,7 @@ def api_cipa_ata_pdf(request, reuniao_id):
 
         # Cabeçalho
         header_data = [[
-            Paragraph("<b>SolusCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL, leading=18)),
+            Paragraph("<b>SoloCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL, leading=18)),
             Paragraph(empresa.nome, ParagraphStyle("en", fontName="Helvetica", fontSize=9, textColor=MUTED, leading=13, alignment=2)),
         ]]
         ht = Table(header_data, colWidths=[W * 0.5 - 2 * cm, W * 0.5 - 2 * cm])
@@ -471,7 +471,7 @@ def api_cipa_ata_pdf(request, reuniao_id):
         story.append(HRFlowable(width="100%", thickness=0.5, color=LGREY, spaceAfter=6))
         hoje = date.today().strftime("%d/%m/%Y")
         story.append(Paragraph(
-            f"Gerado por SolusCRT em {hoje} · Ata CIPA — NR-5 / CLT art. 163",
+            f"Gerado por SoloCRT em {hoje} · Ata CIPA — NR-5 / CLT art. 163",
             styles["center"]
         ))
 

@@ -1,5 +1,5 @@
 """
-Painel de Credenciais de Integrações — SolusCRT.
+Painel de Credenciais de Integrações — SoloCRT.
 
 Cada empresa (tenant) cadastra aqui suas próprias credenciais governamentais:
   - SNGPC / ANVISA   → farmácias
@@ -11,7 +11,7 @@ As credenciais são:
   ✅ Nunca expostas em logs ou respostas de API (somente status: configurado/não)
   ✅ Removíveis pelo próprio cliente (direito ao apagamento)
 
-O operador SolusCRT (Wagner) NÃO tem acesso às senhas — apenas o cliente.
+O operador SoloCRT (Wagner) NÃO tem acesso às senhas — apenas o cliente.
 """
 
 import json

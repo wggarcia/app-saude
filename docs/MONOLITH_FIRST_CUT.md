@@ -1,4 +1,4 @@
-# Monolith First Cut - SolusCRT Saude
+# Monolith First Cut - SoloCRT Saude
 
 Este plano define o primeiro corte seguro de refatoracao para reduzir risco sem travar entrega.
 

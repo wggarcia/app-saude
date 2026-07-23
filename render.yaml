@@ -56,7 +56,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SolusCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@soluscrt.com.br>"
       - key: EMAIL_HOST_USER
         sync: false   # noreply@soluscrt.com.br  (configurar no painel Render)
       - key: EMAIL_HOST_PASSWORD
@@ -90,7 +90,7 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ASAAS_USER_AGENT
-        value: SolusCRT-Saude/1.0
+        value: SoloCRT-Saude/1.0
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: MAPBOX_ACCESS_TOKEN
@@ -152,7 +152,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SolusCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@soluscrt.com.br>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
@@ -196,7 +196,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SolusCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@soluscrt.com.br>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
@@ -236,7 +236,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SolusCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@soluscrt.com.br>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
@@ -276,7 +276,7 @@ services:
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        value: "SolusCRT <noreply@soluscrt.com.br>"
+        value: "SoloCRT <noreply@soluscrt.com.br>"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD

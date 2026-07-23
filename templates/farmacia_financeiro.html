@@ -435,7 +435,7 @@ async function carregarCredNfeFarmacia() {
       : '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,179,71,.12);color:var(--warn)">⚠️ Não configurado</span>';
     document.getElementById('nfeFarInfo').innerHTML = s.configurado
       ? `CNPJ: <strong>${s.cnpj||'—'}</strong> &nbsp;·&nbsp; UF: <strong>${s.uf||'—'}</strong> &nbsp;·&nbsp; Ambiente: <strong>${s.ambiente==='1'?'Produção':'Homologação'}</strong>`
-      : 'Configure o certificado e-CNPJ para emitir Notas Fiscais Eletrônicas diretamente pelo SolusCRT.';
+      : 'Configure o certificado e-CNPJ para emitir Notas Fiscais Eletrônicas diretamente pelo SoloCRT.';
     if (s.cnpj)     document.getElementById('nfeFarCnpj').value     = s.cnpj;
     if (s.ie)       document.getElementById('nfeFarIe').value       = s.ie;
     if (s.uf)       document.getElementById('nfeFarUf').value       = s.uf;

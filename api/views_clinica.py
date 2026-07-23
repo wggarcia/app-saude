@@ -1,6 +1,6 @@
 """
 Sistema de vínculo clínica-empresa: permite que uma clínica de exames ocupacionais
-envie ASOs diretamente para a conta SolusCRT de uma empresa-cliente.
+envie ASOs diretamente para a conta SoloCRT de uma empresa-cliente.
 
 Fluxo:
   1. Clínica cria vínculo informando CNPJ + nome da empresa (POST /api/clinica/vinculos)
@@ -101,7 +101,7 @@ def api_clinica_vinculos(request):
         if not cnpj and not nome:
             return JsonResponse({"erro": "Informe CNPJ ou nome da empresa"}, status=400)
 
-        # Verifica se empresa já tem conta no SolusCRT pelo CNPJ (busca no email ou nome)
+        # Verifica se empresa já tem conta no SoloCRT pelo CNPJ (busca no email ou nome)
         empresa_conta = None
         if email:
             empresa_conta = Empresa.objects.filter(email=email, ativo=True).first()

@@ -3,7 +3,7 @@
 <head>
 {% include "_favicon.html" %}
 <meta charset="UTF-8">
-<title>SolusCRT · Psicossocial NR-01</title>
+<title>SoloCRT · Psicossocial NR-01</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -514,7 +514,7 @@ async function loadKpis() {
     if (!r.ok) {
       const e = await r.json().catch(() => ({}));
       if (r.status === 403 && e.upgrade_necessario) {
-        document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:var(--amber);font-size:.82rem;border:1px solid rgba(240,191,107,.2);border-radius:10px;background:rgba(0,0,0,.2)">🔒 ${e.erro || "Módulo não disponível no seu plano."} <button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir('Psicossocial NR-01')" style="margin-left:10px;padding:5px 12px;border-radius:7px;border:none;background:var(--purple);color:#fff;font-size:.74rem;font-weight:800;cursor:pointer">Ver planos →</button></div>`;
+        document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:var(--amber);font-size:.82rem;border:1px solid rgba(240,191,107,.2);border-radius:10px;background:rgba(0,0,0,.2)">🔒 ${e.erro || "Módulo não disponível no seu plano."} <button onclick="window.SoloCRT&&window.SoloCRT.upgrade.abrir('Psicossocial NR-01')" style="margin-left:10px;padding:5px 12px;border-radius:7px;border:none;background:var(--purple);color:#fff;font-size:.74rem;font-weight:800;cursor:pointer">Ver planos →</button></div>`;
       } else {
         document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:var(--red);font-size:.8rem">⚠️ Erro ao carregar KPIs (${r.status})</div>`;
       }

@@ -111,7 +111,7 @@ class Command(BaseCommand):
 
             # ── Montar e enviar e-mail ────────────────────────────────
             total_itens = sum(len(a["itens"]) for a in alertas)
-            assunto = f"[SolusCRT] {total_itens} vencimento{'s' if total_itens > 1 else ''} SST — {empresa.nome}"
+            assunto = f"[SoloCRT] {total_itens} vencimento{'s' if total_itens > 1 else ''} SST — {empresa.nome}"
 
             texto_puro, html = _montar_email(empresa.nome, alertas, hoje)
 
@@ -182,7 +182,7 @@ def _montar_email(empresa_nome, alertas, hoje):
   <div style="max-width:640px;margin:24px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08)">
     <!-- Header -->
     <div style="background:#041018;padding:24px 32px">
-      <p style="color:#00c9a7;font-size:20px;font-weight:800;margin:0">SolusCRT</p>
+      <p style="color:#00c9a7;font-size:20px;font-weight:800;margin:0">SoloCRT</p>
       <p style="color:#7a9fa0;font-size:13px;margin:4px 0 0">Alerta de Vencimentos SST · {data_str}</p>
     </div>
     <!-- Body -->
@@ -204,7 +204,7 @@ def _montar_email(empresa_nome, alertas, hoje):
     <!-- Footer -->
     <div style="padding:16px 32px;background:#f4f8f7;border-top:1px solid #e8f4f1">
       <p style="margin:0;font-size:11px;color:#7a9fa0;text-align:center">
-        SolusCRT · Plataforma de Saúde e Segurança do Trabalho ·
+        SoloCRT · Plataforma de Saúde e Segurança do Trabalho ·
         <a href="https://empresa.soluscrt.com.br/sst/configuracoes/" style="color:#7a9fa0">Gerenciar alertas</a>
       </p>
     </div>
@@ -213,7 +213,7 @@ def _montar_email(empresa_nome, alertas, hoje):
 </html>"""
 
     # ── Texto puro ────────────────────────────────────────────────────────────
-    linhas = [f"SolusCRT — Alertas SST {empresa_nome} · {data_str}\n"]
+    linhas = [f"SoloCRT — Alertas SST {empresa_nome} · {data_str}\n"]
     for a in alertas:
         linhas.append(f"\n{a['icone']} {a['titulo']}")
         for item in a["itens"]:

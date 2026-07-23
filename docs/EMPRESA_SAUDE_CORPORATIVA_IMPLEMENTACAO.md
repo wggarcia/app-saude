@@ -1,4 +1,4 @@
-# Implementacao incremental do SolusCRT Corporativo
+# Implementacao incremental do SoloCRT Corporativo
 
 Guia de execucao para transformar o ambiente `empresa` em um produto proprio de saude ocupacional, desenvolvimento humano e continuidade operacional, sem quebrar os ambientes epidemiologicos.
 

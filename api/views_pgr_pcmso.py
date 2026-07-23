@@ -1,6 +1,6 @@
 """
 PGR (Programa de Gerenciamento de Riscos) e PCMSO (Programa de Controle Médico de Saúde Ocupacional)
-Geração automática de documentos e PDFs — SolusCRT SST.
+Geração automática de documentos e PDFs — SoloCRT SST.
 
 Endpoints:
   POST /api/sst/pgr/gerar/            — gera PGR automático
@@ -71,7 +71,7 @@ def _styles():
 
 def _header_empresa(story, empresa_nome, titulo, subtitulo, styles):
     header_data = [[
-        Paragraph("<b>SolusCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL, leading=18)),
+        Paragraph("<b>SoloCRT</b>", ParagraphStyle("logo", fontName="Helvetica-Bold", fontSize=14, textColor=TEAL, leading=18)),
         Paragraph(empresa_nome, ParagraphStyle("en", fontName="Helvetica", fontSize=9, textColor=MUTED, leading=13, alignment=2)),
     ]]
     ht = Table(header_data, colWidths=[W * 0.5 - 2 * cm, W * 0.5 - 2 * cm])
@@ -86,7 +86,7 @@ def _header_empresa(story, empresa_nome, titulo, subtitulo, styles):
 def _footer_text(styles, norma):
     hoje = date.today().strftime("%d/%m/%Y")
     return Paragraph(
-        f"Gerado por SolusCRT em {hoje} · Documento eletrônico — {norma}",
+        f"Gerado por SoloCRT em {hoje} · Documento eletrônico — {norma}",
         styles["center"]
     )
 

@@ -1,4 +1,4 @@
-# SolusCRT – Estrutura de Apps
+# SoloCRT – Estrutura de Apps
 
 Este repositório possui **2 apps Flutter separados** e um backend Django:
 

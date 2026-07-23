@@ -559,10 +559,10 @@ def api_matricula_certificado_email(request, matricula_id):
     from django.core.mail import EmailMessage
     try:
         msg = EmailMessage(
-            subject=f"[SolusCRT] Certificado — {matricula.curso.titulo}",
+            subject=f"[SoloCRT] Certificado — {matricula.curso.titulo}",
             body=(
                 f"Segue em anexo o certificado de conclusão do curso {matricula.curso.titulo} "
-                f"para {matricula.funcionario.nome}.\n\n-- \nSolusCRT · Sistema de Gestão SST"
+                f"para {matricula.funcionario.nome}.\n\n-- \nSoloCRT · Sistema de Gestão SST"
             ),
             from_email=None,
             to=[destinatario],

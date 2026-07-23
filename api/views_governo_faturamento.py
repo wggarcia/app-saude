@@ -311,7 +311,7 @@ def api_faturamento_sus_gerar_bpa(request, lote_id):
         orgao_destino="SECRETARIA MUNICIPAL DE SAUDE",
         indicador_destino="M",
         codigo_ibge="",
-        versao="SOLUSCRT",
+        versao="SOLOCRT",
     )
 
     # Reflete a produção real contada no lote (não altera valor financeiro).

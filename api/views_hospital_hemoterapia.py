@@ -507,7 +507,7 @@ def _gerar_xml_notivisa(reacao, empresa):
     root = ET.Element("notificacao", attrib={
         "xmlns":   "http://anvisa.gov.br/esnvs/hemovigilancia",
         "versao":  "2.0",
-        "sistema": "SolusCRT",
+        "sistema": "SoloCRT",
     })
 
     # Cabeçalho

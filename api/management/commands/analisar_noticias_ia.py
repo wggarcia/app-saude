@@ -35,7 +35,7 @@ MODEL_ID = "claude-haiku-4-5"
 # dia inteiro, senão o backlog de não-traduzidas cresce indefinidamente.
 MAX_POR_RODADA = 1500
 
-SYSTEM_PROMPT = """Você é o Agente Analisador Epidemiológico da SolusCRT.
+SYSTEM_PROMPT = """Você é o Agente Analisador Epidemiológico da SoloCRT.
 Analise o título e resumo de uma notícia de saúde e retorne SOMENTE um JSON válido
 com a seguinte estrutura (sem markdown, sem texto extra):
 

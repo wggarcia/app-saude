@@ -175,17 +175,17 @@ class LocationService {
     final raw = error.toString();
 
     if (raw.contains('gps_antigo')) {
-      return 'O iPhone retornou uma localização antiga. Abra o app Mapas por alguns segundos, volte ao SolusCRT e toque em Enviar novamente.';
+      return 'O iPhone retornou uma localização antiga. Abra o app Mapas por alguns segundos, volte ao SoloCRT e toque em Enviar novamente.';
     }
     if (raw.contains('gps_impreciso')) {
       final meters = RegExp(r'gps_impreciso_(\d+)m').firstMatch(raw)?.group(1);
       return 'O GPS atual está impreciso${meters == null ? '' : ' (${meters}m)'}. Ative Localização Precisa e tente em área aberta ou perto de uma janela.';
     }
     if (raw.contains('deniedForever')) {
-      return 'A permissão de localização está bloqueada. Abra Ajustes > SolusCRT Saúde > Localização e marque Durante o Uso com Localização Precisa.';
+      return 'A permissão de localização está bloqueada. Abra Ajustes > SoloCRT Saúde > Localização e marque Durante o Uso com Localização Precisa.';
     }
     if (raw.contains('denied')) {
-      return 'Permissão de localização negada. Autorize o SolusCRT Saúde a usar localização Durante o Uso.';
+      return 'Permissão de localização negada. Autorize o SoloCRT Saúde a usar localização Durante o Uso.';
     }
     if (raw.contains('Location services are disabled') ||
         raw.contains('Ative a localização')) {

@@ -304,7 +304,7 @@ class Command(BaseCommand):
     def _fetch_rss(self, nome_fonte, feed_url):
         results = []
         try:
-            resp = requests.get(feed_url, timeout=15, headers={"User-Agent": "SolusCRT/2.0"})
+            resp = requests.get(feed_url, timeout=15, headers={"User-Agent": "SoloCRT/2.0"})
             resp.raise_for_status()
             root = ET.fromstring(resp.content)
             ns = {
