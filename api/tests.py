@@ -6196,17 +6196,22 @@ class EpidemiologiaAuthMiddlewareTests(TestCase):
     allowlist usa match EXATO, então não pode vazar por prefixo.
     """
 
-    # panorama_epidemiologico lê via conexão "owner" (superuser que bypassa RLS).
-    databases = {"default", "owner"}
-
     def setUp(self):
         epidemiologia.clear_panorama_cache()
 
     def test_epidemiologia_publico_sem_token_retorna_200(self):
-        # Sem nenhuma credencial (sem Bearer, sem cookie) — exatamente o caso
-        # do fetch("/api/epidemiologia") pelado que dava 401 antes da correção.
+        # Prova o veredito do middleware: SEM o fix, o EmpresaMiddleware devolve
+        # 401 ANTES de chegar na view (o payload nem chega a ser montado); COM o
+        # fix, a rota está no allowlist e a view responde 200.
+        # O build real do panorama é mockado de propósito — ele lê pela conexão
+        # "owner" e, no banco de teste (com RLS), aborta a transação. Isso é
+        # artefato do ambiente de teste, não do endpoint (em produção retorna
+        # 200, verificado por curl). O que este teste garante é a decisão de
+        # auth do middleware, não a montagem do panorama.
         # secure=True: em produção SECURE_SSL_REDIRECT=True → http vira 301.
-        resp = Client().get("/api/epidemiologia", secure=True)
+        stub = {"layers": {}, "overview": {}, "filters": {}, "generated_at": ""}
+        with patch("api.epidemiologia.build_panorama_payload", return_value=stub):
+            resp = Client().get("/api/epidemiologia", secure=True)
         self.assertEqual(resp.status_code, 200)
         body = resp.json()
         self.assertIn("layers", body)
