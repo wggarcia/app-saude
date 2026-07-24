@@ -6202,18 +6202,19 @@ class EpidemiologiaAuthMiddlewareTests(TestCase):
     def test_epidemiologia_publico_sem_token_retorna_200(self):
         # Sem nenhuma credencial (sem Bearer, sem cookie) — exatamente o caso
         # do fetch("/api/epidemiologia") pelado que dava 401 antes da correção.
-        resp = Client().get("/api/epidemiologia")
+        # secure=True: em produção SECURE_SSL_REDIRECT=True → http vira 301.
+        resp = Client().get("/api/epidemiologia", secure=True)
         self.assertEqual(resp.status_code, 200)
         body = resp.json()
         self.assertIn("layers", body)
         self.assertIn("overview", body)
 
     def test_briefing_continua_protegido_sem_token(self):
-        resp = Client().get("/api/epidemiologia/briefing")
+        resp = Client().get("/api/epidemiologia/briefing", secure=True)
         self.assertEqual(resp.status_code, 401)
 
     def test_projecao_ml_continua_protegida_sem_token(self):
-        resp = Client().get("/api/epidemiologia/projecao-ml")
+        resp = Client().get("/api/epidemiologia/projecao-ml", secure=True)
         self.assertEqual(resp.status_code, 401)
 
 
@@ -6228,7 +6229,7 @@ class Fetch401InterceptorTests(TestCase):
     """
 
     def test_pagina_html_injeta_interceptor_com_guard(self):
-        resp = Client().get("/login-governo/")
+        resp = Client().get("/login-governo/", secure=True)
         self.assertEqual(resp.status_code, 200)
         html = resp.content.decode("utf-8", "replace")
         self.assertIn("window.fetch", html)                     # interceptor injetado
