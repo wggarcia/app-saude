@@ -22,23 +22,37 @@ input{width:100%;padding:14px;margin-top:12px;border-radius:12px;border:1px soli
     <div class="muted">Acesso restrito ao CEO e equipe autorizada — contratos, finanças, cortesia de planos, uso e capacidade do sistema.</div>
     <input id="email" placeholder="Email operacional">
     <input id="senha" type="password" placeholder="Senha">
-    <button class="btn" onclick="login()">Entrar</button>
+    <button id="loginBtn" class="btn" onclick="login()">Entrar</button>
     <div id="msg" class="muted"></div>
   </section>
   <script>
+    let _loginPending = false;
     async function login() {
-      const response = await fetch("/api/operacao-central/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: document.getElementById("email").value,
-          senha: document.getElementById("senha").value,
-        }),
-      });
-      const data = await response.json();
-      document.getElementById("msg").textContent = data.mensagem || data.erro || "";
-      if (data.token) {
-        window.location.href = data.destination || "/console-operacional/";
+      if (_loginPending) return;
+      _loginPending = true;
+      const btn = document.getElementById("loginBtn");
+      if (btn) btn.disabled = true;
+      let keepPending = false;
+      try {
+        const response = await fetch("/api/operacao-central/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            senha: document.getElementById("senha").value,
+          }),
+        });
+        const data = await response.json();
+        document.getElementById("msg").textContent = data.mensagem || data.erro || "";
+        if (data.token) {
+          window.location.href = data.destination || "/console-operacional/";
+          keepPending = true;
+        }
+      } finally {
+        if (!keepPending) {
+          _loginPending = false;
+          if (btn) btn.disabled = false;
+        }
       }
     }
   </script>

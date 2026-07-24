@@ -204,7 +204,7 @@ h1 em{font-style:italic;color:#f3dfaa}
         </div>
       </div>
 
-      <button class="btn-main" onclick="login()">Acessar portal governamental</button>
+      <button id="loginBtn" class="btn-main" onclick="login()">Acessar portal governamental</button>
 
       <div class="footer-links">
         <a href="/solicitar-reset-senha/">Redefinir credencial de acesso</a>
@@ -234,17 +234,36 @@ function persistScopedSession(data){
   localStorage.setItem("tipo_conta",data.tipo_conta||"empresa");
   if(data.device_id)localStorage.setItem("device_id",data.device_id);
 }
+let _loginPending=false;
 async function login(force=false){
-  const email=document.getElementById("email").value;
-  const senha=document.getElementById("senha").value;
-  const err=document.getElementById("erro");
-  err.style.display="none";
-  const res=await fetch("/api/login-governo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,senha,device_id:getDeviceId(),device_name:navigator.platform||"Estacao",force_login:force})});
-  const data=await res.json();
-  if(data.token){persistScopedSession(data);window.location.href=data.destination||"/dashboard-governo/";}
-  else{
-    if(data.codigo==="sessao_em_uso"&&!force){if(confirm(`${data.mensagem}\n\nEncerrar sessão anterior?`))return login(true);return;}
-    err.textContent=data.mensagem||data.erro||"Credenciais inválidas";err.style.display="block";
+  if(_loginPending)return;
+  _loginPending=true;
+  const btn=document.getElementById("loginBtn");
+  if(btn)btn.disabled=true;
+  let keepPending=false;
+  try{
+    const email=document.getElementById("email").value;
+    const senha=document.getElementById("senha").value;
+    const err=document.getElementById("erro");
+    err.style.display="none";
+    const res=await fetch("/api/login-governo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,senha,device_id:getDeviceId(),device_name:navigator.platform||"Estacao",force_login:force})});
+    const data=await res.json();
+    if(data.token){persistScopedSession(data);window.location.href=data.destination||"/dashboard-governo/";keepPending=true;return;}
+    else if(data.codigo==="sessao_em_uso"&&!force){
+      if(confirm(`${data.mensagem}\n\nEncerrar sessão anterior?`)){
+        _loginPending=false;
+        if(btn)btn.disabled=false;
+        keepPending=true;
+        return login(true);
+      }
+    }else{
+      err.textContent=data.mensagem||data.erro||"Credenciais inválidas";err.style.display="block";
+    }
+  }finally{
+    if(!keepPending){
+      _loginPending=false;
+      if(btn)btn.disabled=false;
+    }
   }
 }
 document.addEventListener("keydown",e=>{if(e.key==="Enter")login();});
