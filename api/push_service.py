@@ -84,6 +84,7 @@ def resolver_empresa_governo_por_geo(estado, cidade):
     candidatos = Empresa.objects.filter(
         tipo_conta=Empresa.TIPO_GOVERNO,
         acesso_governo=True,
+        ativo=True,
     ).exclude(cidade="")
     encontrados = [
         e for e in candidatos
