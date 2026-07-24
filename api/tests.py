@@ -6196,6 +6196,9 @@ class EpidemiologiaAuthMiddlewareTests(TestCase):
     allowlist usa match EXATO, então não pode vazar por prefixo.
     """
 
+    # panorama_epidemiologico lê via conexão "owner" (superuser que bypassa RLS).
+    databases = {"default", "owner"}
+
     def setUp(self):
         epidemiologia.clear_panorama_cache()
 
