@@ -176,6 +176,7 @@ class EmpresaMiddleware:
             "/erro/",
             "/pendente/",
             "/api/platform/status",
+            "/api/epidemiologia",   # panorama agregado público (DATASUS/SINAN) — consumido cross-segmento; sem dado de tenant. Match exato: /briefing e /projecao-ml seguem protegidos.
             "/logout/",
             "/logout-governo/",
             "/logout-operacao/",
@@ -441,6 +442,20 @@ _FETCH_INTERCEPTOR = b"""
   window.fetch = function(url, opts){
     return _origFetch.apply(this, arguments).then(function(res){
       if(res.status === 401){
+        // So derruba a sessao quando a requisicao REALMENTE portava um token
+        // (Authorization: Bearer) - sessao valida que o servidor rejeitou
+        // (expirada/revogada). 401 de chamada SEM credencial e widget publico/
+        // opcional (ex.: panorama epidemiologico) e nao pode chutar a pagina
+        // inteira pro login - era a causa do "carrega e cai".
+        var sentAuth = false;
+        try {
+          var h = (opts && opts.headers) || (url && url.headers);
+          if (h) {
+            if (typeof h.get === 'function') { sentAuth = !!h.get('Authorization'); }
+            else { sentAuth = !!(h['Authorization'] || h['authorization']); }
+          }
+        } catch(e) {}
+        if (!sentAuth) { return res; }
         var p = window.location.pathname;
         var destino;
         // Console operacional (dono) tem login proprio - nunca enviar para login-empresa

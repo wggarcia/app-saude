@@ -6182,6 +6182,65 @@ class NoticiaEpidemiologicaAPITests(TestCase):
         self.assertEqual(resp.status_code, 404)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Middleware — auth de /api/epidemiologia + blindagem do interceptor de 401
+# (regressão do "carrega e cai" em governo.soluscrt.com.br, jul/2026)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class EpidemiologiaAuthMiddlewareTests(TestCase):
+    """
+    O panorama epidemiológico é dado agregado público (DATASUS/SINAN), consumido
+    por 5 dashboards de segmentos distintos. Deve responder SEM autenticação —
+    era o 401 que, via interceptor global, derrubava a sessão do governo.
+    Os endpoints derivados (briefing/projeção-ml) continuam protegidos: o
+    allowlist usa match EXATO, então não pode vazar por prefixo.
+    """
+
+    def setUp(self):
+        epidemiologia.clear_panorama_cache()
+
+    def test_epidemiologia_publico_sem_token_retorna_200(self):
+        # Sem nenhuma credencial (sem Bearer, sem cookie) — exatamente o caso
+        # do fetch("/api/epidemiologia") pelado que dava 401 antes da correção.
+        resp = Client().get("/api/epidemiologia")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertIn("layers", body)
+        self.assertIn("overview", body)
+
+    def test_briefing_continua_protegido_sem_token(self):
+        resp = Client().get("/api/epidemiologia/briefing")
+        self.assertEqual(resp.status_code, 401)
+
+    def test_projecao_ml_continua_protegida_sem_token(self):
+        resp = Client().get("/api/epidemiologia/projecao-ml")
+        self.assertEqual(resp.status_code, 401)
+
+
+class Fetch401InterceptorTests(TestCase):
+    """
+    O interceptor global de fetch (injetado em toda página HTML) só pode
+    redirecionar ao login quando a requisição PORTAVA um token — um 401 de
+    chamada sem credencial (widget público/opcional) não pode chutar a sessão
+    inteira pro login. A lógica roda no cliente (JS), então aqui garantimos que
+    o guard de credencial está presente no script injetado — regressão direta
+    da blindagem que eliminou o "carrega e cai".
+    """
+
+    def test_pagina_html_injeta_interceptor_com_guard(self):
+        resp = Client().get("/login-governo/")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode("utf-8", "replace")
+        self.assertIn("window.fetch", html)                     # interceptor injetado
+        self.assertIn("sentAuth", html)                         # guard presente
+        self.assertIn("if (!sentAuth) { return res; }", html)   # 401 sem token não redireciona
+
+    def test_constante_interceptor_tem_guard(self):
+        from api.middleware import _FETCH_INTERCEPTOR
+        self.assertIn(b"sentAuth", _FETCH_INTERCEPTOR)
+        self.assertIn(b"if (!sentAuth) { return res; }", _FETCH_INTERCEPTOR)
+
+
 class MonitorarNoticiasCommandTests(TransactionTestCase):
     """Cobertura do management command monitorar_noticias."""
 
