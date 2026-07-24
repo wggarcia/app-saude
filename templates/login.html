@@ -185,7 +185,7 @@ body{
       <input id="email" class="input" placeholder="Email">
       <input id="senha" type="password" class="input" placeholder="Senha">
 
-      <button class="btn" onclick="login()">Entrar</button>
+      <button id="loginBtn" class="btn" onclick="login()">Entrar</button>
       <div style="margin-top:15px; text-align:center; font-size:13px; color:#94a3b8;">
   Não tem conta?
   <span 
@@ -223,44 +223,62 @@ function persistScopedSession(data) {
   localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
 }
 
+let _loginPending = false;
 async function login(forceLogin = false){
-  const email = document.getElementById("email").value;
-  const senha = document.getElementById("senha").value;
-  const erro = document.getElementById("erro");
+  if (_loginPending) return;
+  _loginPending = true;
+  const btn = document.getElementById("loginBtn");
+  if (btn) btn.disabled = true;
+  let keepPending = false;
+  try {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+    const erro = document.getElementById("erro");
 
-  erro.style.display = "none";
+    erro.style.display = "none";
 
-  const res = await fetch("/api/login", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      email,
-      senha,
-      device_id: getDeviceId(),
-      device_name: navigator.platform || "Computador",
-      force_login: forceLogin,
-    })
-  });
+    const res = await fetch("/api/login", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        email,
+        senha,
+        device_id: getDeviceId(),
+        device_name: navigator.platform || "Computador",
+        force_login: forceLogin,
+      })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if(data.token){
-  persistScopedSession(data);
+    if(data.token){
+      persistScopedSession(data);
 
-  console.log("EMPRESA ID SALVO:", data.empresa_id);
+      console.log("EMPRESA ID SALVO:", data.empresa_id);
 
-  window.location.href = data.destination || "/dashboard/";
+      window.location.href = data.destination || "/dashboard/";
+      keepPending = true;
+      return;
 
-} else {
-  if (data.codigo === "sessao_em_uso" && !forceLogin) {
-    const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessão anterior e entrar neste computador?`);
-    if (confirmar) {
-      return login(true);
+    } else {
+      if (data.codigo === "sessao_em_uso" && !forceLogin) {
+        const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessão anterior e entrar neste computador?`);
+        if (confirmar) {
+          _loginPending = false;
+          if (btn) btn.disabled = false;
+          keepPending = true;
+          return login(true);
+        }
+      }
+      erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
+      erro.style.display = "block";
+    }
+  } finally {
+    if (!keepPending) {
+      _loginPending = false;
+      if (btn) btn.disabled = false;
     }
   }
-  erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
-  erro.style.display = "block";
-}
 }
 </script>
 
