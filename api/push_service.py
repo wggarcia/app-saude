@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import unicodedata
 from django.conf import settings
@@ -10,6 +11,8 @@ except Exception:  # pragma: no cover
     firebase_admin = None
     credentials = None
     messaging = None
+
+logger = logging.getLogger(__name__)
 
 from .models import DispositivoPushPublico, CredencialAppFuncionario, Empresa
 
@@ -192,7 +195,10 @@ def _firebase_app():
             return firebase_admin.initialize_app(credentials.Certificate(info), options=_opts)
         if path and os.path.exists(path):
             return firebase_admin.initialize_app(credentials.Certificate(path), options=_opts)
-    except Exception:
+    except Exception as exc:
+        # Nunca logar raw_json/info (contém a chave privada) — só tipo e mensagem
+        # da exceção, que descrevem o problema estrutural sem vazar segredo.
+        logger.error("Firebase init falhou tipo=%s: %s", type(exc).__name__, exc)
         return None
 
     return None
