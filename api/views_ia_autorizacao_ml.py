@@ -29,7 +29,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Empresa, IAAutorizacaoGuia, BeneficiarioPlano
+from .models import Empresa, IAAutorizacaoGuia, BeneficiarioPlano, Sinistro
 from .views_dashboard import _empresa_autenticada
 from .access_control import api_requer_feature
 
@@ -124,17 +124,23 @@ def _extrair_features(dados: dict) -> dict:
     # Feature 8: CID tem capítulo numérico (diagnóstico clínico vs. Z/V/W)
     cid_clinico = int(bool(cid) and cid[0].isalpha() and cid[0] not in "ZVWXY")
 
-    # Feature 9: Beneficiário com histórico de autorizações aprovadas no banco
-    # Busca pelo nome/identificador do beneficiário dentro da mesma empresa
-    beneficiario_id = dados.get("beneficiario", "")
+    # Feature 9: Beneficiário com sinistro real nos últimos 12 meses (mesma
+    # fonte e janela que o motor de regras "Guia Express" já usa em
+    # views_plano_saude.py, para as duas leituras de risco ficarem
+    # consistentes). Exige beneficiario_plano_id real (FK) — nunca casa por
+    # nome em texto, que contaminaria a feature entre beneficiários homônimos.
+    # Sem o ID (chamador legado que só envia o nome), o histórico fica
+    # honestamente 0 em vez de arriscar um match por string.
+    beneficiario_plano_id = dados.get("beneficiario_plano_id")
     empresa_id = dados.get("empresa_id")
-    if beneficiario_id and empresa_id:
+    if beneficiario_plano_id and empresa_id:
         try:
+            ha_12_meses = datetime.now() - timedelta(days=365)
             historico = int(
-                IAAutorizacaoGuia.objects.filter(
+                Sinistro.objects.filter(
                     empresa_id=empresa_id,
-                    beneficiario=beneficiario_id,
-                    decisao_final="aprovada",
+                    beneficiario_id=beneficiario_plano_id,
+                    data_abertura__gte=ha_12_meses,
                 ).exists()
             )
         except Exception:
@@ -427,11 +433,27 @@ def api_ia_analisar_ml(request):
     # Injeta empresa_id para que Feature 9 possa consultar histórico real
     dados["empresa_id"] = empresa.pk
 
+    # beneficiario_plano_id (opcional, retrocompatível): quando o chamador
+    # informa o FK real do beneficiário, Feature 9 consulta o histórico de
+    # Sinistro de verdade e o registro fica ligado ao cadastro real — em vez
+    # de log solto por nome em texto (era a lacuna documentada aqui: guia e
+    # beneficiario_plano nunca eram populados neste endpoint).
+    beneficiario_plano = None
+    beneficiario_plano_id = dados.get("beneficiario_plano_id")
+    if beneficiario_plano_id:
+        beneficiario_plano = BeneficiarioPlano.objects.filter(
+            id=beneficiario_plano_id, plano__empresa=empresa,
+        ).first()
+        if not beneficiario_plano:
+            return JsonResponse({"erro": "beneficiario_plano_id não encontrado nesta empresa"}, status=404)
+        dados["beneficiario_plano_id"] = beneficiario_plano.id
+
     resultado = inferir_autorizacao(dados)
 
     # Persiste no banco
     guia = IAAutorizacaoGuia.objects.create(
         empresa=empresa,
+        beneficiario_plano=beneficiario_plano,
         numero_guia=dados["numero_guia"],
         beneficiario=dados["beneficiario"],
         procedimento=dados["procedimento"],

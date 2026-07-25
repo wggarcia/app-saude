@@ -7784,3 +7784,151 @@ class HospitalPaginasOrfasSemTemplateTests(TestCase):
         mesmo antes do fix, para uma conta comum. Documenta a exposição real."""
         resp = self.client.get("/hospital/betha/", secure=True)
         self.assertEqual(resp.status_code, 403)
+
+
+class IAAutorizacaoFeature9SinistroRealTests(TestCase):
+    """Feature 9 de _extrair_features (views_ia_autorizacao_ml.py) deve consultar
+    Sinistro real via FK — nunca mais casar por nome em texto (dois
+    beneficiários homônimos não podem contaminar a feature um do outro)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Operadora Feature9",
+            email="operadora-feature9@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.plano = PlanoSaude.objects.create(
+            empresa=self.empresa, nome="Plano Feature9", registro_ans="999999",
+        )
+        self.beneficiario_com_sinistro = BeneficiarioPlano.objects.create(
+            plano=self.plano, nome="Maria Silva", cpf="111.111.111-11",
+            situacao=BeneficiarioPlano.SITUACAO_ATIVO,
+        )
+        self.beneficiario_homonimo_sem_sinistro = BeneficiarioPlano.objects.create(
+            plano=self.plano, nome="Maria Silva", cpf="222.222.222-22",
+            situacao=BeneficiarioPlano.SITUACAO_ATIVO,
+        )
+        Sinistro.objects.create(
+            empresa=self.empresa, plano=self.plano,
+            beneficiario=self.beneficiario_com_sinistro,
+            tipo="consulta", valor_total="150.00",
+        )
+
+    def test_historico_1_quando_ha_sinistro_real_do_beneficiario(self):
+        from .views_ia_autorizacao_ml import _extrair_features
+        features = _extrair_features({
+            "cid10": "J18", "codigo_tuss": "10101012", "procedimento": "Consulta",
+            "empresa_id": self.empresa.pk,
+            "beneficiario_plano_id": self.beneficiario_com_sinistro.id,
+        })
+        self.assertEqual(features["historico"], 1)
+
+    def test_homonimo_sem_sinistro_proprio_nao_e_contaminado(self):
+        """Antes do fix, casar por nome faria os dois 'Maria Silva' comparti-
+        lharem histórico — agora, por FK, cada um só vê o próprio."""
+        from .views_ia_autorizacao_ml import _extrair_features
+        features = _extrair_features({
+            "cid10": "J18", "codigo_tuss": "10101012", "procedimento": "Consulta",
+            "empresa_id": self.empresa.pk,
+            "beneficiario_plano_id": self.beneficiario_homonimo_sem_sinistro.id,
+        })
+        self.assertEqual(features["historico"], 0)
+
+    def test_sem_beneficiario_plano_id_historico_e_honestamente_zero(self):
+        """Chamador legado que só manda o nome (sem FK): não tenta mais
+        casar por string — fica 0, não um palpite arriscado."""
+        from .views_ia_autorizacao_ml import _extrair_features
+        features = _extrair_features({
+            "cid10": "J18", "codigo_tuss": "10101012", "procedimento": "Consulta",
+            "empresa_id": self.empresa.pk,
+            "beneficiario": "Maria Silva",
+        })
+        self.assertEqual(features["historico"], 0)
+
+
+class IAAnalisarMlLigaBeneficiarioPlanoTests(TestCase):
+    """api_ia_analisar_ml (endpoint 'ml direto') deve popular beneficiario_plano
+    FK quando um beneficiario_plano_id valido e informado — antes ficava sempre
+    None, deixando o registro como log solto sem ligacao com o cadastro real."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Operadora ML Direto",
+            email="operadora-mldireto@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.plano = PlanoSaude.objects.create(
+            empresa=self.empresa, nome="Plano ML Direto", registro_ans="888888",
+        )
+        self.beneficiario = BeneficiarioPlano.objects.create(
+            plano=self.plano, nome="João ML", cpf="333.333.333-33",
+            situacao=BeneficiarioPlano.SITUACAO_ATIVO,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora-mldireto@teste.com", "senha": "123456",
+                "device_id": "dev-ml-direto", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_beneficiario_plano_id_valido_liga_fk_na_guia_criada(self):
+        from .models import IAAutorizacaoGuia
+        resp = self.client.post(
+            "/api/plano-saude/ia/analisar-ml/",
+            data=json.dumps({
+                "numero_guia": "GUIA-ML-001",
+                "beneficiario": "João ML",
+                "beneficiario_plano_id": self.beneficiario.id,
+                "procedimento": "Consulta de rotina",
+                "codigo_tuss": "10101012",
+                "cid10": "Z00",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        guia = IAAutorizacaoGuia.objects.get(pk=resp.json()["guia_id"])
+        self.assertEqual(guia.beneficiario_plano_id, self.beneficiario.id)
+
+    def test_beneficiario_plano_id_de_outra_empresa_retorna_404(self):
+        outra_empresa = Empresa.objects.create(
+            nome="Outra Operadora",
+            email="outra-operadora-mldireto@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        outro_plano = PlanoSaude.objects.create(
+            empresa=outra_empresa, nome="Plano Outro", registro_ans="777777",
+        )
+        beneficiario_de_outra = BeneficiarioPlano.objects.create(
+            plano=outro_plano, nome="Intruso", cpf="444.444.444-44",
+            situacao=BeneficiarioPlano.SITUACAO_ATIVO,
+        )
+        resp = self.client.post(
+            "/api/plano-saude/ia/analisar-ml/",
+            data=json.dumps({
+                "numero_guia": "GUIA-ML-002",
+                "beneficiario": "Intruso",
+                "beneficiario_plano_id": beneficiario_de_outra.id,
+                "procedimento": "Consulta",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 404)

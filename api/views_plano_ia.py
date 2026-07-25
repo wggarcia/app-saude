@@ -87,12 +87,17 @@ def _analisar_guia_fallback(procedimento: str, cid10: str):
     )
 
 
-def _analisar_guia(procedimento: str, cid10: str, codigo_tuss: str = "", beneficiario: str = "", empresa_id=None):
+def _analisar_guia(procedimento: str, cid10: str, codigo_tuss: str = "", beneficiario: str = "", empresa_id=None, beneficiario_plano_id=None):
     """
     Analisa a guia com o ensemble de ML real (RandomForest+GradientBoosting,
     views_ia_autorizacao_ml.py), treinado no historico real de decisoes desta
     empresa (com bootstrap sintetico ate acumular 30 decisoes reais). Cai no
     motor de regras simples apenas se a inferencia de ML falhar.
+
+    beneficiario_plano_id (FK real): quando informado, a Feature 9 do ML
+    consulta o historico de Sinistro de verdade do beneficiario — em vez de
+    ficar cega a sinistralidade real (so o motor de regras "Guia Express"
+    fazia isso ate agora).
     """
     try:
         resultado = inferir_autorizacao({
@@ -101,6 +106,7 @@ def _analisar_guia(procedimento: str, cid10: str, codigo_tuss: str = "", benefic
             "procedimento": procedimento,
             "beneficiario": beneficiario,
             "empresa_id": empresa_id,
+            "beneficiario_plano_id": beneficiario_plano_id,
         })
         return resultado["decisao"], resultado["score_confianca"], resultado["justificativa_ia"]
     except Exception:
@@ -228,7 +234,8 @@ def api_ia_analisar(request):
         return JsonResponse({"erro": "numero_guia e procedimento são obrigatórios"}, status=400)
 
     decisao, score, justificativa = _analisar_guia(
-        procedimento, cid10, codigo_tuss=codigo_tuss, beneficiario=beneficiario, empresa_id=empresa.pk
+        procedimento, cid10, codigo_tuss=codigo_tuss, beneficiario=beneficiario, empresa_id=empresa.pk,
+        beneficiario_plano_id=(beneficiario_obj.id if beneficiario_obj else None),
     )
 
     ia = IAAutorizacaoGuia.objects.create(
