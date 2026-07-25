@@ -7932,3 +7932,132 @@ class IAAnalisarMlLigaBeneficiarioPlanoTests(TestCase):
             secure=True,
         )
         self.assertEqual(resp.status_code, 404)
+
+
+class PortabilidadeAnsFormalCicloCompletoTests(TestCase):
+    """Ciclo completo do fluxo formal RN 438/2018 (views_plano_portabilidade.py),
+    agora ligado à UI (templates/plano_saude_gestao.html). Sem cobertura de
+    teste antes — endpoints existiam roteados, mas nunca chamados."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Operadora Portabilidade ANS",
+            email="operadora-portans@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora-portans@teste.com", "senha": "123456",
+                "device_id": "dev-portans", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_ciclo_criar_analisar_aprovar_efetivar_declaracao(self):
+        # 1) Registra a solicitação
+        resp = self.client.post(
+            "/api/plano-saude/portabilidade-ans/",
+            data=json.dumps({
+                "tipo": "entrada",
+                "beneficiario_nome": "João da Silva",
+                "cpf_beneficiario": "529.982.247-25",
+                "plano_origem": "Outra Operadora Saúde",
+                "plano_destino": "Plano Premium",
+                "carencias_cumpridas": True,
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        criado = resp.json()
+        self.assertTrue(criado["numero_protocolo"].startswith("PORT-ANS-"))
+        sol_id = criado["id"]
+
+        # 2) Aparece na listagem, com prazo calculado
+        resp = self.client.get("/api/plano-saude/portabilidade-ans/", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        sols = resp.json()["solicitacoes"]
+        self.assertEqual(len(sols), 1)
+        self.assertEqual(sols[0]["status"], "iniciada")
+        self.assertIsNotNone(sols[0]["prazo_resposta"])
+
+        # 3) Envia para análise, depois aprova
+        resp = self.client.post(
+            f"/api/plano-saude/portabilidade-ans/{sol_id}/acao/",
+            data=json.dumps({"acao": "analisar"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        self.assertEqual(resp.json()["novo_status"], "analise_operadora")
+
+        resp = self.client.post(
+            f"/api/plano-saude/portabilidade-ans/{sol_id}/acao/",
+            data=json.dumps({"acao": "aprovar"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        self.assertEqual(resp.json()["novo_status"], "aprovada")
+        self.assertIsNotNone(resp.json()["data_efetivacao"])
+
+        # 4) Declaração de carência é gerada e cita o texto legal correto
+        resp = self.client.get(f"/api/plano-saude/portabilidade-ans/{sol_id}/declaracao/", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        declaracao = resp.json()
+        self.assertIn("438/2018", declaracao["texto_legal"])
+        self.assertEqual(declaracao["numero_protocolo"], criado["numero_protocolo"])
+
+        # 5) Efetiva a transferência
+        resp = self.client.post(
+            f"/api/plano-saude/portabilidade-ans/{sol_id}/acao/",
+            data=json.dumps({"acao": "efetivar"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        self.assertEqual(resp.json()["novo_status"], "concluida")
+
+        # 6) KPIs refletem a entrada concluída
+        resp = self.client.get("/api/plano-saude/portabilidade-ans/kpis", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["entradas_concluidas"], 1)
+
+    def test_isolamento_por_empresa(self):
+        outra_empresa = Empresa.objects.create(
+            nome="Outra Operadora Portabilidade",
+            email="outra-portans@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        outro_client = Client()
+        outro_client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "outra-portans@teste.com", "senha": "123456",
+                "device_id": "dev-outra-portans", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.client.post(
+            "/api/plano-saude/portabilidade-ans/",
+            data=json.dumps({
+                "beneficiario_nome": "Confidencial", "cpf_beneficiario": "529.982.247-25",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        resp = outro_client.get("/api/plano-saude/portabilidade-ans/", secure=True)
+        self.assertEqual(resp.json()["total"], 0)

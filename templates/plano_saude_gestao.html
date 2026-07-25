@@ -882,8 +882,8 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div class="card">
       <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
-          <div style="font-size:1rem;font-weight:800">🔄 Portabilidade de Plano</div>
-          <div style="font-size:.78rem;color:var(--muted);margin-top:2px">Transfira beneficiários entre planos mantendo histórico e seguindo regras ANS (RN 438)</div>
+          <div style="font-size:1rem;font-weight:800">🔀 Troca de Plano (interna)</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:2px">Move o beneficiário para outro plano da própria operadora, sem gerar protocolo regulatório. Para portabilidade RN 438/2018 (entre operadoras, com prazos e declaração de carência), use o painel abaixo.</div>
         </div>
       </div>
       <div style="padding:18px">
@@ -909,16 +909,64 @@ tr:hover td{background:rgba(255,107,157,.03)}
             <input type="date" id="port-data" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
           </div>
         </div>
-        <div style="margin-top:16px;padding:12px 14px;border-radius:8px;background:rgba(31,111,242,.06);border:1px solid rgba(31,111,242,.15);font-size:.76rem;color:#60a5fa;max-width:700px">
-          📋 <strong>RN ANS 438:</strong> A portabilidade é permitida após 2 anos no plano de origem (exceto para produtos individuais). Verifique a carência residual antes de confirmar a transferência.
+        <div style="margin-top:16px;padding:12px 14px;border-radius:8px;background:rgba(255,180,60,.08);border:1px solid rgba(255,180,60,.2);font-size:.76rem;color:#ffb43c;max-width:700px">
+          ⚠️ <strong>Isto NÃO é o processo formal de portabilidade ANS.</strong> É uma troca administrativa interna, sem protocolo, prazo legal ou declaração de carência. Use apenas para beneficiários migrando entre planos da mesma operadora.
         </div>
         <div style="margin-top:16px;display:flex;gap:10px">
-          <button class="btn-main" style="padding:9px 20px;font-size:.82rem" onclick="confirmarPortabilidade()">Confirmar Portabilidade</button>
+          <button class="btn-main" style="padding:9px 20px;font-size:.82rem" onclick="confirmarPortabilidade()">Confirmar Troca Interna</button>
           <button style="padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.82rem;cursor:pointer" onclick="document.getElementById('port-beneficiario').value='';document.getElementById('port-plano-atual').textContent='—'">Limpar</button>
         </div>
-        <div id="port-historico" style="margin-top:20px">
-          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Histórico de Portabilidades</div>
-          <div style="color:var(--muted);font-size:.78rem;padding:20px;text-align:center;border-radius:8px;border:1px solid var(--border)">Nenhuma portabilidade registrada ainda.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:1rem;font-weight:800">📋 Portabilidade ANS Formal (RN 438/2018)</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:2px">Processo regulatório completo: protocolo, prazo de resposta (10 dias úteis), efetivação (30 dias) e declaração de carência.</div>
+        </div>
+        <div id="port-ans-kpis" style="display:flex;gap:14px;font-size:.74rem;color:var(--muted)"></div>
+      </div>
+      <div style="padding:18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:900px">
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Tipo</label>
+            <select id="portans-tipo" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+              <option value="saida">Saída (beneficiário sai desta operadora)</option>
+              <option value="entrada">Entrada (beneficiário vem de outra operadora)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Nome do Beneficiário</label>
+            <input type="text" id="portans-nome" placeholder="Nome completo" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">CPF</label>
+            <input type="text" id="portans-cpf" placeholder="000.000.000-00" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">CNS (opcional)</label>
+            <input type="text" id="portans-cns" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Plano Origem</label>
+            <input type="text" id="portans-plano-origem" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Plano Destino</label>
+            <input type="text" id="portans-plano-destino" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:.82rem;color:var(--text)">
+          <input type="checkbox" id="portans-carencias"> Beneficiário cumpriu integralmente as carências contratuais
+        </label>
+        <div style="margin-top:14px">
+          <button class="btn-main" style="padding:9px 20px;font-size:.82rem" onclick="criarPortabilidadeAns()">Registrar Solicitação</button>
+        </div>
+
+        <div id="portans-lista" style="margin-top:22px">
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Solicitações Registradas</div>
+          <div id="portans-lista-body" style="color:var(--muted);font-size:.78rem;padding:20px;text-align:center;border-radius:8px;border:1px solid var(--border)">Carregando...</div>
         </div>
       </div>
     </div>
@@ -3177,7 +3225,7 @@ setTab = function(name) {
   else if (name === 'sinistralidade') carregarSinistralidade();
   else if (name === 'epidemiologia') carregarEpidemiologia();
   else if (name === 'carencias') { carregarCarencias(); popularSelectsCarencia(); }
-  else if (name === 'portabilidade') popularSelectsPortabilidade();
+  else if (name === 'portabilidade') { popularSelectsPortabilidade(); carregarPortabilidadeAns(); }
   else if (name === 'dashboard') loadDashboard();
   else if (name === 'sla') loadSLA();
   else if (name === 'auditoria') loadAuditoria();
@@ -3345,6 +3393,143 @@ async function confirmarPortabilidade() {
   } else {
     showToastPS(d.erro || 'Erro ao realizar portabilidade', 'err');
   }
+}
+
+// ── Portabilidade ANS Formal (RN 438/2018) ──────────────────────────────────
+var PORTANS_STATUS_LABEL = {
+  iniciada: 'Iniciada', documentacao: 'Aguard. documentação', analise_operadora: 'Em análise',
+  aprovada: 'Aprovada', negada: 'Negada', cancelada: 'Cancelada', concluida: 'Concluída',
+};
+var PORTANS_ACOES_POR_STATUS = {
+  iniciada: [['solicitar_doc', 'Solicitar documentação'], ['analisar', 'Enviar p/ análise'], ['cancelar', 'Cancelar']],
+  documentacao: [['analisar', 'Enviar p/ análise'], ['cancelar', 'Cancelar']],
+  analise_operadora: [['aprovar', 'Aprovar'], ['negar', 'Negar'], ['cancelar', 'Cancelar']],
+  aprovada: [['efetivar', 'Efetivar transferência']],
+  negada: [], cancelada: [], concluida: [],
+};
+
+async function criarPortabilidadeAns() {
+  var nome = document.getElementById('portans-nome').value.trim();
+  var cpf = document.getElementById('portans-cpf').value.trim();
+  if (!nome || !cpf) { showToastPS('Preencha nome e CPF do beneficiário', 'warn'); return; }
+  var payload = {
+    tipo: document.getElementById('portans-tipo').value,
+    beneficiario_nome: nome,
+    cpf_beneficiario: cpf,
+    cns_beneficiario: document.getElementById('portans-cns').value.trim(),
+    plano_origem: document.getElementById('portans-plano-origem').value.trim(),
+    plano_destino: document.getElementById('portans-plano-destino').value.trim(),
+    carencias_cumpridas: document.getElementById('portans-carencias').checked,
+  };
+  var resp = await fetch('/api/plano-saude/portabilidade-ans/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  var d = await resp.json();
+  if (resp.ok) {
+    showToastPS('✓ Protocolo ' + d.numero_protocolo + ' registrado. ' + d.mensagem);
+    document.getElementById('portans-nome').value = '';
+    document.getElementById('portans-cpf').value = '';
+    document.getElementById('portans-cns').value = '';
+    document.getElementById('portans-plano-origem').value = '';
+    document.getElementById('portans-plano-destino').value = '';
+    document.getElementById('portans-carencias').checked = false;
+    carregarPortabilidadeAns();
+  } else {
+    showToastPS(d.erro || 'Erro ao registrar solicitação', 'err');
+  }
+}
+
+async function carregarPortabilidadeAns() {
+  var body = document.getElementById('portans-lista-body');
+  var kpisEl = document.getElementById('port-ans-kpis');
+  try {
+    var [respLista, respKpi] = await Promise.all([
+      fetch('/api/plano-saude/portabilidade-ans/', {credentials: 'include'}),
+      fetch('/api/plano-saude/portabilidade-ans/kpis', {credentials: 'include'}),
+    ]);
+    var dLista = await respLista.json();
+    var dKpi = await respKpi.json();
+
+    if (kpisEl) {
+      kpisEl.innerHTML =
+        '<span>⏱️ ' + (dKpi.prazo_vencido || 0) + ' com prazo vencido</span>' +
+        '<span>↗️ ' + (dKpi.saidas_concluidas || 0) + ' saídas concluídas</span>' +
+        '<span>↘️ ' + (dKpi.entradas_concluidas || 0) + ' entradas concluídas</span>';
+    }
+
+    var sols = dLista.solicitacoes || [];
+    if (!sols.length) {
+      body.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:20px;text-align:center;border-radius:8px;border:1px solid var(--border)">Nenhuma solicitação registrada ainda.</div>';
+      return;
+    }
+    body.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.8rem">' +
+      '<thead><tr style="text-align:left;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em">' +
+      '<th style="padding:8px">Protocolo</th><th style="padding:8px">Tipo</th><th style="padding:8px">Beneficiário</th>' +
+      '<th style="padding:8px">Status</th><th style="padding:8px">Prazo</th><th style="padding:8px">Ações</th></tr></thead><tbody>' +
+      sols.map(function(s) {
+        var prazoTxt = s.prazo_resposta ? new Date(s.prazo_resposta + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+        var prazoCor = s.prazo_vencido ? '#ff4d6d' : 'var(--muted)';
+        var acoes = (PORTANS_ACOES_POR_STATUS[s.status] || []).map(function(a) {
+          return '<button style="padding:4px 8px;font-size:.72rem;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer;margin-right:4px" onclick="acaoPortabilidadeAns(' + s.id + ',\'' + a[0] + '\')">' + a[1] + '</button>';
+        }).join('');
+        if (s.status === 'aprovada' || s.status === 'concluida') {
+          acoes += '<button style="padding:4px 8px;font-size:.72rem;border-radius:6px;border:1px solid var(--border);background:none;color:#60a5fa;cursor:pointer" onclick="gerarDeclaracaoCarencia(' + s.id + ')">Declaração</button>';
+        }
+        return '<tr style="border-top:1px solid var(--border)">' +
+          '<td style="padding:8px;font-family:monospace;font-size:.76rem">' + s.numero_protocolo + '</td>' +
+          '<td style="padding:8px">' + s.tipo_display + '</td>' +
+          '<td style="padding:8px">' + s.beneficiario_nome + '</td>' +
+          '<td style="padding:8px">' + (PORTANS_STATUS_LABEL[s.status] || s.status) + '</td>' +
+          '<td style="padding:8px;color:' + prazoCor + '">' + prazoTxt + (s.prazo_vencido ? ' ⚠️' : '') + '</td>' +
+          '<td style="padding:8px;white-space:nowrap">' + (acoes || '—') + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table></div>';
+  } catch (e) {
+    body.innerHTML = '<div style="color:#ff4d6d;font-size:.78rem;padding:20px;text-align:center">Erro ao carregar solicitações.</div>';
+  }
+}
+
+async function acaoPortabilidadeAns(id, acao) {
+  var motivo = '';
+  if (acao === 'negar') {
+    motivo = prompt('Motivo da negativa:') || '';
+    if (!motivo) return;
+  }
+  var resp = await fetch('/api/plano-saude/portabilidade-ans/' + id + '/acao/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify({acao: acao, motivo: motivo}),
+  });
+  var d = await resp.json();
+  if (resp.ok) {
+    showToastPS('✓ Status atualizado: ' + (PORTANS_STATUS_LABEL[d.novo_status] || d.novo_status));
+    carregarPortabilidadeAns();
+  } else {
+    showToastPS(d.erro || 'Erro ao atualizar', 'err');
+  }
+}
+
+async function gerarDeclaracaoCarencia(id) {
+  var resp = await fetch('/api/plano-saude/portabilidade-ans/' + id + '/declaracao/', {credentials: 'include'});
+  var d = await resp.json();
+  if (!resp.ok) { showToastPS(d.erro || 'Erro ao gerar declaração', 'err'); return; }
+  var w = window.open('', '_blank');
+  w.document.write(
+    '<html><head><title>Declaração de Carência — ' + d.numero_protocolo + '</title></head>' +
+    '<body style="font-family:sans-serif;max-width:700px;margin:40px auto;line-height:1.6">' +
+    '<h2>Declaração de Portabilidade de Carências</h2>' +
+    '<p><strong>Protocolo:</strong> ' + d.numero_protocolo + '<br>' +
+    '<strong>Operadora:</strong> ' + d.operadora + ' (ANS ' + d.registro_ans + ')<br>' +
+    '<strong>Emitida em:</strong> ' + new Date(d.emitida_em + 'T00:00:00').toLocaleDateString('pt-BR') + '</p>' +
+    '<p>' + d.texto_legal + '</p>' +
+    '<p style="color:#666;font-size:.85rem">' + d.alerta_prazo + '</p>' +
+    '</body></html>'
+  );
+  w.document.close();
 }
 
 function getCsrfToken() {
