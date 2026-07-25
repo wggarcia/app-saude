@@ -304,7 +304,7 @@ def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@api_requer_feature("plano.ans")
+@api_requer_feature("plano.diops_sib")
 def api_diops_gerar_real(request, declaracao_id):
     """
     Gera XML DIOPS 3.0 real (não simplificado) para uma declaração.
@@ -334,7 +334,7 @@ def api_diops_gerar_real(request, declaracao_id):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@api_requer_feature("plano.ans")
+@api_requer_feature("plano.diops_sib")
 def api_diops_download_xml(request, declaracao_id):
     """Download do XML DIOPS 3.0 gerado."""
     empresa = _empresa_autenticada(request)
@@ -352,7 +352,7 @@ def api_diops_download_xml(request, declaracao_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@api_requer_feature("plano.ans")
+@api_requer_feature("plano.diops_sib")
 def api_diops_transmitir_ans(request, declaracao_id):
     """
     Transmite DIOPS 3.0 ao webservice SIPWeb da ANS.

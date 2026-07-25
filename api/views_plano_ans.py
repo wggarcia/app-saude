@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
+from .access_control import api_requer_gerencia, api_requer_feature, contexto_navegacao_setorial, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, get_setor
 from .models import CredenciaisIntegracoes, DIOPSDeclaracao, SIBRegistro, BeneficiarioPlano
 from .views_dashboard import _empresa_autenticada
 from .views_diops_real import gerar_diops_3_0
@@ -107,6 +107,7 @@ def _sib_dict(s):
 
 @ensure_csrf_cookie
 @requer_setor("plano_saude")
+@requer_feature_pacote("plano.diops_sib", "DIOPS e SIB")
 @requer_operacao_page
 @requer_permissao_modulo("plano.compliance_ans")
 def plano_ans_page(request):
@@ -121,6 +122,7 @@ def plano_ans_page(request):
 
 # ── API: DIOPS ────────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.diops_sib")
 @csrf_exempt
 def api_diops_lista(request):
     empresa, err = _ps_auth(request)
@@ -188,6 +190,7 @@ def api_diops_lista(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.diops_sib")
 @csrf_exempt
 def api_diops_detalhe(request, decl_id):
     empresa, err = _ps_auth(request)
@@ -225,6 +228,7 @@ def api_diops_detalhe(request, decl_id):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.diops_sib")
 @csrf_exempt
 def api_diops_registrar_protocolo(request, decl_id):
     """Registra o protocolo de retorno de uma transmissão DIOPS feita
@@ -260,6 +264,7 @@ def api_diops_registrar_protocolo(request, decl_id):
     return JsonResponse({"declaracao": _diops_dict(d)})
 
 
+@api_requer_feature("plano.diops_sib")
 def api_diops_gerar_xml(request, decl_id):
     """
     Gera e faz download do XML DIOPS 3.0 real (conforme IN ANS nº 77/2022).
@@ -293,6 +298,7 @@ def api_diops_gerar_xml(request, decl_id):
 
 # ── API: SIB ─────────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.diops_sib")
 @csrf_exempt
 def api_sib_lista(request):
     empresa, err = _ps_auth(request)
@@ -348,6 +354,7 @@ def api_sib_lista(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.diops_sib")
 @csrf_exempt
 def api_sib_detalhe(request, sib_id):
     empresa, err = _ps_auth(request)
@@ -381,6 +388,7 @@ def api_sib_detalhe(request, sib_id):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.diops_sib")
 @csrf_exempt
 def api_sib_registrar_protocolo(request, sib_id):
     """Registra o protocolo de retorno de uma transmissão SIB feita
@@ -422,6 +430,7 @@ _SIB_ENDPOINT = {
 }
 
 
+@api_requer_feature("plano.diops_sib")
 @csrf_exempt
 def api_sib_transmitir(request, sib_id):
     """
@@ -542,6 +551,7 @@ def api_sib_transmitir(request, sib_id):
 
 # ── API: KPIs ANS ─────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.diops_sib")
 def api_ans_kpis(request):
     empresa, err = _ps_auth(request)
     if err:

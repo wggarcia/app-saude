@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.db.models import Sum, Count, Q
 
-from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
+from .access_control import api_requer_gerencia, api_requer_feature, contexto_navegacao_setorial, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, get_setor
 from .models import CorretoraPlano, CorretoraComissao
 from .views_dashboard import _empresa_autenticada
 
@@ -58,6 +58,7 @@ def _comissao_dict(cm):
 
 @ensure_csrf_cookie
 @requer_setor("plano_saude")
+@requer_feature_pacote("plano.corretores", "Corretores e Comissões")
 @requer_operacao_page
 @requer_permissao_modulo("plano.comercial")
 def plano_corretores_page(request):
@@ -72,6 +73,7 @@ def plano_corretores_page(request):
 
 # ── API: corretoras ───────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.corretores")
 @csrf_exempt
 def api_corretoras_lista(request):
     empresa, err = _ps_auth(request)
@@ -107,6 +109,7 @@ def api_corretoras_lista(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.corretores")
 @csrf_exempt
 def api_corretora_detalhe(request, cor_id):
     empresa, err = _ps_auth(request)
@@ -138,6 +141,7 @@ def api_corretora_detalhe(request, cor_id):
 
 # ── API: comissões ────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.corretores")
 @csrf_exempt
 def api_corretora_comissoes(request, cor_id):
     empresa, err = _ps_auth(request)
@@ -197,6 +201,7 @@ def api_corretora_comissoes(request, cor_id):
 
 # ── API: KPIs ─────────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.corretores")
 def api_corretoras_kpis(request):
     empresa, err = _ps_auth(request)
     if err:

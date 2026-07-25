@@ -20,12 +20,13 @@ from datetime import date, timedelta
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
     api_requer_permissao_modulo, contexto_navegacao_setorial,
     get_setor, principal_pode_operacao_setorial,
+    requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo,
 )
 from .services.auth_session import empresa_autenticada_from_request
 
@@ -45,11 +46,21 @@ def _assoc(request):
 
 # ─── PÁGINAS HTML ────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("assistencia_social")
+@requer_feature_pacote("assistencia.gestao_suas", "Gestão SUAS")
+@requer_operacao_page
+@requer_permissao_modulo("assistencia.gestao_suas")
 def assistencia_social_dashboard_page(request):
     return render(request, "assistencia_social_dashboard.html",
                   contexto_navegacao_setorial(request, "assistencia_social"))
 
 
+@ensure_csrf_cookie
+@requer_setor("assistencia_social")
+@requer_feature_pacote("assistencia.gestao_suas", "Gestão SUAS")
+@requer_operacao_page
+@requer_permissao_modulo("assistencia.gestao_suas")
 def assistencia_social_gestao_page(request):
     return render(request, "assistencia_social_gestao.html",
                   contexto_navegacao_setorial(request, "assistencia_social"))

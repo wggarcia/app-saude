@@ -16,7 +16,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial
+from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .services.auth_session import empresa_autenticada_from_request
 
 logger = logging.getLogger(__name__)
@@ -110,6 +110,7 @@ def _beneficio_dict(b):
 # ─── CadÚnico ────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cadunico_familias(request):
     """Lista/busca famílias do CadÚnico (cache local após importação)."""
@@ -178,6 +179,7 @@ def api_cadunico_familias(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cadunico_consultar_cpf(request, cpf):
     """Consulta família pelo CPF do responsável no cache local."""
@@ -196,6 +198,7 @@ def api_cadunico_consultar_cpf(request, cpf):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cadunico_importar_lote(request):
     """
@@ -254,6 +257,7 @@ def api_cadunico_importar_lote(request):
 # ─── BPC ─────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_bpc_beneficiarios(request):
     empresa = _gov(request)
@@ -305,6 +309,7 @@ def api_bpc_beneficiarios(request):
 
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_bpc_beneficiario_detalhe(request, bpc_id):
     empresa = _gov(request)
@@ -341,6 +346,7 @@ def api_bpc_beneficiario_detalhe(request, bpc_id):
 # ─── SICON (Condicionalidades Bolsa Família) ─────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_sicon_condicionalidades(request):
     empresa = _gov(request)
@@ -390,6 +396,7 @@ def api_sicon_condicionalidades(request):
 # ─── BENEFÍCIOS EVENTUAIS ────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_beneficios_eventuais(request):
     empresa = _gov(request)
@@ -444,6 +451,7 @@ def api_beneficios_eventuais(request):
 
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_beneficio_eventual_detalhe(request, beneficio_id):
     empresa = _gov(request)

@@ -853,6 +853,7 @@ def api_ps_plano_detalhe(request, plano_id):
 
 # ── Beneficiários ─────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.beneficiarios")
 @csrf_exempt
 def api_ps_beneficiarios(request):
     empresa, err = _ps_auth(request)
@@ -931,6 +932,7 @@ def api_ps_beneficiarios(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.beneficiarios")
 @csrf_exempt
 def api_ps_beneficiario_detalhe(request, ben_id):
     empresa, err = _ps_auth(request)
@@ -1376,6 +1378,7 @@ def api_ps_guia_express_metricas(request):
         "horas_economizadas_estimadas": horas_economizadas,
     })
 
+@api_requer_feature("plano.guias")
 @csrf_exempt
 def api_ps_guias(request):
     empresa, err = _ps_auth(request)
@@ -1482,6 +1485,7 @@ def api_ps_guias(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.guias")
 @csrf_exempt
 def api_ps_guia_detalhe(request, guia_id):
     empresa, err = _ps_auth(request)
@@ -1577,6 +1581,7 @@ def api_ps_guia_detalhe(request, guia_id):
 
 # ── Sinistros ─────────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.sinistros")
 @csrf_exempt
 def api_ps_sinistros(request):
     empresa, err = _ps_auth(request)
@@ -1662,6 +1667,7 @@ def api_ps_sinistros(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.sinistros")
 @csrf_exempt
 def api_ps_sinistro_detalhe(request, sinistro_id):
     empresa, err = _ps_auth(request)
@@ -1700,6 +1706,7 @@ def api_ps_sinistro_detalhe(request, sinistro_id):
 
 # ── Reembolsos ────────────────────────────────────────────────────────────────
 
+@api_requer_feature("plano.reembolsos")
 @csrf_exempt
 def api_ps_reembolsos(request):
     empresa, err = _ps_auth(request)
@@ -1755,6 +1762,7 @@ def api_ps_reembolsos(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.reembolsos")
 @csrf_exempt
 def api_ps_reembolso_detalhe(request, reembolso_id):
     empresa, err = _ps_auth(request)
@@ -1914,6 +1922,7 @@ def _glosa_dict(g):
     }
 
 
+@api_requer_feature("plano.sinistros")
 @csrf_exempt
 def api_ps_glosas(request):
     empresa, err = _ps_auth(request)
@@ -1969,6 +1978,7 @@ def api_ps_glosas(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.sinistros")
 @csrf_exempt
 def api_ps_glosa_detalhe(request, glosa_id):
     empresa, err = _ps_auth(request)
@@ -2909,6 +2919,7 @@ def api_ps_sla(request):
 #  AUDITORIA MÉDICA IA — scoring de fraude/abuso por frequência de sinistros
 # ════════════════════════════════════════════════════════════════════════════════
 
+@api_requer_feature("plano.sinistros")
 @csrf_exempt
 def api_ps_auditoria(request):
     """GET /api/plano-saude/auditoria/?risco=critico|alto|medio
@@ -3084,6 +3095,7 @@ def api_ps_auditoria(request):
 #  CONTRATOS CORPORATIVOS
 # ════════════════════════════════════════════════════════════════════════════════
 
+@api_requer_feature("plano.contratos")
 @csrf_exempt
 def api_ps_contratos(request):
     """GET /api/plano-saude/contratos/  — lista contratos grupo
@@ -3157,6 +3169,7 @@ def api_ps_contratos(request):
     })
 
 
+@api_requer_feature("plano.contratos")
 @csrf_exempt
 def api_ps_contrato_detalhe(request, contrato_id):
     """GET/PUT/DELETE /api/plano-saude/contratos/<id>/"""
@@ -3555,6 +3568,7 @@ def api_ps_guia_odonto_detalhe(request, guia_id):
 #  RELATÓRIOS REGULATÓRIOS — geração de arquivos ANS (DIOPS, TISS, SIB)
 # ════════════════════════════════════════════════════════════════════════════════
 
+@api_requer_feature("plano.ans_relatorios")
 @csrf_exempt
 def api_ps_regulatorio_gerar(request):
     """POST /api/plano-saude/regulatorio/gerar/

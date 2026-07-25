@@ -107,6 +107,7 @@ _HOSPITAL_REDE = _HOSPITAL_MEDIO + [
     "hospital.telemedicina",        # Teleconsulta hospitalar — EXCLUSIVO REDE/GRUPO
     "hospital.nutricao",            # Nutrição clínica hospitalar — EXCLUSIVO REDE/GRUPO
     "hospital.qualidade",           # Qualidade / Núcleo de Segurança do Paciente (NSP) — EXCLUSIVO REDE/GRUPO
+    "hospital.whatsapp_agendamento",# Lembretes/confirmações de agendamento via WhatsApp — EXCLUSIVO REDE/GRUPO
 ]
 
 # ── Governo ──────────────────────────────────────────────────────────────────
@@ -145,6 +146,7 @@ _ASSISTENCIA_TODOS = [
     "assistencia.censo_suas",          # Censo SUAS — indicadores MDS por período
     "assistencia.relatorio_mds",       # Relatório mensal para prestação de contas ao MDS
     "assistencia.prontuario_paif",     # Prontuário Social PAIF enriquecido
+    "assistencia.gestao_suas",         # Dashboard consolidado + Censo SUAS + IA de inconsistências
 ]
 
 # ── Plano de Saúde ───────────────────────────────────────────────────────────

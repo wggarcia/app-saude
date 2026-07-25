@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial
+from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .services.auth_session import empresa_autenticada_from_request
 
 logger = logging.getLogger(__name__)
@@ -115,6 +115,7 @@ def _visita_dict(v):
 # ─── UNIDADES CRAS ───────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_unidades(request):
     empresa = _gov(request)
@@ -152,6 +153,7 @@ def api_cras_unidades(request):
 
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_unidade_detalhe(request, cras_id):
     empresa = _gov(request)
@@ -191,6 +193,7 @@ def api_cras_unidade_detalhe(request, cras_id):
 # ─── FAMÍLIAS CRAS ───────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_familias(request):
     empresa = _gov(request)
@@ -258,6 +261,7 @@ def api_cras_familias(request):
 
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_familia_detalhe(request, familia_id):
     empresa = _gov(request)
@@ -305,6 +309,7 @@ def api_cras_familia_detalhe(request, familia_id):
 # ─── ATENDIMENTOS CRAS ───────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_atendimentos(request):
     empresa = _gov(request)
@@ -363,6 +368,7 @@ def api_cras_atendimentos(request):
 
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_atendimento_detalhe(request, atendimento_id):
     empresa = _gov(request)
@@ -396,6 +402,7 @@ def api_cras_atendimento_detalhe(request, atendimento_id):
 # ─── VISITAS DOMICILIARES SOCIAIS ────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_visitas(request):
     empresa = _gov(request)
@@ -453,6 +460,7 @@ def api_cras_visitas(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_cras_kpis(request):
     empresa = _gov(request)

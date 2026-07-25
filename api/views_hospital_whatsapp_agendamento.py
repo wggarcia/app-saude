@@ -18,7 +18,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db.models import Count, Q
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
-from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo
+from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +122,7 @@ def _salvar_log(emp, telefone, mensagem, tipo, enviado, simulado):
 
 # ── Status do serviço WhatsApp ────────────────────────────────────────────────
 
+@api_requer_feature("hospital.whatsapp_agendamento")
 def api_hosp_wa_status(request):
     if request.method != "GET":
         return JsonResponse({"erro": "Método não permitido"}, status=405)
@@ -143,6 +144,7 @@ def api_hosp_wa_status(request):
 # ── Enviar lembrete de agendamento ────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.whatsapp_agendamento")
 def api_hosp_wa_enviar_lembrete(request):
     if request.method != "POST":
         return JsonResponse({"erro": "Método não permitido"}, status=405)
@@ -193,6 +195,7 @@ def api_hosp_wa_enviar_lembrete(request):
 # ── Processar resposta de confirmação ─────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.whatsapp_agendamento")
 def api_hosp_wa_confirmar(request):
     if request.method != "POST":
         return JsonResponse({"erro": "Método não permitido"}, status=405)
@@ -229,6 +232,7 @@ def api_hosp_wa_confirmar(request):
 
 # ── Histórico de mensagens enviadas ──────────────────────────────────────────
 
+@api_requer_feature("hospital.whatsapp_agendamento")
 def api_hosp_wa_historico(request):
     if request.method != "GET":
         return JsonResponse({"erro": "Método não permitido"}, status=405)
@@ -293,6 +297,7 @@ def api_hosp_wa_webhook(request):
 
 # ── KPIs de envio ─────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.whatsapp_agendamento")
 def api_hosp_wa_kpis(request):
     if request.method != "GET":
         return JsonResponse({"erro": "Método não permitido"}, status=405)

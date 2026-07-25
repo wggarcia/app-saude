@@ -9007,3 +9007,138 @@ class SstAssistenteIaBypassTests(TestCase):
             content_type="application/json", secure=True,
         )
         self.assertEqual(resp.status_code, 403, msg=resp.content)
+
+
+class GovernoSuasSemGatingTests(TestCase):
+    """Item de severidade ALTA que ficou de fora do lote anterior: o módulo
+    SUAS-em-Governo (views_governo_suas_gestao/cras/creas/cadun.py) não tinha
+    NENHUM feature-gate — qualquer cliente Governo, de qualquer plano,
+    acessava de graça o que é vendido separado como o segmento Assistência
+    Social. Confirma que agora está bloqueado (nenhum plano Governo tem a
+    feature "governo.suas" de propósito — é legado, não deve ser vendido
+    junto)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura SUAS Gating", email="pref-suas-gating@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="governo_municipio_medio", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "pref-suas-gating@teste.com", "senha": "123456",
+                "device_id": "dev-suas-gating", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_dashboard_suas_bloqueado_para_qualquer_plano_governo(self):
+        resp = self.client.get("/api/governo/suas/dashboard", secure=True)
+        self.assertEqual(resp.status_code, 403, msg=resp.content)
+
+
+class HospitalWhatsappAgendamentoGatingTests(TestCase):
+    """views_hospital_whatsapp_agendamento.py importava requer_feature_pacote
+    mas nunca aplicava em nenhuma view — zero gate. Confirma bloqueio no
+    plano Médio (sem a feature) e liberação no Grupo (com ela)."""
+
+    def _login(self, pacote_codigo, email):
+        Empresa.objects.create(
+            nome=f"Hospital {pacote_codigo}", email=email,
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo=pacote_codigo, max_dispositivos=5, max_usuarios=5,
+        )
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": email, "senha": "123456",
+                "device_id": f"dev-{pacote_codigo}-wa", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        return client
+
+    def test_status_bloqueado_no_medio_liberado_no_grupo(self):
+        medio = self._login("hospital_medio", "hosp-wa-medio@teste.com")
+        grupo = self._login("hospital_grupo", "hosp-wa-grupo@teste.com")
+        resp = medio.get("/api/hospital/whatsapp-agendamento/status", secure=True)
+        self.assertEqual(resp.status_code, 403, msg=resp.content)
+        resp = grupo.get("/api/hospital/whatsapp-agendamento/status", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+
+class PlanoSaudeFeaturesBaseGatingTests(TestCase):
+    """9 features base do catálogo _PLANO_OPERADORA (beneficiarios, guias,
+    sinistros, reembolsos, contratos, ans_relatorios, corretores, diops_sib,
+    portal_beneficiario) nunca eram checadas em código — qualquer plano
+    acessava tudo. Confirma que agora são checadas (sem quebrar o acesso
+    legítimo, já que TODOS os planos de plano_saude já incluem essas 9
+    features na base)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Operadora Features Base", email="operadora-features-base@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="plano_saude_operadora", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora-features-base@teste.com", "senha": "123456",
+                "device_id": "dev-features-base", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_beneficiarios_e_corretoras_continuam_acessiveis_apos_gating(self):
+        """Sem regressão: plano_saude_operadora já inclui as 9 features na
+        base, então o gate não pode bloquear ninguém que já tinha acesso."""
+        resp = self.client.get("/api/plano-saude/beneficiarios", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = self.client.get("/api/plano-saude/corretoras", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_diops_lista_continua_acessivel_apos_gating(self):
+        """Fecha o ciclo com o bug bônus: views_diops_real.py usava a chave
+        morta 'plano.ans' antes — trocada para 'plano.diops_sib' (real)."""
+        resp = self.client.get("/api/plano-saude/ans/diops", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+
+class AssistenciaSocialPaginasComGatingTests(TestCase):
+    """As 2 páginas novas de Assistência Social não tinham os decorators de
+    segurança padrão (@requer_setor/@requer_feature_pacote/@requer_operacao_page/
+    @requer_permissao_modulo) que o resto do sistema usa. Confirma que os
+    decorators foram adicionados SEM quebrar o acesso legítimo (a feature
+    'assistencia.gestao_suas' foi ao catálogo compartilhado por todos os
+    planos do segmento)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura Assistência Gating", email="pref-assist-gating@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="assistencia_municipio_pequeno", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "pref-assist-gating@teste.com", "senha": "123456",
+                "device_id": "dev-assist-gating", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_paginas_continuam_200_apos_adicionar_decorators(self):
+        resp = self.client.get("/assistencia-social/", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = self.client.get("/assistencia-social/gestao/", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)

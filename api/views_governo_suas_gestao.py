@@ -20,16 +20,29 @@ from datetime import date, timedelta
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
     api_requer_permissao_modulo, contexto_navegacao_setorial,
     get_setor, principal_pode_operacao_setorial,
+    requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo,
+    api_requer_feature,
 )
 from .services.auth_session import empresa_autenticada_from_request
 
 
+# NOTA: "governo.suas" é usado como feature-gate aqui de propósito, mas NÃO
+# está em nenhuma lista de features de nenhum pacote Governo (api/planos.py)
+# — este módulo é um legado duplicado do que hoje é vendido separadamente
+# como o segmento Assistência Social. Sem a feature em nenhum plano, o gate
+# bloqueia por padrão para todo cliente Governo (correto: evita dar de graça
+# um produto vendido à parte). Ver auditoria de prontidão SaaS jul/2026.
+@ensure_csrf_cookie
+@requer_setor("governo")
+@requer_feature_pacote("governo.suas", "Gestão SUAS")
+@requer_operacao_page
+@requer_permissao_modulo("governo.suas")
 def governo_suas_page(request):
     return render(request, "governo_suas.html", contexto_navegacao_setorial(request, "governo"))
 
@@ -52,6 +65,7 @@ def _gov(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_suas_dashboard(request):
     """Dashboard consolidado CRAS + CREAS + CadÚnico + BPC."""
@@ -138,6 +152,7 @@ def api_suas_dashboard(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_suas_censo(request):
     """
@@ -242,6 +257,7 @@ def api_suas_censo(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_suas_ia_inconsistencias(request):
     """
@@ -368,6 +384,7 @@ def api_suas_ia_inconsistencias(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_suas_relatorio_mensal(request):
     """

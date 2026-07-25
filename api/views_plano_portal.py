@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo, get_setor
+from .access_control import api_requer_feature, contexto_navegacao_setorial, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, get_setor
 from .models import (
     BeneficiarioPlano, PortalBeneficiarioToken,
     RedeCredenciadaPlano,
@@ -56,6 +56,7 @@ def _benef_dict(b, token_obj=None):
 
 @ensure_csrf_cookie
 @requer_setor("plano_saude")
+@requer_feature_pacote("plano.portal_beneficiario", "Portal do Beneficiário")
 @requer_operacao_page
 @requer_permissao_modulo("plano.autorizacao")
 def plano_portal_admin_page(request):
@@ -70,6 +71,7 @@ def plano_portal_admin_page(request):
 
 # ── API: lista de beneficiários com status de acesso ─────────────────────────
 
+@api_requer_feature("plano.portal_beneficiario")
 def api_portal_beneficiarios_lista(request):
     empresa, err = _ps_auth(request)
     if err:
@@ -107,6 +109,7 @@ def api_portal_beneficiarios_lista(request):
 
 # ── API: gerar token de acesso ────────────────────────────────────────────────
 
+@api_requer_feature("plano.portal_beneficiario")
 @csrf_exempt
 def api_portal_token_gerar(request, benef_id):
     empresa, err = _ps_auth(request)

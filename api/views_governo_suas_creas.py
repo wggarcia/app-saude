@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial
+from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .services.auth_session import empresa_autenticada_from_request
 
 logger = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ def _atendimento_dict(a):
 # ─── UNIDADES CREAS ──────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_creas_unidades(request):
     empresa = _gov(request)
@@ -114,6 +115,7 @@ def api_creas_unidades(request):
 
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_creas_unidade_detalhe(request, creas_id):
     empresa = _gov(request)
@@ -152,6 +154,7 @@ def api_creas_unidade_detalhe(request, creas_id):
 # ─── ATENDIMENTOS CREAS ──────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_creas_atendimentos(request):
     empresa = _gov(request)
@@ -228,6 +231,7 @@ def api_creas_atendimentos(request):
 
 
 @csrf_exempt
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_creas_atendimento_detalhe(request, atendimento_id):
     empresa = _gov(request)
@@ -269,6 +273,7 @@ def api_creas_atendimento_detalhe(request, atendimento_id):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("governo.suas")
 @api_requer_permissao_modulo("governo.suas")
 def api_creas_kpis(request):
     empresa = _gov(request)
