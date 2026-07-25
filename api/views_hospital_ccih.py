@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .services.identidade_paciente import resolver_identidade
 from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
@@ -116,10 +117,14 @@ def api_ccih_infeccoes(request):
         ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
         if not ok_cpf:
             return JsonResponse({"erro": erro_cpf}, status=400)
+        identidade = resolver_identidade(
+            empresa, nome=data["paciente_nome"], cpf=data.get("cpf_paciente", ""),
+        )
         ih = InfeccaoHospitalar.objects.create(
             empresa=empresa,
             paciente_nome=data["paciente_nome"],
             cpf_paciente=data.get("cpf_paciente", ""),
+            identidade=identidade,
             internacao_id=data.get("internacao_id"),
             leito=data.get("leito", ""),
             setor=data.get("setor", ""),
@@ -201,7 +206,7 @@ def api_ccih_isolamentos(request):
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    _, ProtocoloIsolamento, _ = _get_ccih_models()
+    InfeccaoHospitalar, ProtocoloIsolamento, _ = _get_ccih_models()
 
     if request.method == "GET":
         qs = ProtocoloIsolamento.objects.filter(empresa=empresa)
@@ -237,10 +242,21 @@ def api_ccih_isolamentos(request):
         data = json.loads(request.body)
     except (ValueError, TypeError):
         return JsonResponse({"erro": "JSON inválido"}, status=400)
+    # ProtocoloIsolamento não guarda CPF próprio — herda a identidade da
+    # infecção referenciada quando houver o vínculo; senão resolve só por nome.
+    infeccao_id = data.get("infeccao_id")
+    identidade = None
+    if infeccao_id:
+        infeccao_ref = InfeccaoHospitalar.objects.filter(id=infeccao_id, empresa=empresa).first()
+        if infeccao_ref and infeccao_ref.identidade_id:
+            identidade = infeccao_ref.identidade
+    if identidade is None:
+        identidade = resolver_identidade(empresa, nome=data["paciente_nome"])
     iso = ProtocoloIsolamento.objects.create(
         empresa=empresa,
-        infeccao_id=data.get("infeccao_id"),
+        infeccao_id=infeccao_id,
         paciente_nome=data["paciente_nome"],
+        identidade=identidade,
         leito=data["leito"],
         tipo=data["tipo"],
         motivo=data["motivo"],

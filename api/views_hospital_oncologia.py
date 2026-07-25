@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .services.identidade_paciente import resolver_identidade
 from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
@@ -197,12 +198,16 @@ def api_onco_ciclos(request):
         ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
         if not ok_cpf:
             return JsonResponse({"erro": erro_cpf}, status=400)
+        identidade = resolver_identidade(
+            empresa, nome=data["paciente_nome"], cpf=data.get("cpf_paciente", ""),
+        )
         ciclo = CicloQuimioterapia.objects.create(
             empresa=empresa,
             protocolo=protocolo,
             paciente_nome=data["paciente_nome"],
             cpf_paciente=data.get("cpf_paciente", ""),
             cns_paciente=data.get("cns_paciente", ""),
+            identidade=identidade,
             cid10_principal=data["cid10_principal"],
             numero_ciclo=data.get("numero_ciclo", 1),
             data_inicio=data["data_inicio"],
@@ -386,12 +391,16 @@ def api_onco_apacs(request):
         ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("cpf_paciente", ""), empresa)
         if not ok_cpf:
             return JsonResponse({"erro": erro_cpf}, status=400)
+        identidade = resolver_identidade(
+            empresa, nome=data["paciente_nome"], cpf=data.get("cpf_paciente", ""),
+        )
         apac = APACOncologia.objects.create(
             empresa=empresa,
             numero_apac=data.get("numero_apac", ""),
             paciente_nome=data["paciente_nome"],
             cpf_paciente=data.get("cpf_paciente", ""),
             cns_paciente=data.get("cns_paciente", ""),
+            identidade=identidade,
             cid10_principal=data["cid10_principal"],
             cid10_secundario=data.get("cid10_secundario", ""),
             procedimento_principal=data.get("procedimento_principal", ""),

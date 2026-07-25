@@ -18,7 +18,9 @@ from .maintenance import maintenance_report
 from .models import (
     AceiteLegalPublico,
     AlertaGovernamental,
+    APACOncologia,
     BeneficiarioPlano,
+    CicloQuimioterapia,
     DepartamentoHospital,
     DescarteItemFarmacia,
     Dispensacao,
@@ -34,7 +36,9 @@ from .models import (
     FornecedorFarmacia,
     FornecedorFarmaciaGestao,
     GuiaAutorizacao,
+    IdentidadePaciente,
     IndicadorSaudeGov,
+    InfeccaoHospitalar,
     InternacaoHospital,
     InventarioFarmacia,
     ItemFarmacia,
@@ -44,6 +48,8 @@ from .models import (
     LoteMedicamento,
     MedicamentoFarmacia,
     OrcamentoSaudeGov,
+    ProtocoloIsolamento,
+    ProtocoloOncologico,
     PacienteFarmacia,
     PacienteHospital,
     PacienteInternado,
@@ -8136,3 +8142,157 @@ class MedicamentoFarmaciaCrudViaUiTests(TestCase):
 
         med = MedicamentoFarmacia.objects.get(pk=med_id)
         self.assertEqual(med.quantidade_atual, Decimal("15.000"))
+
+
+class OncologiaCcihIdentidadePacienteTests(TestCase):
+    """Item #11 da auditoria (jul/2026): Oncologia e CCIH identificavam
+    paciente só por texto livre (paciente_nome/cpf_paciente), sem FK para o
+    MPI (IdentidadePaciente) já usado por LIS/Cirurgia/Imagem/Prontuário.
+    Confirma que a criação nesses módulos agora resolve/liga a identidade
+    real, e que o mesmo CPF converge para a MESMA identidade entre
+    Oncologia e CCIH (o ponto inteiro do MPI)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Hospital Oncologia CCIH",
+            email="hospital-onco-ccih@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_rede",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "hospital-onco-ccih@teste.com", "senha": "123456",
+                "device_id": "dev-onco-ccih", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+        self.protocolo = ProtocoloOncologico.objects.create(
+            empresa=self.empresa, codigo="FOLFOX-6", nome="FOLFOX-6",
+            indicacao_cid="C18", ciclos_total=12, intervalo_dias=14,
+        )
+
+    def test_criar_ciclo_quimioterapia_liga_identidade(self):
+        resp = self.client.post(
+            "/api/hospital/oncologia/ciclos/",
+            data=json.dumps({
+                "protocolo_id": self.protocolo.id,
+                "paciente_nome": "Maria das Dores",
+                "cpf_paciente": "52998224725",
+                "cid10_principal": "C18",
+                "numero_ciclo": 1,
+                "data_inicio": "2026-07-01",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        ciclo = CicloQuimioterapia.objects.get(pk=resp.json()["id"])
+        self.assertIsNotNone(ciclo.identidade_id)
+        self.assertEqual(ciclo.identidade.cpf, "52998224725")
+
+    def test_criar_apac_liga_identidade(self):
+        resp = self.client.post(
+            "/api/hospital/oncologia/apacs/",
+            data=json.dumps({
+                "paciente_nome": "João Radioterapia",
+                "cpf_paciente": "52998224725",
+                "cid10_principal": "C61",
+                "competencia": "202607",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        apac = APACOncologia.objects.get(pk=resp.json()["id"])
+        self.assertIsNotNone(apac.identidade_id)
+
+    def test_criar_infeccao_hospitalar_liga_identidade(self):
+        resp = self.client.post(
+            "/api/hospital/ccih/infeccoes/",
+            data=json.dumps({
+                "paciente_nome": "Carlos Infectado",
+                "cpf_paciente": "52998224725",
+                "topografia": "pav",
+                "data_diagnostico": "2026-07-10",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        ih = InfeccaoHospitalar.objects.get(pk=resp.json()["id"])
+        self.assertIsNotNone(ih.identidade_id)
+
+    def test_isolamento_herda_identidade_da_infeccao_referenciada(self):
+        resp = self.client.post(
+            "/api/hospital/ccih/infeccoes/",
+            data=json.dumps({
+                "paciente_nome": "Ana Isolada",
+                "cpf_paciente": "52998224725",
+                "topografia": "iss",
+                "data_diagnostico": "2026-07-10",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        ih_id = resp.json()["id"]
+        ih = InfeccaoHospitalar.objects.get(pk=ih_id)
+
+        resp = self.client.post(
+            "/api/hospital/ccih/isolamentos/",
+            data=json.dumps({
+                "infeccao_id": ih_id,
+                "paciente_nome": "Ana Isolada",
+                "leito": "10A",
+                "tipo": "contato",
+                "motivo": "MRSA",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        iso = ProtocoloIsolamento.objects.get(pk=resp.json()["id"])
+        self.assertEqual(iso.identidade_id, ih.identidade_id)
+
+    def test_mesmo_cpf_converge_para_mesma_identidade_entre_oncologia_e_ccih(self):
+        """O ponto inteiro do MPI: o mesmo paciente (mesmo CPF) tratado em
+        Oncologia E em CCIH deve resolver para a MESMA IdentidadePaciente —
+        antes desta fix, cada módulo só tinha paciente_nome/cpf_paciente
+        soltos, sem nenhum jeito de saber que eram a mesma pessoa."""
+        cpf = "52998224725"
+        resp_ciclo = self.client.post(
+            "/api/hospital/oncologia/ciclos/",
+            data=json.dumps({
+                "protocolo_id": self.protocolo.id,
+                "paciente_nome": "Paciente Convergente",
+                "cpf_paciente": cpf,
+                "cid10_principal": "C18",
+                "numero_ciclo": 1,
+                "data_inicio": "2026-07-01",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        resp_infeccao = self.client.post(
+            "/api/hospital/ccih/infeccoes/",
+            data=json.dumps({
+                "paciente_nome": "Paciente Convergente",
+                "cpf_paciente": cpf,
+                "topografia": "ics",
+                "data_diagnostico": "2026-07-15",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        ciclo = CicloQuimioterapia.objects.get(pk=resp_ciclo.json()["id"])
+        infeccao = InfeccaoHospitalar.objects.get(pk=resp_infeccao.json()["id"])
+        self.assertIsNotNone(ciclo.identidade_id)
+        self.assertEqual(ciclo.identidade_id, infeccao.identidade_id)
+        self.assertEqual(IdentidadePaciente.objects.filter(empresa=self.empresa, cpf=cpf).count(), 1)

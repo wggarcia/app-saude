@@ -9054,6 +9054,11 @@ class InfeccaoHospitalar(models.Model):
                                           related_name="infeccoes_hospitalares")
     paciente_nome    = models.CharField(max_length=160)
     cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    identidade       = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="infeccoes_hospitalares_mpi",
+        help_text="Vínculo com a identidade única do paciente (MPI) — populado por sync, não exposto na UI",
+    )
     internacao_id    = models.PositiveIntegerField(null=True, blank=True)
     leito            = models.CharField(max_length=30, blank=True, default="")
     setor            = models.CharField(max_length=100, blank=True, default="")
@@ -9101,6 +9106,11 @@ class ProtocoloIsolamento(models.Model):
     infeccao         = models.ForeignKey(InfeccaoHospitalar, on_delete=models.SET_NULL,
                                           null=True, blank=True, related_name="isolamentos")
     paciente_nome    = models.CharField(max_length=160)
+    identidade       = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="isolamentos_mpi",
+        help_text="Vínculo com a identidade única do paciente (MPI) — populado por sync, não exposto na UI",
+    )
     leito            = models.CharField(max_length=30)
     tipo             = models.CharField(max_length=15, choices=TIPO)
     motivo           = models.CharField(max_length=300,
@@ -9781,6 +9791,11 @@ class CicloQuimioterapia(models.Model):
     paciente_nome    = models.CharField(max_length=160)
     cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
     cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    identidade       = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="ciclos_quimioterapia_mpi",
+        help_text="Vínculo com a identidade única do paciente (MPI) — populado por sync, não exposto na UI",
+    )
     cid10_principal  = models.CharField(max_length=10)
     numero_ciclo     = models.PositiveSmallIntegerField(verbose_name="Número do ciclo")
     data_inicio      = models.DateField()
@@ -9827,6 +9842,11 @@ class APACOncologia(models.Model):
     paciente_nome    = models.CharField(max_length=160)
     cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
     cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    identidade       = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="apacs_oncologia_mpi",
+        help_text="Vínculo com a identidade única do paciente (MPI) — populado por sync, não exposto na UI",
+    )
     cid10_principal  = models.CharField(max_length=10)
     cid10_secundario = models.CharField(max_length=10, blank=True, default="")
     procedimento_principal = models.CharField(max_length=10, blank=True, default="",
