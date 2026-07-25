@@ -8851,11 +8851,12 @@ class FarmaciaTransferenciaRedeAutorizacaoTests(TestCase):
         resp = self._acao(self.client_fornecedora, "aprovar")
         self.assertEqual(resp.status_code, 200, msg=resp.content)
 
-        # Fornecedora tenta "receber" (ação exclusiva do solicitante) — bloqueado
         resp = self._acao(self.client_fornecedora, "enviar")
         self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        # Fornecedora tenta "receber" (ação exclusiva do solicitante) — bloqueado
         resp = self._acao(self.client_fornecedora, "receber")
-        self.assertEqual(resp.status_code, 400, msg="'receber' não é transição válida a partir de 'enviada' pela fornecedora tentando de novo")
+        self.assertEqual(resp.status_code, 403, msg=resp.content)
 
         resp = self._acao(self.client_solicitante, "receber")
         self.assertEqual(resp.status_code, 200, msg=resp.content)
