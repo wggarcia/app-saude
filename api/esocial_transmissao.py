@@ -287,27 +287,34 @@ def testar_conexao_esocial(cfg_sst):
 
 
 def _sincronizar_status(evento, status, protocolo):
-    """Updates the source record (CAT, ASO, etc.) with the transmission status."""
-    from .models import CATOcupacional, ASOOcupacional, AfastamentoSST
+    """Denormaliza o status de transmissão no registro de origem.
 
+    Apenas a CAT (S-2210) possui os campos status_esocial/protocolo_esocial no
+    model. Para ASO (S-2220) e Afastamento (S-2230), a listagem lê o status
+    diretamente do eSocialEventoSST (ev_map em views_sst.py) — não há campo
+    denormalizado a atualizar, então não fazemos nada para esses tipos.
+
+    Antes, este bloco tentava escrever em campos inexistentes de ASO/Afastamento
+    e o erro (FieldError) era engolido por um `except Exception: pass` — mascarando
+    silenciosamente uma falha em toda transmissão. Agora só toca a CAT e loga
+    qualquer erro real em vez de escondê-lo.
+    """
+    from .models import CATOcupacional
+
+    if evento.tipo_evento != "S-2210":
+        return
     try:
         ref = int(evento.referencia) if evento.referencia and evento.referencia.isdigit() else None
         if ref is None:
             return
-        if evento.tipo_evento == "S-2210":
-            CATOcupacional.objects.filter(pk=ref, empresa=evento.empresa).update(
-                status_esocial=status, protocolo_esocial=protocolo
-            )
-        elif evento.tipo_evento == "S-2220":
-            ASOOcupacional.objects.filter(pk=ref, empresa=evento.empresa).update(
-                status_esocial=status, protocolo_esocial=protocolo
-            )
-        elif evento.tipo_evento == "S-2230":
-            AfastamentoSST.objects.filter(pk=ref, empresa=evento.empresa).update(
-                status_esocial=status
-            )
-    except Exception:
-        pass
+        CATOcupacional.objects.filter(pk=ref, empresa=evento.empresa).update(
+            status_esocial=status, protocolo_esocial=protocolo
+        )
+    except Exception as exc:
+        logger.warning(
+            "Falha ao sincronizar status eSocial na CAT ref=%s: %s",
+            evento.referencia, exc,
+        )
 
 
 # ── Batch transmission ────────────────────────────────────────────────────────
