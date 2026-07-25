@@ -7570,3 +7570,160 @@ class DarBaixaEstoqueMedicamentoTests(TestCase):
         self.medicamento.refresh_from_db()
         self.assertIsNotNone(resultado)
         self.assertEqual(self.medicamento.quantidade_atual, Decimal("0.000"))
+
+
+class ClinicaVinculoEmpresaRoteamentoTests(TestCase):
+    """Cobertura de ponta a ponta do fluxo clinica->empresa (views_clinica.py)
+    depois de ativado o roteamento (antes, código morto sem nenhum path()).
+
+    secure=True em toda requisição: em produção (VPS) SECURE_SSL_REDIRECT=True
+    faz http virar 301 antes de chegar na view."""
+
+    def setUp(self):
+        self.clinica = Empresa.objects.create(
+            nome="Clínica Ocupacional Teste",
+            email="clinica-vinculo@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            pacote_codigo="sst_enterprise_10",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.empresa_cliente = Empresa.objects.create(
+            nome="Empresa Cliente Teste",
+            email="empresa-cliente-vinculo@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            pacote_codigo="sst_enterprise_10",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.funcionario = FuncionarioSST.objects.create(
+            empresa=self.clinica,
+            nome="Paciente do Vínculo",
+            cpf="555.666.777-88",
+            matricula="MAT-VINC",
+            cargo="Operador",
+            ativo=True,
+        )
+        self.aso = ASOOcupacional.objects.create(
+            empresa=self.clinica,
+            funcionario=self.funcionario,
+            tipo="admissional",
+            data_emissao=date(2026, 6, 1),
+            medico_responsavel="Dr. Vínculo",
+        )
+
+    def _login(self, email):
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": email, "senha": "123456",
+                "device_id": f"dev-{email}", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou ({email}): {resp.content}")
+        return client
+
+    def test_fluxo_completo_convite_aceite_envio_recebimento(self):
+        clinica_client = self._login("clinica-vinculo@teste.com")
+        empresa_client = self._login("empresa-cliente-vinculo@teste.com")
+
+        # 1) Clínica cria vínculo/convite
+        resp = clinica_client.post(
+            "/api/clinica/vinculos",
+            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        vinculo = resp.json()
+        token = vinculo["token_convite"]
+
+        # 2) Página pública de aceite responde 200 para visitante ANÔNIMO
+        #    (é exatamente o que o allowlist do middleware precisava garantir —
+        #    sem ele, isso viraria redirect para login antes de renderizar).
+        anon = Client()
+        resp = anon.get(f"/clinica/aceitar/{token}/", secure=True)
+        self.assertEqual(resp.status_code, 200)
+
+        # 3) Empresa (autenticada) aceita o convite
+        resp = empresa_client.post(
+            f"/api/clinica/aceitar/{token}",
+            data=json.dumps({"acao": "aceitar"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        # 4) Clínica envia o ASO
+        resp = clinica_client.post(
+            f"/api/clinica/vinculos/{vinculo['id']}/enviar-aso/{self.aso.id}",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+
+        # 5) Empresa vê o ASO recebido
+        resp = empresa_client.get("/api/empresa/asos-recebidos", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        recebidos = resp.json()["asos_recebidos"]
+        self.assertEqual(len(recebidos), 1)
+        self.assertEqual(recebidos[0]["funcionario_cpf"], "555.666.777-88")
+
+    def test_pagina_aceitar_nao_exige_login_para_visualizar(self):
+        """Regressão direta do allowlist: sem /clinica/aceitar/ nas rotas
+        livres, o EmpresaMiddleware redirecionaria (nunca 200) antes da view."""
+        clinica_client = self._login("clinica-vinculo@teste.com")
+        resp = clinica_client.post(
+            "/api/clinica/vinculos",
+            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com"}),
+            content_type="application/json",
+            secure=True,
+        )
+        token = resp.json()["token_convite"]
+
+        anon = Client()
+        resp = anon.get(f"/clinica/aceitar/{token}/", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotEqual(resp.status_code, 301)
+
+    def test_isolamento_clinica_nao_envia_aso_de_outra_empresa(self):
+        outra_clinica = Empresa.objects.create(
+            nome="Outra Clínica",
+            email="outra-clinica-vinculo@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            pacote_codigo="sst_enterprise_10",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        outra_client = self._login("outra-clinica-vinculo@teste.com")
+
+        clinica_client = self._login("clinica-vinculo@teste.com")
+        empresa_client = self._login("empresa-cliente-vinculo@teste.com")
+        resp = clinica_client.post(
+            "/api/clinica/vinculos",
+            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com"}),
+            content_type="application/json",
+            secure=True,
+        )
+        vinculo = resp.json()
+        empresa_client.post(
+            f"/api/clinica/aceitar/{vinculo['token_convite']}",
+            data=json.dumps({"acao": "aceitar"}),
+            content_type="application/json",
+            secure=True,
+        )
+
+        # outra_clinica tenta enviar o ASO do funcionário que não é dela
+        resp = outra_client.post(
+            f"/api/clinica/vinculos/{vinculo['id']}/enviar-aso/{self.aso.id}",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 404)

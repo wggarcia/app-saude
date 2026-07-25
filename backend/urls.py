@@ -1621,6 +1621,20 @@ urlpatterns = [
     path('api/clinica/financeiro/glosas/', api_glosas),
     path('api/clinica/financeiro/kpis/', api_financeiro_kpis_clinica),
     path('api/clinica/financeiro/fluxo-caixa/', api_fluxo_caixa_clinica),
+
+    # Vinculo clinica-empresa: clinica de exames ocupacionais envia ASO
+    # direto para a conta SoloCRT da empresa-cliente (cross-tenant dentro do
+    # mesmo segmento SST, mesmo padrao de views_rede.py). Auth e isolamento
+    # por tenant ja feitos dentro de views_clinica.py (_empresa_req).
+    path('api/clinica/vinculos', api_clinica_vinculos),
+    path('api/clinica/vinculos/<int:vinculo_id>', api_clinica_vinculo_detalhe),
+    path('api/clinica/vinculos/<int:vinculo_id>/enviar-aso/<int:aso_id>', api_clinica_enviar_aso),
+    path('clinica/aceitar/<str:token>/', pagina_aceitar_convite),
+    path('api/clinica/aceitar/<str:token>', api_aceitar_vinculo),
+    path('api/empresa/asos-recebidos', api_empresa_asos_recebidos),
+    path('api/empresa/asos-recebidos/<int:envio_id>', api_empresa_aso_recebido_acao),
+    path('api/empresa/vinculos-clinicas', api_empresa_vinculos_clinicas),
+
     # Contratos de saúde / convênios
     path('api/contratos/', api_contratos_saude),
     path('api/contratos/kpis/', api_contratos_kpis),

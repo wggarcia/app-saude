@@ -200,6 +200,7 @@ class EmpresaMiddleware:
             "/verificar-email/",
         }
         rotas_livres_prefixo = (
+            "/clinica/aceitar/",  # convite publico de vinculo clinica-empresa (sem login pra visualizar)
             "/redefinir-senha/",
             "/api/funcionario/",   # portal do trabalhador — auth própria via Bearer
             "/api/funcionario",
