@@ -7416,3 +7416,157 @@ class RedeCredenciadaAPITests(PlanoSaudeEnterpriseBaseTests):
     def test_sem_autenticacao_retorna_401(self):
         resp = self.anon.get("/api/plano-saude/rede")
         self.assertEqual(resp.status_code, 401)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Auditoria jul/2026 — testes unitários diretos (sem HTTP/login) para os fixes
+# do lote SST eSocial + Farmácia estoque. Unitário de propósito: evita o
+# SECURE_SSL_REDIRECT=True do ambiente de produção do VPS, que faz qualquer
+# Client() HTTP sem secure=True retornar 301 antes de chegar na view.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class EsocialSincronizarStatusTests(TestCase):
+    """_sincronizar_status (api/esocial_transmissao.py) deve tocar apenas a CAT
+    (única com status_esocial/protocolo_esocial no model) e nunca lançar exceção
+    para ASO/Afastamento, que não têm esses campos."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Empresa Sync eSocial",
+            email="sync-esocial@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            pacote_codigo="sst_enterprise_10",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Funcionário Sync",
+            cpf="111.222.333-44",
+            matricula="MAT-SYNC",
+            cargo="Operador",
+            ativo=True,
+        )
+
+    def _evento(self, tipo_evento, referencia):
+        return eSocialEventoSST.objects.create(
+            empresa=self.empresa,
+            tipo_evento=tipo_evento,
+            referencia=str(referencia),
+        )
+
+    def test_s2210_atualiza_status_e_protocolo_na_cat(self):
+        from .esocial_transmissao import _sincronizar_status
+        cat = CATOcupacional.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            data_acidente=date(2026, 6, 1),
+            descricao="Corte leve",
+        )
+        evento = self._evento("S-2210", cat.id)
+        _sincronizar_status(evento, "transmitido", "PROTO-CAT-001")
+        cat.refresh_from_db()
+        self.assertEqual(cat.status_esocial, "transmitido")
+        self.assertEqual(cat.protocolo_esocial, "PROTO-CAT-001")
+
+    def test_s2220_nao_lanca_excecao_mesmo_sem_campo_no_model(self):
+        """ASOOcupacional não tem status_esocial/protocolo_esocial — a função
+        deve retornar silenciosamente (sem tentar .update() em campo inexistente),
+        não mascarar um FieldError com except genérico como antes."""
+        from .esocial_transmissao import _sincronizar_status
+        aso = ASOOcupacional.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            tipo="admissional",
+            data_emissao=date(2026, 6, 1),
+            medico_responsavel="Dr. Teste",
+        )
+        evento = self._evento("S-2220", aso.id)
+        # Não deve levantar FieldError nem qualquer outra exceção.
+        _sincronizar_status(evento, "transmitido", "PROTO-ASO-001")
+
+    def test_s2230_nao_lanca_excecao_mesmo_sem_campo_no_model(self):
+        from .esocial_transmissao import _sincronizar_status
+        afastamento = AfastamentoSST.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            motivo="doenca_ocupacional",
+            data_inicio=date(2026, 6, 1),
+        )
+        evento = self._evento("S-2230", afastamento.id)
+        _sincronizar_status(evento, "transmitido", "")
+
+    def test_referencia_invalida_nao_lanca_excecao(self):
+        from .esocial_transmissao import _sincronizar_status
+        evento = self._evento("S-2210", "")  # referencia vazia/não numérica
+        _sincronizar_status(evento, "transmitido", "PROTO-X")
+
+
+class DarBaixaEstoqueMedicamentoTests(TestCase):
+    """dar_baixa_estoque_medicamento (api/views_farmacia_pdv.py) deve bloquear
+    baixa acima do saldo quando bloquear_negativo=True (padrão — balcão/gestão),
+    e manter o comportamento antigo de saturar em zero (com log de alerta,
+    verificado apenas por não lançar exceção) quando bloquear_negativo=False
+    (canal externo já pago — delivery/iFood)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Farmácia Baixa Estoque",
+            email="baixa-estoque@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.medicamento = MedicamentoFarmacia.objects.create(
+            empresa=self.empresa,
+            nome="Dipirona 500mg",
+            quantidade_atual="10.000",
+            preco_venda="4.00",
+            controlado=False,
+        )
+
+    def test_baixa_normal_dentro_do_saldo_funciona(self):
+        from decimal import Decimal
+        from django.db import transaction
+        from .views_farmacia_pdv import dar_baixa_estoque_medicamento
+        with transaction.atomic():
+            resultado = dar_baixa_estoque_medicamento(
+                self.empresa, medicamento_id=self.medicamento.id, quantidade=Decimal("3"),
+            )
+        self.medicamento.refresh_from_db()
+        self.assertIsNotNone(resultado)
+        self.assertEqual(self.medicamento.quantidade_atual, Decimal("7.000"))
+
+    def test_baixa_acima_do_saldo_bloqueia_por_padrao(self):
+        from decimal import Decimal
+        from django.db import transaction
+        from .views_farmacia_pdv import dar_baixa_estoque_medicamento, EstoqueInsuficienteError
+        with self.assertRaises(EstoqueInsuficienteError):
+            with transaction.atomic():
+                dar_baixa_estoque_medicamento(
+                    self.empresa, medicamento_id=self.medicamento.id, quantidade=Decimal("999"),
+                )
+        # Saldo não pode ter sido alterado — a exceção precisa ser levantada
+        # ANTES do decremento, não depois (senão o rollback escondia dado
+        # inconsistente só por sorte do atomic(), sem prova).
+        self.medicamento.refresh_from_db()
+        self.assertEqual(self.medicamento.quantidade_atual, Decimal("10.000"))
+
+    def test_baixa_acima_do_saldo_com_bloqueio_desativado_satura_em_zero(self):
+        """Canal externo (delivery/iFood): não bloqueia, preserva comportamento
+        antigo de saturar em zero — nunca deve ficar negativo."""
+        from decimal import Decimal
+        from django.db import transaction
+        from .views_farmacia_pdv import dar_baixa_estoque_medicamento
+        with transaction.atomic():
+            resultado = dar_baixa_estoque_medicamento(
+                self.empresa, medicamento_id=self.medicamento.id, quantidade=Decimal("999"),
+                bloquear_negativo=False,
+            )
+        self.medicamento.refresh_from_db()
+        self.assertIsNotNone(resultado)
+        self.assertEqual(self.medicamento.quantidade_atual, Decimal("0.000"))
