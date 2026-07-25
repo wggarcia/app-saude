@@ -76,12 +76,16 @@ def baixar_estoque_pedido(pedido):
         if p is None or p.estoque_baixado:
             return
         for item in p.itens.filter(medicamento__isnull=False):
+            # Canal externo (pedido ja pago no iFood/e-commerce): nao bloqueia
+            # nem crasha o webhook por falta de estoque — satura em zero e loga
+            # alerta (bloquear_negativo=False). Ver dar_baixa_estoque_medicamento.
             dar_baixa_estoque_medicamento(
                 p.empresa,
                 medicamento_id=item.medicamento_id,
                 codigo_barras=item.codigo_barras,
                 quantidade=item.quantidade,
                 motivo=f"Venda delivery — pedido {p.numero_pedido} ({p.origem})",
+                bloquear_negativo=False,
             )
         p.estoque_baixado = True
         p.save(update_fields=["estoque_baixado", "atualizado_em"])

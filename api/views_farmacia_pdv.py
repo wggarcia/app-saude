@@ -3,6 +3,7 @@ Views Farmácia PDV — Ponto de Venda / Caixa.
 Endpoints para: sessões PDV, vendas, itens de venda e histórico.
 """
 import json
+import logging
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -27,6 +28,25 @@ from .models import (
     EstoqueMovimento,
 )
 from .access_control import api_requer_operacao_ou_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
+
+logger = logging.getLogger(__name__)
+
+
+class EstoqueInsuficienteError(Exception):
+    """Estoque insuficiente para a baixa solicitada.
+
+    Levantada por dar_baixa_estoque_medicamento quando bloquear_negativo=True
+    e a quantidade pedida excede o saldo. Deve ser capturada pelo caller (que
+    roda dentro de transaction.atomic()) para reverter a operação e devolver
+    HTTP 409 — em vez de vender/dispensar produto que nao existe fisicamente."""
+
+    def __init__(self, nome, disponivel, solicitado):
+        self.nome = nome
+        self.disponivel = disponivel
+        self.solicitado = solicitado
+        super().__init__(
+            f"Estoque insuficiente de '{nome}': disponivel {disponivel}, solicitado {solicitado}."
+        )
 
 
 def _proximo_lote_fefo(empresa, medicamento):
@@ -62,6 +82,7 @@ def dar_baixa_estoque_medicamento(
     prescricao_numero="",
     medico_crm="",
     dispensacao=None,
+    bloquear_negativo=True,
 ):
     """Baixa de estoque unificada de MedicamentoFarmacia — a mesma usada pelo PDV.
 
@@ -83,6 +104,19 @@ def dar_baixa_estoque_medicamento(
                .filter(empresa=empresa, codigo_barras=codigo_barras, ativo=True).first())
     if not med:
         return None
+
+    # Trava de estoque: no balcao/dispensacao (bloquear_negativo=True) recusa a
+    # baixa quando falta produto; em canais externos ja pagos (delivery/iFood,
+    # bloquear_negativo=False) preserva o comportamento de saturar em zero, mas
+    # loga um alerta para a farmacia saber que houve venda sem lastro de estoque.
+    if quantidade > med.quantidade_atual:
+        if bloquear_negativo:
+            raise EstoqueInsuficienteError(med.nome, med.quantidade_atual, quantidade)
+        logger.warning(
+            "Baixa de estoque sem saldo suficiente (canal externo) empresa=%s med=%s "
+            "disponivel=%s solicitado=%s — saldo saturado em zero.",
+            getattr(empresa, "id", empresa), med.nome, med.quantidade_atual, quantidade,
+        )
 
     med.quantidade_atual = max(med.quantidade_atual - quantidade, Decimal("0"))
     med.save(update_fields=["quantidade_atual", "atualizado_em"])
@@ -497,7 +531,8 @@ def api_pdv_registrar_venda(request, sessao_id):
 
     cpf_cliente = (data.get("cpf_cliente") or "").strip()
 
-    with transaction.atomic():
+    try:
+      with transaction.atomic():
         venda = PDVVenda.objects.create(
             sessao=sessao,
             empresa=empresa,
@@ -545,6 +580,14 @@ def api_pdv_registrar_venda(request, sessao_id):
             if resultado and resultado["lote_usado"] and not item_venda.lote:
                 item_venda.lote = resultado["lote_usado"]
                 item_venda.save(update_fields=["lote"])
+    except EstoqueInsuficienteError as e:
+        return JsonResponse({
+            "erro": str(e),
+            "codigo": "estoque_insuficiente",
+            "medicamento": e.nome,
+            "disponivel": float(e.disponivel),
+            "solicitado": float(e.solicitado),
+        }, status=409)
 
     return JsonResponse({"ok": True, "venda": _venda_to_dict(venda), "desconto_pbm_aplicado": float(desconto_pbm)}, status=201)
 

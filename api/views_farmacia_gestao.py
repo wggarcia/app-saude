@@ -23,7 +23,7 @@ from .models import (
     PedidoFarmacia,
     FarmaciaAuditLog,
 )
-from .views_farmacia_pdv import dar_baixa_estoque_medicamento
+from .views_farmacia_pdv import dar_baixa_estoque_medicamento, EstoqueInsuficienteError
 from .access_control import api_requer_operacao_ou_gerencia, api_requer_setor, api_requer_feature
 
 
@@ -407,7 +407,8 @@ def api_farmacia_dispensacao(request):
 
         paciente_cpf = data.get("paciente_cpf", "")
 
-        with transaction.atomic():
+        try:
+          with transaction.atomic():
             disp = Dispensacao.objects.create(
                 empresa=empresa,
                 paciente_nome=paciente_nome,
@@ -445,6 +446,14 @@ def api_farmacia_dispensacao(request):
                     medico_crm=medico_crm,
                     dispensacao=disp,
                 )
+        except EstoqueInsuficienteError as e:
+            return JsonResponse({
+                "erro": str(e),
+                "codigo": "estoque_insuficiente",
+                "medicamento": e.nome,
+                "disponivel": float(e.disponivel),
+                "solicitado": float(e.solicitado),
+            }, status=409)
 
         FarmaciaAuditLog.objects.create(
             empresa=empresa,
