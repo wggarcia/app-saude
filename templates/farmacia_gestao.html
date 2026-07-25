@@ -114,8 +114,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <details class="nav-group" data-nav-group data-group-key="farmacia-operacao" open>
     <summary><div class="nav-section">Operação</div></summary>
     <div class="nav-group-body">
-      <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
-      <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
+      <button class="tab-btn active" onclick="setTab('estoque')"><span>🧪</span> Materiais e Insumos</button>
+      <button class="tab-btn" onclick="setTab('medicamentos')"><span>💊</span> Estoque de Medicamentos</button>
+      <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💉</span> Dispensações</button>
       <button class="tab-btn" onclick="setTab('movimentos')"><span>↕️</span> Movimentos</button>
       <button class="tab-btn" onclick="setTab('fornecedores')"><span>🏭</span> Fornecedores</button>
       <button class="tab-btn" onclick="setTab('pedidos')"><span>🛒</span> Pedidos de Compra</button>
@@ -204,7 +205,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-panel active" id="tab-estoque">
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Itens em Estoque</span>
+          <span class="card-title">Materiais e Insumos em Estoque</span>
           <div style="display:flex;gap:8px">
             <a href="/api/farmacia/pdf/estoque/" target="_blank" class="btn btn-ghost">📄 Exportar PDF</a>
             <button class="btn btn-primary" onclick="abrirModalItem()">+ Novo Item</button>
@@ -213,6 +214,23 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <table>
           <thead><tr><th>Item</th><th>Categoria</th><th>Estoque Atual</th><th>Mínimo</th><th>Situação</th><th>Ações</th></tr></thead>
           <tbody id="tbodyEstoque"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Estoque de Medicamentos (MedicamentoFarmacia — pilha real, usada por PDV/e-commerce/iFood) -->
+    <div class="tab-panel" id="tab-medicamentos" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">💊 Estoque de Medicamentos</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="abrirModalMedicamento()">+ Novo Medicamento</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);padding:0 16px 8px">Este é o cadastro que alimenta o PDV, e-commerce e iFood — o mesmo estoque decrementado em cada venda.</div>
+        <table>
+          <thead><tr><th>Medicamento</th><th>Registro ANVISA</th><th>Estoque Atual</th><th>Preço Venda</th><th>Situação</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyMedicamentos"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -720,7 +738,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- Modal: Novo Item -->
 <div class="modal-bg" id="modalItem">
   <div class="modal">
-    <h3>📦 Cadastrar Item</h3>
+    <h3>🧪 Cadastrar Material/Insumo</h3>
     <div class="form-row">
       <div class="form-group"><label>Nome *</label><input id="iNome" placeholder="Ex: Luva de procedimento, Seringa 10ml"></div>
       <div class="form-group"><label>Código</label><input id="iCodigo" placeholder="SKU ou lote"></div>
@@ -742,6 +760,51 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalItem')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarItem()">Salvar Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Medicamento (MedicamentoFarmacia) -->
+<div class="modal-bg" id="modalMedicamento">
+  <div class="modal">
+    <h3>💊 Cadastrar Medicamento</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="mNome" placeholder="Ex: Dipirona 500mg"></div>
+      <div class="form-group"><label>Princípio Ativo</label><input id="mPrincipioAtivo" placeholder="Ex: Dipirona sódica"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Forma Farmacêutica</label>
+        <select id="mForma">
+          <option value="comprimido">Comprimido</option>
+          <option value="capsula">Cápsula</option>
+          <option value="xarope">Xarope</option>
+          <option value="injetavel">Injetável</option>
+          <option value="pomada">Pomada/Creme</option>
+          <option value="gotas">Gotas</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Concentração</label><input id="mConcentracao" placeholder="Ex: 500mg, 10mg/mL"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Registro ANVISA</label><input id="mRegistroAnvisa" placeholder="Nº do registro"></div>
+      <div class="form-group"><label>Código de Barras</label><input id="mCodigoBarras" placeholder="EAN/GTIN"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Estoque Atual</label><input id="mQtdAtual" type="number" step="0.001" min="0" value="0"></div>
+      <div class="form-group"><label>Estoque Mínimo</label><input id="mQtdMinima" type="number" step="0.001" min="0" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Preço de Venda (R$)</label><input id="mPrecoVenda" type="number" step="0.01" min="0" value="0"></div>
+      <div class="form-group"><label>Preço de Custo (R$)</label><input id="mPrecoCusto" type="number" step="0.01" min="0" value="0"></div>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+      <input type="checkbox" id="mControlado" style="width:auto">
+      <label style="margin:0">Medicamento controlado (Portaria 344/98)</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMedicamento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMedicamento()">Salvar Medicamento</button>
     </div>
   </div>
 </div>
@@ -999,6 +1062,57 @@ async function api(url, opts={}) {
 function getCsrf() {
   return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';
 }
+
+// ── Medicamentos (MedicamentoFarmacia — pilha real do PDV/e-commerce/iFood) ─
+async function carregarMedicamentos() {
+  const d = await api('/api/farmacia/estoque');
+  const meds = d.medicamentos || [];
+  const tb = document.getElementById('tbodyMedicamentos');
+  if (!meds.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum medicamento cadastrado</td></tr>'; return; }
+  const statusBadge = {ok: '<span class="badge badge-ok">✓ OK</span>', baixo: '<span class="badge badge-warn">⚠ Baixo</span>', critico: '<span class="badge badge-danger">🔴 Crítico</span>'};
+  tb.innerHTML = meds.map(m => `<tr>
+      <td><strong>${m.nome}</strong>${m.concentracao ? ` <small style="color:var(--muted)">${m.concentracao}</small>` : ''}${m.controlado ? ' <span class="badge badge-warn" style="font-size:10px">Controlado</span>' : ''}</td>
+      <td>${m.registro_anvisa || '—'}</td>
+      <td><strong>${m.quantidade_atual}</strong></td>
+      <td>R$ ${m.preco_venda.toFixed(2)}</td>
+      <td>${statusBadge[m.status] || m.status}</td>
+      <td>—</td>
+    </tr>`).join('');
+}
+
+function abrirModalMedicamento() {
+  ['mNome','mPrincipioAtivo','mConcentracao','mRegistroAnvisa','mCodigoBarras'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mForma').value = 'comprimido';
+  document.getElementById('mQtdAtual').value = '0';
+  document.getElementById('mQtdMinima').value = '0';
+  document.getElementById('mPrecoVenda').value = '0';
+  document.getElementById('mPrecoCusto').value = '0';
+  document.getElementById('mControlado').checked = false;
+  abrirModal('modalMedicamento');
+}
+
+async function salvarMedicamento() {
+  const nome = v('mNome');
+  if (!nome) return _t('Nome obrigatório', 'warn');
+  const body = {
+    nome,
+    principio_ativo: v('mPrincipioAtivo'),
+    forma_farmaceutica: v('mForma'),
+    concentracao: v('mConcentracao'),
+    registro_anvisa: v('mRegistroAnvisa'),
+    codigo_barras: v('mCodigoBarras'),
+    quantidade_atual: parseFloat(v('mQtdAtual') || 0),
+    quantidade_minima: parseFloat(v('mQtdMinima') || 0),
+    preco_venda: parseFloat(v('mPrecoVenda') || 0),
+    preco_custo: parseFloat(v('mPrecoCusto') || 0),
+    controlado: document.getElementById('mControlado').checked,
+  };
+  await api('/api/farmacia/estoque', {method: 'POST', body: JSON.stringify(body)});
+  fecharModal('modalMedicamento');
+  carregarMedicamentos();
+  _t('✓ Medicamento salvo', 'ok');
+}
+
 
 // ── KPIs ──────────────────────────────────────────────────────
 async function carregarKpis() {
@@ -1660,6 +1774,7 @@ function setTab(tab) {
   if (panel) panel.classList.add('active');
   scrollMainToTop();
   if (tab === 'estoque') carregarEstoque();
+  else if (tab === 'medicamentos') carregarMedicamentos();
   else if (tab === 'dispensacoes') carregarDispensacoes();
   else if (tab === 'movimentos') carregarMovimentos();
   else if (tab === 'fornecedores') carregarFornecedores();

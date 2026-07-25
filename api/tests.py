@@ -8061,3 +8061,78 @@ class PortabilidadeAnsFormalCicloCompletoTests(TestCase):
         )
         resp = outro_client.get("/api/plano-saude/portabilidade-ans/", secure=True)
         self.assertEqual(resp.json()["total"], 0)
+
+
+class MedicamentoFarmaciaCrudViaUiTests(TestCase):
+    """POST /api/farmacia/estoque (criação de MedicamentoFarmacia) já existia
+    completo no backend, mas nenhuma tela nunca chamava — apenas GET (leitura)
+    era exercitado por templates/farmacia_gestao.html. Confirma que a nova
+    aba 'Estoque de Medicamentos' tem um endpoint real por trás, e que o
+    medicamento criado é a MESMA pilha usada pelo PDV (dar_baixa_estoque_medicamento,
+    fix do item #3 desta auditoria) — não a pilha ItemFarmacia."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Farmácia CRUD UI",
+            email="farmacia-crud-ui@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "farmacia-crud-ui@teste.com", "senha": "123456",
+                "device_id": "dev-farm-crud", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_cria_medicamento_e_aparece_na_listagem(self):
+        resp = self.client.post(
+            "/api/farmacia/estoque",
+            data=json.dumps({
+                "nome": "Dipirona 500mg",
+                "principio_ativo": "Dipirona sódica",
+                "registro_anvisa": "1.0000.0000.000-0",
+                "quantidade_atual": 50,
+                "quantidade_minima": 10,
+                "preco_venda": 4.90,
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        med_id = resp.json()["medicamento"]["id"]
+
+        resp = self.client.get("/api/farmacia/estoque", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        nomes = [m["nome"] for m in resp.json()["medicamentos"]]
+        self.assertIn("Dipirona 500mg", nomes)
+
+    def test_medicamento_criado_e_a_mesma_pilha_usada_pelo_pdv(self):
+        """Fecha o ciclo com o fix do item #3: o medicamento cadastrado por
+        esta tela nova é decrementado de verdade por dar_baixa_estoque_medicamento
+        (o mesmo código usado pelo PDV/e-commerce/iFood)."""
+        from django.db import transaction
+        from decimal import Decimal
+        from .views_farmacia_pdv import dar_baixa_estoque_medicamento
+
+        resp = self.client.post(
+            "/api/farmacia/estoque",
+            data=json.dumps({"nome": "Paracetamol 750mg", "quantidade_atual": 20}),
+            content_type="application/json",
+            secure=True,
+        )
+        med_id = resp.json()["medicamento"]["id"]
+
+        with transaction.atomic():
+            dar_baixa_estoque_medicamento(self.empresa, medicamento_id=med_id, quantidade=Decimal("5"))
+
+        med = MedicamentoFarmacia.objects.get(pk=med_id)
+        self.assertEqual(med.quantidade_atual, Decimal("15.000"))
