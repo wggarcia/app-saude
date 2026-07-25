@@ -41,7 +41,7 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_betha_page(request):
-    return render(request, "hospital_betha.html")
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Betha (Integração ERP)"})
 
 
 # ─── Status ──────────────────────────────────────────────────────────────────

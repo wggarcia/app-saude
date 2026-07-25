@@ -71,7 +71,7 @@ def _registro_to_dict(r, detalhe=False):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_rhc_page(request):
-    return render(request, "hospital_rhc.html")
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "RHC (Registro Hospitalar de Câncer)"})
 
 
 # ── Registros — lista / criação ────────────────────────────────────────────────

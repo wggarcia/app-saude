@@ -49,7 +49,7 @@ def _consulta_to_dict(c):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_telemedicina_page(request):
-    return render(request, "hospital_telemedicina.html")
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Telemedicina"})
 
 
 # ─── Consultas ────────────────────────────────────────────────────────────────

@@ -85,7 +85,7 @@ def _ciclo_to_dict(c):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_cme_page(request):
-    return render(request, "hospital_cme.html", contexto_navegacao_setorial(request, "hospital"))
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "CME (Central de Materiais)"})
 
 
 # ─── API: Instrumentais ───────────────────────────────────────────────────────

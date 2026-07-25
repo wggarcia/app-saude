@@ -39,7 +39,7 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_custos_page(request):
-    return render(request, "hospital_custos.html")
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Custos Hospitalares"})
 
 
 # ─── Centros de Responsabilidade ─────────────────────────────────────────────

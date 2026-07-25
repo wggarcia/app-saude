@@ -7727,3 +7727,60 @@ class ClinicaVinculoEmpresaRoteamentoTests(TestCase):
             secure=True,
         )
         self.assertEqual(resp.status_code, 404)
+
+
+class HospitalPaginasOrfasSemTemplateTests(TestCase):
+    """As 5 páginas hospitalares roteadas (Betha/Custos/DRG/Epimed/Telemedicina)
+    apontavam para templates que não existem — 500 (TemplateDoesNotExist) para
+    qualquer conta que algum dia tenha a feature liberada. Nenhum pacote do
+    catálogo (api/planos.py) inclui essas 4 features hoje, então mockamos
+    empresa_tem_feature para simular o cenário de risco real (feature
+    liberada manualmente/demo/upgrade comercial) e confirmar que a página
+    renderiza (200), em vez de quebrar (500), quando isso acontecer."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Hospital Páginas Órfãs",
+            email="hospital-paginas-orfas@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "hospital-paginas-orfas@teste.com", "senha": "123456",
+                "device_id": "dev-hosp-orfas", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_paginas_roteadas_renderizam_sem_500_quando_feature_liberada(self):
+        from unittest.mock import patch
+        urls = [
+            "/hospital/betha/",
+            "/hospital/custos/",
+            "/hospital/drg/",
+            "/hospital/epimed/",
+            "/hospital/telemedicina/",
+        ]
+        with patch("api.access_control.empresa_tem_feature", return_value=True):
+            for url in urls:
+                resp = self.client.get(url, secure=True)
+                self.assertEqual(
+                    resp.status_code, 200,
+                    msg=f"{url} retornou {resp.status_code} (esperado 200 — verifique TemplateDoesNotExist)",
+                )
+                self.assertIn(b"constru", resp.content.lower())
+
+    def test_sem_feature_liberada_cai_no_upgrade_nao_no_500(self):
+        """Confirma o comportamento hoje (sem mock): nenhum pacote tem essas
+        features, então a resposta é 403 (upgrade necessário) — nunca 500,
+        mesmo antes do fix, para uma conta comum. Documenta a exposição real."""
+        resp = self.client.get("/hospital/betha/", secure=True)
+        self.assertEqual(resp.status_code, 403)

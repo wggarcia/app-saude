@@ -44,7 +44,7 @@ def _get_lavanderia_models():
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_lavanderia_page(request):
-    return render(request, "hospital_lavanderia.html")
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Lavanderia"})
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

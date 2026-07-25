@@ -103,7 +103,7 @@ def _triagem_to_dict(a):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_nutricao_page(request):
-    return render(request, "hospital_nutricao.html")
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Nutrição"})
 
 
 # ── Dietas ───────────────────────────────────────────────────────────────────

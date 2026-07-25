@@ -300,4 +300,4 @@ def api_same_kpis(request):
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_same_page(request):
     """Renderiza a interface do SAME hospitalar."""
-    return render(request, "hospital_same.html")
+    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "SAME (Arquivo de Prontuários)"})
