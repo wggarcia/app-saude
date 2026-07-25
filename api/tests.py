@@ -7637,7 +7637,7 @@ class ClinicaVinculoEmpresaRoteamentoTests(TestCase):
         # 1) Clínica cria vínculo/convite
         resp = clinica_client.post(
             "/api/clinica/vinculos",
-            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com"}),
+            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com", "empresa_nome": "Empresa Cliente Teste"}),
             content_type="application/json",
             secure=True,
         )
@@ -7681,7 +7681,7 @@ class ClinicaVinculoEmpresaRoteamentoTests(TestCase):
         clinica_client = self._login("clinica-vinculo@teste.com")
         resp = clinica_client.post(
             "/api/clinica/vinculos",
-            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com"}),
+            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com", "empresa_nome": "Empresa Cliente Teste"}),
             content_type="application/json",
             secure=True,
         )
@@ -7709,7 +7709,7 @@ class ClinicaVinculoEmpresaRoteamentoTests(TestCase):
         empresa_client = self._login("empresa-cliente-vinculo@teste.com")
         resp = clinica_client.post(
             "/api/clinica/vinculos",
-            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com"}),
+            data=json.dumps({"empresa_email": "empresa-cliente-vinculo@teste.com", "empresa_nome": "Empresa Cliente Teste"}),
             content_type="application/json",
             secure=True,
         )
@@ -7968,7 +7968,7 @@ class PortabilidadeAnsFormalCicloCompletoTests(TestCase):
             data=json.dumps({
                 "tipo": "entrada",
                 "beneficiario_nome": "João da Silva",
-                "cpf_beneficiario": "529.982.247-25",
+                "cpf_beneficiario": "52998224725",
                 "plano_origem": "Outra Operadora Saúde",
                 "plano_destino": "Plano Premium",
                 "carencias_cumpridas": True,
@@ -8054,7 +8054,7 @@ class PortabilidadeAnsFormalCicloCompletoTests(TestCase):
         self.client.post(
             "/api/plano-saude/portabilidade-ans/",
             data=json.dumps({
-                "beneficiario_nome": "Confidencial", "cpf_beneficiario": "529.982.247-25",
+                "beneficiario_nome": "Confidencial", "cpf_beneficiario": "52998224725",
             }),
             content_type="application/json",
             secure=True,

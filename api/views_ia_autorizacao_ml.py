@@ -404,7 +404,7 @@ import re
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@api_requer_feature("plano.autorizacao_ia")
+@api_requer_feature("plano.ia_autorizacao")
 def api_ia_analisar_ml(request):
     """
     Analisa uma guia com ML real e persiste o resultado.
@@ -479,7 +479,7 @@ def api_ia_analisar_ml(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@api_requer_feature("plano.autorizacao_ia")
+@api_requer_feature("plano.ia_autorizacao")
 def api_ia_retreinar(request):
     """
     Re-treina o modelo ML com o histórico acumulado.
@@ -509,7 +509,7 @@ def api_ia_retreinar(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@api_requer_feature("plano.autorizacao_ia")
+@api_requer_feature("plano.ia_autorizacao")
 def api_ia_modelo_info(request):
     """Retorna metadados do modelo ML atual."""
     empresa = _empresa_autenticada(request)
