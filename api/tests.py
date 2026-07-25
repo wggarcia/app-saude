@@ -8296,3 +8296,144 @@ class OncologiaCcihIdentidadePacienteTests(TestCase):
         self.assertIsNotNone(ciclo.identidade_id)
         self.assertEqual(ciclo.identidade_id, infeccao.identidade_id)
         self.assertEqual(IdentidadePaciente.objects.filter(empresa=self.empresa, cpf=cpf).count(), 1)
+
+
+class AnsConformidadeAssistidaTests(TestCase):
+    """Item #12: obrigações ANS (DIOPS/SIB) em modelo de conformidade
+    assistida. Garante que 'enviada/enviado à ANS' NUNCA é marcado sem
+    comprovante — só a transmissão real ou o registro de protocolo marcam.
+    Fecha o bug anterior em que o botão da UI só flipava o flag local
+    dizendo 'enviada' sem nada ter saído do sistema."""
+
+    def setUp(self):
+        from .models import DIOPSDeclaracao, SIBRegistro
+        self.DIOPS = DIOPSDeclaracao
+        self.SIB = SIBRegistro
+        self.empresa = Empresa.objects.create(
+            nome="Operadora ANS Conformidade",
+            email="operadora-ans-conf@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora-ans-conf@teste.com", "senha": "123456",
+                "device_id": "dev-ans-conf", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def _nova_diops(self):
+        return self.DIOPS.objects.create(
+            empresa=self.empresa, trimestre="20251", registro_ans="123456",
+            receita_operacional=1000, despesa_assistencial=800, vidas_ativas=10,
+            status="validada",
+        )
+
+    def _novo_sib(self):
+        return self.SIB.objects.create(
+            empresa=self.empresa, competencia="202501", registro_ans="123456",
+            vidas_incluidas=5, vidas_excluidas=1, total_vidas=100,
+        )
+
+    def test_diops_put_status_enviada_nao_marca_sem_protocolo(self):
+        """O caminho fake antigo: PUT {status:'enviada'} NÃO pode mais marcar."""
+        d = self._nova_diops()
+        resp = self.client.put(
+            f"/api/plano-saude/ans/diops/{d.id}",
+            data=json.dumps({"status": "enviada"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d.refresh_from_db()
+        self.assertNotEqual(d.status, "enviada")
+        self.assertIsNone(d.enviado_em)
+
+    def test_diops_registrar_protocolo_marca_enviada(self):
+        d = self._nova_diops()
+        resp = self.client.post(
+            f"/api/plano-saude/ans/diops/{d.id}/registrar-protocolo/",
+            data=json.dumps({"protocolo": "ANS-DIOPS-2025-0001"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d.refresh_from_db()
+        self.assertEqual(d.status, "enviada")
+        self.assertEqual(d.protocolo_ans, "ANS-DIOPS-2025-0001")
+        self.assertIsNotNone(d.enviado_em)
+
+    def test_diops_registrar_protocolo_vazio_400(self):
+        d = self._nova_diops()
+        resp = self.client.post(
+            f"/api/plano-saude/ans/diops/{d.id}/registrar-protocolo/",
+            data=json.dumps({"protocolo": "   "}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 400)
+        d.refresh_from_db()
+        self.assertNotEqual(d.status, "enviada")
+
+    def test_sib_put_enviado_nao_marca_sem_protocolo(self):
+        s = self._novo_sib()
+        resp = self.client.put(
+            f"/api/plano-saude/ans/sib/{s.id}",
+            data=json.dumps({"enviado": True}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        s.refresh_from_db()
+        self.assertFalse(s.enviado)
+        self.assertIsNone(s.enviado_em)
+
+    def test_sib_registrar_protocolo_marca_enviado(self):
+        s = self._novo_sib()
+        resp = self.client.post(
+            f"/api/plano-saude/ans/sib/{s.id}/registrar-protocolo/",
+            data=json.dumps({"protocolo": "ANS-SIB-2025-0009"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        s.refresh_from_db()
+        self.assertTrue(s.enviado)
+        self.assertEqual(s.protocolo_ans, "ANS-SIB-2025-0009")
+        self.assertIsNotNone(s.enviado_em)
+
+    def test_isolamento_por_empresa_registrar_protocolo(self):
+        """Outra operadora não pode registrar protocolo em DIOPS alheia."""
+        d = self._nova_diops()
+        outra = Empresa.objects.create(
+            nome="Outra Operadora ANS", email="outra-ans-conf@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="plano_saude_operadora", max_dispositivos=5, max_usuarios=5,
+        )
+        outro_client = Client()
+        outro_client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "outra-ans-conf@teste.com", "senha": "123456",
+                "device_id": "dev-outra-ans", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        resp = outro_client.post(
+            f"/api/plano-saude/ans/diops/{d.id}/registrar-protocolo/",
+            data=json.dumps({"protocolo": "X"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 404)
+        d.refresh_from_db()
+        self.assertNotEqual(d.status, "enviada")

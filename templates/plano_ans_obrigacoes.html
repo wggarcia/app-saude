@@ -217,9 +217,9 @@ tr:hover td{background:rgba(0,194,255,.03)}
         <select id="dStatus">
           <option value="em_elaboracao">Em elaboracao</option>
           <option value="validada">Validada</option>
-          <option value="enviada">Enviada ANS</option>
           <option value="retificada">Retificada</option>
         </select>
+        <span style="font-size:11px;color:var(--muted)">"Enviada ANS" é definida automaticamente ao transmitir/registrar protocolo.</span>
       </div>
     </div>
     <div class="modal-actions">
@@ -330,11 +330,11 @@ function renderDiops(lista) {
       <td>${fmt(d.despesa_assistencial)}</td>
       <td style="font-weight:700;color:${mlrColor}">${mlr}%</td>
       <td>${d.vidas_ativas.toLocaleString('pt-BR')}</td>
-      <td><span class="badge ${STATUS_BADGE[d.status]||'badge-gray'}">${STATUS_LABEL[d.status]||d.status}</span></td>
+      <td><span class="badge ${STATUS_BADGE[d.status]||'badge-gray'}">${STATUS_LABEL[d.status]||d.status}</span>${d.protocolo_ans ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">Protocolo: ${d.protocolo_ans}</div>` : ''}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="editarDiops(${d.id})">Editar</button>
         <a class="btn btn-ghost btn-sm" href="/api/plano-saude/ans/diops/${d.id}/xml" download>XML</a>
-        ${d.status !== 'enviada' ? `<button class="btn btn-ok btn-sm" onclick="enviarDiops(${d.id})">Enviar ANS</button>` : ''}
+        ${d.status !== 'enviada' ? `<button class="btn btn-ok btn-sm" onclick="abrirTransmitir('diops', ${d.id})">Transmitir</button>` : ''}
       </td>
     </tr>`;
   }
@@ -364,10 +364,10 @@ function renderSib(lista) {
       <td style="color:var(--danger)">-${s.vidas_excluidas}</td>
       <td style="color:var(--warn)">${s.vidas_alteradas}</td>
       <td style="font-weight:700">${s.total_vidas.toLocaleString('pt-BR')}</td>
-      <td><span class="badge ${s.enviado ? 'badge-ok' : 'badge-warn'}">${s.enviado ? 'Enviado' : 'Pendente'}</span></td>
+      <td><span class="badge ${s.enviado ? 'badge-ok' : 'badge-warn'}">${s.enviado ? 'Enviado' : 'Pendente'}</span>${s.protocolo_ans ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">Protocolo: ${s.protocolo_ans}</div>` : ''}</td>
       <td style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="editarSib(${s.id})">Editar</button>
-        ${!s.enviado ? `<button class="btn btn-ok btn-sm" onclick="enviarSib(${s.id})">Enviar</button>` : (s.enviado_em||'')}
+        ${!s.enviado ? `<button class="btn btn-ok btn-sm" onclick="abrirTransmitir('sib', ${s.id})">Transmitir</button>` : (s.enviado_em||'')}
       </td>
     </tr>`;
   }
@@ -425,14 +425,74 @@ async function salvarDiops() {
   else { const e = await r.json(); alert(e.erro || 'Erro.'); }
 }
 
-async function enviarDiops(id) {
-  if (!confirm('Marcar declaracao DIOPS como Enviada ANS?')) return;
-  const r = await fetch(`/api/plano-saude/ans/diops/${id}`, {
-    method:'PUT', credentials:'include',
-    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
-    body: JSON.stringify({status:'enviada'})
-  });
-  if (r.ok) { carregarDiops(); carregarKPIs(); }
+// ── Transmissão à ANS (conformidade assistida) ──────────────────────────────
+// Duas formas honestas, nunca marca "enviada" sem comprovante:
+//  A) automática via SIPWeb (se a operadora tiver credencial configurada)
+//  B) manual pelo portal oficial da ANS + registro do protocolo de retorno
+let transCtx = { tipo: null, id: null };
+
+function abrirTransmitir(tipo, id) {
+  transCtx = { tipo, id };
+  const isDiops = tipo === 'diops';
+  document.getElementById('transTitulo').textContent = isDiops ? 'Transmitir DIOPS à ANS' : 'Transmitir SIB à ANS';
+  document.getElementById('transDownload').style.display = isDiops ? 'block' : 'none';
+  if (isDiops) document.getElementById('transDownloadLink').href = `/api/plano-saude/ans/diops/${id}/xml`;
+  const portais = {
+    diops: 'https://www.gov.br/ans/pt-br/assuntos/operadoras/informacoes-e-avaliacoes-de-operadoras/diops',
+    sib:   'https://www.gov.br/ans/pt-br/assuntos/operadoras/espaco-da-operadora/envio-de-informacoes-a-ans'
+  };
+  document.getElementById('transPortalLink').href = portais[tipo];
+  document.getElementById('transProtocolo').value = '';
+  document.getElementById('transAutoMsg').textContent = '';
+  document.getElementById('transManualMsg').textContent = '';
+  document.getElementById('modalTransmitir').classList.add('open');
+}
+function fecharTransmitir() { document.getElementById('modalTransmitir').classList.remove('open'); }
+function recarregarTrans() { if (transCtx.tipo === 'diops') carregarDiops(); else carregarSib(); carregarKPIs(); }
+
+async function transmitirAuto() {
+  const msg = document.getElementById('transAutoMsg');
+  msg.style.color = 'var(--muted)'; msg.textContent = 'Transmitindo ao SIPWeb ANS…';
+  try {
+    const r = await fetch(`/api/plano-saude/ans/${transCtx.tipo}/${transCtx.id}/transmitir/`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: '{}'
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      msg.style.color = 'var(--ok)';
+      msg.textContent = '✓ Transmitido à ANS. Protocolo: ' + (d.protocolo || '(retorno sem protocolo)');
+      recarregarTrans();
+    } else {
+      msg.style.color = 'var(--danger)';
+      msg.textContent = (d.erro || 'Falha na transmissão automática.') + (d.instrucao ? ' — ' + d.instrucao : ' Use a Opção B (envio manual pelo portal da ANS).');
+    }
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Erro de conexão com o SIPWeb. Use a Opção B (envio manual pelo portal da ANS).';
+  }
+}
+
+async function registrarProtocolo() {
+  const protocolo = document.getElementById('transProtocolo').value.trim();
+  const msg = document.getElementById('transManualMsg');
+  if (!protocolo) { msg.style.color = 'var(--danger)'; msg.textContent = 'Informe o protocolo retornado pela ANS.'; return; }
+  try {
+    const r = await fetch(`/api/plano-saude/ans/${transCtx.tipo}/${transCtx.id}/registrar-protocolo/`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({ protocolo })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      msg.style.color = 'var(--ok)'; msg.textContent = '✓ Protocolo registrado. Marcado como enviado à ANS.';
+      recarregarTrans();
+      setTimeout(fecharTransmitir, 900);
+    } else {
+      msg.style.color = 'var(--danger)'; msg.textContent = d.erro || 'Erro ao registrar protocolo.';
+    }
+  } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = 'Erro de conexão.'; }
 }
 
 function abrirModalSib() {
@@ -480,16 +540,6 @@ async function salvarSib() {
   });
   if (r.ok) { fecharModalSib(); carregarSib(); carregarKPIs(); }
   else { const e = await r.json(); alert(e.erro || 'Erro.'); }
-}
-
-async function enviarSib(id) {
-  if (!confirm('Confirmar envio do registro SIB para a ANS?')) return;
-  const r = await fetch(`/api/plano-saude/ans/sib/${id}`, {
-    method:'PUT', credentials:'include',
-    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
-    body: JSON.stringify({enviado: true})
-  });
-  if (r.ok) { carregarSib(); carregarKPIs(); }
 }
 
 function getCookie(name) {
@@ -651,6 +701,50 @@ async function testarTissPlano() {
       <button class="btn btn-primary" onclick="salvarTissPlano()">Salvar</button>
     </div>
     <div id="tissMsgTeste" style="font-size:12px;margin-top:8px;text-align:right"></div>
+  </div>
+</div>
+
+<!-- Modal: Transmitir à ANS (conformidade assistida) -->
+<div class="modal-bg" id="modalTransmitir">
+  <div class="modal">
+    <h3 id="transTitulo">Transmitir à ANS</h3>
+    <div class="info-card" style="margin-bottom:18px">
+      <div class="info-card-title">Como a transmissão à ANS funciona</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.5">
+        O sistema prepara os dados no formato oficial. A transmissão pode ser feita de duas formas — escolha uma:
+      </div>
+    </div>
+
+    <!-- Passo download (só DIOPS) -->
+    <div id="transDownload" style="margin-bottom:18px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Arquivo oficial DIOPS 3.0 (IN ANS 77/2022), já validado com os dados da carteira:</div>
+      <a class="btn btn-ghost" id="transDownloadLink" download>⬇️ Baixar XML DIOPS 3.0</a>
+    </div>
+
+    <!-- Opção A: automática -->
+    <div style="padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">Opção A — Transmissão automática (SIPWeb)</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Requer as credenciais ANS SIPWeb desta operadora configuradas no topo desta página.</div>
+      <button class="btn btn-primary btn-sm" onclick="transmitirAuto()">🚀 Transmitir automaticamente</button>
+      <div id="transAutoMsg" style="font-size:12px;margin-top:8px"></div>
+    </div>
+
+    <!-- Opção B: manual + protocolo -->
+    <div style="padding:14px 16px;border:1px solid var(--border);border-radius:10px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">Opção B — Enviei pelo portal oficial da ANS</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+        Transmita pelo <a id="transPortalLink" href="#" target="_blank" rel="noopener" style="color:var(--accent)">portal/aplicativo oficial da ANS ↗</a> e cole aqui o número de protocolo retornado — fica registrado como comprovante de envio.
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <input type="text" id="transProtocolo" placeholder="Protocolo de retorno da ANS">
+      </div>
+      <button class="btn btn-ok btn-sm" onclick="registrarProtocolo()">✓ Registrar protocolo</button>
+      <div id="transManualMsg" style="font-size:12px;margin-top:8px"></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="fecharTransmitir()">Fechar</button>
+    </div>
   </div>
 </div>
 

@@ -7702,6 +7702,10 @@ class DIOPSDeclaracao(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="em_elaboracao")
     xml_gerado = models.TextField(blank=True)
     enviado_em = models.DateTimeField(null=True, blank=True)
+    protocolo_ans = models.CharField(
+        max_length=60, blank=True, default="",
+        help_text="Protocolo de retorno da ANS — só preenchido após transmissão real (automática SIPWeb ou registro manual do envio pelo portal ANS)",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["-trimestre"]
@@ -7717,6 +7721,10 @@ class SIBRegistro(models.Model):
     total_vidas = models.PositiveIntegerField(default=0)
     enviado = models.BooleanField(default=False)
     enviado_em = models.DateTimeField(null=True, blank=True)
+    protocolo_ans = models.CharField(
+        max_length=60, blank=True, default="",
+        help_text="Protocolo de retorno da ANS — só preenchido após transmissão real (automática SIPWeb ou registro manual do envio pelo portal ANS)",
+    )
     retorno_ans = models.JSONField(default=dict, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     class Meta:

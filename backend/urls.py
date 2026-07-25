@@ -1010,9 +1010,11 @@ from api.views_plano_ans import (
     api_diops_lista,
     api_diops_detalhe,
     api_diops_gerar_xml,
+    api_diops_registrar_protocolo,
     api_sib_lista,
     api_sib_detalhe,
     api_sib_transmitir,
+    api_sib_registrar_protocolo,
     api_ans_kpis,
 )
 from api.views_diops_real import (
@@ -1979,9 +1981,11 @@ urlpatterns = [
     path('api/plano-saude/ans/diops/<int:declaracao_id>/gerar-real/', api_diops_gerar_real),
     path('api/plano-saude/ans/diops/<int:declaracao_id>/download/', api_diops_download_xml),
     path('api/plano-saude/ans/diops/<int:declaracao_id>/transmitir/', api_diops_transmitir_ans),
+    path('api/plano-saude/ans/diops/<int:decl_id>/registrar-protocolo/', api_diops_registrar_protocolo),
     path('api/plano-saude/ans/sib', api_sib_lista),
     path('api/plano-saude/ans/sib/<int:sib_id>', api_sib_detalhe),
     path('api/plano-saude/ans/sib/<int:sib_id>/transmitir/', api_sib_transmitir),
+    path('api/plano-saude/ans/sib/<int:sib_id>/registrar-protocolo/', api_sib_registrar_protocolo),
     path('api/plano-saude/ia/kpis', api_ia_kpis),
     path('api/plano-saude/ia/autorizacoes', api_ia_autorizacoes),
     path('api/plano-saude/ia/analisar', api_ia_analisar),

@@ -417,15 +417,24 @@ def api_diops_transmitir_ans(request, declaracao_id):
 
         if resp.status_code in (200, 201):
             agora = timezone.now()
+            # Tenta extrair o protocolo do retorno (JSON ou texto)
+            protocolo = ""
+            try:
+                j = resp.json()
+                protocolo = str(j.get("protocolo") or j.get("nrProtocolo") or "")
+            except Exception:
+                protocolo = ""
             decl.status = "enviada"
             decl.enviado_em = agora
-            decl.save(update_fields=["status", "enviado_em"])
+            decl.protocolo_ans = protocolo[:60]
+            decl.save(update_fields=["status", "enviado_em", "protocolo_ans"])
             # Atualiza metadados de transmissão na credencial da operadora
             cred.ans_ultima_transmissao = agora
             cred.save(update_fields=["ans_ultima_transmissao"])
             return JsonResponse({
                 "ok": True,
                 "status_http": resp.status_code,
+                "protocolo": protocolo,
                 "retorno_ans": resp.text[:2000],
                 "transmitido_em": agora.isoformat(),
             })

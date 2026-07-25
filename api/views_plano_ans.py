@@ -80,6 +80,7 @@ def _diops_dict(d):
         "status": d.status,
         "status_label": dict(DIOPSDeclaracao.STATUS_CHOICES).get(d.status, d.status),
         "xml_gerado": bool(d.xml_gerado),
+        "protocolo_ans": d.protocolo_ans,
         "enviado_em": d.enviado_em.strftime("%d/%m/%Y %H:%M") if d.enviado_em else None,
         "criado_em": d.criado_em.strftime("%d/%m/%Y"),
     }
@@ -95,6 +96,7 @@ def _sib_dict(s):
         "vidas_alteradas": s.vidas_alteradas,
         "total_vidas": s.total_vidas,
         "enviado": s.enviado,
+        "protocolo_ans": s.protocolo_ans,
         "enviado_em": s.enviado_em.strftime("%d/%m/%Y %H:%M") if s.enviado_em else None,
         "criado_em": s.criado_em.strftime("%d/%m/%Y"),
     }
@@ -204,21 +206,58 @@ def api_diops_detalhe(request, decl_id):
             data = json.loads(request.body)
         except Exception:
             return JsonResponse({"erro": "JSON inválido"}, status=400)
-        for field in ("registro_ans", "status"):
-            if field in data:
-                setattr(d, field, data[field])
+        if "registro_ans" in data:
+            d.registro_ans = data["registro_ans"]
+        # Status: 'enviada' NÃO pode ser setada por edição manual — só a
+        # transmissão real (api_diops_transmitir_ans) ou o registro de
+        # protocolo (api_diops_registrar_protocolo) marcam como enviada, para
+        # não haver "enviada à ANS" sem comprovante de transmissão.
+        if "status" in data and data["status"] != "enviada":
+            d.status = data["status"]
         for field in ("receita_operacional", "despesa_assistencial", "despesa_administrativa", "resultado_periodo"):
             if field in data:
                 setattr(d, field, float(data[field]))
         if "vidas_ativas" in data:
             d.vidas_ativas = int(data["vidas_ativas"])
-        # Marcar como enviada
-        if data.get("status") == "enviada" and not d.enviado_em:
-            d.enviado_em = timezone.now()
         d.save()
         return JsonResponse({"declaracao": _diops_dict(d)})
 
     return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_diops_registrar_protocolo(request, decl_id):
+    """Registra o protocolo de retorno de uma transmissão DIOPS feita
+    MANUALMENTE pela operadora no portal/aplicativo oficial da ANS.
+
+    Este é o caminho honesto de "eu enviei pela ANS, aqui está o comprovante":
+    exige o protocolo, e só então marca status='enviada' + enviado_em.
+
+    POST /api/plano-saude/ans/diops/<id>/registrar-protocolo/
+    { "protocolo": "..." }
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        d = DIOPSDeclaracao.objects.get(id=decl_id, empresa=empresa)
+    except DIOPSDeclaracao.DoesNotExist:
+        return JsonResponse({"erro": "Declaração não encontrada"}, status=404)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    protocolo = (data.get("protocolo") or "").strip()
+    if not protocolo:
+        return JsonResponse({"erro": "Protocolo obrigatório. Informe o número de protocolo retornado pela ANS no envio."}, status=400)
+    d.protocolo_ans = protocolo[:60]
+    d.status = "enviada"
+    if not d.enviado_em:
+        d.enviado_em = timezone.now()
+    d.save(update_fields=["protocolo_ans", "status", "enviado_em"])
+    return JsonResponse({"declaracao": _diops_dict(d)})
 
 
 def api_diops_gerar_xml(request, decl_id):
@@ -332,13 +371,47 @@ def api_sib_detalhe(request, sib_id):
                 setattr(s, field, int(data[field]))
         if "registro_ans" in data:
             s.registro_ans = data["registro_ans"]
-        if data.get("enviado"):
-            s.enviado = True
-            s.enviado_em = timezone.now()
+        # 'enviado' NÃO pode ser marcado por edição manual — só a transmissão
+        # real (api_sib_transmitir) ou o registro de protocolo
+        # (api_sib_registrar_protocolo) marcam como enviado, para não haver
+        # "enviado à ANS" sem comprovante.
         s.save()
         return JsonResponse({"registro": _sib_dict(s)})
 
     return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_sib_registrar_protocolo(request, sib_id):
+    """Registra o protocolo de retorno de uma transmissão SIB feita
+    MANUALMENTE pela operadora no aplicativo/portal oficial da ANS.
+    Exige o protocolo e só então marca enviado=True + enviado_em.
+
+    POST /api/plano-saude/ans/sib/<id>/registrar-protocolo/
+    { "protocolo": "..." }
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        s = SIBRegistro.objects.get(id=sib_id, empresa=empresa)
+    except SIBRegistro.DoesNotExist:
+        return JsonResponse({"erro": "Registro SIB não encontrado"}, status=404)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    protocolo = (data.get("protocolo") or "").strip()
+    if not protocolo:
+        return JsonResponse({"erro": "Protocolo obrigatório. Informe o número de protocolo retornado pela ANS no envio."}, status=400)
+    s.protocolo_ans = protocolo[:60]
+    s.enviado = True
+    if not s.enviado_em:
+        s.enviado_em = timezone.now()
+    s.save(update_fields=["protocolo_ans", "enviado", "enviado_em"])
+    return JsonResponse({"registro": _sib_dict(s)})
 
 
 # ── API: SIB Transmissão ──────────────────────────────────────────────────────
@@ -427,16 +500,16 @@ def api_sib_transmitir(request, sib_id):
             retorno = {"texto": resp.text[:500]}
 
         if resp.status_code in (200, 201):
+            protocolo = retorno.get("protocolo") or retorno.get("nrProtocolo", "")
             s.enviado    = True
             s.enviado_em = timezone.now()
             s.retorno_ans = retorno
-            s.save(update_fields=["enviado", "enviado_em", "retorno_ans"])
+            s.protocolo_ans = str(protocolo)[:60]
+            s.save(update_fields=["enviado", "enviado_em", "retorno_ans", "protocolo_ans"])
 
             # Atualiza data de última transmissão ANS
             cred.ans_ultima_transmissao = timezone.now()
             cred.save(update_fields=["ans_ultima_transmissao"])
-
-            protocolo = retorno.get("protocolo") or retorno.get("nrProtocolo", "")
             return JsonResponse({
                 "ok":         True,
                 "sib_id":     s.id,
