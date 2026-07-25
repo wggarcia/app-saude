@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
-from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo
+from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 try:
     from .models import IntegracaoBetha, CredenciaisIntegracoes
@@ -47,6 +47,7 @@ def hospital_betha_page(request):
 # ─── Status ──────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.administrativo")
 def api_betha_status(request):
     emp = _hosp(request)
     if not emp:
@@ -129,6 +130,7 @@ def _sincronizar(emp, tipo):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.administrativo")
 def api_betha_sincronizar_almoxarifado(request):
     emp = _hosp(request)
     if not emp:
@@ -140,6 +142,7 @@ def api_betha_sincronizar_almoxarifado(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.administrativo")
 def api_betha_sincronizar_compras(request):
     emp = _hosp(request)
     if not emp:
@@ -201,6 +204,7 @@ def api_betha_webhook(request):
 # ─── Fila de Integrações ─────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.administrativo")
 def api_betha_fila(request):
     emp = _hosp(request)
     if not emp:
@@ -229,6 +233,7 @@ def api_betha_fila(request):
 # ─── KPIs ─────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.administrativo")
 def api_betha_kpis(request):
     emp = _hosp(request)
     if not emp:

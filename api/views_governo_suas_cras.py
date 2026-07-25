@@ -21,6 +21,17 @@ def _gov(request):
     return emp
 
 
+def _pertence(model, id_, empresa):
+    """True se `id_` for None/vazio (campo opcional) OU se o registro existir
+    E pertencer à empresa. Usado para validar toda FK secundária recebida crua
+    do client antes de gravar — sem isso, um tenant pode referenciar o ID de
+    outro tenant e o dado relacionado (nome de família/unidade) vaza nas
+    respostas subsequentes."""
+    if not id_:
+        return True
+    return model.objects.filter(id=id_, empresa=empresa).exists()
+
+
 # ─── HELPERS ────────────────────────────────────────────────────────────────
 
 def _cras_dict(u):
@@ -212,11 +223,14 @@ def api_cras_familias(request):
 
     if request.method == "POST":
         from .utils import validar_cpf_cadastro
+        from .models import UnidadeCRAS
         body = json.loads(request.body)
         cpf = body.get("responsavel_cpf", "").replace(".", "").replace("-", "").strip()
         ok, erro = validar_cpf_cadastro(cpf, empresa)
         if not ok:
             return JsonResponse({"erro": erro}, status=400)
+        if not _pertence(UnidadeCRAS, body.get("unidade_cras_id"), empresa):
+            return JsonResponse({"erro": "Unidade CRAS não encontrada para esta empresa"}, status=400)
 
         f = FamiliaCRAS.objects.create(
             empresa=empresa,
@@ -278,6 +292,9 @@ def api_cras_familia_detalhe(request, familia_id):
         if "marcador_bpc" in body:
             f.marcador_bpc = bool(body["marcador_bpc"])
         if "unidade_cras_id" in body:
+            from .models import UnidadeCRAS
+            if not _pertence(UnidadeCRAS, body["unidade_cras_id"], empresa):
+                return JsonResponse({"erro": "Unidade CRAS não encontrada para esta empresa"}, status=400)
             f.unidade_cras_id = body["unidade_cras_id"] or None
         f.save()
         return JsonResponse({"status": "atualizado", **_familia_dict(f)})
@@ -322,7 +339,12 @@ def api_cras_atendimentos(request):
         })
 
     if request.method == "POST":
+        from .models import FamiliaCRAS, UnidadeCRAS
         body = json.loads(request.body)
+        if not FamiliaCRAS.objects.filter(id=body["familia_id"], empresa=empresa).exists():
+            return JsonResponse({"erro": "Família CRAS não encontrada para esta empresa"}, status=400)
+        if not _pertence(UnidadeCRAS, body.get("unidade_cras_id"), empresa):
+            return JsonResponse({"erro": "Unidade CRAS não encontrada para esta empresa"}, status=400)
         a = AtendimentoCRAS.objects.create(
             empresa=empresa,
             familia_id=body["familia_id"],
@@ -408,7 +430,10 @@ def api_cras_visitas(request):
         })
 
     if request.method == "POST":
+        from .models import FamiliaCRAS
         body = json.loads(request.body)
+        if not FamiliaCRAS.objects.filter(id=body["familia_id"], empresa=empresa).exists():
+            return JsonResponse({"erro": "Família CRAS não encontrada para esta empresa"}, status=400)
         v = VisitaDomiciliarSocial.objects.create(
             empresa=empresa,
             familia_id=body["familia_id"],

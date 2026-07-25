@@ -439,19 +439,25 @@ def api_sib_transmitir(request, sib_id):
     if err:
         return err
 
-    # Rate limiting: max 1 transmissão SIB por registro por hora (evita DoS no SIPWeb ANS)
-    rl_key = f"sib_transmit:{sib_id}"
+    # Checa posse ANTES de tocar no rate-limit — senão qualquer tenant
+    # autenticado podia "poluir" o rate-limit de um sib_id de OUTRA operadora
+    # só chutando IDs sequenciais, causando 429 nela sem nunca ter tentado
+    # transmitir (DoS cross-tenant num prazo regulatório rígido).
+    try:
+        s = SIBRegistro.objects.get(id=sib_id, empresa=empresa)
+    except SIBRegistro.DoesNotExist:
+        return JsonResponse({"erro": "Registro SIB não encontrado"}, status=404)
+
+    # Rate limiting: max 1 transmissão SIB por registro por hora (evita DoS no
+    # SIPWeb ANS). Chave inclui a empresa: mesmo que sib_id seja adivinhado,
+    # só o rate-limit da própria operadora dona do registro é afetado.
+    rl_key = f"sib_transmit:{empresa.id}:{sib_id}"
     if cache.get(rl_key):
         return JsonResponse(
             {"erro": "Este registro SIB já foi transmitido recentemente. Aguarde 1 hora antes de retransmitir."},
             status=429,
         )
     cache.set(rl_key, True, timeout=3600)
-
-    try:
-        s = SIBRegistro.objects.get(id=sib_id, empresa=empresa)
-    except SIBRegistro.DoesNotExist:
-        return JsonResponse({"erro": "Registro SIB não encontrado"}, status=404)
 
     if s.enviado:
         return JsonResponse({"erro": "Registro já foi transmitido à ANS."}, status=400)

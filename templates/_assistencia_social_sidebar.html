@@ -1,0 +1,9 @@
+<aside class="sidebar">
+  <div class="logo">Assistência Social</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link{% if request.path == '/assistencia-social/' or request.path == '/dashboard-assistencia/' %} active{% endif %}" href="/assistencia-social/"><span>&#128202;</span> Dashboard</a>
+  <a class="nav-link{% if request.path == '/assistencia-social/gestao/' %} active{% endif %}" href="/assistencia-social/gestao/"><span>&#127968;</span> Gestão SUAS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
+  </div>
+</aside>

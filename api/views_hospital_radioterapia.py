@@ -525,6 +525,15 @@ def api_radioterapia_sessao_atualizar(request, pk: int):
         return JsonResponse({"erro": "Erro interno"}, status=500)
 
 
+def api_radioterapia_sessao(request, pk: int):
+    """Dispatcher GET/PATCH /api/hospital/radioterapia/sessoes/<pk> —
+    o URLconf só pode apontar uma URL para uma view, então este dispatcher
+    encaminha para o detalhe (GET) ou a atualização (PATCH)."""
+    if request.method == "PATCH":
+        return api_radioterapia_sessao_atualizar(request, pk)
+    return api_radioterapia_sessao_detalhe(request, pk)
+
+
 # ─── GET /api/hospital/radioterapia/kpis ─────────────────────────────────────
 
 @api_requer_feature("hospital.oncologia")

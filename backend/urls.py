@@ -947,6 +947,79 @@ from api.views_hospital_oncologia import (
     api_onco_kpis,
     hospital_oncologia_page,
 )
+from api.views_hospital_manutencao import (
+    hospital_manutencao_page,
+    api_manutencao_ordens,
+    api_manutencao_ordem_detalhe,
+    api_manutencao_ordem_concluir,
+    api_manutencao_ordem_cancelar,
+    api_manutencao_kpis,
+)
+from api.views_hospital_nhve import (
+    hospital_nhve_page,
+    api_nhve_notificacoes,
+    api_nhve_notificacao_detalhe,
+    api_nhve_confirmar,
+    api_nhve_descartar,
+    api_nhve_notificar_sinan,
+    api_nhve_kpis,
+)
+from api.views_hospital_nutricao import (
+    hospital_nutricao_page,
+    api_nutricao_dietas,
+    api_nutricao_dieta_detalhe,
+    api_nutricao_triagens,
+    api_nutricao_kpis,
+)
+from api.views_hospital_qualidade import (
+    hospital_qualidade_page,
+    api_qualidade_incidentes,
+    api_qualidade_incidente_detalhe,
+    api_qualidade_incidente_encerrar,
+    api_qualidade_indicadores,
+    api_qualidade_kpis,
+)
+from api.views_hospital_radioterapia import (
+    hospital_radioterapia_page,
+    api_radioterapia_hl7_receber,
+    api_radioterapia_sessoes,
+    api_radioterapia_sessao,
+    api_radioterapia_kpis,
+)
+from api.views_hospital_rhc import (
+    hospital_rhc_page,
+    api_rhc_registros,
+    api_rhc_registro_detalhe,
+    api_rhc_tratar,
+    api_rhc_exportar,
+    api_rhc_kpis,
+)
+from api.views_hospital_same import (
+    hospital_same_page,
+    api_same_pacientes,
+    api_same_paciente_detalhe,
+    api_same_emprestimos,
+    api_same_emprestimo_devolver,
+    api_same_kpis,
+)
+from api.views_hospital_lavanderia import (
+    hospital_lavanderia_page,
+    api_lavanderia_itens,
+    api_lavanderia_item_detail,
+    api_lavanderia_ciclos,
+    api_lavanderia_saldo,
+    api_lavanderia_kpis,
+)
+from api.views_hospital_cme import (
+    hospital_cme_page,
+    api_cme_instrumentais,
+    api_cme_instrumental_detalhe,
+    api_cme_ciclos,
+    api_cme_ciclo_detalhe,
+    api_cme_ciclo_uso,
+    api_cme_vencimentos,
+    api_cme_kpis,
+)
 from api.views_plano_tuss import (
     api_tuss_procedimentos,
     api_rol_coberturas,
@@ -1261,6 +1334,15 @@ urlpatterns = [
     path('hospital/hemoterapia/', hospital_hemoterapia_page),
     path('hospital/obstetrico/', hospital_obstetrico_page),
     path('hospital/oncologia/', hospital_oncologia_page),
+    path('hospital/manutencao/', hospital_manutencao_page),
+    path('hospital/nhve/', hospital_nhve_page),
+    path('hospital/nutricao/', hospital_nutricao_page),
+    path('hospital/qualidade/', hospital_qualidade_page),
+    path('hospital/radioterapia/', hospital_radioterapia_page),
+    path('hospital/rhc/', hospital_rhc_page),
+    path('hospital/same/', hospital_same_page),
+    path('hospital/lavanderia/', hospital_lavanderia_page),
+    path('hospital/cme/', hospital_cme_page),
     path('hospital/opme/', hospital_opme_page),
     path('hospital/lis/', hospital_lis_page),
     path('hospital/imagem/', hospital_imagem_page),
@@ -2781,6 +2863,116 @@ urlpatterns = [
     path('api/hospital/oncologia/apacs/<int:apac_id>/',         api_onco_apac_detalhe),
     path('api/hospital/oncologia/kpis',                         api_onco_kpis),
     path('api/hospital/oncologia/kpis/',                        api_onco_kpis),
+
+    # ── Manutenção Predial/Equipamentos ───────────────────────────────────────
+    path('api/hospital/manutencao/ordens',                      api_manutencao_ordens),
+    path('api/hospital/manutencao/ordens/',                     api_manutencao_ordens),
+    path('api/hospital/manutencao/ordens/<int:pk>',             api_manutencao_ordem_detalhe),
+    path('api/hospital/manutencao/ordens/<int:pk>/',            api_manutencao_ordem_detalhe),
+    path('api/hospital/manutencao/ordens/<int:pk>/concluir',    api_manutencao_ordem_concluir),
+    path('api/hospital/manutencao/ordens/<int:pk>/concluir/',   api_manutencao_ordem_concluir),
+    path('api/hospital/manutencao/ordens/<int:pk>/cancelar',    api_manutencao_ordem_cancelar),
+    path('api/hospital/manutencao/ordens/<int:pk>/cancelar/',   api_manutencao_ordem_cancelar),
+    path('api/hospital/manutencao/kpis',                        api_manutencao_kpis),
+    path('api/hospital/manutencao/kpis/',                       api_manutencao_kpis),
+
+    # ── NHVE — Notificação Compulsória ────────────────────────────────────────
+    path('api/hospital/nhve/notificacoes',                      api_nhve_notificacoes),
+    path('api/hospital/nhve/notificacoes/',                     api_nhve_notificacoes),
+    path('api/hospital/nhve/notificacoes/<int:pk>',             api_nhve_notificacao_detalhe),
+    path('api/hospital/nhve/notificacoes/<int:pk>/',            api_nhve_notificacao_detalhe),
+    path('api/hospital/nhve/notificacoes/<int:pk>/confirmar',   api_nhve_confirmar),
+    path('api/hospital/nhve/notificacoes/<int:pk>/confirmar/',  api_nhve_confirmar),
+    path('api/hospital/nhve/notificacoes/<int:pk>/descartar',   api_nhve_descartar),
+    path('api/hospital/nhve/notificacoes/<int:pk>/descartar/',  api_nhve_descartar),
+    path('api/hospital/nhve/notificacoes/<int:pk>/notificar-sinan',  api_nhve_notificar_sinan),
+    path('api/hospital/nhve/notificacoes/<int:pk>/notificar-sinan/', api_nhve_notificar_sinan),
+    path('api/hospital/nhve/kpis',                              api_nhve_kpis),
+    path('api/hospital/nhve/kpis/',                             api_nhve_kpis),
+
+    # ── Nutrição Clínica ──────────────────────────────────────────────────────
+    path('api/hospital/nutricao/dietas',                        api_nutricao_dietas),
+    path('api/hospital/nutricao/dietas/',                       api_nutricao_dietas),
+    path('api/hospital/nutricao/dietas/<int:pk>',               api_nutricao_dieta_detalhe),
+    path('api/hospital/nutricao/dietas/<int:pk>/',              api_nutricao_dieta_detalhe),
+    path('api/hospital/nutricao/triagens',                      api_nutricao_triagens),
+    path('api/hospital/nutricao/triagens/',                     api_nutricao_triagens),
+    path('api/hospital/nutricao/kpis',                          api_nutricao_kpis),
+    path('api/hospital/nutricao/kpis/',                         api_nutricao_kpis),
+
+    # ── Qualidade / Núcleo de Segurança do Paciente (NSP) ─────────────────────
+    path('api/hospital/qualidade/incidentes',                   api_qualidade_incidentes),
+    path('api/hospital/qualidade/incidentes/',                  api_qualidade_incidentes),
+    path('api/hospital/qualidade/incidentes/<int:pk>',          api_qualidade_incidente_detalhe),
+    path('api/hospital/qualidade/incidentes/<int:pk>/',         api_qualidade_incidente_detalhe),
+    path('api/hospital/qualidade/incidentes/<int:pk>/encerrar', api_qualidade_incidente_encerrar),
+    path('api/hospital/qualidade/incidentes/<int:pk>/encerrar/',api_qualidade_incidente_encerrar),
+    path('api/hospital/qualidade/indicadores',                  api_qualidade_indicadores),
+    path('api/hospital/qualidade/indicadores/',                 api_qualidade_indicadores),
+    path('api/hospital/qualidade/kpis',                         api_qualidade_kpis),
+    path('api/hospital/qualidade/kpis/',                        api_qualidade_kpis),
+
+    # ── Radioterapia ───────────────────────────────────────────────────────────
+    path('api/hospital/radioterapia/hl7/receber',               api_radioterapia_hl7_receber),
+    path('api/hospital/radioterapia/hl7/receber/',              api_radioterapia_hl7_receber),
+    path('api/hospital/radioterapia/sessoes',                   api_radioterapia_sessoes),
+    path('api/hospital/radioterapia/sessoes/',                  api_radioterapia_sessoes),
+    path('api/hospital/radioterapia/sessoes/<int:pk>',          api_radioterapia_sessao),
+    path('api/hospital/radioterapia/sessoes/<int:pk>/',         api_radioterapia_sessao),
+    path('api/hospital/radioterapia/kpis',                      api_radioterapia_kpis),
+    path('api/hospital/radioterapia/kpis/',                     api_radioterapia_kpis),
+
+    # ── RHC — Registro Hospitalar de Câncer ───────────────────────────────────
+    path('api/hospital/rhc/registros',                          api_rhc_registros),
+    path('api/hospital/rhc/registros/',                         api_rhc_registros),
+    path('api/hospital/rhc/registros/<int:pk>',                 api_rhc_registro_detalhe),
+    path('api/hospital/rhc/registros/<int:pk>/',                api_rhc_registro_detalhe),
+    path('api/hospital/rhc/registros/<int:pk>/tratar',          api_rhc_tratar),
+    path('api/hospital/rhc/registros/<int:pk>/tratar/',         api_rhc_tratar),
+    path('api/hospital/rhc/exportar',                           api_rhc_exportar),
+    path('api/hospital/rhc/exportar/',                          api_rhc_exportar),
+    path('api/hospital/rhc/kpis',                               api_rhc_kpis),
+    path('api/hospital/rhc/kpis/',                              api_rhc_kpis),
+
+    # ── SAME — Serviço de Arquivo Médico e Estatístico ────────────────────────
+    path('api/hospital/same/pacientes',                         api_same_pacientes),
+    path('api/hospital/same/pacientes/',                        api_same_pacientes),
+    path('api/hospital/same/pacientes/<int:pk>',                api_same_paciente_detalhe),
+    path('api/hospital/same/pacientes/<int:pk>/',               api_same_paciente_detalhe),
+    path('api/hospital/same/emprestimos',                       api_same_emprestimos),
+    path('api/hospital/same/emprestimos/',                      api_same_emprestimos),
+    path('api/hospital/same/emprestimos/<int:pk>/devolver',     api_same_emprestimo_devolver),
+    path('api/hospital/same/emprestimos/<int:pk>/devolver/',    api_same_emprestimo_devolver),
+    path('api/hospital/same/kpis',                               api_same_kpis),
+    path('api/hospital/same/kpis/',                              api_same_kpis),
+
+    # ── Lavanderia / Rouparia ──────────────────────────────────────────────────
+    path('api/hospital/lavanderia/itens',                       api_lavanderia_itens),
+    path('api/hospital/lavanderia/itens/',                      api_lavanderia_itens),
+    path('api/hospital/lavanderia/itens/<int:pk>',              api_lavanderia_item_detail),
+    path('api/hospital/lavanderia/itens/<int:pk>/',             api_lavanderia_item_detail),
+    path('api/hospital/lavanderia/ciclos',                      api_lavanderia_ciclos),
+    path('api/hospital/lavanderia/ciclos/',                     api_lavanderia_ciclos),
+    path('api/hospital/lavanderia/saldo',                       api_lavanderia_saldo),
+    path('api/hospital/lavanderia/saldo/',                      api_lavanderia_saldo),
+    path('api/hospital/lavanderia/kpis',                        api_lavanderia_kpis),
+    path('api/hospital/lavanderia/kpis/',                       api_lavanderia_kpis),
+
+    # ── CME — Central de Materiais e Esterilização ────────────────────────────
+    path('api/hospital/cme/instrumentais',                      api_cme_instrumentais),
+    path('api/hospital/cme/instrumentais/',                     api_cme_instrumentais),
+    path('api/hospital/cme/instrumentais/<int:pk>',             api_cme_instrumental_detalhe),
+    path('api/hospital/cme/instrumentais/<int:pk>/',            api_cme_instrumental_detalhe),
+    path('api/hospital/cme/ciclos',                             api_cme_ciclos),
+    path('api/hospital/cme/ciclos/',                            api_cme_ciclos),
+    path('api/hospital/cme/ciclos/<int:pk>',                    api_cme_ciclo_detalhe),
+    path('api/hospital/cme/ciclos/<int:pk>/',                   api_cme_ciclo_detalhe),
+    path('api/hospital/cme/ciclos/<int:pk>/uso',                api_cme_ciclo_uso),
+    path('api/hospital/cme/ciclos/<int:pk>/uso/',               api_cme_ciclo_uso),
+    path('api/hospital/cme/vencimentos',                        api_cme_vencimentos),
+    path('api/hospital/cme/vencimentos/',                       api_cme_vencimentos),
+    path('api/hospital/cme/kpis',                               api_cme_kpis),
+    path('api/hospital/cme/kpis/',                              api_cme_kpis),
 
     # ── TUSS + Rol ANS + NIP (Plano de Saúde) ────────────────────────────────
     path('api/plano-saude/tuss/procedimentos',                  api_tuss_procedimentos),

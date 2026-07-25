@@ -85,7 +85,7 @@ def _emprestimo_to_dict(obj):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_feature("hospital.administrativo", "SAME")
+@api_requer_feature("hospital.administrativo")
 def api_same_pacientes(request):
     """
     GET  — lista/busca pacientes pelo código SAME.
@@ -137,7 +137,7 @@ def api_same_pacientes(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@api_requer_feature("hospital.administrativo", "SAME")
+@api_requer_feature("hospital.administrativo")
 def api_same_paciente_detalhe(request, pk):
     """
     GET /api/hospital/same/pacientes/<pk>
@@ -166,7 +166,7 @@ def api_same_paciente_detalhe(request, pk):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_feature("hospital.administrativo", "SAME")
+@api_requer_feature("hospital.administrativo")
 def api_same_emprestimos(request):
     """
     GET  — lista empréstimos em aberto (status=emprestado).
@@ -224,7 +224,7 @@ def api_same_emprestimos(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@api_requer_feature("hospital.administrativo", "SAME")
+@api_requer_feature("hospital.administrativo")
 def api_same_emprestimo_devolver(request, pk):
     """
     POST /api/hospital/same/emprestimos/<pk>/devolver
@@ -259,7 +259,7 @@ def api_same_emprestimo_devolver(request, pk):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@api_requer_feature("hospital.administrativo", "SAME")
+@api_requer_feature("hospital.administrativo")
 def api_same_kpis(request):
     """
     GET /api/hospital/same/kpis

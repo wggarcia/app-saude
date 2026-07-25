@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
-from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo
+from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 try:
     from .models import ClassificacaoDRG, PacienteInternado, CredenciaisIntegracoes
@@ -36,7 +36,7 @@ def _hosp(request):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
-@requer_feature_pacote("hospital.financeiro", "DRG")
+@requer_feature_pacote("hospital.faturamento_avancado", "DRG")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_drg_page(request):
@@ -46,6 +46,7 @@ def hospital_drg_page(request):
 # ─── Status ──────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_drg_status(request):
     emp = _hosp(request)
     if not emp:
@@ -76,6 +77,7 @@ def api_drg_status(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_drg_enviar_internacao(request):
     emp = _hosp(request)
     if not emp:
@@ -146,6 +148,7 @@ def api_drg_enviar_internacao(request):
 # ─── Histórico ────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_drg_historico(request):
     emp = _hosp(request)
     if not emp:
@@ -179,6 +182,7 @@ def api_drg_historico(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_drg_reenviar(request, pk):
     emp = _hosp(request)
     if not emp:
@@ -248,6 +252,7 @@ def api_drg_reenviar(request, pk):
 # ─── KPIs ─────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_drg_kpis(request):
     emp = _hosp(request)
     if not emp:

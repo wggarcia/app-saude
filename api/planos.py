@@ -103,6 +103,10 @@ _HOSPITAL_REDE = _HOSPITAL_MEDIO + [
     "hospital.uti_centro_cirurgico",# Evoluções, UTI (SOFA/Glasgow), centro cirúrgico, alta, isolamento — EXCLUSIVO REDE/GRUPO
     "hospital.exames_resultados",   # Pedidos de exame, resultados, administração de medicamentos — EXCLUSIVO REDE/GRUPO
     "hospital.faturamento_avancado",# Faturamento TUSS/CBHPM e analytics — EXCLUSIVO REDE/GRUPO
+    "hospital.administrativo",      # Integração Betha (compras/almoxarifado) + SAME (arquivo de prontuários) — EXCLUSIVO REDE/GRUPO
+    "hospital.telemedicina",        # Teleconsulta hospitalar — EXCLUSIVO REDE/GRUPO
+    "hospital.nutricao",            # Nutrição clínica hospitalar — EXCLUSIVO REDE/GRUPO
+    "hospital.qualidade",           # Qualidade / Núcleo de Segurança do Paciente (NSP) — EXCLUSIVO REDE/GRUPO
 ]
 
 # ── Governo ──────────────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     MedicamentoFarmacia, LoteMedicamento,
     TransferenciaFarmaciaMed, Rede, UnidadeRede,
@@ -71,6 +71,7 @@ def _transf_to_dict(t):
 # ─── Estoque consolidado da rede ──────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.multi_unidade")
 def api_rede_farmacia_estoque(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -189,6 +190,7 @@ def api_rede_farmacia_estoque(request):
 # ─── Disponibilidade de medicamento na rede ───────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.multi_unidade")
 def api_rede_farmacia_disponibilidade(request, nome_med):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -232,6 +234,7 @@ def api_rede_farmacia_disponibilidade(request, nome_med):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("farmacia.transferencias")
 def api_rede_farmacia_transferencias(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -318,6 +321,7 @@ def api_rede_farmacia_transferencias(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("farmacia.transferencias")
 def api_rede_farmacia_transferencia_acao(request, transf_id):
     """Approve / send / receive / cancel / reject a transfer."""
     empresa = _empresa_autenticada(request)
@@ -342,6 +346,16 @@ def api_rede_farmacia_transferencia_acao(request, transf_id):
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
     acao = data.get("acao")  # aprovar, rejeitar, enviar, receber, cancelar
+
+    # Cada lado da transferência só pode executar as ações que lhe cabem —
+    # sem isso, a empresa solicitante podia se autoaprovar/autoenviar e
+    # debitar estoque da fornecedora sem ela jamais ter confirmado nada.
+    acoes_somente_fornecedora = {"aprovar", "rejeitar", "enviar"}
+    acoes_somente_solicitante = {"receber"}
+    if acao in acoes_somente_fornecedora and t.empresa_fornecedora != empresa:
+        return JsonResponse({"erro": "Apenas a empresa fornecedora pode executar esta ação"}, status=403)
+    if acao in acoes_somente_solicitante and t.empresa_solicitante != empresa:
+        return JsonResponse({"erro": "Apenas a empresa solicitante pode executar esta ação"}, status=403)
 
     transicoes_validas = {
         "pendente":  ["aprovar", "rejeitar", "cancelar"],
@@ -399,6 +413,7 @@ def api_rede_farmacia_transferencia_acao(request, transf_id):
 # ─── KPIs de rede ────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.multi_unidade")
 def api_rede_farmacia_kpis(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

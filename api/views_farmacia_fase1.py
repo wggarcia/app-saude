@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     LivroRegistroControlado, LoteMedicamento, MedicamentoFarmacia,
     FarmaciaAuditLog, Dispensacao,
@@ -58,6 +58,7 @@ def _audit(empresa, acao, modelo, objeto_id, descricao, usuario="", ip="", dados
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.controlados")
 def api_livro_controlado(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -107,6 +108,7 @@ def api_livro_controlado(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("farmacia.controlados")
 def api_lotes_bloqueio(request, lote_id=None):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -175,6 +177,7 @@ def api_lotes_bloqueio(request, lote_id=None):
 # ─── Auditoria ────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.controlados")
 def api_farmacia_auditoria(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -214,6 +217,7 @@ def api_farmacia_auditoria(request):
 # ─── Dashboard de conformidade ────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.controlados")
 def api_farmacia_conformidade(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

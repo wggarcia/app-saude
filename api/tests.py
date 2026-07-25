@@ -1,5 +1,6 @@
 import json
 from datetime import date, timedelta
+from decimal import Decimal
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
@@ -8437,3 +8438,571 @@ class AnsConformidadeAssistidaTests(TestCase):
         self.assertEqual(resp.status_code, 404)
         d.refresh_from_db()
         self.assertNotEqual(d.status, "enviada")
+
+
+class GovernoSuasPiiCrossTenantTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): FK secundária crua (familia_id,
+    unidade_cras_id, unidade_creas_id, unidade_origem_id/destino_id,
+    unidade_notificante_id, surto_id, unidade_id) permitia a uma prefeitura-
+    cliente referenciar o registro de OUTRA prefeitura, vazando nome de
+    família/unidade nas respostas. Confirma que agora é validado e rejeitado
+    com 400."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura A", email="prefeitura-a-pii@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="governo_municipio_medio", max_dispositivos=5, max_usuarios=5,
+        )
+        self.outra = Empresa.objects.create(
+            nome="Prefeitura B", email="prefeitura-b-pii@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="governo_municipio_medio", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "prefeitura-a-pii@teste.com", "senha": "123456",
+                "device_id": "dev-pref-a", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_cras_atendimento_rejeita_familia_de_outra_empresa(self):
+        from .models import FamiliaCRAS
+        familia_outra = FamiliaCRAS.objects.create(
+            empresa=self.outra, responsavel_nome="Família Confidencial B",
+        )
+        resp = self.client.post(
+            "/api/governo/suas/cras/atendimentos",
+            data=json.dumps({"familia_id": familia_outra.id, "tipo": "individual"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 400, msg=resp.content)
+
+    def test_cras_visita_rejeita_familia_de_outra_empresa(self):
+        from .models import FamiliaCRAS
+        familia_outra = FamiliaCRAS.objects.create(
+            empresa=self.outra, responsavel_nome="Família Confidencial B",
+        )
+        resp = self.client.post(
+            "/api/governo/suas/cras/visitas",
+            data=json.dumps({"familia_id": familia_outra.id}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 400, msg=resp.content)
+
+    def test_creas_atendimento_rejeita_unidade_de_outra_empresa(self):
+        from .models import UnidadeCREAS
+        unidade_outra = UnidadeCREAS.objects.create(empresa=self.outra, nome="CREAS Confidencial B")
+        resp = self.client.post(
+            "/api/governo/suas/creas/atendimentos",
+            data=json.dumps({"usuario_nome": "Fulano", "unidade_creas_id": unidade_outra.id}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 400, msg=resp.content)
+
+    def test_beneficio_eventual_rejeita_unidade_cras_de_outra_empresa(self):
+        from .models import UnidadeCRAS
+        unidade_outra = UnidadeCRAS.objects.create(empresa=self.outra, nome="CRAS Confidencial B")
+        resp = self.client.post(
+            "/api/governo/suas/beneficios-eventuais",
+            data=json.dumps({"beneficiario_nome": "Fulano", "unidade_cras_id": unidade_outra.id}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 400, msg=resp.content)
+
+    def test_regulacao_leitos_rejeita_unidade_de_outra_empresa(self):
+        from .models import UnidadeSaude
+        unidade_outra = UnidadeSaude.objects.create(empresa=self.outra, nome="Hospital Confidencial B", tipo="hospital")
+        resp = self.client.post(
+            "/api/governo/regulacao/",
+            data=json.dumps({"tipo_leito": "uti", "unidade_origem_id": unidade_outra.id}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertIn(resp.status_code, (400, 404), msg=resp.content)
+
+
+class AssistenciaSocialPaginasETemplatesTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): assistencia_social_dashboard.html e
+    assistencia_social_gestao.html não existiam — as 2 páginas principais do
+    segmento quebravam com TemplateDoesNotExist (500). Confirma que ambas
+    agora renderizam (200)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura Assistência Social", email="pref-assistencia-tpl@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="assistencia_municipio_pequeno", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "pref-assistencia-tpl@teste.com", "senha": "123456",
+                "device_id": "dev-assist-tpl", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_dashboard_page_renderiza(self):
+        resp = self.client.get("/assistencia-social/", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_gestao_page_renderiza(self):
+        resp = self.client.get("/assistencia-social/gestao/", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+
+class AssistenciaSocialCamposModeloRealTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): views_assistencia_creas.py usava
+    nomes de campo inventados (beneficiario_nome, responsavel_familiar,
+    encaminhamentos) que NÃO existem no model AtendimentoCREAS real (que tem
+    usuario_nome, tecnico_cargo, encaminhamento singular) — toda chamada
+    quebrava com TypeError/AttributeError. views_assistencia_cras.py também
+    usava encaminhamentos (plural, inexistente) e nunca salvava objetivo.
+    Confirma que os endpoints reais do módulo novo funcionam de ponta a
+    ponta com os nomes de campo corretos."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura Assistência Campos", email="pref-assistencia-campos@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="assistencia_municipio_pequeno", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "pref-assistencia-campos@teste.com", "senha": "123456",
+                "device_id": "dev-assist-campos", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_creas_atendimento_ciclo_completo(self):
+        resp = self.client.post(
+            "/api/assistencia-social/creas/atendimentos",
+            data=json.dumps({
+                "usuario_nome": "Usuário PAEFI",
+                "usuario_cpf": "52998224725",
+                "tecnico_nome": "Assistente Social X",
+                "tecnico_cargo": "Assistente Social",
+                "data_atendimento": "2026-07-01",
+                "tipo_violacao": "negligencia",
+                "plano_atendimento": "Acompanhamento quinzenal",
+                "encaminhamento": "CREAS regional",
+                "numero_prontuario": "PRT-001",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        atendimento_id = resp.json()["atendimento"]["id"]
+
+        resp = self.client.get("/api/assistencia-social/creas/atendimentos", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        a = next(x for x in resp.json()["atendimentos"] if x["id"] == atendimento_id)
+        self.assertEqual(a["usuario_nome"], "Usuário PAEFI")
+        self.assertEqual(a["tecnico_cargo"], "Assistente Social")
+        self.assertEqual(a["plano_atendimento"], "Acompanhamento quinzenal")
+        self.assertEqual(a["encaminhamento"], "CREAS regional")
+        self.assertEqual(a["numero_prontuario"], "PRT-001")
+
+    def test_cras_atendimento_salva_objetivo_e_encaminhamento(self):
+        from .models import FamiliaCRAS
+        familia = FamiliaCRAS.objects.create(empresa=self.empresa, responsavel_nome="Família Teste")
+        resp = self.client.post(
+            "/api/assistencia-social/cras/atendimentos",
+            data=json.dumps({
+                "familia_id": familia.id,
+                "data_atendimento": "2026-07-01",
+                "tipo": "individual",
+                "objetivo": "Avaliação socioeconômica",
+                "encaminhamento": "CRAS Centro",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 201, msg=resp.content)
+        atendimento_id = resp.json()["atendimento"]["id"]
+
+        resp = self.client.get("/api/assistencia-social/cras/atendimentos", secure=True)
+        self.assertEqual(resp.status_code, 200)
+        a = next(x for x in resp.json()["atendimentos"] if x["id"] == atendimento_id)
+        self.assertEqual(a["objetivo"], "Avaliação socioeconômica")
+        self.assertEqual(a["encaminhamento"], "CRAS Centro")
+
+
+class HospitalModulosOrfaosReligadosTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): 9 arquivos inteiros do Hospital
+    (manutencao, nhve, nutricao, qualidade, radioterapia, rhc, same,
+    lavanderia, cme) nunca tinham sido roteados em urls.py — ~50 endpoints
+    funcionais totalmente inacessíveis via HTTP. SAME adicionalmente tinha
+    um bug real (api_requer_feature chamado com 2 argumentos, quebra na
+    importação). Confirma que as 9 páginas agora respondem 200 (não 404,
+    não 500) para um plano hospital_grupo (que tem todas as features)."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Hospital Módulos Órfãos", email="hosp-orfaos-religados@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="hospital_grupo", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "hosp-orfaos-religados@teste.com", "senha": "123456",
+                "device_id": "dev-hosp-orfaos-2", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+
+    def test_9_paginas_orfas_agora_respondem_200(self):
+        urls = [
+            "/hospital/manutencao/", "/hospital/nhve/", "/hospital/nutricao/",
+            "/hospital/qualidade/", "/hospital/radioterapia/", "/hospital/rhc/",
+            "/hospital/same/", "/hospital/lavanderia/", "/hospital/cme/",
+        ]
+        for url in urls:
+            resp = self.client.get(url, secure=True)
+            self.assertEqual(resp.status_code, 200, msg=f"{url} -> {resp.status_code}: {resp.content[:300]}")
+
+    def test_same_nao_quebra_mais_no_import_ou_na_chamada(self):
+        """O bug real: api_requer_feature("hospital.administrativo", "SAME")
+        tinha 2 argumentos posicionais — o decorator só aceita 1. Isso dava
+        TypeError na hora de decorar a função (import-time), derrubando
+        qualquer tentativa de rotear o módulo. Confirma que a API responde
+        normalmente agora."""
+        resp = self.client.get("/api/hospital/same/pacientes", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = self.client.get("/api/hospital/same/kpis", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_radioterapia_dispatcher_get_e_patch_mesma_url(self):
+        """api_radioterapia_sessao_detalhe (GET) e _atualizar (PATCH) eram
+        2 funções para a MESMA URL — o URLconf só aceita uma view por rota.
+        Confirma que o dispatcher criado encaminha corretamente por método."""
+        from .models import SessaoRadioterapia
+        sessao = SessaoRadioterapia.objects.create(
+            empresa=self.empresa, paciente="Paciente RT",
+            numero_fracoes_total=10, numero_fracoes_realizadas=0,
+            status="em_andamento",
+        )
+        resp = self.client.get(f"/api/hospital/radioterapia/sessoes/{sessao.id}", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = self.client.patch(
+            f"/api/hospital/radioterapia/sessoes/{sessao.id}",
+            data=json.dumps({"status": "concluido"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+
+class HospitalFeatureKeyCorrigidaTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): 5 módulos AO VIVO (Betha, Custos,
+    DRG, Epimed, Telemedicina) usavam feature-key que não existia em
+    NENHUM plano — bloqueados para 100% dos clientes, inclusive o mais caro.
+    Além disso as APIs por trás não tinham gate nenhum (bypass do paywall).
+    Confirma que: (a) hospital_grupo agora acessa; (b) hospital_medio
+    (sem as features) recebe 403; (c) bypass de API fechado."""
+
+    def _login(self, pacote_codigo, email):
+        empresa = Empresa.objects.create(
+            nome=f"Hospital {pacote_codigo}", email=email,
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo=pacote_codigo, max_dispositivos=5, max_usuarios=5,
+        )
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": email, "senha": "123456",
+                "device_id": f"dev-{pacote_codigo}", "device_name": "Test",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+        return client
+
+    def test_betha_kpis_acessivel_no_grupo_bloqueado_no_medio(self):
+        grupo = self._login("hospital_grupo", "hosp-betha-grupo@teste.com")
+        medio = self._login("hospital_medio", "hosp-betha-medio@teste.com")
+        resp = grupo.get("/api/hospital/betha/kpis", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = medio.get("/api/hospital/betha/kpis", secure=True)
+        self.assertEqual(resp.status_code, 403, msg="API deveria bloquear plano sem a feature (bypass fechado)")
+
+    def test_custos_kpis_acessivel_no_grupo_bloqueado_no_medio(self):
+        grupo = self._login("hospital_grupo", "hosp-custos-grupo@teste.com")
+        medio = self._login("hospital_medio", "hosp-custos-medio@teste.com")
+        resp = grupo.get("/api/hospital/custos/kpis", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = medio.get("/api/hospital/custos/kpis", secure=True)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_telemedicina_kpis_acessivel_no_grupo_bloqueado_no_medio(self):
+        grupo = self._login("hospital_grupo", "hosp-tele-grupo@teste.com")
+        medio = self._login("hospital_medio", "hosp-tele-medio@teste.com")
+        resp = grupo.get("/api/hospital/telemedicina/kpis", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = medio.get("/api/hospital/telemedicina/kpis", secure=True)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_nutricao_e_qualidade_acessiveis_no_grupo_bloqueados_no_medio(self):
+        grupo = self._login("hospital_grupo", "hosp-nutriqual-grupo@teste.com")
+        medio = self._login("hospital_medio", "hosp-nutriqual-medio@teste.com")
+        resp = grupo.get("/api/hospital/nutricao/kpis", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = medio.get("/api/hospital/nutricao/kpis", secure=True)
+        self.assertEqual(resp.status_code, 403)
+        resp = grupo.get("/api/hospital/qualidade/kpis", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = medio.get("/api/hospital/qualidade/kpis", secure=True)
+        self.assertEqual(resp.status_code, 403)
+
+
+class FarmaciaTransferenciaRedeAutorizacaoTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): api_rede_farmacia_transferencia_acao
+    não distinguia qual lado da transferência pode executar qual ação — a
+    empresa SOLICITANTE podia se autoaprovar, autoenviar e depois "receber",
+    debitando estoque real da FORNECEDORA sem ela jamais ter confirmado nada.
+    Confirma que agora cada ação é restrita ao lado correto."""
+
+    def setUp(self):
+        from .models import Rede, UnidadeRede, MedicamentoFarmacia, TransferenciaFarmaciaMed
+
+        self.solicitante = Empresa.objects.create(
+            nome="Farmácia Solicitante", email="farm-solicitante@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="farmacia_rede_regional", max_dispositivos=5, max_usuarios=5,
+        )
+        self.fornecedora = Empresa.objects.create(
+            nome="Farmácia Fornecedora", email="farm-fornecedora@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="farmacia_rede_regional", max_dispositivos=5, max_usuarios=5,
+        )
+        rede = Rede.objects.create(nome="Rede Teste Transferência", tipo="farmacia")
+        UnidadeRede.objects.create(empresa=self.solicitante, rede=rede, ativa=True)
+        UnidadeRede.objects.create(empresa=self.fornecedora, rede=rede, ativa=True)
+
+        self.med = MedicamentoFarmacia.objects.create(
+            empresa=self.fornecedora, nome="Dipirona 500mg", quantidade_atual=Decimal("100"),
+        )
+        self.transferencia = TransferenciaFarmaciaMed.objects.create(
+            rede=rede, empresa_solicitante=self.solicitante, empresa_fornecedora=self.fornecedora,
+            medicamento=self.med, quantidade_solicitada=Decimal("10"), status="pendente",
+        )
+
+        self.client_solicitante = Client()
+        resp = self.client_solicitante.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "farm-solicitante@teste.com", "senha": "123456",
+                "device_id": "dev-farm-solic", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        self.client_fornecedora = Client()
+        resp = self.client_fornecedora.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "farm-fornecedora@teste.com", "senha": "123456",
+                "device_id": "dev-farm-forn", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def _acao(self, client, acao):
+        return client.post(
+            f"/api/farmacia/rede/transferencias/{self.transferencia.id}/acao/",
+            data=json.dumps({"acao": acao}),
+            content_type="application/json", secure=True,
+        )
+
+    def test_solicitante_nao_pode_se_autoaprovar(self):
+        resp = self._acao(self.client_solicitante, "aprovar")
+        self.assertEqual(resp.status_code, 403, msg=resp.content)
+        self.transferencia.refresh_from_db()
+        self.assertEqual(self.transferencia.status, "pendente")
+
+    def test_fornecedora_pode_aprovar_e_enviar_solicitante_recebe(self):
+        from .models import MedicamentoFarmacia
+        resp = self._acao(self.client_fornecedora, "aprovar")
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        # Fornecedora tenta "receber" (ação exclusiva do solicitante) — bloqueado
+        resp = self._acao(self.client_fornecedora, "enviar")
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        resp = self._acao(self.client_fornecedora, "receber")
+        self.assertEqual(resp.status_code, 400, msg="'receber' não é transição válida a partir de 'enviada' pela fornecedora tentando de novo")
+
+        resp = self._acao(self.client_solicitante, "receber")
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        self.med.refresh_from_db()
+        self.assertEqual(self.med.quantidade_atual, Decimal("90.000"))
+
+    def test_solicitante_nao_pode_enviar(self):
+        self._acao(self.client_fornecedora, "aprovar")
+        resp = self._acao(self.client_solicitante, "enviar")
+        self.assertEqual(resp.status_code, 403, msg=resp.content)
+
+
+class FarmaciaFase2GatingTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): views_farmacia_fase2.py (rede
+    multi-unidade/transferências) não tinha nenhum @api_requer_feature,
+    apesar de farmacia.multi_unidade/transferencias serem EXCLUSIVO REDE no
+    catálogo. Confirma bloqueio para plano Local e liberação para Rede."""
+
+    def _login(self, pacote_codigo, email):
+        Empresa.objects.create(
+            nome=f"Farmácia {pacote_codigo}", email=email,
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo=pacote_codigo, max_dispositivos=5, max_usuarios=5,
+        )
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": email, "senha": "123456",
+                "device_id": f"dev-{pacote_codigo}-gate", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        return client
+
+    def test_rede_estoque_bloqueado_no_local_liberado_no_rede(self):
+        local = self._login("farmacia_local", "farm-fase2-local@teste.com")
+        rede = self._login("farmacia_rede_regional", "farm-fase2-rede@teste.com")
+        resp = local.get("/api/farmacia/rede/estoque/", secure=True)
+        self.assertEqual(resp.status_code, 403, msg=resp.content)
+        resp = rede.get("/api/farmacia/rede/estoque/", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+
+class PlanoSaudeSibRateLimitCrossTenantTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): api_sib_transmitir gravava a chave
+    de rate-limit ANTES de checar posse do registro — outro tenant podia
+    poluir o rate-limit de um sib_id de outra operadora só chutando IDs
+    sequenciais (404 pra ele, mas 429 pra dona do registro depois, num
+    prazo regulatório rígido). Confirma que a checagem de posse acontece
+    primeiro e que o rate-limit é escopado por empresa."""
+
+    def setUp(self):
+        from .models import SIBRegistro
+        self.dona = Empresa.objects.create(
+            nome="Operadora Dona SIB", email="operadora-dona-sib@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="plano_saude_operadora", max_dispositivos=5, max_usuarios=5,
+        )
+        self.atacante = Empresa.objects.create(
+            nome="Operadora Atacante SIB", email="operadora-atacante-sib@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="plano_saude_operadora", max_dispositivos=5, max_usuarios=5,
+        )
+        self.sib = SIBRegistro.objects.create(empresa=self.dona, competencia="202507", total_vidas=10)
+
+        self.client_atacante = Client()
+        resp = self.client_atacante.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora-atacante-sib@teste.com", "senha": "123456",
+                "device_id": "dev-sib-atacante", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        self.client_dona = Client()
+        resp = self.client_dona.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora-dona-sib@teste.com", "senha": "123456",
+                "device_id": "dev-sib-dona", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_atacante_nao_poe_poluir_rate_limit_da_dona(self):
+        resp = self.client_atacante.post(
+            f"/api/plano-saude/ans/sib/{self.sib.id}/transmitir/",
+            data="{}", content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 404, msg=resp.content)
+
+        # A dona do registro tenta transmitir de verdade (sem credenciais
+        # ANS configuradas, então recebe 400 orientando a configurar — o
+        # ponto do teste é que NÃO seja 429, ou seja, o ataque anterior não
+        # poluiu o rate-limit dela.
+        resp = self.client_dona.post(
+            f"/api/plano-saude/ans/sib/{self.sib.id}/transmitir/",
+            data="{}", content_type="application/json", secure=True,
+        )
+        self.assertNotEqual(resp.status_code, 429, msg="Rate-limit poluído por outro tenant!")
+
+
+class SstAssistenteIaBypassTests(TestCase):
+    """Item da auditoria SaaS (jul/2026): api_assistente_grafico_pdf e
+    api_assistente_grafico_pdf_email não checavam sst.assistente_ia
+    (diferente da view irmã assistente_sst, que checa corretamente) —
+    qualquer plano SST conseguia gerar/enviar por e-mail o PDF do recurso
+    Enterprise. Confirma bloqueio para plano Profissional."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Empresa SST Profissional", email="empresa-sst-prof@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="empresa_profissional_25", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "empresa-sst-prof@teste.com", "senha": "123456",
+                "device_id": "dev-sst-prof", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_grafico_pdf_bloqueado_sem_feature(self):
+        resp = self.client.post(
+            "/api/sst/assistente/grafico-pdf",
+            data=json.dumps({"grafico": {"titulo": "X", "tipo": "bar", "labels": ["a"], "valores": [1]}, "resposta": "y"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 403, msg=resp.content)
+
+    def test_grafico_pdf_email_bloqueado_sem_feature(self):
+        resp = self.client.post(
+            "/api/sst/assistente/grafico-pdf/email",
+            data=json.dumps({
+                "email": "destino@teste.com",
+                "grafico": {"titulo": "X", "tipo": "bar", "labels": ["a"], "valores": [1]},
+                "resposta": "y",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 403, msg=resp.content)

@@ -221,6 +221,12 @@ def api_notificacoes(request):
     data = json.loads(request.body or "{}")
     if not data.get("doenca") or not data.get("data_notificacao") or not data.get("municipio_notificacao"):
         return JsonResponse({"erro": "doenca, data_notificacao e municipio_notificacao são obrigatórios"}, status=400)
+    unidade_notificante_id = data.get("unidade_notificante_id") or None
+    surto_id = data.get("surto_id") or None
+    if unidade_notificante_id and not UnidadeSaude.objects.filter(pk=unidade_notificante_id, empresa=e).exists():
+        return JsonResponse({"erro": "unidade_notificante_id: unidade não encontrada para esta empresa"}, status=400)
+    if surto_id and not SurtoEpidemiologico.objects.filter(pk=surto_id, empresa=e).exists():
+        return JsonResponse({"erro": "surto_id: surto não encontrado para esta empresa"}, status=400)
     n = NotificacaoCompulsoria.objects.create(
         empresa=e,
         doenca=data["doenca"],
@@ -228,13 +234,13 @@ def api_notificacoes(request):
         data_inicio_sintomas=data.get("data_inicio_sintomas") or None,
         municipio_notificacao=data["municipio_notificacao"],
         uf_notificacao=data.get("uf_notificacao",""),
-        unidade_notificante_id=data.get("unidade_notificante_id") or None,
+        unidade_notificante_id=unidade_notificante_id,
         idade_paciente=data.get("idade_paciente") or None,
         sexo=data.get("sexo","I"),
         zona=data.get("zona","urbana"),
         status_investigacao=data.get("status_investigacao","aberto"),
         evolucao=data.get("evolucao","ativo"),
-        surto_id=data.get("surto_id") or None,
+        surto_id=surto_id,
         observacoes=data.get("observacoes",""),
     )
     return JsonResponse({"id": n.id}, status=201)
@@ -443,11 +449,16 @@ def api_regulacao_leitos(request):
     data = json.loads(request.body or "{}")
     if not data.get("tipo_leito"):
         return JsonResponse({"erro": "tipo_leito é obrigatório"}, status=400)
+    unidade_origem_id = data.get("unidade_origem_id") or None
+    unidade_destino_id = data.get("unidade_destino_id") or None
+    for campo, valor in (("unidade_origem_id", unidade_origem_id), ("unidade_destino_id", unidade_destino_id)):
+        if valor and not UnidadeSaude.objects.filter(pk=valor, empresa=e).exists():
+            return JsonResponse({"erro": f"{campo}: unidade não encontrada para esta empresa"}, status=400)
     r = RegulacaoLeito.objects.create(
         empresa=e,
         numero_solicitacao=_gerar_numero_solicitacao(),
-        unidade_origem_id=data.get("unidade_origem_id") or None,
-        unidade_destino_id=data.get("unidade_destino_id") or None,
+        unidade_origem_id=unidade_origem_id,
+        unidade_destino_id=unidade_destino_id,
         tipo_leito=data["tipo_leito"],
         prioridade=data.get("prioridade","urgencia"),
         status=data.get("status","solicitado"),
@@ -487,7 +498,10 @@ def api_regulacao_detalhe(request, regulacao_id):
             setattr(r, campo, data[campo])
     for campo in nullable_fk:
         if campo in data:
-            setattr(r, campo, data[campo] or None)
+            valor = data[campo] or None
+            if valor and not UnidadeSaude.objects.filter(pk=valor, empresa=e).exists():
+                return JsonResponse({"erro": f"{campo}: unidade não encontrada para esta empresa"}, status=400)
+            setattr(r, campo, valor)
     if "status" in data:
         r.status = data["status"]
         if data["status"] == "regulado" and not r.data_regulacao:
@@ -936,10 +950,13 @@ def api_atendimentos_urgencia(request):
     data = json.loads(request.body or "{}")
     if not data.get("tipo_unidade") or not data.get("data_atendimento"):
         return JsonResponse({"erro": "tipo_unidade e data_atendimento são obrigatórios"}, status=400)
+    unidade_id = data.get("unidade_id") or None
+    if unidade_id and not UnidadeSaude.objects.filter(pk=unidade_id, empresa=e).exists():
+        return JsonResponse({"erro": "unidade_id: unidade não encontrada para esta empresa"}, status=400)
 
     a, _ = AtendimentoUrgencia.objects.update_or_create(
         empresa=e,
-        unidade_id=data.get("unidade_id") or None,
+        unidade_id=unidade_id,
         data_atendimento=data["data_atendimento"],
         defaults={
             "tipo_unidade": data["tipo_unidade"],

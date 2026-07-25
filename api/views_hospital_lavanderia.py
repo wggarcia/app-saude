@@ -40,7 +40,7 @@ def _get_lavanderia_models():
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
-@requer_feature_pacote("hospital.operacional", "Lavanderia")
+@requer_feature_pacote("hospital.limpeza", "Lavanderia")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_lavanderia_page(request):
@@ -80,7 +80,7 @@ def _ciclo_to_dict(ciclo):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_feature("hospital.lavanderia")
+@api_requer_feature("hospital.limpeza")
 def api_lavanderia_itens(request):
     """GET/POST /api/hospital/lavanderia/itens"""
     empresa = _hosp(request)
@@ -137,7 +137,7 @@ def api_lavanderia_itens(request):
 
 @csrf_exempt
 @require_http_methods(["PATCH"])
-@api_requer_feature("hospital.lavanderia")
+@api_requer_feature("hospital.limpeza")
 def api_lavanderia_item_detail(request, pk):
     """PATCH /api/hospital/lavanderia/itens/<pk>"""
     empresa = _hosp(request)
@@ -184,7 +184,7 @@ def api_lavanderia_item_detail(request, pk):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_feature("hospital.lavanderia")
+@api_requer_feature("hospital.limpeza")
 def api_lavanderia_ciclos(request):
     """GET/POST /api/hospital/lavanderia/ciclos"""
     empresa = _hosp(request)
@@ -278,7 +278,7 @@ def api_lavanderia_ciclos(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@api_requer_feature("hospital.lavanderia")
+@api_requer_feature("hospital.limpeza")
 def api_lavanderia_saldo(request):
     """GET /api/hospital/lavanderia/saldo — saldo atual de roupas por setor"""
     empresa = _hosp(request)
@@ -312,7 +312,7 @@ def api_lavanderia_saldo(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@api_requer_feature("hospital.lavanderia")
+@api_requer_feature("hospital.limpeza")
 def api_lavanderia_kpis(request):
     """GET /api/hospital/lavanderia/kpis"""
     empresa = _hosp(request)

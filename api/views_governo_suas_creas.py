@@ -21,6 +21,15 @@ def _gov(request):
     return emp
 
 
+def _pertence(model, id_, empresa):
+    """True se `id_` for None/vazio (campo opcional) OU se o registro existir
+    E pertencer à empresa. Sem isso, um tenant pode referenciar o ID de outro
+    tenant e o dado relacionado (nome da unidade) vaza nas respostas."""
+    if not id_:
+        return True
+    return model.objects.filter(id=id_, empresa=empresa).exists()
+
+
 # ─── HELPERS ────────────────────────────────────────────────────────────────
 
 def _creas_dict(u):
@@ -186,11 +195,14 @@ def api_creas_atendimentos(request):
 
     if request.method == "POST":
         from .utils import validar_cpf_cadastro
+        from .models import UnidadeCREAS
         body = json.loads(request.body)
         cpf = body.get("usuario_cpf", "").replace(".", "").replace("-", "").strip()
         ok, erro = validar_cpf_cadastro(cpf, empresa)
         if not ok:
             return JsonResponse({"erro": erro}, status=400)
+        if not _pertence(UnidadeCREAS, body.get("unidade_creas_id"), empresa):
+            return JsonResponse({"erro": "Unidade CREAS não encontrada para esta empresa"}, status=400)
 
         a = AtendimentoCREAS.objects.create(
             empresa=empresa,
@@ -243,6 +255,9 @@ def api_creas_atendimento_detalhe(request, atendimento_id):
         if "data_atendimento" in body:
             a.data_atendimento = body["data_atendimento"]
         if "unidade_creas_id" in body:
+            from .models import UnidadeCREAS
+            if not _pertence(UnidadeCREAS, body["unidade_creas_id"], empresa):
+                return JsonResponse({"erro": "Unidade CREAS não encontrada para esta empresa"}, status=400)
             a.unidade_creas_id = body["unidade_creas_id"] or None
         a.save()
         return JsonResponse({"status": "atualizado", **_atendimento_dict(a)})

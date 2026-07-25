@@ -59,7 +59,7 @@ def _os_to_dict(o):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
-@requer_feature_pacote("hospital.operacional", "Manutenção")
+@requer_feature_pacote("hospital.equipamentos", "Manutenção")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_manutencao_page(request):
@@ -70,7 +70,7 @@ def hospital_manutencao_page(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_feature("hospital.operacional")
+@api_requer_feature("hospital.equipamentos")
 def api_manutencao_ordens(request):
     """GET/POST /api/hospital/manutencao/ordens"""
     empresa = _hosp(request)
@@ -134,7 +134,7 @@ def api_manutencao_ordens(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
-@api_requer_feature("hospital.operacional")
+@api_requer_feature("hospital.equipamentos")
 def api_manutencao_ordem_detalhe(request, pk):
     """GET/PATCH /api/hospital/manutencao/ordens/<pk>"""
     empresa = _hosp(request)
@@ -175,7 +175,7 @@ def api_manutencao_ordem_detalhe(request, pk):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@api_requer_feature("hospital.operacional")
+@api_requer_feature("hospital.equipamentos")
 def api_manutencao_ordem_concluir(request, pk):
     """POST /api/hospital/manutencao/ordens/<pk>/concluir"""
     empresa = _hosp(request)
@@ -215,7 +215,7 @@ def api_manutencao_ordem_concluir(request, pk):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@api_requer_feature("hospital.operacional")
+@api_requer_feature("hospital.equipamentos")
 def api_manutencao_ordem_cancelar(request, pk):
     """POST /api/hospital/manutencao/ordens/<pk>/cancelar"""
     empresa = _hosp(request)
@@ -248,7 +248,7 @@ def api_manutencao_ordem_cancelar(request, pk):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@api_requer_feature("hospital.operacional")
+@api_requer_feature("hospital.equipamentos")
 def api_manutencao_kpis(request):
     """GET /api/hospital/manutencao/kpis"""
     empresa = _hosp(request)

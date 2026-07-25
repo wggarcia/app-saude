@@ -419,7 +419,11 @@ def api_beneficios_eventuais(request):
         return JsonResponse({"total": total, "page": page, "beneficios": [_beneficio_dict(b) for b in itens]})
 
     if request.method == "POST":
+        from .models import UnidadeCRAS
         body = json.loads(request.body)
+        unidade_cras_id = body.get("unidade_cras_id") or None
+        if unidade_cras_id and not UnidadeCRAS.objects.filter(id=unidade_cras_id, empresa=empresa).exists():
+            return JsonResponse({"erro": "Unidade CRAS não encontrada para esta empresa"}, status=400)
         b = BeneficioEventual.objects.create(
             empresa=empresa,
             beneficiario_nome=body.get("beneficiario_nome", "").strip(),
@@ -430,7 +434,7 @@ def api_beneficios_eventuais(request):
             quantidade=body.get("quantidade", 1),
             valor=body.get("valor") or None,
             data_concessao=body.get("data_concessao", str(date.today())),
-            unidade_cras_id=body.get("unidade_cras_id") or None,
+            unidade_cras_id=unidade_cras_id,
             tecnico_responsavel=body.get("tecnico_responsavel", "").strip(),
             observacoes=body.get("observacoes", "").strip(),
         )
@@ -470,7 +474,11 @@ def api_beneficio_eventual_detalhe(request, beneficio_id):
         if "valor" in body:
             b.valor = body["valor"] or None
         if "unidade_cras_id" in body:
-            b.unidade_cras_id = body["unidade_cras_id"] or None
+            from .models import UnidadeCRAS
+            novo_id = body["unidade_cras_id"] or None
+            if novo_id and not UnidadeCRAS.objects.filter(id=novo_id, empresa=empresa).exists():
+                return JsonResponse({"erro": "Unidade CRAS não encontrada para esta empresa"}, status=400)
+            b.unidade_cras_id = novo_id
         b.save()
         return JsonResponse({"status": "atualizado", **_beneficio_dict(b)})
 

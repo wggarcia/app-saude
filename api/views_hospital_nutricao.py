@@ -99,7 +99,7 @@ def _triagem_to_dict(a):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
-@requer_feature_pacote("hospital.clinico", "Nutrição")
+@requer_feature_pacote("hospital.nutricao", "Nutrição")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_nutricao_page(request):
@@ -110,7 +110,7 @@ def hospital_nutricao_page(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_feature("hospital.clinico")
+@api_requer_feature("hospital.nutricao")
 def api_nutricao_dietas(request):
     """
     GET  /api/hospital/nutricao/dietas — lista DietaHospitalar ativas
@@ -191,7 +191,7 @@ def api_nutricao_dietas(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
-@api_requer_feature("hospital.clinico")
+@api_requer_feature("hospital.nutricao")
 def api_nutricao_dieta_detalhe(request, pk):
     """
     GET   /api/hospital/nutricao/dietas/<pk> — detalhe da dieta
@@ -246,7 +246,7 @@ def api_nutricao_dieta_detalhe(request, pk):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@api_requer_feature("hospital.clinico")
+@api_requer_feature("hospital.nutricao")
 def api_nutricao_triagens(request):
     """
     GET  /api/hospital/nutricao/triagens — lista AvaliacaoNutricional do mês atual
@@ -332,7 +332,7 @@ def api_nutricao_triagens(request):
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
-@api_requer_feature("hospital.clinico")
+@api_requer_feature("hospital.nutricao")
 def api_nutricao_kpis(request):
     """GET /api/hospital/nutricao/kpis"""
     empresa = _hosp(request)

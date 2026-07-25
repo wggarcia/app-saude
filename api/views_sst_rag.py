@@ -641,6 +641,12 @@ def api_assistente_grafico_pdf(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
+    from .access_control import empresa_tem_feature
+    if not empresa_tem_feature(empresa, "sst.assistente_ia"):
+        return JsonResponse(
+            {"erro": "O Assistente IA está disponível a partir do plano Enterprise SST."},
+            status=403,
+        )
     try:
         body = json.loads(request.body or "{}")
     except json.JSONDecodeError:
@@ -667,6 +673,12 @@ def api_assistente_grafico_pdf_email(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
+    from .access_control import empresa_tem_feature
+    if not empresa_tem_feature(empresa, "sst.assistente_ia"):
+        return JsonResponse(
+            {"erro": "O Assistente IA está disponível a partir do plano Enterprise SST."},
+            status=403,
+        )
     try:
         body = json.loads(request.body or "{}")
     except json.JSONDecodeError:

@@ -78,8 +78,9 @@ def _atendimento_dict(a):
         "tecnico_cargo": a.tecnico_cargo,
         "data_atendimento": str(a.data_atendimento),
         "tipo": a.tipo,
+        "objetivo": a.objetivo,
         "descricao": a.descricao,
-        "encaminhamentos": a.encaminhamentos,
+        "encaminhamento": a.encaminhamento,
         "criado_em": a.criado_em.isoformat(),
     }
 
@@ -363,8 +364,9 @@ def api_ass_cras_atendimentos(request):
         tecnico_cargo=data.get("tecnico_cargo", ""),
         data_atendimento=data.get("data_atendimento", str(date.today())),
         tipo=data.get("tipo", "individual"),
+        objetivo=data.get("objetivo", ""),
         descricao=data.get("descricao", ""),
-        encaminhamentos=data.get("encaminhamentos", ""),
+        encaminhamento=data.get("encaminhamento", ""),
     )
     return JsonResponse({"atendimento": _atendimento_dict(a)}, status=201)
 
@@ -392,7 +394,7 @@ def api_ass_cras_atendimento_detalhe(request, atendimento_id):
         return JsonResponse({"ok": True})
 
     data = json.loads(request.body)
-    for campo in ["tecnico_nome", "tecnico_cargo", "data_atendimento", "tipo", "descricao", "encaminhamentos"]:
+    for campo in ["tecnico_nome", "tecnico_cargo", "data_atendimento", "tipo", "objetivo", "descricao", "encaminhamento"]:
         if campo in data:
             setattr(a, campo, data[campo])
     a.save()

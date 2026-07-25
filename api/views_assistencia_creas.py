@@ -47,15 +47,19 @@ def _atendimento_creas_dict(a):
         "id": a.id,
         "unidade_creas_id": a.unidade_creas_id,
         "unidade_creas_nome": a.unidade_creas.nome if a.unidade_creas else None,
-        "beneficiario_nome": a.beneficiario_nome,
-        "beneficiario_cpf": a.beneficiario_cpf,
-        "beneficiario_nis": a.beneficiario_nis,
-        "responsavel_familiar": a.responsavel_familiar,
+        "usuario_nome": a.usuario_nome,
+        "usuario_cpf": a.usuario_cpf,
+        "usuario_cns": a.usuario_cns,
+        "usuario_data_nascimento": str(a.usuario_data_nascimento) if a.usuario_data_nascimento else None,
+        "usuario_telefone": a.usuario_telefone,
         "tecnico_nome": a.tecnico_nome,
+        "tecnico_cargo": a.tecnico_cargo,
         "data_atendimento": str(a.data_atendimento),
         "tipo_violacao": a.tipo_violacao,
         "descricao": a.descricao,
-        "encaminhamentos": a.encaminhamentos,
+        "plano_atendimento": a.plano_atendimento,
+        "encaminhamento": a.encaminhamento,
+        "numero_prontuario": a.numero_prontuario,
         "situacao": a.situacao,
         "criado_em": a.criado_em.isoformat(),
     }
@@ -163,9 +167,8 @@ def api_ass_creas_atendimentos(request):
         if busca:
             from django.db.models import Q
             qs = qs.filter(
-                Q(beneficiario_nome__icontains=busca) |
-                Q(beneficiario_cpf__icontains=busca) |
-                Q(beneficiario_nis__icontains=busca)
+                Q(usuario_nome__icontains=busca) |
+                Q(usuario_cpf__icontains=busca)
             )
         return JsonResponse({"atendimentos": [_atendimento_creas_dict(a) for a in qs[:300]]})
 
@@ -177,30 +180,30 @@ def api_ass_creas_atendimentos(request):
         except UnidadeCREAS.DoesNotExist:
             return JsonResponse({"erro": "Unidade CREAS não encontrada"}, status=400)
 
-    # Pré-preenche beneficiário com dados do CadÚnico quando NIS ou CPF é informado.
-    nis = (data.get("beneficiario_nis") or "").strip()
-    cpf = (data.get("beneficiario_cpf") or "").strip()
-    if (nis or cpf) and not data.get("beneficiario_nome"):
+    # Pré-preenche usuário com dados do CadÚnico quando CPF é informado.
+    cpf = (data.get("usuario_cpf") or "").strip()
+    if cpf and not data.get("usuario_nome"):
         from .models import CadUnicoFamilia
-        from django.db.models import Q
-        cad = CadUnicoFamilia.objects.filter(empresa=empresa).filter(
-            Q(responsavel_nis=nis) if nis else Q() | Q(responsavel_cpf=cpf) if cpf else Q()
-        ).first()
-        if cad and not data.get("beneficiario_nome"):
-            data["beneficiario_nome"] = cad.responsavel_nome
+        cad = CadUnicoFamilia.objects.filter(empresa=empresa, responsavel_cpf=cpf).first()
+        if cad:
+            data["usuario_nome"] = cad.responsavel_nome
 
     a = AtendimentoCREAS.objects.create(
         empresa=empresa,
         unidade_creas=unidade_creas,
-        beneficiario_nome=data["beneficiario_nome"],
-        beneficiario_cpf=data.get("beneficiario_cpf", ""),
-        beneficiario_nis=data.get("beneficiario_nis", ""),
-        responsavel_familiar=data.get("responsavel_familiar", ""),
+        usuario_nome=data["usuario_nome"],
+        usuario_cpf=data.get("usuario_cpf", ""),
+        usuario_cns=data.get("usuario_cns", ""),
+        usuario_data_nascimento=data.get("usuario_data_nascimento") or None,
+        usuario_telefone=data.get("usuario_telefone", ""),
         tecnico_nome=data.get("tecnico_nome", ""),
+        tecnico_cargo=data.get("tecnico_cargo", ""),
         data_atendimento=data.get("data_atendimento", str(date.today())),
-        tipo_violacao=data.get("tipo_violacao", "outro"),
+        tipo_violacao=data.get("tipo_violacao", "outros"),
         descricao=data.get("descricao", ""),
-        encaminhamentos=data.get("encaminhamentos", ""),
+        plano_atendimento=data.get("plano_atendimento", ""),
+        encaminhamento=data.get("encaminhamento", ""),
+        numero_prontuario=data.get("numero_prontuario", ""),
         situacao=data.get("situacao", "em_acompanhamento"),
     )
     return JsonResponse({"atendimento": _atendimento_creas_dict(a)}, status=201)
@@ -230,8 +233,9 @@ def api_ass_creas_atendimento_detalhe(request, atendimento_id):
         return JsonResponse({"ok": True})
 
     data = json.loads(request.body)
-    for campo in ["beneficiario_nome", "beneficiario_cpf", "beneficiario_nis", "responsavel_familiar",
-                  "tecnico_nome", "data_atendimento", "tipo_violacao", "descricao", "encaminhamentos", "situacao"]:
+    for campo in ["usuario_nome", "usuario_cpf", "usuario_cns", "usuario_data_nascimento", "usuario_telefone",
+                  "tecnico_nome", "tecnico_cargo", "data_atendimento", "tipo_violacao", "descricao",
+                  "plano_atendimento", "encaminhamento", "numero_prontuario", "situacao"]:
         if campo in data:
             setattr(a, campo, data[campo])
     a.save()

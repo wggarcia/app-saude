@@ -207,6 +207,23 @@ def api_rede_convidar(request):
                     'aviso': 'Empresa não encontrada no sistema. Compartilhe o código do convite diretamente.'
                 })
             ja_e_membro = UnidadeRede.objects.filter(empresa=empresa_destino, rede=rede, ativa=True).exists()
+            if not ja_e_membro:
+                # A empresa convidada precisa ter a feature de rede multi-unidade
+                # no PRÓPRIO plano — sem isso, uma empresa em plano básico
+                # entrava de graça na rede só por ter sido convidada por quem
+                # já paga o upgrade.
+                from .access_control import empresa_tem_feature
+                _feature_por_setor = {
+                    "farmacia": "farmacia.multi_unidade",
+                    "rede": "rede.multi_unidade",
+                    "hospital": "hospital.multi_unidade",
+                }
+                destino_feature = _feature_por_setor.get(get_setor(empresa_destino))
+                if not destino_feature or not empresa_tem_feature(empresa_destino, destino_feature):
+                    return JsonResponse({
+                        "erro": "A empresa convidada não possui o plano de rede multi-unidade — ela precisa fazer upgrade antes de entrar na rede.",
+                        "feature_requerida": destino_feature or "",
+                    }, status=403)
             if not ja_e_membro and not _rede_dentro_do_limite(rede):
                 return JsonResponse({
                     'erro': 'Limite de unidades do plano atingido. Faça upgrade para adicionar mais unidades.',
