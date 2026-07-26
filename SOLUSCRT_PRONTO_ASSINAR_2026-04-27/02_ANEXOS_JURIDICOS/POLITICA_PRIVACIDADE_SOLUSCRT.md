@@ -1,7 +1,7 @@
 # POLÍTICA DE PRIVACIDADE — SOLUSCRT SAUDE
 
-**Versão:** 1.0.0
-**Vigência:** a partir de 21/05/2026
+**Versão:** 1.0.1
+**Vigência:** a partir de 21/05/2026 (correção de infraestrutura em 26/07/2026 — hospedagem real em servidor dedicado no Brasil, não Render/EUA)
 **Controlador da plataforma:** Wagner Garcia (SolusCRT Saude), CPF 091.189.637-65, Niterói/RJ
 **Contato DPO/Privacidade:** privacidade@soluscrt.com.br
 
@@ -102,13 +102,13 @@ A SolusCRT **não vende** dados pessoais. Compartilhamentos ocorrem somente nas 
 
 | Destinatário | Dados | Finalidade |
 |---|---|---|
-| Render (infraestrutura) | Todos os dados da plataforma | Hospedagem segura (Render Services, Inc.) |
+| Provedor de hospedagem (servidor dedicado em território nacional) | Todos os dados da plataforma | Hospedagem segura |
 | Asaas (pagamentos) | Dados de faturamento do Cliente | Processamento de cobrança |
 | Firebase (Google) | Token push, analytics pseudoanonimizado | Notificações móveis |
 | Zoho Mail | E-mail do destinatário | Envio de comunicações transacionais |
 | Autoridades competentes | Conforme ordem judicial ou legal | Cumprimento de obrigação legal |
 
-Todos os suboperadores listados mantêm nível de proteção compatível com LGPD e, no caso de infraestrutura norte-americana, com base nas cláusulas contratuais padrão (SCCs) ou certificações equivalentes.
+Todos os suboperadores listados mantêm nível de proteção compatível com LGPD. Firebase (Google) e Zoho Mail podem envolver processamento em infraestrutura no exterior, sujeito às cláusulas contratuais padrão (SCCs) ou certificações equivalentes desses fornecedores — ver seção 12.
 
 ---
 
@@ -167,7 +167,7 @@ Medidas técnicas e organizacionais implementadas:
 - Rate limiting via Redis;
 - Segregação de dados por empresa (multi-tenant isolado);
 - Trilha de auditoria persistente e imutável;
-- Backup diário automatizado (Render Postgres);
+- Backup diário automatizado, criptografado e com retenção de 30 dias;
 - Rotação periódica de segredos (conforme CHECKLIST_ROTACAO_SEGREDOS_E_ACESSOS.md).
 
 ---
@@ -186,10 +186,12 @@ Canal de reporte de incidentes: **privacidade@soluscrt.com.br** (24h).
 
 ## 12. Transferência Internacional de Dados
 
-A plataforma é hospedada na infraestrutura da **Render Services, Inc.** (EUA), com servidores na região `Oregon (US-West)`. A transferência internacional de dados é realizada com base em:
+A plataforma é hospedada em servidor dedicado em território nacional (Brasil) — não há transferência internacional de dados para fins de hospedagem e processamento principal.
+
+Alguns suboperadores auxiliares (notificações push via Firebase/Google e envio de e-mail transacional via Zoho Mail) podem processar dados em infraestrutura no exterior, limitados a token de dispositivo, analytics pseudoanonimizado e endereço de e-mail de destinatário. Essa transferência pontual é realizada com base em:
 
 - Cláusulas Contratuais Padrão (SCCs) da Comissão Europeia, aceitas pela ANPD como mecanismo equivalente;
-- Cláusulas específicas de segurança e confidencialidade nos contratos com suboperadores.
+- Cláusulas específicas de segurança e confidencialidade nos contratos com esses suboperadores.
 
 ---
 
@@ -216,4 +218,4 @@ Para solicitações de titulares, dúvidas sobre esta Política ou notificaçõe
 
 ---
 
-*Última atualização: 21/05/2026 — Versão 1.0.0*
+*Última atualização: 26/07/2026 — Versão 1.0.1*
