@@ -9370,6 +9370,7 @@ class AlertaGovernamentalXssTests(TestCase):
         self.assertEqual(resp.status_code, 200, msg=resp.content)
         alerta = AlertaGovernamental.objects.get(id=alerta_id)
         self.assertNotIn("<script>", alerta.justificativa)
+        self.assertIn("motivo real", alerta.justificativa)
 
 
 class PlanoSaudePlanosPaginacaoTests(TestCase):
@@ -9519,4 +9520,3 @@ class GovernoListagensPaginacaoTests(TestCase):
         self.assertEqual(d["total"], 3)
         self.assertEqual(len(d["atendimentos"]), 2)
         self.assertTrue(d["has_more"])
-        self.assertIn("motivo real", alerta.justificativa)
