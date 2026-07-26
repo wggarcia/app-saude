@@ -2711,6 +2711,11 @@ class GovernanceTests(TestCase):
                 "mensagem": "Comunicado preventivo",
                 "nivel": "alto",
                 "justificativa": "Crescimento regional acima do esperado",
+                # sem esta flag o alerta nasce como rascunho (guardrail de
+                # segurança: publicar_agora=False é o default seguro desde a
+                # correção do bypass de aprovação). Este teste quer exercer o
+                # fluxo completo até publicado, então pede revisão já na criação.
+                "publicar_agora": True,
             }),
             content_type="application/json",
         )
@@ -7247,7 +7252,11 @@ class SIBAPITests(PlanoSaudeEnterpriseBaseTests):
         resp = self._get("/api/plano-saude/ans/sib/99999")
         self.assertEqual(resp.status_code, 404)
 
-    def test_update_sib_marca_enviado(self):
+    def test_update_sib_nao_marca_enviado_por_edicao_manual(self):
+        """Conformidade assistida: 'enviado' só pode ser marcado por transmissão
+        real (api_sib_transmitir) ou registro de protocolo
+        (api_sib_registrar_protocolo) — nunca por PUT direto, pra não haver
+        'enviado à ANS' sem comprovante."""
         s = SIBRegistro.objects.create(
             empresa=self.operadora,
             competencia="202604",
@@ -7255,7 +7264,11 @@ class SIBAPITests(PlanoSaudeEnterpriseBaseTests):
         )
         resp = self._put(f"/api/plano-saude/ans/sib/{s.pk}", {"enviado": True})
         self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.json()["registro"]["enviado"])
+        self.assertFalse(resp.json()["registro"]["enviado"])
+
+        protocolo = self._post(f"/api/plano-saude/ans/sib/{s.pk}/registrar-protocolo/", {"protocolo": "ANS-123456"})
+        self.assertEqual(protocolo.status_code, 200)
+        self.assertTrue(protocolo.json()["registro"]["enviado"])
 
     def test_transmitir_sib_rate_limit(self):
         from django.core.cache import cache as django_cache
@@ -7266,9 +7279,11 @@ class SIBAPITests(PlanoSaudeEnterpriseBaseTests):
             total_vidas=400,
         )
         url = f"/api/plano-saude/ans/sib/{s.pk}/transmitir/"
-        # Marca rate limit manualmente
+        # Marca rate limit manualmente. Chave inclui empresa.id desde a correção
+        # do DoS cross-tenant (rate-limit não podia ser poluído chutando IDs de
+        # registro de outra operadora).
         from django.core.cache import cache
-        cache.set(f"sib_transmit:{s.pk}", True, timeout=3600)
+        cache.set(f"sib_transmit:{self.operadora.id}:{s.pk}", True, timeout=3600)
         resp = self.client.post(url)
         self.assertEqual(resp.status_code, 429)
 
@@ -8446,9 +8461,20 @@ class GovernoSuasPiiCrossTenantTests(TestCase):
     unidade_notificante_id, surto_id, unidade_id) permitia a uma prefeitura-
     cliente referenciar o registro de OUTRA prefeitura, vazando nome de
     família/unidade nas respostas. Confirma que agora é validado e rejeitado
-    com 400."""
+    com 400.
+
+    Nenhum plano Governo inclui a feature "governo.suas" de propósito (ver
+    GovernoSuasSemGatingTests) — então liberamos ela artificialmente aqui pra
+    alcançar a validação de PII que este teste quer exercer, sem depender do
+    catálogo de planos."""
 
     def setUp(self):
+        patcher = patch(
+            "api.access_control.empresa_tem_feature",
+            side_effect=lambda empresa, feature: True if feature == "governo.suas" else False,
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.empresa = Empresa.objects.create(
             nome="Prefeitura A", email="prefeitura-a-pii@teste.com",
             senha=make_password("123456"), ativo=True,

@@ -4,6 +4,7 @@ push público (DispositivoPushPublico), contagens de KPI e disparo de push de
 AlertaCidadao nunca atravessam a fronteira entre municípios/tenants diferentes.
 """
 import json
+from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
 from django.test import Client, TestCase
@@ -120,12 +121,15 @@ class AppCidadaoTenantIsolationTests(TestCase):
             tipo="informativo", publico_alvo="todos",
         )
 
-        # sem FIREBASE_SERVICE_ACCOUNT_JSON no ambiente de teste, a função retorna
-        # "push_indisponivel" antes de montar a lista de tokens — mas o escopo por
-        # tenant é a MESMA expressão de queryset usada internamente por
-        # enviar_push_alerta_cidadao, então validamos que ela nunca inclui tokens
-        # de outro município.
-        self.assertEqual(enviar_push_alerta_cidadao(alerta_a)["status"], "push_indisponivel")
+        # Força o caminho "sem Firebase configurado" explicitamente — em vez de
+        # depender do ambiente não ter credencial (o VPS real TEM
+        # FIREBASE_SERVICE_ACCOUNT_PATH configurado, herdado do .env de
+        # produção mesmo em manage.py test, o que faria a função tentar um
+        # envio real com tokens falsos de teste e retornar "falha_total").
+        # O que este teste quer garantir é o escopo por tenant do queryset
+        # interno, não o comportamento do SDK do Firebase.
+        with patch("api.push_service._firebase_app", return_value=None):
+            self.assertEqual(enviar_push_alerta_cidadao(alerta_a)["status"], "push_indisponivel")
 
         tokens_a = set(
             DispositivoPushPublico.objects.filter(ativo=True, empresa=alerta_a.empresa)
