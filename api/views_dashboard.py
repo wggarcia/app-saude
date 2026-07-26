@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.db.models import Count, Avg
 from django.utils import timezone
+from django.utils.html import strip_tags
 from datetime import timedelta
 import json
 from .models import RegistroSintoma, DispositivoAutorizado, EmpresaUsuario, FinanceiroEventoSaaS, DonoAuditoriaAcao, AlertaGovernamental, DonoSaaS
@@ -552,13 +553,23 @@ def api_criar_alerta_governo(request):
     except Exception:
         return JsonResponse({"erro": "json inválido"}, status=400)
 
-    titulo = (dados.get("titulo") or "").strip()
-    mensagem = (dados.get("mensagem") or "").strip()
+    # strip_tags remove qualquer marcação HTML — estes campos são texto puro
+    # (título/mensagem de alerta), nunca deveriam conter HTML. Sanitização na
+    # escrita, em vez de só confiar em escape na exibição, porque o mesmo
+    # dado é servido sem autenticação em /api/public/alertas e espelhado
+    # entre tenants por _sincronizar_alerta_no_app_publico.
+    titulo = strip_tags((dados.get("titulo") or "").strip())
+    mensagem = strip_tags((dados.get("mensagem") or "").strip())
     if not titulo or not mensagem:
         return JsonResponse({"erro": "titulo e mensagem são obrigatórios"}, status=400)
 
-    publicar_agora = bool(dados.get("publicar_agora"))
-    status_inicial = AlertaGovernamental.STATUS_PUBLICADO if publicar_agora else AlertaGovernamental.STATUS_EM_REVISAO
+    # "publicar_agora" NÃO publica mais direto — isso permitia ao próprio
+    # autor se auto-aprovar (revisado_por/aprovado_por = ele mesmo) e ir ao ar
+    # sem segundo revisor. Agora só avança pra EM_REVISAO; publicar de fato
+    # exige passar por api_fluxo_alerta_governo (ação "aprovar" depois
+    # "publicar"), que já checa status=APROVADO antes de liberar.
+    enviar_para_revisao = bool(dados.get("publicar_agora"))
+    status_inicial = AlertaGovernamental.STATUS_EM_REVISAO if enviar_para_revisao else AlertaGovernamental.STATUS_RASCUNHO
     agora = timezone.now()
     alerta = AlertaGovernamental.objects.create(
         empresa=empresa,
@@ -568,15 +579,12 @@ def api_criar_alerta_governo(request):
         cidade=(dados.get("cidade") or "").strip() or None,
         bairro=(dados.get("bairro") or "").strip() or None,
         nivel=((dados.get("nivel") or "moderado").strip() or "moderado")[:20],
-        ativo=publicar_agora,
+        ativo=False,
         status=status_inicial,
         protocolo=f"ALR-{agora.strftime('%Y%m%d%H%M%S')}",
-        justificativa=(dados.get("justificativa") or "").strip(),
+        justificativa=strip_tags((dados.get("justificativa") or "").strip()),
         criado_por=_principal_label(request),
-        revisado_por=_principal_label(request) if publicar_agora else "",
-        aprovado_por=_principal_label(request) if publicar_agora else "",
-        aprovado_em=agora if publicar_agora else None,
-        publicado_em=agora if publicar_agora else None,
+        revisado_por=_principal_label(request) if enviar_para_revisao else "",
     )
     registrar_auditoria_institucional(
         request,
@@ -584,20 +592,16 @@ def api_criar_alerta_governo(request):
         alerta,
         {
             "status": alerta.status,
-            "publicar_agora": publicar_agora,
             "nivel": alerta.nivel,
             "escopo": {"estado": alerta.estado, "cidade": alerta.cidade, "bairro": alerta.bairro},
         },
     )
-    if publicar_agora:
-        _sincronizar_alerta_no_app_publico(alerta)
-    push_resultado = enviar_alerta_governamental(alerta) if publicar_agora else {"status": "aguardando_aprovacao", "enviados": 0}
     return JsonResponse({
         "status": "ok",
         "alerta_id": alerta.id,
         "alerta_status": alerta.status,
         "protocolo": alerta.protocolo,
-        "push": push_resultado,
+        "push": {"status": "aguardando_aprovacao", "enviados": 0},
         "push_configurado": push_disponivel(),
     })
 
@@ -661,7 +665,7 @@ def api_fluxo_alerta_governo(request):
         return JsonResponse({"erro": "alerta não encontrado"}, status=404)
 
     acao = (dados.get("acao") or "").strip()
-    justificativa = (dados.get("justificativa") or "").strip()
+    justificativa = strip_tags((dados.get("justificativa") or "").strip())
     agora = timezone.now()
     push_resultado = {"status": "nao_enviado", "enviados": 0}
     update_fields = [

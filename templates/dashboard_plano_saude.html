@@ -898,6 +898,14 @@
       return level === "MODERADO" || level === "BAIXO" ? "#07131d" : "#ffffff";
     }
 
+    function escHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
     function numericAreaValue(area, keys) {
       for (const key of keys) {
         const value = Number(area?.[key]);
@@ -1344,10 +1352,10 @@
         container.innerHTML = alertas.slice(0, 5).map((a) => `
           <div class="alert-card">
             <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-              <strong>${a.titulo || a.title || a.doenca || "Alerta"}</strong>
-              <span class="risk-badge risk-${a.nivel || a.risk_level || "MODERADO"}" style="color:${riskTextColor(a.nivel || a.risk_level || "MODERADO")}">${a.nivel || a.risk_level || "ALERTA"}</span>
+              <strong>${escHtml(a.titulo || a.title || a.doenca || "Alerta")}</strong>
+              <span class="risk-badge risk-${escHtml(a.nivel || a.risk_level || "MODERADO")}" style="color:${riskTextColor(a.nivel || a.risk_level || "MODERADO")}">${escHtml(a.nivel || a.risk_level || "ALERTA")}</span>
             </div>
-            <div class="mini" style="margin-top:6px">${a.mensagem || a.message || a.descricao || ""}</div>
+            <div class="mini" style="margin-top:6px">${escHtml(a.mensagem || a.message || a.descricao || "")}</div>
           </div>
         `).join("");
       } catch(e) {

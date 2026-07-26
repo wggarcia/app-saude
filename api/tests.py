@@ -9248,3 +9248,126 @@ class AssistenciaSocialCrudCompletoTests(TestCase):
         self.assertEqual(resp.status_code, 200, msg=resp.content)
         b.refresh_from_db()
         self.assertEqual(b.observacoes, "Entregue em mãos")
+
+
+class AlertaGovernamentalXssTests(TestCase):
+    """Auditoria de segurança geral (jul/2026): AlertaGovernamental aceitava
+    HTML/JS cru em titulo/mensagem/justificativa, servido sem autenticação em
+    /api/public/alertas e espelhado entre tenants — XSS armazenado real.
+    Além disso, 'publicar_agora' na criação permitia auto-aprovação (o
+    próprio autor virava revisado_por/aprovado_por) sem segundo revisor.
+    Confirma que o HTML é removido na escrita e que criar não publica mais
+    direto — precisa passar pelo fluxo real (enviar_revisao > aprovar >
+    publicar) que já existia e já checava status=aprovado."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura XSS Teste", email="pref-xss-teste@teste.com",
+            senha=make_password("123456"), ativo=True, tipo_conta="governo",
+            pacote_codigo="governo_municipio_medio", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "pref-xss-teste@teste.com", "senha": "123456",
+                "device_id": "dev-xss-teste", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_criar_alerta_remove_html_do_titulo_e_mensagem(self):
+        from .models import AlertaGovernamental
+        resp = self.client.post(
+            "/api/governo/alertas/criar",
+            data=json.dumps({
+                "titulo": "Alerta <script>alert(1)</script> Real",
+                "mensagem": "Mensagem <img src=x onerror=alert(2)> perigosa",
+                "justificativa": "<b>negrito</b> justificativa",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        alerta = AlertaGovernamental.objects.get(id=resp.json()["alerta_id"])
+        self.assertNotIn("<script>", alerta.titulo)
+        self.assertNotIn("<img", alerta.mensagem)
+        self.assertNotIn("<b>", alerta.justificativa)
+        self.assertIn("Alerta", alerta.titulo)
+        self.assertIn("Mensagem", alerta.mensagem)
+
+    def test_publicar_agora_nao_publica_mais_direto_nem_autoaprova(self):
+        """O bug real: publicar_agora=True ia direto pra PUBLICADO com o
+        próprio autor como aprovado_por. Agora só avança pra EM_REVISAO."""
+        from .models import AlertaGovernamental
+        resp = self.client.post(
+            "/api/governo/alertas/criar",
+            data=json.dumps({
+                "titulo": "Alerta urgente", "mensagem": "Mensagem urgente",
+                "publicar_agora": True,
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        alerta = AlertaGovernamental.objects.get(id=resp.json()["alerta_id"])
+        self.assertEqual(alerta.status, AlertaGovernamental.STATUS_EM_REVISAO)
+        self.assertNotEqual(alerta.status, AlertaGovernamental.STATUS_PUBLICADO)
+        self.assertEqual(alerta.aprovado_por, "")
+        self.assertIsNone(alerta.aprovado_em)
+        self.assertFalse(alerta.ativo)
+
+    def test_fluxo_completo_ainda_exige_aprovacao_antes_de_publicar(self):
+        """Confirma que o caminho legítimo (que já existia) continua
+        funcionando: só publica depois de passar por 'aprovar'."""
+        from .models import AlertaGovernamental
+        resp = self.client.post(
+            "/api/governo/alertas/criar",
+            data=json.dumps({"titulo": "Alerta", "mensagem": "Mensagem", "publicar_agora": True}),
+            content_type="application/json", secure=True,
+        )
+        alerta_id = resp.json()["alerta_id"]
+
+        resp = self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({"alerta_id": alerta_id, "acao": "publicar"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 400, msg=resp.content)
+
+        resp = self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({"alerta_id": alerta_id, "acao": "aprovar"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        resp = self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({"alerta_id": alerta_id, "acao": "publicar"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        alerta = AlertaGovernamental.objects.get(id=alerta_id)
+        self.assertEqual(alerta.status, AlertaGovernamental.STATUS_PUBLICADO)
+
+    def test_fluxo_remove_html_da_justificativa(self):
+        from .models import AlertaGovernamental
+        resp = self.client.post(
+            "/api/governo/alertas/criar",
+            data=json.dumps({"titulo": "Alerta", "mensagem": "Mensagem"}),
+            content_type="application/json", secure=True,
+        )
+        alerta_id = resp.json()["alerta_id"]
+
+        resp = self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({
+                "alerta_id": alerta_id, "acao": "enviar_revisao",
+                "justificativa": "<script>alert(3)</script> motivo real",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        alerta = AlertaGovernamental.objects.get(id=alerta_id)
+        self.assertNotIn("<script>", alerta.justificativa)
+        self.assertIn("motivo real", alerta.justificativa)

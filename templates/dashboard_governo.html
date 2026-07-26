@@ -1097,6 +1097,14 @@
     const rightHandle = document.getElementById("rightHandle");
     const bottomHandle = document.getElementById("bottomHandle");
 
+    function escHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
     function _t(msg, tipo) {
       const el = document.createElement("div");
       const cor = tipo === "err" ? "#ff4d6d" : tipo === "ok" ? "#00e5b0" : "#ffb347";
@@ -1584,15 +1592,15 @@
         ? items.map((alerta) => `
             <div class="alert-card">
               <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
-                <strong>${alerta.titulo}</strong>
-                <span class="badge ${alerta.status === "publicado" ? "alto" : alerta.status === "aprovado" ? "moderado" : "baixo"}">${statusLabel[alerta.status] || alerta.status}</span>
+                <strong>${escHtml(alerta.titulo)}</strong>
+                <span class="badge ${alerta.status === "publicado" ? "alto" : alerta.status === "aprovado" ? "moderado" : "baixo"}">${escHtml(statusLabel[alerta.status] || alerta.status)}</span>
               </div>
               <div class="mini" style="margin-top:8px;">
-                ${alerta.mensagem}<br>
-                Protocolo: ${alerta.protocolo || "-"}<br>
-                ${alerta.bairro || alerta.cidade || alerta.estado ? `Recorte: ${alerta.bairro || "-"} / ${alerta.cidade || "-"} / ${alerta.estado || "-"}` : "Abrangencia geral"}<br>
-                Justificativa: ${alerta.justificativa || "nao informada"}<br>
-                Criado por: ${alerta.criado_por || "-"} | Aprovado por: ${alerta.aprovado_por || "-"}<br>
+                ${escHtml(alerta.mensagem)}<br>
+                Protocolo: ${escHtml(alerta.protocolo || "-")}<br>
+                ${alerta.bairro || alerta.cidade || alerta.estado ? `Recorte: ${escHtml(alerta.bairro || "-")} / ${escHtml(alerta.cidade || "-")} / ${escHtml(alerta.estado || "-")}` : "Abrangencia geral"}<br>
+                Justificativa: ${escHtml(alerta.justificativa || "nao informada")}<br>
+                Criado por: ${escHtml(alerta.criado_por || "-")} | Aprovado por: ${escHtml(alerta.aprovado_por || "-")}<br>
                 Criado em: ${new Date(alerta.criado_em).toLocaleString("pt-BR")}
               </div>
               <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
