@@ -483,13 +483,17 @@ def _guia_sla_info(g):
 
 
 def _prestador_dict(p):
-    pendentes = p.guias.filter(
-        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
-    ).count()
-    vencidas = p.guias.filter(
-        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
-        prazo_sla_em__lt=timezone.now(),
-    ).count()
+    if hasattr(p, "_guias_pendentes_anot"):
+        pendentes = p._guias_pendentes_anot
+        vencidas = p._guias_sla_vencido_anot
+    else:
+        pendentes = p.guias.filter(
+            status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
+        ).count()
+        vencidas = p.guias.filter(
+            status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+            prazo_sla_em__lt=timezone.now(),
+        ).count()
     return {
         "id": p.id,
         "codigo_rede": p.codigo_rede,
@@ -517,6 +521,17 @@ def _prestador_dict(p):
     }
 
 def _plano_dict(p):
+    # Se a queryset já veio com .annotate() (ver api_ps_planos), usa os totais
+    # pré-calculados numa única query; senão (ex: instância recém-criada no
+    # POST) cai para os .count() individuais — só acontece para 1 linha.
+    if hasattr(p, "_total_beneficiarios_anot"):
+        total_beneficiarios = p._total_beneficiarios_anot
+        total_guias_pendentes = p._total_guias_pendentes_anot
+        total_sinistros_abertos = p._total_sinistros_abertos_anot
+    else:
+        total_beneficiarios = p.beneficiarios.filter(situacao="ativo").count()
+        total_guias_pendentes = p.guias.filter(status__in=["solicitada", "em_analise"]).count()
+        total_sinistros_abertos = p.sinistros.filter(status__in=["aberto", "em_analise"]).count()
     return {
         "id": p.id,
         "nome": p.nome,
@@ -527,9 +542,9 @@ def _plano_dict(p):
         "abrangencia": p.abrangencia,
         "status": p.status,
         "status_label": p.get_status_display(),
-        "total_beneficiarios": p.beneficiarios.filter(situacao="ativo").count(),
-        "total_guias_pendentes": p.guias.filter(status__in=["solicitada", "em_analise"]).count(),
-        "total_sinistros_abertos": p.sinistros.filter(status__in=["aberto", "em_analise"]).count(),
+        "total_beneficiarios": total_beneficiarios,
+        "total_guias_pendentes": total_guias_pendentes,
+        "total_sinistros_abertos": total_sinistros_abertos,
         "criado_em": p.criado_em.strftime("%d/%m/%Y"),
     }
 
@@ -794,7 +809,36 @@ def api_ps_planos(request):
         status_f = request.GET.get("status")
         if status_f:
             qs = qs.filter(status=status_f)
-        return JsonResponse({"planos": [_plano_dict(p) for p in qs]})
+
+        try:
+            limit = min(max(int(request.GET.get("limit", 200)), 1), 500)
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            limit, offset = 200, 0
+        total = qs.count()
+
+        # Uma única query com subquery de contagem por plano, em vez de 3
+        # .count() por linha dentro de _plano_dict (era N+1: 3xN queries).
+        # Aplicado só na página já fatiada (evita anotar linhas que nem vão
+        # ser devolvidas).
+        pagina = qs.order_by("-criado_em")[offset:offset + limit]
+        planos = PlanoSaude.objects.filter(pk__in=[p.pk for p in pagina]).annotate(
+            _total_beneficiarios_anot=Count(
+                "beneficiarios", filter=Q(beneficiarios__situacao="ativo"), distinct=True,
+            ),
+            _total_guias_pendentes_anot=Count(
+                "guias", filter=Q(guias__status__in=["solicitada", "em_analise"]), distinct=True,
+            ),
+            _total_sinistros_abertos_anot=Count(
+                "sinistros", filter=Q(sinistros__status__in=["aberto", "em_analise"]), distinct=True,
+            ),
+        ).order_by("-criado_em")
+
+        return JsonResponse({
+            "planos": [_plano_dict(p) for p in planos],
+            "total": total, "limit": limit, "offset": offset,
+            "has_more": (offset + limit) < total,
+        })
 
     if request.method == "POST":
         try:
@@ -1000,7 +1044,25 @@ def api_ps_prestadores(request):
             )
         if request.GET.get("portal_ativo") in {"1", "true"}:
             qs = qs.filter(portal_ativo=True)
-        return JsonResponse({"prestadores": [_prestador_dict(p) for p in qs[:300]]})
+        pagina_ids = list(qs.values_list("pk", flat=True)[:300])
+        prestadores = PrestadorPlanoSaude.objects.filter(pk__in=pagina_ids).annotate(
+            _guias_pendentes_anot=Count(
+                "guias",
+                filter=Q(guias__status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]),
+                distinct=True,
+            ),
+            _guias_sla_vencido_anot=Count(
+                "guias",
+                filter=Q(
+                    guias__status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+                    guias__prazo_sla_em__lt=timezone.now(),
+                ),
+                distinct=True,
+            ),
+        )
+        prestadores_por_id = {p.pk: p for p in prestadores}
+        ordenados = [prestadores_por_id[pk] for pk in pagina_ids if pk in prestadores_por_id]
+        return JsonResponse({"prestadores": [_prestador_dict(p) for p in ordenados]})
 
     if request.method == "POST":
         try:

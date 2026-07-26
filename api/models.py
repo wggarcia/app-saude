@@ -3861,6 +3861,11 @@ class GuiaAutorizacao(models.Model):
 
     class Meta:
         ordering = ["-solicitada_em"]
+        indexes = [
+            models.Index(fields=["plano", "status"], name="api_guiaaut_plano_status_idx"),
+            models.Index(fields=["plano", "fila_status"], name="api_guiaaut_plano_filastat_idx"),
+            models.Index(fields=["plano", "prazo_sla_em"], name="api_guiaaut_plano_slaprazo_idx"),
+        ]
 
     def __str__(self):
         return f"Guia #{self.numero_guia or self.id} — {self.beneficiario.nome}"
@@ -3922,6 +3927,10 @@ class Sinistro(models.Model):
 
     class Meta:
         ordering = ["-data_abertura"]
+        indexes = [
+            models.Index(fields=["empresa", "status"], name="api_sinist_empresa_status_idx"),
+            models.Index(fields=["empresa", "data_abertura"], name="api_sinist_empresa_abert_idx"),
+        ]
 
     def __str__(self):
         return f"Sinistro #{self.numero_sinistro or self.id} — {self.beneficiario.nome}"
@@ -5109,6 +5118,10 @@ class PacienteInternado(models.Model):
 
     class Meta:
         ordering = ["-data_internacao", "nome"]
+        indexes = [
+            models.Index(fields=["empresa", "status"], name="api_pacint_empresa_status_idx"),
+            models.Index(fields=["empresa", "data_internacao"], name="api_pacint_empresa_intern_idx"),
+        ]
 
     def __str__(self):
         return f"{self.nome} — {self.status}"

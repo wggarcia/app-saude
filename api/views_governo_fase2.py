@@ -80,7 +80,20 @@ def api_unidades_saude(request):
             qs = qs.filter(status=status)
         if municipio:
             qs = qs.filter(municipio__icontains=municipio)
-        return JsonResponse({"unidades": [_unidade_dict(u) for u in qs]})
+
+        try:
+            limit = min(max(int(request.GET.get("limit", 200)), 1), 500)
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            limit, offset = 200, 0
+        total = qs.count()
+        pagina = qs.order_by("-criado_em")[offset:offset + limit]
+
+        return JsonResponse({
+            "unidades": [_unidade_dict(u) for u in pagina],
+            "total": total, "limit": limit, "offset": offset,
+            "has_more": (offset + limit) < total,
+        })
 
     data = json.loads(request.body or "{}")
     if not data.get("nome") or not data.get("tipo") or not data.get("municipio"):
@@ -258,6 +271,24 @@ def api_surtos(request):
         status = request.GET.get("status")
         if status:
             qs = qs.filter(status=status)
+
+        try:
+            limit = min(max(int(request.GET.get("limit", 200)), 1), 500)
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            limit, offset = 200, 0
+        total = qs.count()
+
+        # Paginação primeiro (barato, sem join), depois anota total_notificacoes
+        # só na página já fatiada — evita 1 count() extra por linha (era N+1).
+        pagina_ids = [s.pk for s in qs.order_by("-criado_em")[offset:offset + limit]]
+        surtos_por_id = {
+            s.pk: s for s in SurtoEpidemiologico.objects.filter(pk__in=pagina_ids).annotate(
+                _total_notificacoes_anot=Count("notificacoes", distinct=True),
+            )
+        }
+        pagina = [surtos_por_id[pk] for pk in pagina_ids if pk in surtos_por_id]
+
         return JsonResponse({"surtos": [{
             "id": s.id, "doenca": s.doenca,
             "municipio": s.municipio, "uf": s.uf, "bairro": s.bairro,
@@ -268,9 +299,12 @@ def api_surtos(request):
             "nivel_alerta": s.nivel_alerta,
             "acoes_resposta": s.acoes_resposta,
             "responsavel_investigacao": s.responsavel_investigacao,
-            "total_notificacoes": s.notificacoes.count(),
+            "total_notificacoes": s._total_notificacoes_anot,
             "criado_em": s.criado_em.isoformat(),
-        } for s in qs]})
+        } for s in pagina],
+            "total": total, "limit": limit, "offset": offset,
+            "has_more": (offset + limit) < total,
+        })
 
     data = json.loads(request.body or "{}")
     if not data.get("doenca") or not data.get("municipio") or not data.get("data_inicio"):
@@ -840,7 +874,20 @@ def api_contratos_gestao(request):
             qs = qs.filter(status=status)
         if tipo:
             qs = qs.filter(tipo=tipo)
-        return JsonResponse({"contratos": [_contrato_dict(c) for c in qs]})
+
+        try:
+            limit = min(max(int(request.GET.get("limit", 200)), 1), 500)
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            limit, offset = 200, 0
+        total = qs.count()
+        pagina = qs.order_by("-criado_em")[offset:offset + limit]
+
+        return JsonResponse({
+            "contratos": [_contrato_dict(c) for c in pagina],
+            "total": total, "limit": limit, "offset": offset,
+            "has_more": (offset + limit) < total,
+        })
 
     data = json.loads(request.body or "{}")
     required = ["numero_contrato","fornecedor_nome","tipo","objeto","data_inicio","data_fim"]
@@ -945,7 +992,20 @@ def api_atendimentos_urgencia(request):
             qs = qs.filter(data_atendimento__gte=data_inicio)
         if data_fim:
             qs = qs.filter(data_atendimento__lte=data_fim)
-        return JsonResponse({"atendimentos": [_urgencia_dict(a) for a in qs]})
+
+        try:
+            limit = min(max(int(request.GET.get("limit", 200)), 1), 500)
+            offset = max(int(request.GET.get("offset", 0)), 0)
+        except (ValueError, TypeError):
+            limit, offset = 200, 0
+        total = qs.count()
+        pagina = qs.order_by("-data_atendimento")[offset:offset + limit]
+
+        return JsonResponse({
+            "atendimentos": [_urgencia_dict(a) for a in pagina],
+            "total": total, "limit": limit, "offset": offset,
+            "has_more": (offset + limit) < total,
+        })
 
     data = json.loads(request.body or "{}")
     if not data.get("tipo_unidade") or not data.get("data_atendimento"):

@@ -9370,4 +9370,153 @@ class AlertaGovernamentalXssTests(TestCase):
         self.assertEqual(resp.status_code, 200, msg=resp.content)
         alerta = AlertaGovernamental.objects.get(id=alerta_id)
         self.assertNotIn("<script>", alerta.justificativa)
+
+
+class PlanoSaudePlanosPaginacaoTests(TestCase):
+    """api_ps_planos fazia 3 .count() por linha (N+1) e devolvia a lista
+    inteira sem paginação. Confirma que a paginação (limit/offset/total/
+    has_more) funciona e que os totais agregados via annotate() batem com
+    o que o .count() por linha calculava antes."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Operadora Paginação", email="operadora-paginacao@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="plano_saude_operadora", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora-paginacao@teste.com", "senha": "123456",
+                "device_id": "dev-plano-paginacao", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        self.planos = [
+            PlanoSaude.objects.create(empresa=self.empresa, nome=f"Plano {i}")
+            for i in range(3)
+        ]
+
+    def test_paginacao_limit_offset_has_more(self):
+        resp = self.client.get("/api/plano-saude/planos?limit=2&offset=0", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d = resp.json()
+        self.assertEqual(d["total"], 3)
+        self.assertEqual(len(d["planos"]), 2)
+        self.assertTrue(d["has_more"])
+
+        resp = self.client.get("/api/plano-saude/planos?limit=2&offset=2", secure=True)
+        d = resp.json()
+        self.assertEqual(len(d["planos"]), 1)
+        self.assertFalse(d["has_more"])
+
+    def test_total_beneficiarios_via_annotate_bate_com_situacao_ativo(self):
+        from .models import BeneficiarioPlano
+        alvo = self.planos[0]
+        BeneficiarioPlano.objects.create(plano=alvo, nome="Ativo 1", situacao="ativo")
+        BeneficiarioPlano.objects.create(plano=alvo, nome="Ativo 2", situacao="ativo")
+        BeneficiarioPlano.objects.create(plano=alvo, nome="Cancelado", situacao="cancelado")
+
+        resp = self.client.get("/api/plano-saude/planos", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d = resp.json()
+        plano_dict = next(p for p in d["planos"] if p["id"] == alvo.id)
+        self.assertEqual(plano_dict["total_beneficiarios"], 2)
+
+
+class GovernoListagensPaginacaoTests(TestCase):
+    """4 listagens do Governo (unidades, surtos, contratos, atendimentos de
+    urgência) devolviam a queryset inteira sem paginação. Confirma limit/
+    offset/total/has_more e que api_surtos não regrediu para N+1 no
+    total_notificacoes (agora via annotate())."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura Paginação", email="pref-paginacao@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="governo_municipio_medio", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "pref-paginacao@teste.com", "senha": "123456",
+                "device_id": "dev-gov-paginacao", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_unidades_paginacao(self):
+        from .models import UnidadeSaude
+        for i in range(3):
+            UnidadeSaude.objects.create(
+                empresa=self.empresa, nome=f"UBS {i}", tipo="ubs", municipio="Cidade X",
+            )
+        resp = self.client.get("/api/governo/unidades/?limit=2&offset=0", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d = resp.json()
+        self.assertEqual(d["total"], 3)
+        self.assertEqual(len(d["unidades"]), 2)
+        self.assertTrue(d["has_more"])
+
+    def test_surtos_paginacao_e_total_notificacoes_via_annotate(self):
+        from .models import SurtoEpidemiologico, NotificacaoCompulsoria
+        s1 = SurtoEpidemiologico.objects.create(
+            empresa=self.empresa, doenca="Dengue", municipio="Cidade X", data_inicio="2026-01-01",
+        )
+        SurtoEpidemiologico.objects.create(
+            empresa=self.empresa, doenca="Zika", municipio="Cidade X", data_inicio="2026-02-01",
+        )
+        NotificacaoCompulsoria.objects.create(
+            empresa=self.empresa, doenca="Dengue", data_notificacao="2026-01-05",
+            municipio_notificacao="Cidade X", surto=s1,
+        )
+        NotificacaoCompulsoria.objects.create(
+            empresa=self.empresa, doenca="Dengue", data_notificacao="2026-01-06",
+            municipio_notificacao="Cidade X", surto=s1,
+        )
+
+        resp = self.client.get("/api/governo/vigilancia/surtos/?limit=1&offset=0", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d = resp.json()
+        self.assertEqual(d["total"], 2)
+        self.assertEqual(len(d["surtos"]), 1)
+        self.assertTrue(d["has_more"])
+
+        resp = self.client.get("/api/governo/vigilancia/surtos/", secure=True)
+        d = resp.json()
+        surto_dengue = next(s for s in d["surtos"] if s["doenca"] == "Dengue")
+        self.assertEqual(surto_dengue["total_notificacoes"], 2)
+
+    def test_contratos_paginacao(self):
+        from .models import ContratoGestao
+        for i in range(3):
+            ContratoGestao.objects.create(
+                empresa=self.empresa, numero_contrato=f"CT-{i}", fornecedor_nome="Fornecedor X",
+                tipo="terceirizacao", objeto="Objeto teste",
+                data_inicio="2026-01-01", data_fim="2026-12-31",
+            )
+        resp = self.client.get("/api/governo/contratos/?limit=2&offset=0", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d = resp.json()
+        self.assertEqual(d["total"], 3)
+        self.assertEqual(len(d["contratos"]), 2)
+        self.assertTrue(d["has_more"])
+
+    def test_atendimentos_urgencia_paginacao(self):
+        from .models import AtendimentoUrgencia
+        for i in range(3):
+            AtendimentoUrgencia.objects.create(
+                empresa=self.empresa, tipo_unidade="upa",
+                data_atendimento=f"2026-01-0{i+1}", total_atendimentos=10,
+            )
+        resp = self.client.get("/api/governo/urgencia/?limit=2&offset=0", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        d = resp.json()
+        self.assertEqual(d["total"], 3)
+        self.assertEqual(len(d["atendimentos"]), 2)
+        self.assertTrue(d["has_more"])
         self.assertIn("motivo real", alerta.justificativa)
