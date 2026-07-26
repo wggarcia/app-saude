@@ -1,7 +1,7 @@
 # ANEXO IV — POLÍTICA DE SEGURANÇA DA INFORMAÇÃO E RESPOSTA A INCIDENTES
 
-**Versão:** 1.0.1
-**Data:** 26/07/2026 (correção de infraestrutura — hospedagem real em servidor dedicado, não Render)
+**Versão:** 1.0.2
+**Data:** 26/07/2026 (correção de infraestrutura — primário em VPS dedicado no Brasil + standby de contingência no Render/EUA, com transferência internacional declarada)
 **Vínculo:** Anexo obrigatório de todos os contratos SolusCRT (B2B e B2G)
 
 ---
@@ -36,8 +36,9 @@ Definir os controles de segurança da informação implementados pela SolusCRT e
 - Cabeçalhos de segurança: HSTS, X-Frame-Options, X-Content-Type-Options, CSP básico.
 
 ### 2.3 Infraestrutura
-- Hospedagem em servidor dedicado (VPS) com acesso restrito por chave SSH e firewall;
-- Banco de dados PostgreSQL com backup diário automatizado, criptografado (AES-256) e retido por 30 dias;
+- Hospedagem primária em servidor dedicado (VPS) em território nacional (Brasil), com acesso restrito por chave SSH e firewall;
+- Ambiente de contingência (standby) na Render Services, Inc. (Oregon, EUA), com o banco de dados replicado a cada 6 horas para permitir recuperação de desastre — essa replicação constitui transferência internacional de dados (ver seção 12 da Política de Privacidade e Anexo V);
+- Banco de dados PostgreSQL com backup diário automatizado, criptografado (AES-256) e retido por 30 dias, com cópia off-site adicional;
 - Cache Redis isolado por conta;
 - Variáveis de ambiente e segredos armazenados em arquivo de configuração com acesso restrito ao usuário de sistema, fora do repositório de código;
 - Repositório com acesso restrito — PRs revisadas antes de merge em `main`.
@@ -148,4 +149,4 @@ O Cliente (Controlador) é responsável por:
 
 *Este Anexo integra o contrato de prestação de serviços SolusCRT e tem validade equivalente ao instrumento principal.*
 
-*Versão 1.0.1 — 26/07/2026*
+*Versão 1.0.2 — 26/07/2026*

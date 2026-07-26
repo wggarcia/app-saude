@@ -1,7 +1,7 @@
 # ANEXO V — PLANO DE CONTINUIDADE DE SERVIÇO E TRANSIÇÃO DE DADOS
 
-**Versão:** 1.0.1
-**Data:** 26/07/2026 (correção de infraestrutura — hospedagem real em servidor dedicado, RPO uniformizado em 24h)
+**Versão:** 1.0.2
+**Data:** 26/07/2026 (correção de infraestrutura — primário em VPS dedicado no Brasil + standby de contingência no Render/EUA replicado a cada 6h; RPO de backup uniformizado em 24h)
 **Vínculo:** Anexo obrigatório do Contrato B2G; recomendado para B2B com volume >500 usuários
 
 ---
@@ -18,8 +18,9 @@ Garantir a continuidade operacional da plataforma SolusCRT durante eventos adver
 
 | Componente | Configuração | Impacto em falha |
 |---|---|---|
-| Aplicação (Gunicorn, servidor dedicado) | Serviço gerenciado por systemd, com reinício automático em falha | Reinício automático em <2 min |
-| PostgreSQL (servidor dedicado) | Backup diário automatizado, criptografado, retido por 30 dias | Recuperação com RPO de até 24h |
+| Aplicação (Gunicorn, servidor dedicado — primário, Brasil) | Serviço gerenciado por systemd, com reinício automático em falha | Reinício automático em <2 min |
+| PostgreSQL (servidor dedicado — primário) | Backup diário automatizado, criptografado, retido por 30 dias | Recuperação com RPO de até 24h |
+| Ambiente de contingência (standby — Render, Oregon/EUA) | Web ativo + banco replicado a partir do primário a cada 6 horas | Failover manual (repontamento de DNS); RPO de até 6h nesse caminho |
 | Redis (servidor dedicado) | In-memory cache | Perda de sessões ativas; re-login necessário |
 | Arquivos estáticos | Servidos pela própria aplicação | N/A |
 | Tarefas agendadas (SLA, SST, Trial) | Cron do sistema operacional | Próxima execução no ciclo seguinte |
@@ -40,10 +41,11 @@ O RPO é uniforme entre planos porque a rotina de backup (diária) é a mesma pa
 2. **Acionamento:** responsável técnico notificado em até 15 minutos;
 3. **Avaliação:** determinar se é falha de aplicação, infraestrutura ou banco;
 4. **Recuperação de aplicação:** redeploy via `git pull` + reinício do serviço (systemd);
-5. **Recuperação de banco:** restauração do backup criptografado mais recente (rotina diária);
-6. **Validação:** smoke test nos endpoints críticos (`/api/public/resumo`, `/api/login`, `/api/plano-saude/dashboard`);
-7. **Comunicação:** notificação ao Cliente no prazo do SLA contratado;
-8. **Documentação:** registro do evento, causa raiz e ação corretiva.
+5. **Recuperação de banco:** restauração do backup criptografado mais recente (rotina diária, RPO de até 24h);
+6. **Failover (indisponibilidade total do primário):** ativação do ambiente de contingência no Render, cujo banco reflete o primário nas últimas 6 horas, mediante repontamento de DNS — usado quando a recuperação do VPS não é viável no prazo do RTO;
+7. **Validação:** smoke test nos endpoints críticos (`/api/public/resumo`, `/api/login`, `/api/plano-saude/dashboard`);
+8. **Comunicação:** notificação ao Cliente no prazo do SLA contratado;
+9. **Documentação:** registro do evento, causa raiz e ação corretiva.
 
 ### 2.4 Manutenções Programadas
 
@@ -147,4 +149,4 @@ Ao final do processo de transição, as Partes firmarão **Termo de Encerramento
 
 *Este Anexo integra o contrato de prestação de serviços SolusCRT e tem validade equivalente ao instrumento principal.*
 
-*Versão 1.0.1 — 26/07/2026*
+*Versão 1.0.2 — 26/07/2026*

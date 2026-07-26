@@ -1,7 +1,7 @@
 # POLÍTICA DE PRIVACIDADE — SOLUSCRT SAUDE
 
-**Versão:** 1.0.1
-**Vigência:** a partir de 21/05/2026 (correção de infraestrutura em 26/07/2026 — hospedagem real em servidor dedicado no Brasil, não Render/EUA)
+**Versão:** 1.0.2
+**Vigência:** a partir de 21/05/2026 (correção de infraestrutura em 26/07/2026 — primário em servidor dedicado no Brasil + standby de contingência no Render/EUA replicado a cada 6h, com transferência internacional declarada sob SCCs)
 **Controlador da plataforma:** Wagner Garcia (SolusCRT Saude), CPF 091.189.637-65, Niterói/RJ
 **Contato DPO/Privacidade:** privacidade@soluscrt.com.br
 
@@ -102,13 +102,14 @@ A SolusCRT **não vende** dados pessoais. Compartilhamentos ocorrem somente nas 
 
 | Destinatário | Dados | Finalidade |
 |---|---|---|
-| Provedor de hospedagem (servidor dedicado em território nacional) | Todos os dados da plataforma | Hospedagem segura |
+| Provedor de hospedagem primária (servidor dedicado, território nacional/Brasil) | Todos os dados da plataforma | Hospedagem primária |
+| Render Services, Inc. (Oregon, EUA) | Réplica do banco de dados, atualizada a cada 6h | Ambiente de contingência (standby) para recuperação de desastre |
 | Asaas (pagamentos) | Dados de faturamento do Cliente | Processamento de cobrança |
 | Firebase (Google) | Token push, analytics pseudoanonimizado | Notificações móveis |
 | Zoho Mail | E-mail do destinatário | Envio de comunicações transacionais |
 | Autoridades competentes | Conforme ordem judicial ou legal | Cumprimento de obrigação legal |
 
-Todos os suboperadores listados mantêm nível de proteção compatível com LGPD. Firebase (Google) e Zoho Mail podem envolver processamento em infraestrutura no exterior, sujeito às cláusulas contratuais padrão (SCCs) ou certificações equivalentes desses fornecedores — ver seção 12.
+Todos os suboperadores listados mantêm nível de proteção compatível com LGPD. O ambiente de contingência (Render, EUA), o Firebase (Google) e o Zoho Mail envolvem processamento em infraestrutura no exterior, sujeito às cláusulas contratuais padrão (SCCs) ou certificações equivalentes — ver seção 12.
 
 ---
 
@@ -186,12 +187,17 @@ Canal de reporte de incidentes: **privacidade@soluscrt.com.br** (24h).
 
 ## 12. Transferência Internacional de Dados
 
-A plataforma é hospedada em servidor dedicado em território nacional (Brasil) — não há transferência internacional de dados para fins de hospedagem e processamento principal.
+A hospedagem primária e o processamento principal dos dados ocorrem em servidor dedicado em território nacional (Brasil).
 
-Alguns suboperadores auxiliares (notificações push via Firebase/Google e envio de e-mail transacional via Zoho Mail) podem processar dados em infraestrutura no exterior, limitados a token de dispositivo, analytics pseudoanonimizado e endereço de e-mail de destinatário. Essa transferência pontual é realizada com base em:
+Para fins de continuidade de serviço e recuperação de desastre, a SolusCRT mantém um ambiente de contingência (standby) na **Render Services, Inc.**, região Oregon (EUA), que recebe uma réplica do banco de dados a cada 6 horas. Essa replicação constitui transferência internacional de dados pessoais, inclusive dados sensíveis de saúde.
+
+Adicionalmente, suboperadores auxiliares processam dados no exterior de forma limitada: Firebase/Google (token de dispositivo, analytics pseudoanonimizado, notificações push) e Zoho Mail (endereço de e-mail de destinatário).
+
+Todas essas transferências internacionais são realizadas com base em:
 
 - Cláusulas Contratuais Padrão (SCCs) da Comissão Europeia, aceitas pela ANPD como mecanismo equivalente;
-- Cláusulas específicas de segurança e confidencialidade nos contratos com esses suboperadores.
+- Cláusulas específicas de segurança e confidencialidade nos contratos com os suboperadores;
+- Medidas técnicas de proteção sobre os dados transferidos (criptografia em trânsito e controle de acesso restrito).
 
 ---
 
@@ -218,4 +224,4 @@ Para solicitações de titulares, dúvidas sobre esta Política ou notificaçõe
 
 ---
 
-*Última atualização: 26/07/2026 — Versão 1.0.1*
+*Última atualização: 26/07/2026 — Versão 1.0.2*
