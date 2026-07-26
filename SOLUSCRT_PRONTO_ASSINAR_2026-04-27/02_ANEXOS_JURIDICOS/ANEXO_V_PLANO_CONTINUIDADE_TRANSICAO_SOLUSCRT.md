@@ -1,7 +1,7 @@
 # ANEXO V — PLANO DE CONTINUIDADE DE SERVIÇO E TRANSIÇÃO DE DADOS
 
-**Versão:** 1.0.0
-**Data:** 21/05/2026
+**Versão:** 1.0.1
+**Data:** 26/07/2026 (correção de infraestrutura — hospedagem real em servidor dedicado, RPO uniformizado em 24h)
 **Vínculo:** Anexo obrigatório do Contrato B2G; recomendado para B2B com volume >500 usuários
 
 ---
@@ -18,27 +18,29 @@ Garantir a continuidade operacional da plataforma SolusCRT durante eventos adver
 
 | Componente | Configuração | Impacto em falha |
 |---|---|---|
-| Render Web Service | Plano Starter com auto-restart | Reinício automático em <2 min |
-| PostgreSQL (Render DB) | Backup diário automatizado | Recuperação com RPO de até 24h |
-| Redis (Render Redis) | In-memory cache | Perda de sessões ativas; re-login necessário |
-| CDN/Static Assets | Render CDN | Fallback para origin server |
-| Workers Cron (SLA, SST, Trial) | Render Cron Jobs | Próxima execução no ciclo seguinte |
+| Aplicação (Gunicorn, servidor dedicado) | Serviço gerenciado por systemd, com reinício automático em falha | Reinício automático em <2 min |
+| PostgreSQL (servidor dedicado) | Backup diário automatizado, criptografado, retido por 30 dias | Recuperação com RPO de até 24h |
+| Redis (servidor dedicado) | In-memory cache | Perda de sessões ativas; re-login necessário |
+| Arquivos estáticos | Servidos pela própria aplicação | N/A |
+| Tarefas agendadas (SLA, SST, Trial) | Cron do sistema operacional | Próxima execução no ciclo seguinte |
 
 ### 2.2 Objetivos de Recuperação
 
 | Métrica | Meta (Plano Essencial) | Meta (Plano Profissional) | Meta (Plano Crítico) |
 |---|---|---|---|
 | RTO (Recovery Time Objective) | 4 horas | 2 horas | 30 minutos |
-| RPO (Recovery Point Objective) | 24 horas | 4 horas | 1 hora |
+| RPO (Recovery Point Objective) | 24 horas | 24 horas | 24 horas |
 | Disponibilidade mensal alvo | 99,5% | 99,7% | 99,9% |
+
+O RPO é uniforme entre planos porque a rotina de backup (diária) é a mesma para toda a base — não há diferenciação de frequência de backup por tier hoje.
 
 ### 2.3 Procedimento de Recuperação após Desastre
 
-1. **Detecção:** monitoramento automatizado (Render Health Check em `/api/public/resumo`);
-2. **Acionamento:** responsável técnico notificado em até 15 minutos via alerta do Render;
+1. **Detecção:** monitoramento automatizado do serviço (`/api/public/resumo`) e alerta ao responsável técnico;
+2. **Acionamento:** responsável técnico notificado em até 15 minutos;
 3. **Avaliação:** determinar se é falha de aplicação, infraestrutura ou banco;
-4. **Recuperação de aplicação:** redeploy forçado via pipeline CI/CD (`git push origin main`);
-5. **Recuperação de banco:** restauração do snapshot mais recente via Render Postgres Console;
+4. **Recuperação de aplicação:** redeploy via `git pull` + reinício do serviço (systemd);
+5. **Recuperação de banco:** restauração do backup criptografado mais recente (rotina diária);
 6. **Validação:** smoke test nos endpoints críticos (`/api/public/resumo`, `/api/login`, `/api/plano-saude/dashboard`);
 7. **Comunicação:** notificação ao Cliente no prazo do SLA contratado;
 8. **Documentação:** registro do evento, causa raiz e ação corretiva.
@@ -145,4 +147,4 @@ Ao final do processo de transição, as Partes firmarão **Termo de Encerramento
 
 *Este Anexo integra o contrato de prestação de serviços SolusCRT e tem validade equivalente ao instrumento principal.*
 
-*Versão 1.0.0 — 21/05/2026*
+*Versão 1.0.1 — 26/07/2026*

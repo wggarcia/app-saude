@@ -1,7 +1,7 @@
 # TERMOS DE USO — SOLUSCRT SAUDE
 
-**Versão:** 1.0.0
-**Vigência:** a partir de 21/05/2026
+**Versão:** 1.0.1
+**Vigência:** a partir de 21/05/2026 (correção de infraestrutura em 26/07/2026 — provedor de hospedagem real)
 **Prestadora:** Wagner Garcia (SolusCRT Saude), CPF 091.189.637-65, Niterói/RJ
 **Contato:** contato@soluscrt.com.br
 
@@ -96,7 +96,7 @@ O módulo Plano de Saúde suporta a gestão operacional da operadora; a decisão
 
 7.2. Manutenções programadas serão comunicadas com antecedência mínima de 48 horas, preferencialmente em janelas de baixo uso (madrugada, finais de semana).
 
-7.3. Indisponibilidades causadas por: falha de infraestrutura de terceiros (Render, AWS, Google), ataques DDoS, força maior ou falha de conectividade do Usuário não configuram descumprimento de SLA pela SolusCRT.
+7.3. Indisponibilidades causadas por: falha de infraestrutura de terceiros (provedor de hospedagem, serviços de nuvem de terceiros como Google/Firebase), ataques DDoS, força maior ou falha de conectividade do Usuário não configuram descumprimento de SLA pela SolusCRT.
 
 ---
 
@@ -172,4 +172,4 @@ Alterações relevantes serão comunicadas por e-mail ao administrador da conta 
 - Comercial: comercial@soluscrt.com.br
 - Site: soluscrt.com.br
 
-*Última atualização: 21/05/2026 — Versão 1.0.0*
+*Última atualização: 26/07/2026 — Versão 1.0.1*
