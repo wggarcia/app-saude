@@ -235,9 +235,12 @@ def api_ass_cras_familias(request):
     if nis or cpf:
         from .models import CadUnicoFamilia
         from django.db.models import Q
-        cad = CadUnicoFamilia.objects.filter(empresa=empresa).filter(
-            Q(responsavel_nis=nis) if nis else Q() | Q(responsavel_cpf=cpf) if cpf else Q()
-        ).first()
+        filtro = Q()
+        if nis:
+            filtro |= Q(responsavel_nis=nis)
+        if cpf:
+            filtro |= Q(responsavel_cpf=cpf)
+        cad = CadUnicoFamilia.objects.filter(empresa=empresa).filter(filtro).first()
         if cad:
             if not data.get("renda_familiar_total") and cad.renda_per_capita:
                 data["renda_familiar_total"] = float(cad.renda_per_capita) * cad.qtd_pessoas
@@ -446,6 +449,39 @@ def api_ass_cras_visitas(request):
         vulnerabilidade_identificada=data.get("vulnerabilidade_identificada", False),
     )
     return JsonResponse({"visita": _visita_dict(v)}, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT", "PATCH", "DELETE"])
+@api_requer_permissao_modulo("assistencia.cras_paif")
+def api_ass_cras_visita_detalhe(request, visita_id):
+    """GET/PUT/PATCH/DELETE /api/assistencia-social/cras/visitas/<id>/"""
+    empresa = _assoc(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+
+    from .models import VisitaDomiciliarSocial
+
+    try:
+        v = VisitaDomiciliarSocial.objects.select_related("familia").get(id=visita_id, empresa=empresa)
+    except VisitaDomiciliarSocial.DoesNotExist:
+        return JsonResponse({"erro": "Visita não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"visita": _visita_dict(v)})
+
+    if request.method == "DELETE":
+        v.delete()
+        return JsonResponse({"ok": True})
+
+    data = json.loads(request.body)
+    for campo in ["tecnico_nome", "data_visita", "objetivo", "relato", "resultado"]:
+        if campo in data:
+            setattr(v, campo, data[campo])
+    if "vulnerabilidade_identificada" in data:
+        v.vulnerabilidade_identificada = bool(data["vulnerabilidade_identificada"])
+    v.save()
+    return JsonResponse({"visita": _visita_dict(v)})
 
 
 # ─── PRONTUÁRIOS PAIF ────────────────────────────────────────────────────────

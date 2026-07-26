@@ -357,6 +357,39 @@ def api_ass_sicon_condicionalidades(request):
     return JsonResponse({"condicionalidade": _sicon_dict(s)}, status=201)
 
 
+@csrf_exempt
+@require_http_methods(["GET", "PUT", "PATCH", "DELETE"])
+@api_requer_permissao_modulo("assistencia.cadunico")
+def api_ass_sicon_detalhe(request, sicon_id):
+    """GET/PUT/PATCH/DELETE /api/assistencia-social/sicon/<id>/"""
+    empresa = _assoc(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+
+    from .models import CondicionalidadeSICON
+
+    try:
+        s = CondicionalidadeSICON.objects.get(id=sicon_id, empresa=empresa)
+    except CondicionalidadeSICON.DoesNotExist:
+        return JsonResponse({"erro": "Condicionalidade não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"condicionalidade": _sicon_dict(s)})
+
+    if request.method == "DELETE":
+        s.delete()
+        return JsonResponse({"ok": True})
+
+    data = json.loads(request.body)
+    for campo in ["titular_nome", "titular_cpf", "titular_nis", "area",
+                  "periodo_referencia", "status", "motivo_descumprimento",
+                  "acompanhamento_tecnico"]:
+        if campo in data:
+            setattr(s, campo, data[campo])
+    s.save()
+    return JsonResponse({"condicionalidade": _sicon_dict(s)})
+
+
 # ─── BENEFÍCIOS EVENTUAIS ────────────────────────────────────────────────────
 
 @csrf_exempt
@@ -425,14 +458,14 @@ def api_ass_beneficios_eventuais(request):
 
 
 @csrf_exempt
-@require_http_methods(["GET", "DELETE"])
+@require_http_methods(["GET", "PUT", "PATCH", "DELETE"])
 @api_requer_permissao_modulo("assistencia.cadunico")
 def api_ass_beneficio_eventual_detalhe(request, beneficio_id):
     empresa = _assoc(request)
     if not empresa:
         return JsonResponse({"erro": "Acesso restrito"}, status=403)
 
-    from .models import BeneficioEventual
+    from .models import BeneficioEventual, UnidadeCRAS
 
     try:
         b = BeneficioEventual.objects.select_related("unidade_cras").get(id=beneficio_id, empresa=empresa)
@@ -442,5 +475,20 @@ def api_ass_beneficio_eventual_detalhe(request, beneficio_id):
     if request.method == "GET":
         return JsonResponse({"beneficio": _beneficio_eventual_dict(b)})
 
-    b.delete()
-    return JsonResponse({"ok": True})
+    if request.method == "DELETE":
+        b.delete()
+        return JsonResponse({"ok": True})
+
+    data = json.loads(request.body)
+    for campo in ["beneficiario_nome", "beneficiario_cpf", "beneficiario_nis", "tipo",
+                  "descricao", "quantidade", "valor", "data_concessao",
+                  "tecnico_responsavel", "observacoes"]:
+        if campo in data:
+            setattr(b, campo, data[campo])
+    if "unidade_cras_id" in data:
+        novo_id = data["unidade_cras_id"] or None
+        if novo_id and not UnidadeCRAS.objects.filter(id=novo_id, empresa=empresa).exists():
+            return JsonResponse({"erro": "Unidade CRAS não encontrada para esta empresa"}, status=400)
+        b.unidade_cras_id = novo_id
+    b.save()
+    return JsonResponse({"beneficio": _beneficio_eventual_dict(b)})

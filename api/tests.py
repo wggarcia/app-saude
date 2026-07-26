@@ -9142,3 +9142,109 @@ class AssistenciaSocialPaginasComGatingTests(TestCase):
         self.assertEqual(resp.status_code, 200, msg=resp.content)
         resp = self.client.get("/assistencia-social/gestao/", secure=True)
         self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+
+class AssistenciaSocialCrudCompletoTests(TestCase):
+    """Itens de baixa severidade da auditoria: SICON e Visitas Domiciliares não
+    tinham endpoint de detalhe/edição nenhum; Benefício Eventual tinha só
+    GET/DELETE (PUT/PATCH ausente). Confirma que os 3 CRUDs agora estão
+    completos, escopados por empresa."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Prefeitura CRUD Completo", email="pref-crud-completo@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="assistencia_municipio_pequeno", max_dispositivos=5, max_usuarios=5,
+        )
+        self.outra = Empresa.objects.create(
+            nome="Outra Prefeitura CRUD", email="outra-pref-crud@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="assistencia_municipio_pequeno", max_dispositivos=5, max_usuarios=5,
+        )
+        self.client = Client()
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "pref-crud-completo@teste.com", "senha": "123456",
+                "device_id": "dev-crud-completo", "device_name": "Test",
+            }),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+    def test_sicon_detalhe_get_patch_delete(self):
+        from .models import CondicionalidadeSICON
+        s = CondicionalidadeSICON.objects.create(
+            empresa=self.empresa, titular_nome="Fulano", status="sem_informacao",
+        )
+        resp = self.client.get(f"/api/assistencia-social/sicon/{s.id}", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        resp = self.client.patch(
+            f"/api/assistencia-social/sicon/{s.id}",
+            data=json.dumps({"status": "descumprida", "motivo_descumprimento": "Faltou consulta"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        s.refresh_from_db()
+        self.assertEqual(s.status, "descumprida")
+        self.assertEqual(s.motivo_descumprimento, "Faltou consulta")
+
+        resp = self.client.delete(f"/api/assistencia-social/sicon/{s.id}", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        self.assertFalse(CondicionalidadeSICON.objects.filter(id=s.id).exists())
+
+    def test_sicon_detalhe_isolado_por_empresa(self):
+        from .models import CondicionalidadeSICON
+        s_outra = CondicionalidadeSICON.objects.create(empresa=self.outra, titular_nome="Confidencial")
+        resp = self.client.get(f"/api/assistencia-social/sicon/{s_outra.id}", secure=True)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_visita_detalhe_get_patch_delete(self):
+        from .models import FamiliaCRAS, VisitaDomiciliarSocial
+        familia = FamiliaCRAS.objects.create(empresa=self.empresa, responsavel_nome="Família X")
+        v = VisitaDomiciliarSocial.objects.create(
+            empresa=self.empresa, familia=familia, tecnico_nome="Técnico Y",
+            data_visita="2026-07-01",
+        )
+        resp = self.client.get(f"/api/assistencia-social/cras/visitas/{v.id}", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+
+        resp = self.client.patch(
+            f"/api/assistencia-social/cras/visitas/{v.id}",
+            data=json.dumps({"vulnerabilidade_identificada": True, "resultado": "Encontrado risco"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        v.refresh_from_db()
+        self.assertTrue(v.vulnerabilidade_identificada)
+        self.assertEqual(v.resultado, "Encontrado risco")
+
+        resp = self.client.delete(f"/api/assistencia-social/cras/visitas/{v.id}", secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        self.assertFalse(VisitaDomiciliarSocial.objects.filter(id=v.id).exists())
+
+    def test_visita_detalhe_isolada_por_empresa(self):
+        from .models import FamiliaCRAS, VisitaDomiciliarSocial
+        familia_outra = FamiliaCRAS.objects.create(empresa=self.outra, responsavel_nome="Família Confidencial")
+        v_outra = VisitaDomiciliarSocial.objects.create(
+            empresa=self.outra, familia=familia_outra, tecnico_nome="Técnico Confidencial",
+            data_visita="2026-07-01",
+        )
+        resp = self.client.get(f"/api/assistencia-social/cras/visitas/{v_outra.id}", secure=True)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_beneficio_eventual_agora_aceita_patch(self):
+        from .models import BeneficioEventual
+        b = BeneficioEventual.objects.create(
+            empresa=self.empresa, beneficiario_nome="Ciclano", tipo="cesta_basica",
+            data_concessao="2026-07-01",
+        )
+        resp = self.client.patch(
+            f"/api/assistencia-social/beneficios-eventuais/{b.id}",
+            data=json.dumps({"observacoes": "Entregue em mãos"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        b.refresh_from_db()
+        self.assertEqual(b.observacoes, "Entregue em mãos")

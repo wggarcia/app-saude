@@ -689,6 +689,7 @@ from api.views_governo_farmacia_basica import (
     api_farmacia_basica_itens,
     api_farmacia_basica_dispensar,
     api_farmacia_basica_dispensacoes,
+    api_farmacia_basica_cidadao_lookup,
 )
 from api.views_governo_painel_chamado import (
     governo_painel_chamado_page,
@@ -709,6 +710,7 @@ from api.views_governo_tfd import (
     api_tfd_veiculo_detalhe,
     api_tfd_viagens,
     api_tfd_viagem_detalhe,
+    api_tfd_cidadao_lookup,
 )
 from api.views_governo_almoxarifado import (
     governo_almoxarifado_page,
@@ -736,6 +738,7 @@ from api.views_governo_regulacao import (
     api_regulacao_lista,
     api_regulacao_nova,
     api_regulacao_atualizar,
+    api_regulacao_cidadao_lookup,
 )
 from api.views_governo_sala_situacao import (
     governo_sala_situacao_page,
@@ -821,6 +824,7 @@ from api.views_governo_caps import (
     api_caps_encaminhamento_acao,
     api_caps_kpis,
     api_caps_raas_exportar,
+    api_caps_cidadao_lookup,
     governo_caps_page,
 )
 from api.views_hospital_rnds import (
@@ -1238,7 +1242,7 @@ from api.views_assistencia_cras import (
     api_ass_cras_unidades, api_ass_cras_unidade_detalhe,
     api_ass_cras_familias, api_ass_cras_familia_detalhe,
     api_ass_cras_atendimentos, api_ass_cras_atendimento_detalhe,
-    api_ass_cras_visitas,
+    api_ass_cras_visitas, api_ass_cras_visita_detalhe,
     api_ass_prontuarios_paif, api_ass_prontuario_paif_detalhe,
     api_ass_cras_kpis,
 )
@@ -1250,7 +1254,7 @@ from api.views_assistencia_creas import (
 from api.views_assistencia_cadun import (
     api_ass_cadunico_familias, api_ass_cadunico_consultar_cpf, api_ass_cadunico_importar_lote,
     api_ass_bpc_beneficiarios, api_ass_bpc_beneficiario_detalhe,
-    api_ass_sicon_condicionalidades,
+    api_ass_sicon_condicionalidades, api_ass_sicon_detalhe,
     api_ass_beneficios_eventuais, api_ass_beneficio_eventual_detalhe,
 )
 from api.views_assistencia_gestao import (
@@ -2170,6 +2174,8 @@ urlpatterns = [
     path('api/governo/farmacia-basica/itens/', api_farmacia_basica_itens),
     path('api/governo/farmacia-basica/dispensar/', api_farmacia_basica_dispensar),
     path('api/governo/farmacia-basica/dispensacoes/', api_farmacia_basica_dispensacoes),
+    path('api/governo/farmacia-basica/cidadao-lookup', api_farmacia_basica_cidadao_lookup),
+    path('api/governo/farmacia-basica/cidadao-lookup/', api_farmacia_basica_cidadao_lookup),
     path('api/governo/painel-chamado/gerar/', api_painel_gerar_senha),
     path('api/governo/painel-chamado/chamar/', api_painel_chamar_proxima),
     path('api/governo/painel-chamado/<int:senha_id>/finalizar/', api_painel_finalizar_senha),
@@ -2181,6 +2187,8 @@ urlpatterns = [
     path('api/governo/tfd/veiculos/<int:veiculo_id>/', api_tfd_veiculo_detalhe),
     path('api/governo/tfd/viagens/', api_tfd_viagens),
     path('api/governo/tfd/viagens/<int:viagem_id>/', api_tfd_viagem_detalhe),
+    path('api/governo/tfd/cidadao-lookup', api_tfd_cidadao_lookup),
+    path('api/governo/tfd/cidadao-lookup/', api_tfd_cidadao_lookup),
     path('api/governo/almoxarifado/unidades/', api_governo_unidades),
     path('api/governo/almoxarifado/kpis/', api_almoxarifado_kpis),
     path('api/governo/almoxarifado/produtos/', api_almoxarifado_produtos),
@@ -2199,6 +2207,8 @@ urlpatterns = [
     path('api/governo/regulacao-assistencial/', api_regulacao_lista),
     path('api/governo/regulacao-assistencial/nova/', api_regulacao_nova),
     path('api/governo/regulacao-assistencial/<int:reg_id>/atualizar/', api_regulacao_atualizar),
+    path('api/governo/regulacao-assistencial/cidadao-lookup', api_regulacao_cidadao_lookup),
+    path('api/governo/regulacao-assistencial/cidadao-lookup/', api_regulacao_cidadao_lookup),
     path('api/governo/sala-situacao/', api_governo_sala_situacao),
     path('api/governo/app-cidadao/alertas/', api_alertas_cidadao),
     path('api/governo/app-cidadao/alertas/<int:alerta_id>/enviar/', api_alerta_cidadao_enviar),
@@ -2260,6 +2270,8 @@ urlpatterns = [
     path('api/governo/caps/encaminhamentos/<int:enc_id>/acao/',     api_caps_encaminhamento_acao),
     path('api/governo/caps/kpis',                                   api_caps_kpis),
     path('api/governo/caps/kpis/',                                  api_caps_kpis),
+    path('api/governo/caps/cidadao-lookup',                         api_caps_cidadao_lookup),
+    path('api/governo/caps/cidadao-lookup/',                        api_caps_cidadao_lookup),
     path('api/governo/caps/raas-exportar',                          api_caps_raas_exportar),
     path('api/governo/caps/raas-exportar/',                         api_caps_raas_exportar),
 
@@ -3274,6 +3286,8 @@ urlpatterns = [
     path('api/assistencia-social/cras/atendimentos/<int:atendimento_id>/',        api_ass_cras_atendimento_detalhe),
     path('api/assistencia-social/cras/visitas',                                   api_ass_cras_visitas),
     path('api/assistencia-social/cras/visitas/',                                  api_ass_cras_visitas),
+    path('api/assistencia-social/cras/visitas/<int:visita_id>',                   api_ass_cras_visita_detalhe),
+    path('api/assistencia-social/cras/visitas/<int:visita_id>/',                  api_ass_cras_visita_detalhe),
     path('api/assistencia-social/cras/prontuarios-paif',                          api_ass_prontuarios_paif),
     path('api/assistencia-social/cras/prontuarios-paif/',                         api_ass_prontuarios_paif),
     path('api/assistencia-social/cras/prontuarios-paif/<int:prontuario_id>',      api_ass_prontuario_paif_detalhe),
@@ -3306,6 +3320,8 @@ urlpatterns = [
     path('api/assistencia-social/bpc/<int:bpc_id>/',                              api_ass_bpc_beneficiario_detalhe),
     path('api/assistencia-social/sicon',                                          api_ass_sicon_condicionalidades),
     path('api/assistencia-social/sicon/',                                         api_ass_sicon_condicionalidades),
+    path('api/assistencia-social/sicon/<int:sicon_id>',                           api_ass_sicon_detalhe),
+    path('api/assistencia-social/sicon/<int:sicon_id>/',                          api_ass_sicon_detalhe),
     path('api/assistencia-social/beneficios-eventuais',                           api_ass_beneficios_eventuais),
     path('api/assistencia-social/beneficios-eventuais/',                          api_ass_beneficios_eventuais),
     path('api/assistencia-social/beneficios-eventuais/<int:beneficio_id>',        api_ass_beneficio_eventual_detalhe),

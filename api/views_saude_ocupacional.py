@@ -39,23 +39,6 @@ def sst_saude_comunicacao_page(request):
     })
 
 
-def app_colaborador_saude(request, codigo):
-    from .views_comunicacao import _resolve_alias
-    alias = _resolve_alias(codigo)
-    if not alias:
-        return __import__("django.shortcuts", fromlist=["redirect"]).redirect("/")
-    empresa = alias.empresa
-    setores = list(EmpresaSetor.objects.filter(empresa=empresa).values("id", "nome"))
-    return render(request, "app_colaborador_corporativo.html", {
-        "empresa_nome": empresa.nome,
-        "codigo_acesso": codigo,
-        "alias_nome": alias.alias_publico,
-        "cargo": alias.cargo.nome if alias.cargo else "",
-        "setor": alias.setor.nome if alias.setor else "",
-        "setores_json": json.dumps(setores),
-    })
-
-
 # ─── wellness dashboard (SST gestor) ──────────────────────────────────────────
 
 def api_wellness_resumo(request):

@@ -3572,9 +3572,11 @@ def api_ps_guia_odonto_detalhe(request, guia_id):
 @csrf_exempt
 def api_ps_regulatorio_gerar(request):
     """POST /api/plano-saude/regulatorio/gerar/
-    Gera payload de relatório regulatório ANS.
-    DIOPS e SIB retornam estrutura XML simplificada (produção: usar biblioteca XML).
-    TISS retorna lote de guias no padrão 3.05.00 simplificado.
+    Gera um RESUMO/RASCUNHO de conferência em JSON — não é o arquivo oficial.
+    DIOPS e SIB oficiais (XML 3.0 real + transmissão SIPWeb) ficam no módulo
+    dedicado "ANS / DIOPS / SIB" (views_diops_real.py + views_plano_ans.py).
+    TISS retorna lote de guias no padrão 3.05.00 simplificado (sem módulo
+    dedicado equivalente — este é o gerador de fato para TISS).
     """
     empresa, err = _ps_auth(request)
     if err:
@@ -3602,8 +3604,12 @@ def api_ps_regulatorio_gerar(request):
             "trimestre": trimestre,
             "planos": planos,
             "beneficiarios_ativos": beneficiarios_ativos,
-            "formato": "XML",
-            "instrucoes": "Importe este JSON em seu sistema de geração XML DIOPS ou use a API ANS diretamente.",
+            # NÃO é o XML DIOPS 3.0 oficial — é só um resumo/rascunho em JSON pra
+            # conferência rápida. O XML real (IN ANS 77/2022) e a transmissão ao
+            # SIPWeb ficam no módulo dedicado "ANS / DIOPS / SIB"
+            # (views_diops_real.py + views_plano_ans.py).
+            "formato": "resumo_json",
+            "aviso": "Este é um rascunho de conferência, não o arquivo oficial. Gere o XML DIOPS 3.0 e transmita pelo módulo \"ANS / DIOPS / SIB\".",
         }
 
     elif tipo == "SIB":
@@ -3617,7 +3623,10 @@ def api_ps_regulatorio_gerar(request):
             "competencia": f"{ano}-{trimestre.zfill(2)}",
             "total_registros": len(movimentacoes),
             "movimentacoes": movimentacoes,
-            "formato": "TXT_FIXO",
+            # Idem DIOPS acima — resumo de conferência, não o arquivo oficial
+            # de transmissão. SIB oficial fica no módulo "ANS / DIOPS / SIB".
+            "formato": "resumo_json",
+            "aviso": "Este é um rascunho de conferência, não o arquivo oficial. Transmita pelo módulo \"ANS / DIOPS / SIB\".",
         }
 
     elif tipo == "TISS":
