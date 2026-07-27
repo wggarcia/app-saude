@@ -132,6 +132,10 @@ _GOVERNO_TODOS = [
     "governo.tfd",              # Gestão de Veículos e Agendamento de Viagens (TFD)
     "governo.almoxarifado",     # Almoxarifado municipal (FEFO, multi-unidade, transferências)
     "governo.laboratorio",      # Laboratório municipal — LIS
+    "governo.suas",             # Assistência Social (SUAS): CRAS, CREAS, CadÚnico, BPC, SICON, Benefícios Eventuais.
+                                # O ambiente Governo é completo e inclui a gestão social por contrato — não é add-on pago.
+                                # (Assistência Social também pode ser contratada isolada via pacotes assistencia_* pra
+                                #  secretarias que não querem a saúde pública.)
 ]
 
 # ── Assistência Social ────────────────────────────────────────────────────────

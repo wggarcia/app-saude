@@ -106,12 +106,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
   <!-- Tabs principais -->
   <div class="card" style="overflow:visible">
-    <div class="tab-bar">
+    <div class="tab-bar" id="mainTabBar">
       <button class="tab-btn active" onclick="setTab('dashboard',this)">📊 Dashboard</button>
       <button class="tab-btn" onclick="setTab('cras',this)">🏠 CRAS / Famílias</button>
       <button class="tab-btn" onclick="setTab('creas',this)">🛡️ CREAS</button>
       <button class="tab-btn" onclick="setTab('cadunico',this)">📋 CadÚnico</button>
       <button class="tab-btn" onclick="setTab('bpc',this)">♿ BPC</button>
+      <button class="tab-btn" onclick="setTab('sicon',this)">🔔 SICON</button>
       <button class="tab-btn" onclick="setTab('beneficios',this)">🎁 Benefícios Eventuais</button>
     </div>
 
@@ -139,7 +140,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
     <!-- TAB: CRAS / Famílias -->
     <div id="tabCras" class="tab-panel">
-      <div class="tab-bar" style="border-top:1px solid var(--border)">
+      <div class="tab-bar" id="crasSubTabBar" style="border-top:1px solid var(--border)">
         <button class="tab-btn active" onclick="setSubTab('cras','unidades',this)">Unidades</button>
         <button class="tab-btn" onclick="setSubTab('cras','familias',this)">Famílias</button>
         <button class="tab-btn" onclick="setSubTab('cras','atendimentos',this)">Atendimentos PAIF</button>
@@ -221,7 +222,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
     <!-- TAB: CREAS -->
     <div id="tabCreas" class="tab-panel">
-      <div class="tab-bar" style="border-top:1px solid var(--border)">
+      <div class="tab-bar" id="creasSubTabBar" style="border-top:1px solid var(--border)">
         <button class="tab-btn active" onclick="setSubTab('creas','unidades',this)">Unidades</button>
         <button class="tab-btn" onclick="setSubTab('creas','atendimentos',this)">Atendimentos PAEFI</button>
       </div>
@@ -310,6 +311,36 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <table>
           <thead><tr><th>Beneficiário</th><th>CPF</th><th>NIS</th><th>Tipo</th><th>Valor</th><th>Início</th><th>Ativo</th></tr></thead>
           <tbody id="tbBpc"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: SICON -->
+    <div id="tabSicon" class="tab-panel">
+      <div class="card-header" style="border-bottom:none">
+        <span class="card-title">Condicionalidades SICON — Bolsa Família</span>
+        <div class="filters">
+          <select id="filtroSiconArea" class="filter-sel" onchange="carregarSicon()">
+            <option value="">Todas as áreas</option>
+            <option value="saude">Saúde</option>
+            <option value="educacao">Educação</option>
+            <option value="social">Assistência Social</option>
+          </select>
+          <select id="filtroSiconStatus" class="filter-sel" onchange="carregarSicon()">
+            <option value="">Todas as situações</option>
+            <option value="cumprida">Cumprida</option>
+            <option value="descumprida">Descumprida</option>
+            <option value="sem_informacao">Sem Informação</option>
+            <option value="em_acompanhamento">Em Acompanhamento</option>
+          </select>
+          <input id="filtroSiconQ" class="filter-inp" placeholder="Buscar titular…" oninput="carregarSicon()">
+          <button class="btn btn-primary btn-sm" onclick="abrirModal('modalSicon')">+ Novo Registro</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Titular</th><th>CPF</th><th>NIS</th><th>Área</th><th>Período</th><th>Situação</th></tr></thead>
+          <tbody id="tbSicon"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -541,6 +572,43 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div></div>
 
+<!-- Modal SICON -->
+<div class="modal-bg" id="modalSicon"><div class="modal">
+  <h3>🔔 Registrar Condicionalidade SICON</h3>
+  <div class="form-group"><label>Titular *</label><input id="siNome" placeholder="Nome completo"></div>
+  <div class="form-row">
+    <div class="form-group"><label>CPF</label><input id="siCpf" placeholder="000.000.000-00"></div>
+    <div class="form-group"><label>NIS</label><input id="siNis" placeholder="NIS Bolsa Família"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Área *</label>
+      <select id="siArea">
+        <option value="saude">Saúde (vacinas, pré-natal, nutrição)</option>
+        <option value="educacao">Educação (frequência escolar)</option>
+        <option value="social">Assistência Social (acompanhamento familiar)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Período de Referência</label><input id="siPeriodo" placeholder="AAAA/MM"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Situação *</label>
+      <select id="siStatus">
+        <option value="sem_informacao">Sem Informação</option>
+        <option value="cumprida">Cumprida</option>
+        <option value="descumprida">Descumprida</option>
+        <option value="em_acompanhamento">Em Acompanhamento</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group"><label>Motivo do Descumprimento</label><textarea id="siMotivo" rows="2"></textarea></div>
+  <div class="form-group"><label>Acompanhamento Técnico</label><textarea id="siAcompanhamento" rows="2"></textarea></div>
+  <div id="msgSicon" class="msg"></div>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="fecharModal('modalSicon')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarSicon()">Salvar</button>
+  </div>
+</div></div>
+
 <!-- Modal IA Inconsistências -->
 <div class="modal-bg" id="modalIA"><div class="modal" style="max-width:680px">
   <h3>🤖 IA: Inconsistências Cadastrais CadÚnico</h3>
@@ -575,15 +643,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <script>
 // ─── Utilitários ─────────────────────────────────────────────────────────────
 function setTab(nome, btn) {
+  // Escopado ao #mainTabBar: o seletor global '.tab-btn' apagava o destaque
+  // das sub-abas de CRAS/CREAS ao trocar de aba principal e voltar.
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#mainTabBar .tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab' + nome.charAt(0).toUpperCase() + nome.slice(1)).classList.add('active');
   btn.classList.add('active');
   carregarTab(nome);
 }
 function setSubTab(grupo, sub, btn) {
   document.querySelectorAll('.sub-panel.' + grupo).forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
-  document.querySelectorAll('.tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#' + grupo + 'SubTabBar .tab-btn').forEach(b => b.classList.remove('active'));
   const el = document.getElementById(grupo + sub.charAt(0).toUpperCase() + sub.slice(1));
   if (el) { el.classList.add('active'); el.style.display = ''; }
   btn.classList.add('active');
@@ -595,6 +665,7 @@ function carregarTab(nome) {
   else if (nome === 'creas') { carregarCreasUnidades(); }
   else if (nome === 'cadunico') carregarCadunico();
   else if (nome === 'bpc') carregarBpc();
+  else if (nome === 'sicon') carregarSicon();
   else if (nome === 'beneficios') carregarBeneficios();
 }
 function carregarSubTab(grupo, sub) {
@@ -618,7 +689,13 @@ function setMsg(id, txt, tipo) {
 function fmt(v, casas=0) { return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:casas,maximumFractionDigits:casas}); }
 function fmtMoeda(v) { return 'R$ ' + fmt(v, 2); }
 function badgeSit(s) {
-  const m = {em_acompanhamento:'ok',ativa:'ok',encerrada:'muted',suspensa:'warn',encerrado:'muted',referenciado:'info',aguardando:'warn'};
+  const m = {
+    em_acompanhamento:'ok', ativa:'ok', cumprida:'ok',
+    encerrada:'muted', encerrado:'muted', sem_informacao:'muted',
+    suspensa:'warn', aguardando:'warn',
+    referenciado:'info',
+    descumprida:'danger',
+  };
   return `<span class="badge badge-${m[s]||'muted'}">${s.replace(/_/g,' ')}</span>`;
 }
 function sim_nao(v) { return v ? '<span class="badge badge-ok">Sim</span>' : '<span class="badge badge-muted">Não</span>'; }
@@ -815,6 +892,45 @@ async function carregarCadunico(page) {
     <button class="btn btn-ghost btn-sm" ${cadPage<=1?'disabled':''} onclick="carregarCadunico(${cadPage-1})">← Anterior</button>
     <span>Página ${cadPage} de ${r.paginas} (${fmt(r.total)} registros)</span>
     <button class="btn btn-ghost btn-sm" ${cadPage>=r.paginas?'disabled':''} onclick="carregarCadunico(${cadPage+1})">Próxima →</button>` : `<span>${fmt(r.total)} registros</span>`;
+}
+
+// ─── SICON ────────────────────────────────────────────────────────────────────
+async function carregarSicon() {
+  const area = document.getElementById('filtroSiconArea').value;
+  const status = document.getElementById('filtroSiconStatus').value;
+  const q = document.getElementById('filtroSiconQ').value;
+  const params = new URLSearchParams();
+  if (area) params.set('area', area);
+  if (status) params.set('status', status);
+  if (q) params.set('q', q);
+  const r = await fetch('/api/governo/suas/sicon?' + params).then(r=>r.json());
+  const tb = document.getElementById('tbSicon');
+  if (!r.condicionalidades?.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum registro encontrado</td></tr>'; return; }
+  tb.innerHTML = r.condicionalidades.map(s=>`<tr>
+    <td><b>${s.titular_nome}</b></td>
+    <td>${s.titular_cpf||'—'}</td>
+    <td>${s.titular_nis||'—'}</td>
+    <td><span class="badge badge-info">${s.area_display}</span></td>
+    <td>${s.periodo_referencia||'—'}</td>
+    <td>${badgeSit(s.status)}</td>
+  </tr>`).join('');
+}
+
+async function salvarSicon() {
+  const body = {
+    titular_nome: document.getElementById('siNome').value.trim(),
+    titular_cpf: document.getElementById('siCpf').value.trim(),
+    titular_nis: document.getElementById('siNis').value.trim(),
+    area: document.getElementById('siArea').value,
+    periodo_referencia: document.getElementById('siPeriodo').value.trim(),
+    status: document.getElementById('siStatus').value,
+    motivo_descumprimento: document.getElementById('siMotivo').value.trim(),
+    acompanhamento_tecnico: document.getElementById('siAcompanhamento').value.trim(),
+  };
+  if (!body.titular_nome) { setMsg('msgSicon','Titular obrigatório','err'); return; }
+  const r = await fetch('/api/governo/suas/sicon',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if (r.status === 'criado') { fecharModal('modalSicon'); carregarSicon(); }
+  else setMsg('msgSicon', r.erro||'Erro ao salvar', 'err');
 }
 
 // ─── BPC ──────────────────────────────────────────────────────────────────────

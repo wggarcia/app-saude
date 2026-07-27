@@ -32,12 +32,13 @@ from .access_control import (
 from .services.auth_session import empresa_autenticada_from_request
 
 
-# NOTA: "governo.suas" é usado como feature-gate aqui de propósito, mas NÃO
-# está em nenhuma lista de features de nenhum pacote Governo (api/planos.py)
-# — este módulo é um legado duplicado do que hoje é vendido separadamente
-# como o segmento Assistência Social. Sem a feature em nenhum plano, o gate
-# bloqueia por padrão para todo cliente Governo (correto: evita dar de graça
-# um produto vendido à parte). Ver auditoria de prontidão SaaS jul/2026.
+# NOTA: "governo.suas" é feature de TODOS os pacotes Governo (api/planos.py,
+# _GOVERNO_TODOS). O ambiente Governo é completo e inclui a gestão social
+# (CRAS/CREAS/CadÚnico/BPC/SICON) por contrato — não é add-on pago. O gate
+# aqui existe só para o RBAC granular por operador (um técnico de saúde pode
+# não receber o módulo SUAS), não para vender à parte. A Assistência Social
+# também é ofertada isolada via pacotes assistencia_* (setor próprio) para
+# secretarias que não contratam a saúde pública.
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_feature_pacote("governo.suas", "Gestão SUAS")
