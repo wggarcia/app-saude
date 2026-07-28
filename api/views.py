@@ -931,7 +931,8 @@ def _commercial_site_copy(language, site):
     site["differential"]["lead"] = (
         "A proposta certa reduz explicação, diminui objeção e acelera demo, negociação e assinatura. O SoloCRT "
         "organiza a conversa por segmento para que cada cliente veja uma IA desenhada para o próprio contexto, sem "
-        "precisar traduzir a plataforma."
+        "precisar traduzir a plataforma. Por trás dessa conversa estão 8 sistemas de IA proprietários, desenvolvidos "
+        "e treinados com dados reais de saúde pública brasileira, já integrados a fontes oficiais de saúde."
     )
     site["differential"]["traditional_title"] = "Oferta genérica"
     site["differential"]["traditional_items"] = [
@@ -1162,10 +1163,11 @@ def _commercial_presentation_copy(language, deck):
     deck["differential"]["eyebrow"] = "Diferencial"
     deck["differential"]["title"] = "Não é uma IA genérica. É inteligência epidemiológica desenhada por segmento."
     deck["differential"]["body"] = (
-        "SoloCRT respeita a forma como cada segmento decide: Governo compra clareza e governança; Farmácia compra "
-        "previsibilidade; Hospital compra capacidade; SST compra adesão e recorrência; Plano de Saúde compra operação "
-        "especializada. Cada um entra no seu próprio ambiente com uma IA ajustada ao contexto, com dados segregados e "
-        "experiência protegida."
+        "São 8 sistemas de IA proprietários, desenvolvidos e treinados internamente com dados reais de saúde pública "
+        "brasileira — cada um calibrado para o contexto do segmento: leitura territorial para o Governo, previsão de "
+        "demanda para a Farmácia, antecipação de capacidade para o Hospital, adesão para o SST e leitura de "
+        "sinistralidade para o Plano de Saúde. Tudo integrado a fontes oficiais de saúde, com dados segregados e "
+        "experiência protegida por ambiente."
     )
     deck["differential"]["quote"] = "Um motor. Cinco ambientes. Nenhum cliente misturado."
     deck["governance"]["title"] = "Privacidade e segregação fazem parte de cada ambiente."
