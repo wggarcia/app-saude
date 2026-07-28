@@ -1138,6 +1138,10 @@ def _commercial_presentation_copy(language, deck):
             "title": "SST precisa de fluxo próprio",
             "text": "ASO, CAT, eSocial SST, exames, PGR, app do trabalhador e bem-estar exigem um ambiente independente, sem mistura com outros clientes.",
         },
+        {
+            "title": "Plano de Saúde perde previsibilidade",
+            "text": "Sem leitura territorial cruzada com sinistros, a operadora só percebe o aumento de sinistralidade depois que o custo já subiu.",
+        },
     ]
     deck["solution"]["title"] = "Cada segmento entra no ambiente certo, com isolamento, privacidade e proposta própria."
     deck["solution"]["body"] = (
@@ -1150,15 +1154,16 @@ def _commercial_presentation_copy(language, deck):
         {"title": "Farmácia", "text": "Estoque, lotes, compras e previsão de demanda ligados ao risco regional."},
         {"title": "Hospital", "text": "Leitos, triagem, internações, equipes e pressão assistencial com antecipação do pico."},
         {"title": "SST", "text": "ASO, CAT, exames, NRs, eSocial, bem-estar anônimo e app do trabalhador em um ambiente próprio."},
+        {"title": "Plano de Saúde", "text": "Beneficiários, guias, sinistros e reembolsos com leitura territorial ligada ao risco regional."},
     ]
     deck["ecosystem"]["eyebrow"] = "Ambientes isolados"
     deck["ecosystem"]["title"] = "Cinco ambientes isolados para cinco compradoras diferentes."
     deck["ecosystem"]["cards"] = [
-        {"title": "Governo", "text": "Sala de situação, alertas oficiais, matriz de decisão, auditoria e contrato institucional em ambiente próprio."},
-        {"title": "Farmácia", "text": "Gestão farmacêutica, FEFO, lotes, ruptura, compras e previsão de demanda em ambiente próprio."},
-        {"title": "Hospital", "text": "Gestão de leitos, atendimento, triagem, internação e preparação assistencial em ambiente próprio."},
-        {"title": "SST e Empresas", "text": "SST completo, bem-estar anônimo, app do trabalhador e prova de valor em ambiente próprio."},
-        {"title": "Plano de Saúde", "text": "Beneficiários, contratos, guias, sinistros, reembolsos e leitura territorial em ambiente próprio."},
+        {"title": "Governo", "text": "Sala de situação, alertas oficiais, matriz de decisão, auditoria e contrato institucional em ambiente próprio.", "img": "/static/apresentacao/segmento_governo.jpg"},
+        {"title": "Farmácia", "text": "Gestão farmacêutica, FEFO, lotes, ruptura, compras e previsão de demanda em ambiente próprio.", "img": "/static/apresentacao/segmento_farmacia.jpg"},
+        {"title": "Hospital", "text": "Gestão de leitos, atendimento, triagem, internação e preparação assistencial em ambiente próprio.", "img": "/static/apresentacao/segmento_hospital.jpg"},
+        {"title": "SST e Empresas", "text": "SST completo, bem-estar anônimo, app do trabalhador e prova de valor em ambiente próprio.", "img": "/static/apresentacao/segmento_sst.jpg"},
+        {"title": "Plano de Saúde", "text": "Beneficiários, contratos, guias, sinistros, reembolsos e leitura territorial em ambiente próprio.", "img": "/static/apresentacao/segmento_plano.jpg"},
     ]
     deck["differential"]["eyebrow"] = "Diferencial"
     deck["differential"]["title"] = "Não é uma IA genérica. É inteligência epidemiológica desenhada por segmento."
