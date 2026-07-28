@@ -177,6 +177,7 @@ class EmpresaMiddleware:
             "/pendente/",
             "/api/platform/status",
             "/api/epidemiologia",   # panorama agregado público (DATASUS/SINAN) — consumido cross-segmento; sem dado de tenant. Match exato: /briefing e /projecao-ml seguem protegidos.
+            "/api/epidemiologia/dispersao",  # projeção de dispersão (SEIR + mobilidade) — mesmo caráter agregado/público do panorama; sem dado de tenant. Consumida pela sala de situação (Governo) e pelo mapa público.
             "/logout/",
             "/logout-governo/",
             "/logout-operacao/",

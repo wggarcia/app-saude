@@ -1147,8 +1147,9 @@ from api.views_plano_portal import (
     api_portal_token_gerar,
     plano_portal_beneficiario_page,
 )
-from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
+from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo, panorama_simulacao_nacional
 from api.views_epidemiologia_ml import api_epidemiologia_projecao_ml
+from api.views_dispersao import api_epidemiologia_dispersao
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
 
@@ -2338,6 +2339,8 @@ urlpatterns = [
     path('api/epidemiologia', panorama_epidemiologico),
     path('api/epidemiologia/briefing', exportar_briefing_governo),
     path('api/epidemiologia/projecao-ml', api_epidemiologia_projecao_ml),
+    path('api/epidemiologia/dispersao', api_epidemiologia_dispersao),
+    path('api/simulacao-nacional/<str:token>/panorama', panorama_simulacao_nacional),
     path('api/brasil/fontes-oficiais', api_brasil_fontes_oficiais),
 
     # 🔐 API CENTRALIZADA

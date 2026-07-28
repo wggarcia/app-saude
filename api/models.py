@@ -922,6 +922,86 @@ class FonteOficialAgregado(models.Model):
         return f"{self.fonte_id} - {self.indicador} - {local} - {self.periodo}"
 
 
+# ── MOBILIDADE E DISPERSÃO EPIDEMIOLÓGICA ─────────────────────────────────────
+# Igual a FonteOficialAgregado: dado público AGREGADO, sem FK para Empresa e
+# portanto fora da RLS (ver api/migrations/0085_rls_policies.py, que cobre só
+# tabelas com FK direta para Empresa). Fluxo de voos entre municípios não é
+# dado pessoal — é mobilidade agregada, LGPD não se aplica a indivíduo aqui.
+
+class MatrizMobilidade(models.Model):
+    """Fluxo agregado origem→destino entre municípios (voos, rodoviário, etc.).
+
+    Alimentada por api/pipeline_mobilidade.py (OpenSky Network). Uma linha por
+    par (origem, destino, modo, período): quantos deslocamentos houve e qual a
+    fração do fluxo total que sai da origem (peso normalizado, usado como
+    acoplamento no SEIR metapopulacional).
+    """
+    MODO_AEREO = "aereo"
+    MODO_RODOVIARIO = "rodoviario"
+    MODO_CHOICES = [
+        (MODO_AEREO, "Aéreo"),
+        (MODO_RODOVIARIO, "Rodoviário"),
+    ]
+
+    origem_ibge = models.CharField(max_length=20)
+    destino_ibge = models.CharField(max_length=20)
+    origem_nome = models.CharField(max_length=120, blank=True, default="")
+    destino_nome = models.CharField(max_length=120, blank=True, default="")
+    origem_uf = models.CharField(max_length=2, blank=True, default="")
+    destino_uf = models.CharField(max_length=2, blank=True, default="")
+    modo = models.CharField(max_length=20, default=MODO_AEREO, choices=MODO_CHOICES)
+    periodo = models.CharField(max_length=20)          # ex.: 2026-07-28 ou 2026-S30
+    viagens = models.PositiveIntegerField(default=0)   # nº de voos observados
+    peso = models.FloatField(default=0.0)              # fração do fluxo da origem (0–1)
+    fonte = models.CharField(max_length=80, default="opensky")
+    metadados = models.JSONField(default=dict, blank=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("origem_ibge", "destino_ibge", "modo", "periodo")
+        indexes = [
+            models.Index(fields=["origem_ibge", "modo", "periodo"], name="api_matmob_orig_modo_per_idx"),
+            models.Index(fields=["destino_ibge", "modo", "periodo"], name="api_matmob_dest_modo_per_idx"),
+            models.Index(fields=["periodo"], name="api_matmob_periodo_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.origem_nome or self.origem_ibge} → {self.destino_nome or self.destino_ibge} ({self.viagens} voos, {self.periodo})"
+
+
+class ProjecaoDispersao(models.Model):
+    """Projeção de chegada de uma doença num município (SEIR + mobilidade).
+
+    Gerada por api/modelo_dispersao.py — o 9º sistema de IA. Responde
+    "para onde o surto vai", complementando o Detector de Surto (que responde
+    "onde ele está"). Sem FK para Empresa: a projeção é sobre território
+    público, e cada ambiente consulta o mesmo dado agregado.
+    """
+    doenca = models.CharField(max_length=120)
+    municipio_ibge = models.CharField(max_length=20)
+    municipio_nome = models.CharField(max_length=120, blank=True, default="")
+    uf = models.CharField(max_length=2, blank=True, default="")
+    horizonte_dias = models.PositiveSmallIntegerField()  # 7, 14 ou 30
+    probabilidade = models.FloatField(default=0.0)       # 0–1
+    casos_projetados = models.FloatField(default=0.0)
+    origem_provavel_ibge = models.CharField(max_length=20, blank=True, default="")
+    origem_provavel_nome = models.CharField(max_length=120, blank=True, default="")
+    calculado_em = models.DateTimeField(auto_now=True)
+    metadados = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        unique_together = ("doenca", "municipio_ibge", "horizonte_dias")
+        indexes = [
+            models.Index(fields=["doenca", "horizonte_dias", "-probabilidade"], name="api_projdisp_doe_hor_prob_idx"),
+            models.Index(fields=["municipio_ibge", "doenca"], name="api_projdisp_mun_doenca_idx"),
+        ]
+        ordering = ["-probabilidade"]
+
+    def __str__(self):
+        nome = self.municipio_nome or self.municipio_ibge
+        return f"{self.doenca} → {nome} em {self.horizonte_dias}d: {self.probabilidade:.0%}"
+
+
 # ── ESCALAS CORPORATIVAS ───────────────────────────────────────────────────────
 
 class EscalaCorporativa(models.Model):

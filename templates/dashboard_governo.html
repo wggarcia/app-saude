@@ -911,6 +911,7 @@
                 <option value="surtos">Surto detalhado</option>
                 <option value="radar">Radar saúde</option>
                 <option value="risco">Mapa de risco</option>
+                <option value="dispersao">Para onde vai (IA)</option>
               </select>
               <span id="modeHint" style="display:block;font-size:0.72rem;color:var(--muted,#8a9bb5);margin-top:4px;line-height:1.3;"></span>
             </label>
@@ -1204,6 +1205,8 @@
     let _mapaRegioesTotal = 0;
     let circlesLayer = L.layerGroup().addTo(map);
     let markersLayer = L.layerGroup().addTo(map);
+    let dispersaoLayer = L.layerGroup();   // arcos "para onde o surto vai" (IA #9)
+    let dispersaoHorizonte = 14;           // 7 | 14 | 30 dias
     let leftVisible = false;
     let rightVisible = false;
     let bottomVisible = false;
@@ -1934,6 +1937,7 @@
     function clearMap() {
       circlesLayer.clearLayers();
       markersLayer.clearLayers();
+      dispersaoLayer.clearLayers();
       if (heatLayer) {
         map.removeLayer(heatLayer);
         heatLayer = null;
@@ -2021,11 +2025,79 @@
       map.removeLayer(markersLayer);
       markersLayer.addTo(map);
 
+      // Modo "para onde vai": sobrepõe os arcos de dispersão projetados pela IA #9.
+      if (mode === "dispersao") {
+        if (!map.hasLayer(dispersaoLayer)) dispersaoLayer.addTo(map);
+        renderDispersao();
+      } else if (map.hasLayer(dispersaoLayer)) {
+        map.removeLayer(dispersaoLayer);
+      }
+
       if (bounds.length && !mapUserMoved) {
         _mapFitting = true;
         map.fitBounds(bounds, { padding: [60, 60], maxZoom: isBairroView ? 11 : levelFilter.value === "municipios" ? 8 : 5 });
         map.once("zoomend moveend", () => { _mapFitting = false; });
       }
+    }
+
+    // Cor por probabilidade de chegada: teal (baixa) → âmbar → vermelho (alta).
+    function _corDispersao(p) {
+      if (p >= 0.66) return "#ff5574";
+      if (p >= 0.33) return "#ff9b54";
+      return "#17d7a0";
+    }
+
+    // Arco curvo estilo "rota de voo" entre origem e destino (quadrática simples).
+    function _pontosArco(o, d) {
+      const lat1 = o.lat, lon1 = o.lon, lat2 = d.lat, lon2 = d.lon;
+      const mlat = (lat1 + lat2) / 2, mlon = (lon1 + lon2) / 2;
+      const dx = lat2 - lat1, dy = lon2 - lon1;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      // ponto de controle deslocado perpendicularmente — curvatura ~18% da distância
+      const clat = mlat + (-dy / dist) * dist * 0.18;
+      const clon = mlon + (dx / dist) * dist * 0.18;
+      const pts = [];
+      for (let t = 0; t <= 1.0001; t += 0.05) {
+        const a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t;
+        pts.push([a * lat1 + b * clat + c * lat2, a * lon1 + b * clon + c * lon2]);
+      }
+      return pts;
+    }
+
+    async function renderDispersao() {
+      const doenca = (panorama?.overview?.probable_diseases || [{}])[0]?.name;
+      if (!doenca) return;
+      dispersaoLayer.clearLayers();
+      let data;
+      try {
+        const r = await fetch(`/api/epidemiologia/dispersao?doenca=${encodeURIComponent(doenca)}&horizonte=${dispersaoHorizonte}&min_prob=0.05`);
+        if (!r.ok) return;
+        data = await r.json();
+      } catch (e) { return; }
+      if (!data?.ok || !data.destinos?.length) return;
+
+      // arcos origem → destino
+      data.destinos.forEach((dst) => {
+        if (!dst.origem) return;
+        const cor = _corDispersao(dst.probabilidade);
+        L.polyline(_pontosArco(dst.origem, dst), {
+          color: cor, weight: 1 + dst.probabilidade * 3, opacity: 0.55,
+          smoothFactor: 1, interactive: false,
+        }).addTo(dispersaoLayer);
+        // marcador pulsante no destino
+        const m = L.circleMarker([dst.lat, dst.lon], {
+          radius: 4 + dst.probabilidade * 8, color: cor, weight: 1.5,
+          fillColor: cor, fillOpacity: 0.35,
+        });
+        m.bindPopup(
+          `<b>${dst.nome}/${dst.uf}</b><br>` +
+          `Chegada de <b>${data.doenca}</b> em ${data.horizonte_dias} dias: <b>${Math.round(dst.probabilidade * 100)}%</b><br>` +
+          `Casos projetados: ~${Math.round(dst.casos_projetados)}<br>` +
+          `Rota provável: via <b>${dst.origem.nome}</b>`
+        );
+        bindHoverTooltip(m, `${dst.nome} — ${Math.round(dst.probabilidade * 100)}% em ${data.horizonte_dias}d`);
+        m.addTo(dispersaoLayer);
+      });
     }
 
     async function loadPanorama() {
@@ -2067,6 +2139,7 @@
       surtos: "Onde estão os focos ativos agora",
       radar: "Intensidade geral da doença no território",
       risco: "Áreas que precisam de ação prioritária",
+      dispersao: "Projeção de IA: para onde o surto tende a ir (mobilidade aérea)",
     };
     function updateModeHint() {
       const el = document.getElementById("modeHint");
