@@ -70,19 +70,29 @@ class Command(BaseCommand):
                 self.stdout.write("Municípios não resolvidos: " + ", ".join(sorted(set(nao_resolvidos))))
             return
 
-        # 3) matriz de mobilidade
+        # 3) matriz de mobilidade — prioriza voo real (MatrizMobilidade); se não
+        #    houver, usa o modelo gravitacional (método principal, dado público
+        #    IBGE, sem licença comercial — ver pipeline_mobilidade.matriz_gravitacional).
         matriz_norm, periodo_matriz = self._carregar_matriz_norm()
-        if not matriz_norm:
+        if matriz_norm:
+            fonte_mobilidade = "opensky"
+        else:
+            todas_seeds = {ibge for seeds in seeds_por_doenca.values() for ibge in seeds}
+            matriz_norm = pm.matriz_gravitacional(todas_seeds)
+            fonte_mobilidade = "gravitacional"
+            periodo_matriz = None
             self.stdout.write(self.style.WARNING(
-                "Sem MatrizMobilidade — rode coletar_mobilidade_aerea antes. "
-                "Projeção segue só com transmissão local (sem rota de dispersão)."
+                "Sem voo real (MatrizMobilidade vazia) — usando modelo GRAVITACIONAL "
+                f"(mobilidade estimada por população/distância). {len(matriz_norm)} focos com rota."
             ))
+
+        # população conhecida dos hubs (para o SEIR); ausência vira default no modelo
+        populacoes = {str(k): v for k, v in pm.POPULACAO_HUBS.items()}
 
         total_gravado = 0
         for doenca, seeds in seeds_por_doenca.items():
             params = md.parametros_para_doenca(doenca)
-            # população: sem tabela dedicada, usa default documentado (registrado nos metadados)
-            proj = md.projetar_dispersao(seeds, populacoes={}, matriz_norm=matriz_norm, params=params)
+            proj = md.projetar_dispersao(seeds, populacoes=populacoes, matriz_norm=matriz_norm, params=params)
 
             self.stdout.write(f"\n== {doenca} (R0={params.r0}, focos={len(seeds)}) ==")
             registros_doenca = []
@@ -103,7 +113,8 @@ class Command(BaseCommand):
                         "origem_provavel_nome": origem_geo["nome"] if origem_geo else "",
                         "metadados": {
                             "r0": params.r0, "rho": params.rho_mobilidade,
-                            "populacao": "default", "periodo_matriz": periodo_matriz,
+                            "fonte_mobilidade": fonte_mobilidade,
+                            "periodo_matriz": periodo_matriz,
                         },
                     })
                 if selecionadas:

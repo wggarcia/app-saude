@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -336,6 +337,130 @@ def matriz_para_pesos_normalizados(matriz: dict) -> dict:
         total = total_por_origem[o] or 1
         normalizada[o] = {d: n / total for d, n in destinos.items()}
     return normalizada
+
+
+# ── Mobilidade ESTIMADA por modelo gravitacional (método principal) ──────────
+# A API do OpenSky é licenciada só para uso de pesquisa/não-comercial; a SoloCRT
+# é comercial. Por isso o método principal de mobilidade NÃO é voo real, e sim a
+# estimativa gravitacional — padrão em epidemiologia de mobilidade humana —
+# calculada sobre dado público do IBGE (população + coordenada). Sem licença de
+# terceiro, sem custo, sempre disponível (funciona offline no estande).
+#
+# População (censo IBGE 2022, arredondada) dos municípios-hub — os polos de
+# maior atração de deslocamento. Chave = código IBGE (int), igual a AEROPORTOS_BR.
+POPULACAO_HUBS = {
+    3550308: 11451000,  # São Paulo/SP
+    3304557:  6211000,  # Rio de Janeiro/RJ
+    5300108:  2817000,  # Brasília/DF
+    2304400:  2428000,  # Fortaleza/CE
+    2927408:  2418000,  # Salvador/BA
+    3106200:  2315000,  # Belo Horizonte/MG
+    1302603:  2063000,  # Manaus/AM
+    2611606:  1488000,  # Recife/PE
+    5208707:  1437000,  # Goiânia/GO
+    4314902:  1332000,  # Porto Alegre/RS
+    1501402:  1303000,  # Belém/PA
+    3518800:  1291000,  # Guarulhos/SP
+    3509502:  1139000,  # Campinas/SP
+    2111300:  1037000,  # São Luís/MA
+    2704302:   957000,  # Maceió/AL
+    5002704:   898000,  # Campo Grande/MS
+    2211001:   866000,  # Teresina/PI
+    2507507:   833000,  # João Pessoa/PB
+    3170206:   713000,  # Uberlândia/MG
+    3549904:   697000,  # São José dos Campos/SP
+    2800308:   602000,  # Aracaju/SE
+    4209102:   597000,  # Joinville/SC
+    4113700:   575000,  # Londrina/PR
+    4205407:   537000,  # Florianópolis/SC
+    1600303:   522000,  # Macapá/AP
+    1100205:   460000,  # Porto Velho/RO
+    4115200:   430000,  # Maringá/PR
+    2504009:   419000,  # Campina Grande/PB
+    1400100:   419000,  # Boa Vista/RR
+    2611101:   393000,  # Petrolina/PE
+    1200401:   364000,  # Rio Branco/AC
+    4125506:   329000,  # São José dos Pinhais/PR
+    3205309:   322000,  # Vitória/ES
+    1721000:   302000,  # Palmas/TO
+    5108402:   287000,  # Várzea Grande/MT
+    4108304:   285000,  # Foz do Iguaçu/PR
+    2307304:   276000,  # Juazeiro do Norte/CE
+    3541406:   224000,  # Presidente Prudente/SP
+    2913606:   155000,  # Ilhéus/BA
+    2925303:   150000,  # Porto Seguro/BA
+    2412005:   104000,  # São Gonçalo do Amarante/RN
+    4211306:    82000,  # Navegantes/SC
+    3117876:     9700,  # Confins/MG (aeroporto de BH; município pequeno)
+}
+
+
+def _haversine_km(lat1, lon1, lat2, lon2) -> float:
+    """Distância em km entre dois pontos (lat/lon em graus), fórmula de haversine."""
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlmb / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def matriz_gravitacional(
+    origens_ibge,
+    *,
+    expoente_dist: float = 2.0,
+    dist_min_km: float = 30.0,
+    top_destinos: int = 12,
+    populacao_destino_default: int = 60000,
+) -> dict:
+    """Estima a matriz de mobilidade por modelo gravitacional (sem voo real).
+
+    Fluxo(origem→destino) ∝ população_destino / distância^expoente. Como o SEIR
+    usa a matriz NORMALIZADA por origem, a população da origem se cancela — só
+    entra a do destino; por isso só precisamos de POPULACAO_HUBS (destinos).
+
+    Universo de destinos = hubs (POPULACAO_HUBS) ∪ as próprias origens (um surto
+    pode dispersar para a cidade de outro foco). Para cada origem, mantém os
+    `top_destinos` de maior peso e normaliza para somar 1.
+
+    Args:
+        origens_ibge: iterável de códigos IBGE (str/int) — os focos do surto.
+    Retorna:
+        {origem_ibge(str): {destino_ibge(str): peso∈(0,1]}} — mesma forma de
+        matriz_para_pesos_normalizados(), consumível direto pelo modelo_dispersao.
+    """
+    origens = [str(o) for o in origens_ibge if o]
+    # universo de destinos: hubs + origens (com população default onde não é hub)
+    destinos_pop: dict = {str(k): v for k, v in POPULACAO_HUBS.items()}
+    for o in origens:
+        destinos_pop.setdefault(o, populacao_destino_default)
+
+    # coordenadas de todos os nós envolvidos (origens + destinos)
+    coords: dict = {}
+    for ibge in set(origens) | set(destinos_pop):
+        g = geo_municipio(ibge)
+        if g:
+            coords[ibge] = (g["latitude"], g["longitude"])
+
+    matriz: dict = {}
+    for o in origens:
+        if o not in coords:
+            continue
+        olat, olon = coords[o]
+        pesos: dict = {}
+        for d, popd in destinos_pop.items():
+            if d == o or d not in coords:
+                continue
+            dlat, dlon = coords[d]
+            dist = max(_haversine_km(olat, olon, dlat, dlon), dist_min_km)
+            pesos[d] = popd / (dist ** expoente_dist)
+        if not pesos:
+            continue
+        # mantém só os destinos de maior atração e normaliza
+        maiores = sorted(pesos.items(), key=lambda kv: kv[1], reverse=True)[:top_destinos]
+        total = sum(w for _, w in maiores) or 1.0
+        matriz[o] = {d: w / total for d, w in maiores}
+    return matriz
 
 
 def coletar_matriz_nacional(inicio: int, fim: int) -> dict:
