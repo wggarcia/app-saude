@@ -23,6 +23,7 @@ from .models import (
     BeneficiarioOdonto, GuiaOdonto, MensagemPlano,
     CarenciaBeneficiario, RegraAutorizacaoAutomatica,
     RedeCredenciadaPlano, ProcedimentoTUSS,
+    RessarcimentoSUS, AvaliacaoNPS,
 )
 from .views_dashboard import _empresa_autenticada
 from .utils import validar_cpf_cadastro
@@ -2921,20 +2922,18 @@ def api_ps_dashboard_exec(request):
     )
     top_procedimentos = [{"nome": t["tipo"], "custo": float(t["custo"] or 0)} for t in top_proc]
 
+    # NPS real — calculado do model AvaliacaoNPS (0 respostas → None, honesto).
+    nps_valor, nps_total, _promo, _neu, _detr = _calcular_nps(
+        AvaliacaoNPS.objects.filter(empresa=empresa)
+    )
+
     return JsonResponse({
         "mlr": mlr,
         "pmpm": pmpm,
         "mrr": mrr,
-        # TODO(NPS real): não existe, hoje, nenhum model de avaliação/NPS
-        # (ex: AvaliacaoNPS) em api/models.py. O único campo próximo é
-        # TeleconsultaAutorizacao.nota_satisfacao (escala 1-5, só cobre
-        # teleconsultas) — escala e cobertura diferentes de um NPS real
-        # (0-10, % promotores - % detratores, base completa de beneficiários),
-        # então não foi reaproveitado para não fabricar um número. Mantido em
-        # 0 até existir um model dedicado de pesquisa de satisfação/NPS;
-        # reportado ao usuário para decidir se cria esse model.
-        "nps": 0,
-        "nps_fonte": "indisponivel_sem_model",
+        "nps": nps_valor,
+        "nps_respostas": nps_total,
+        "nps_fonte": "calculado_dados_reais" if nps_total else "sem_respostas",
         "crescimento_beneficiarios": crescimento,
         "mlr_por_plano": mlr_por_plano,
         "mlr_mensal": mlr_mensal,
@@ -4115,4 +4114,296 @@ def api_plano_saude_painel(request):
             "total_sinistros_30d": total_sinistros_30d,
             "pressao_sinistralidade_estimada": pressao_sinistralidade,
         },
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  RESSARCIMENTO AO SUS  (ABI/GRU — Lei 9.656/98 art. 32, RN ANS 502/2022)
+# ════════════════════════════════════════════════════════════════════════════════
+
+def _ressarcimento_dict(r):
+    return {
+        "id": r.id,
+        "numero_abi": r.numero_abi,
+        "competencia": r.competencia,
+        "beneficiario_id": r.beneficiario_id,
+        "beneficiario_nome": r.beneficiario_nome or (r.beneficiario.nome if r.beneficiario_id else ""),
+        "beneficiario_cpf": r.beneficiario_cpf,
+        "plano_id": r.plano_id,
+        "plano_nome": r.plano.nome if r.plano_id else "",
+        "tipo_atendimento": r.tipo_atendimento,
+        "tipo_atendimento_label": r.get_tipo_atendimento_display(),
+        "procedimento": r.procedimento,
+        "estabelecimento_sus": r.estabelecimento_sus,
+        "data_atendimento": r.data_atendimento.isoformat() if r.data_atendimento else None,
+        "valor_cobrado": float(r.valor_cobrado or 0),
+        "valor_pago": float(r.valor_pago or 0),
+        "status": r.status,
+        "status_label": r.get_status_display(),
+        "data_recebimento": r.data_recebimento.isoformat() if r.data_recebimento else None,
+        "prazo_impugnacao": r.prazo_impugnacao.isoformat() if r.prazo_impugnacao else None,
+        "justificativa_impugnacao": r.justificativa_impugnacao,
+        "numero_gru": r.numero_gru,
+        "data_pagamento": r.data_pagamento.isoformat() if r.data_pagamento else None,
+        "observacoes": r.observacoes,
+        "criado_em": r.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+def _parse_date_opt(valor):
+    if not valor:
+        return None
+    from datetime import datetime
+    try:
+        return datetime.strptime(valor, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
+@api_requer_feature("plano.ressarcimento_sus")
+@csrf_exempt
+def api_ps_ressarcimento(request):
+    """GET  /api/plano-saude/ressarcimento-sus?status=&competencia=&busca=
+       POST /api/plano-saude/ressarcimento-sus  (registra um ABI)"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "GET":
+        qs = RessarcimentoSUS.objects.filter(empresa=empresa).select_related("plano", "beneficiario")
+        status = request.GET.get("status")
+        if status:
+            qs = qs.filter(status=status)
+        competencia = request.GET.get("competencia")
+        if competencia:
+            qs = qs.filter(competencia=competencia)
+        busca = (request.GET.get("busca") or "").strip()
+        if busca:
+            qs = qs.filter(
+                Q(beneficiario_nome__icontains=busca)
+                | Q(beneficiario_cpf__icontains=busca)
+                | Q(numero_abi__icontains=busca)
+            )
+        return JsonResponse({"ressarcimentos": [_ressarcimento_dict(r) for r in qs[:300]]})
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        plano = None
+        if data.get("plano_id"):
+            try:
+                plano = PlanoSaude.objects.get(id=data["plano_id"], empresa=empresa)
+            except PlanoSaude.DoesNotExist:
+                return JsonResponse({"erro": "Plano não encontrado"}, status=404)
+        beneficiario = None
+        if data.get("beneficiario_id"):
+            try:
+                beneficiario = BeneficiarioPlano.objects.get(
+                    id=data["beneficiario_id"], plano__empresa=empresa
+                )
+            except BeneficiarioPlano.DoesNotExist:
+                return JsonResponse({"erro": "Beneficiário não encontrado"}, status=404)
+
+        r = RessarcimentoSUS.objects.create(
+            empresa=empresa,
+            plano=plano,
+            beneficiario=beneficiario,
+            numero_abi=data.get("numero_abi", ""),
+            competencia=data.get("competencia", ""),
+            beneficiario_nome=data.get("beneficiario_nome", "") or (beneficiario.nome if beneficiario else ""),
+            beneficiario_cpf=data.get("beneficiario_cpf", "") or (beneficiario.cpf if beneficiario else ""),
+            tipo_atendimento=data.get("tipo_atendimento", RessarcimentoSUS.TIPO_AMBULATORIAL),
+            procedimento=data.get("procedimento", ""),
+            estabelecimento_sus=data.get("estabelecimento_sus", ""),
+            data_atendimento=_parse_date_opt(data.get("data_atendimento")),
+            valor_cobrado=data.get("valor_cobrado") or 0,
+            data_recebimento=_parse_date_opt(data.get("data_recebimento")),
+            prazo_impugnacao=_parse_date_opt(data.get("prazo_impugnacao")),
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"ressarcimento": _ressarcimento_dict(r)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@api_requer_feature("plano.ressarcimento_sus")
+@csrf_exempt
+def api_ps_ressarcimento_detalhe(request, ress_id):
+    """GET/PUT/DELETE de um ABI. PUT aceita transições de status (impugnar,
+    emitir GRU, pagar) via campo 'status' + campos associados."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        r = RessarcimentoSUS.objects.select_related("plano", "beneficiario").get(
+            id=ress_id, empresa=empresa
+        )
+    except RessarcimentoSUS.DoesNotExist:
+        return JsonResponse({"erro": "Ressarcimento não encontrado"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"ressarcimento": _ressarcimento_dict(r)})
+
+    if request.method in ("PUT", "PATCH"):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for campo in ["numero_abi", "competencia", "beneficiario_nome", "beneficiario_cpf",
+                      "tipo_atendimento", "procedimento", "estabelecimento_sus",
+                      "justificativa_impugnacao", "numero_gru", "observacoes"]:
+            if campo in data:
+                setattr(r, campo, data[campo])
+        if "valor_cobrado" in data:
+            r.valor_cobrado = data["valor_cobrado"] or 0
+        if "valor_pago" in data:
+            r.valor_pago = data["valor_pago"] or 0
+        for campo_data in ["data_atendimento", "data_recebimento", "prazo_impugnacao", "data_pagamento"]:
+            if campo_data in data:
+                setattr(r, campo_data, _parse_date_opt(data[campo_data]))
+        if "status" in data:
+            status_novo = data["status"]
+            validos = dict(RessarcimentoSUS.STATUS_CHOICES)
+            if status_novo not in validos:
+                return JsonResponse({"erro": "Status inválido"}, status=400)
+            r.status = status_novo
+            # Efeitos colaterais coerentes com o ciclo de vida
+            if status_novo == RessarcimentoSUS.STATUS_PAGO and not r.data_pagamento:
+                r.data_pagamento = timezone.now().date()
+                if not r.valor_pago:
+                    r.valor_pago = r.valor_cobrado
+        r.save()
+        return JsonResponse({"ressarcimento": _ressarcimento_dict(r)})
+
+    if request.method == "DELETE":
+        r.delete()
+        return JsonResponse({"status": "ok"})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@api_requer_feature("plano.ressarcimento_sus")
+@csrf_exempt
+def api_ps_ressarcimento_kpis(request):
+    """GET /api/plano-saude/ressarcimento-sus/kpis — indicadores do módulo."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    qs = RessarcimentoSUS.objects.filter(empresa=empresa)
+    hoje = timezone.now().date()
+    pendentes = qs.exclude(status__in=[RessarcimentoSUS.STATUS_PAGO, RessarcimentoSUS.STATUS_DEFERIDO, RessarcimentoSUS.STATUS_CANCELADO])
+    por_status = list(qs.values("status").annotate(qtd=Count("id"), valor=Sum("valor_cobrado")).order_by("-qtd"))
+    total_cobrado = float(qs.aggregate(s=Sum("valor_cobrado"))["s"] or 0)
+    total_pago = float(qs.filter(status=RessarcimentoSUS.STATUS_PAGO).aggregate(s=Sum("valor_pago"))["s"] or 0)
+    impugnacoes = qs.filter(status__in=[RessarcimentoSUS.STATUS_IMPUGNADO, RessarcimentoSUS.STATUS_DEFERIDO, RessarcimentoSUS.STATUS_INDEFERIDO]).count()
+    deferidas = qs.filter(status=RessarcimentoSUS.STATUS_DEFERIDO).count()
+    taxa_sucesso_impugnacao = round(deferidas / impugnacoes * 100, 1) if impugnacoes else 0.0
+    prazo_vencendo = pendentes.filter(prazo_impugnacao__isnull=False, prazo_impugnacao__gte=hoje, prazo_impugnacao__lte=hoje + timedelta(days=15)).count()
+    return JsonResponse({
+        "total_abis": qs.count(),
+        "pendentes": pendentes.count(),
+        "total_cobrado": total_cobrado,
+        "total_pago": total_pago,
+        "economia_impugnacao": float(qs.filter(status=RessarcimentoSUS.STATUS_DEFERIDO).aggregate(s=Sum("valor_cobrado"))["s"] or 0),
+        "taxa_sucesso_impugnacao": taxa_sucesso_impugnacao,
+        "prazo_impugnacao_vencendo_15d": prazo_vencendo,
+        "por_status": por_status,
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  NPS — Pesquisa de satisfação do beneficiário
+# ════════════════════════════════════════════════════════════════════════════════
+
+def _calcular_nps(qs):
+    """Retorna (nps, total, promotores, neutros, detratores) para um queryset
+    de AvaliacaoNPS. NPS = %promotores - %detratores (arredondado)."""
+    total = qs.count()
+    if total == 0:
+        return None, 0, 0, 0, 0
+    promotores = qs.filter(nota__gte=9).count()
+    detratores = qs.filter(nota__lte=6).count()
+    neutros = total - promotores - detratores
+    nps = round((promotores - detratores) / total * 100)
+    return nps, total, promotores, neutros, detratores
+
+
+@api_requer_feature("plano.nps")
+@csrf_exempt
+def api_ps_nps(request):
+    """GET  /api/plano-saude/nps  → NPS agregado + distribuição + série 6 meses
+       POST /api/plano-saude/nps  → registra uma avaliação (nota 0-10)"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        try:
+            nota = int(data.get("nota"))
+        except (TypeError, ValueError):
+            return JsonResponse({"erro": "Nota obrigatória (0 a 10)"}, status=400)
+        if nota < 0 or nota > 10:
+            return JsonResponse({"erro": "Nota deve estar entre 0 e 10"}, status=400)
+        plano = None
+        if data.get("plano_id"):
+            try:
+                plano = PlanoSaude.objects.get(id=data["plano_id"], empresa=empresa)
+            except PlanoSaude.DoesNotExist:
+                return JsonResponse({"erro": "Plano não encontrado"}, status=404)
+        beneficiario = None
+        if data.get("beneficiario_id"):
+            try:
+                beneficiario = BeneficiarioPlano.objects.get(
+                    id=data["beneficiario_id"], plano__empresa=empresa
+                )
+            except BeneficiarioPlano.DoesNotExist:
+                return JsonResponse({"erro": "Beneficiário não encontrado"}, status=404)
+        av = AvaliacaoNPS.objects.create(
+            empresa=empresa,
+            plano=plano,
+            beneficiario=beneficiario,
+            nota=nota,
+            comentario=data.get("comentario", ""),
+            canal=data.get("canal", AvaliacaoNPS.CANAL_APP),
+            competencia=data.get("competencia") or timezone.now().strftime("%Y-%m"),
+        )
+        return JsonResponse({"id": av.id, "categoria": av.categoria}, status=201)
+
+    # GET — agregado
+    qs = AvaliacaoNPS.objects.filter(empresa=empresa)
+    nps, total, promotores, neutros, detratores = _calcular_nps(qs)
+
+    # Série mensal (últimos 6 meses)
+    hoje = date.today()
+    serie = []
+    for i in range(5, -1, -1):
+        total_meses = (hoje.year * 12 + (hoje.month - 1)) - i
+        ano_ref, mes_ref = total_meses // 12, (total_meses % 12) + 1
+        comp = f"{ano_ref:04d}-{mes_ref:02d}"
+        nps_m, _, _, _, _ = _calcular_nps(qs.filter(competencia=comp))
+        serie.append({"mes": f"{mes_ref:02d}/{str(ano_ref)[2:]}", "nps": nps_m})
+
+    comentarios = [
+        {"nota": a.nota, "categoria": a.categoria, "comentario": a.comentario, "canal": a.canal}
+        for a in qs.exclude(comentario="").order_by("-criado_em")[:20]
+    ]
+    return JsonResponse({
+        "nps": nps,
+        "total_respostas": total,
+        "promotores": promotores,
+        "neutros": neutros,
+        "detratores": detratores,
+        "pct_promotores": round(promotores / total * 100, 1) if total else 0,
+        "pct_neutros": round(neutros / total * 100, 1) if total else 0,
+        "pct_detratores": round(detratores / total * 100, 1) if total else 0,
+        "serie": serie,
+        "comentarios": comentarios,
+        "fonte": "calculado_dados_reais",
     })

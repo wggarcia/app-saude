@@ -4195,6 +4195,116 @@ class FaturamentoBeneficiario(models.Model):
         return f"Fatura {self.competencia} — {self.beneficiario.nome}"
 
 
+class RessarcimentoSUS(models.Model):
+    """Ressarcimento ao SUS — obrigação legal da operadora (Lei 9.656/98 art. 32,
+    RN ANS 502/2022). Quando um beneficiário usa a rede pública (SUS), a ANS
+    envia um ABI (Aviso de Beneficiário Identificado) e a operadora ressarce
+    o SUS via GRU, ou impugna. Ciclo: ABI recebido → análise → (impugnação) →
+    deferido/indeferido → GRU emitida → pago."""
+    STATUS_RECEBIDO = "recebido"
+    STATUS_EM_ANALISE = "em_analise"
+    STATUS_IMPUGNADO = "impugnado"
+    STATUS_DEFERIDO = "deferido"        # impugnação aceita — operadora não paga
+    STATUS_INDEFERIDO = "indeferido"    # impugnação negada — operadora deve pagar
+    STATUS_GRU_EMITIDA = "gru_emitida"
+    STATUS_PAGO = "pago"
+    STATUS_CANCELADO = "cancelado"
+    STATUS_CHOICES = [
+        (STATUS_RECEBIDO, "ABI recebido"),
+        (STATUS_EM_ANALISE, "Em análise"),
+        (STATUS_IMPUGNADO, "Impugnado"),
+        (STATUS_DEFERIDO, "Impugnação deferida"),
+        (STATUS_INDEFERIDO, "Impugnação indeferida"),
+        (STATUS_GRU_EMITIDA, "GRU emitida"),
+        (STATUS_PAGO, "Pago"),
+        (STATUS_CANCELADO, "Cancelado"),
+    ]
+    TIPO_AMBULATORIAL = "ambulatorial"
+    TIPO_INTERNACAO = "internacao"
+    TIPO_URGENCIA = "urgencia"
+    TIPO_ALTA_COMPLEXIDADE = "alta_complexidade"
+    TIPO_CHOICES = [
+        (TIPO_AMBULATORIAL, "Ambulatorial"),
+        (TIPO_INTERNACAO, "Internação"),
+        (TIPO_URGENCIA, "Urgência / Emergência"),
+        (TIPO_ALTA_COMPLEXIDADE, "Alta Complexidade"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="ressarcimentos_sus")
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.SET_NULL, null=True, blank=True, related_name="ressarcimentos_sus")
+    beneficiario = models.ForeignKey(
+        BeneficiarioPlano, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="ressarcimentos_sus",
+        help_text="Beneficiário casado no cadastro (pode não haver match com o ABI da ANS)",
+    )
+    numero_abi = models.CharField(max_length=40, blank=True, default="", help_text="Nº do Aviso de Beneficiário Identificado (ANS)")
+    competencia = models.CharField(max_length=7, blank=True, default="", help_text="YYYY-MM do lote ABI")
+    # Dados como enviados pela ANS (podem não bater com o cadastro)
+    beneficiario_nome = models.CharField(max_length=200, blank=True, default="")
+    beneficiario_cpf = models.CharField(max_length=14, blank=True, default="")
+    tipo_atendimento = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_AMBULATORIAL)
+    procedimento = models.CharField(max_length=255, blank=True, default="")
+    estabelecimento_sus = models.CharField(max_length=200, blank=True, default="", help_text="Unidade SUS onde ocorreu o atendimento")
+    data_atendimento = models.DateField(null=True, blank=True)
+    valor_cobrado = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Valor cobrado pela ANS (VRR)")
+    valor_pago = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_RECEBIDO)
+    data_recebimento = models.DateField(null=True, blank=True)
+    prazo_impugnacao = models.DateField(null=True, blank=True, help_text="Prazo final para impugnar o ABI")
+    justificativa_impugnacao = models.TextField(blank=True, default="")
+    numero_gru = models.CharField(max_length=60, blank=True, default="")
+    data_pagamento = models.DateField(null=True, blank=True)
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_recebimento", "-criado_em"]
+
+    def __str__(self):
+        return f"Ressarcimento SUS {self.numero_abi or self.id} — {self.beneficiario_nome or '—'}"
+
+
+class AvaliacaoNPS(models.Model):
+    """Pesquisa de satisfação (NPS) do beneficiário. Nota 0-10; promotor (9-10),
+    neutro (7-8), detrator (0-6). NPS = %promotores - %detratores."""
+    CANAL_APP = "app"
+    CANAL_PORTAL = "portal"
+    CANAL_EMAIL = "email"
+    CANAL_TELEFONE = "telefone"
+    CANAL_PRESENCIAL = "presencial"
+    CANAL_CHOICES = [
+        (CANAL_APP, "App"),
+        (CANAL_PORTAL, "Portal Web"),
+        (CANAL_EMAIL, "E-mail"),
+        (CANAL_TELEFONE, "Telefone"),
+        (CANAL_PRESENCIAL, "Presencial"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="avaliacoes_nps")
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.SET_NULL, null=True, blank=True, related_name="avaliacoes_nps")
+    beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.SET_NULL, null=True, blank=True, related_name="avaliacoes_nps")
+    nota = models.PositiveSmallIntegerField(help_text="Nota NPS de 0 a 10")
+    comentario = models.TextField(blank=True, default="")
+    canal = models.CharField(max_length=12, choices=CANAL_CHOICES, default=CANAL_APP)
+    competencia = models.CharField(max_length=7, blank=True, default="", help_text="YYYY-MM")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    @property
+    def categoria(self):
+        if self.nota >= 9:
+            return "promotor"
+        if self.nota >= 7:
+            return "neutro"
+        return "detrator"
+
+    def __str__(self):
+        return f"NPS {self.nota} ({self.categoria}) — {self.empresa_id}"
+
+
 class ProgramaSaude(models.Model):
     """Programa de saúde gerenciado da operadora (DIP, crônicos, oncologia…)."""
     TIPO_CRONICO = "cronico"

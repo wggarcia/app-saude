@@ -227,10 +227,12 @@ tr:hover td{background:rgba(255,107,157,.03)}
       {% endif %}
       {% if ps_ver_compliance_ans %}
       <button class="tab-btn" onclick="setTab('regulatorio')"><span>&#128196;</span> Relatorios ANS</button>
+      <button class="tab-btn" onclick="setTab('ressarcimento')"><span>&#9851;</span> Ressarcimento SUS</button>
       {% endif %}
       {% if ps_ver_comercial %}
       <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
       <button class="tab-btn" onclick="setTab('comunicacao')"><span>&#128172;</span> Comunicacao</button>
+      <button class="tab-btn" onclick="setTab('nps')"><span>&#11088;</span> NPS Beneficiario</button>
       <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
       <button class="tab-btn" onclick="setTab('telemedicina')"><span>&#128241;</span> Telemedicina</button>
       <button class="tab-btn" onclick="setTab('odontologia')"><span>&#129463;</span> Odontologia</button>
@@ -1264,6 +1266,73 @@ tr:hover td{background:rgba(255,107,157,.03)}
     </div>
   </div>
 
+  <!-- ═══ RESSARCIMENTO AO SUS ═══ -->
+  <div class="tab-panel" id="tab-ressarcimento">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Ressarcimento ao SUS</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">ABI / GRU — Lei 9.656/98 art. 32 · quando o beneficiario usa o SUS, a operadora ressarce ou impugna</div>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalRessarc()">+ Registrar ABI</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px" id="ressarcKpis">
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">ABIs recebidos</div></div>
+      <div class="kpi warn"><div class="kpi-val" style="color:var(--warn)">--</div><div class="kpi-lbl">Pendentes</div></div>
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">Total cobrado</div></div>
+      <div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">--</div><div class="kpi-lbl">Economia (impugnacao)</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="gap:10px;flex-wrap:wrap">
+        <span class="card-title">&#9851; Avisos de Beneficiario Identificado (ABI)</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="buscaRessarc" placeholder="Buscar por nome/CPF/ABI" oninput="carregarRessarcimento()" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
+          <select class="filter-sel" id="filtroStatusRessarc" onchange="carregarRessarcimento()">
+            <option value="">Todos os status</option>
+            <option value="recebido">ABI recebido</option>
+            <option value="em_analise">Em analise</option>
+            <option value="impugnado">Impugnado</option>
+            <option value="deferido">Impugnacao deferida</option>
+            <option value="indeferido">Impugnacao indeferida</option>
+            <option value="gru_emitida">GRU emitida</option>
+            <option value="pago">Pago</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>ABI</th><th>Beneficiario</th><th>Tipo</th><th>Atendimento SUS</th><th>Data</th><th>Valor cobrado</th><th>Status</th><th>Acao</th></tr></thead>
+          <tbody id="tbodyRessarc"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ NPS BENEFICIARIO ═══ -->
+  <div class="tab-panel" id="tab-nps">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">NPS — Satisfacao do Beneficiario</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Net Promoter Score · promotor (9-10) · neutro (7-8) · detrator (0-6)</div>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalNps()">+ Registrar avaliacao</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-bottom:20px">
+      <div class="card" style="text-align:center;padding:22px">
+        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">NPS</div>
+        <div id="npsScore" style="font-size:52px;font-weight:800;line-height:1.1">--</div>
+        <div id="npsRespostas" style="font-size:12px;color:var(--muted)">sem respostas</div>
+      </div>
+      <div class="card" style="padding:18px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Distribuicao</div>
+        <div id="npsDist"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">&#128172; Comentarios recentes</span></div>
+      <div id="npsComentarios" style="padding:8px 20px 16px"></div>
+    </div>
+  </div>
+
   <!-- ═══ COMUNICACAO ═══ -->
   <div class="tab-panel" id="tab-comunicacao">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -1413,6 +1482,70 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div id="idssModalBody" style="max-height:64vh;overflow-y:auto"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalIDSS')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Registrar ABI (Ressarcimento SUS) -->
+<div class="modal-bg" id="modalRessarc">
+  <div class="modal" style="max-width:640px">
+    <h3>&#9851; Registrar ABI — Ressarcimento SUS</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nº do ABI</label><input id="rsAbi" placeholder="Ex: 2026.0001234"></div>
+      <div class="form-group"><label>Competência (AAAA-MM)</label><input id="rsComp" placeholder="2026-07"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nome do beneficiário *</label><input id="rsNome" placeholder="Como consta no ABI da ANS"></div>
+      <div class="form-group"><label>CPF</label><input id="rsCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de atendimento</label>
+        <select id="rsTipo">
+          <option value="ambulatorial">Ambulatorial</option>
+          <option value="internacao">Internação</option>
+          <option value="urgencia">Urgência / Emergência</option>
+          <option value="alta_complexidade">Alta Complexidade</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Valor cobrado (R$) *</label><input id="rsValor" type="number" step="0.01" placeholder="0,00"></div>
+    </div>
+    <div class="form-group"><label>Procedimento</label><input id="rsProc" placeholder="Descrição do procedimento SUS"></div>
+    <div class="form-group"><label>Estabelecimento SUS</label><input id="rsEstab" placeholder="Unidade onde ocorreu o atendimento"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Data do atendimento</label><input type="date" id="rsDataAtend"></div>
+      <div class="form-group"><label>Prazo de impugnação</label><input type="date" id="rsPrazo"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalRessarc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarRessarc()">Registrar ABI</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova avaliação NPS -->
+<div class="modal-bg" id="modalNps">
+  <div class="modal" style="max-width:520px">
+    <h3>&#11088; Registrar avaliação (NPS)</h3>
+    <div class="form-group"><label>Nota (0 a 10) *</label>
+      <select id="npsNota">
+        <option value="">selecione</option>
+        <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option>
+        <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Canal</label>
+      <select id="npsCanal">
+        <option value="app">App</option>
+        <option value="portal">Portal Web</option>
+        <option value="email">E-mail</option>
+        <option value="telefone">Telefone</option>
+        <option value="presencial">Presencial</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Comentário</label><textarea id="npsComentario" rows="3" placeholder="O que o beneficiário achou?"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNps')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNps()">Registrar</button>
     </div>
   </div>
 </div>
@@ -2243,7 +2376,9 @@ function setTab(name) {
     guias:carregarGuias,
     sinistros:carregarSinistros,
     reembolsos:carregarReembolsos,
-    regulatorio:carregarIDSS
+    regulatorio:carregarIDSS,
+    ressarcimento:carregarRessarcimento,
+    nps:carregarNps
   };
   if (loaders[name]) loaders[name]();
 }
@@ -4236,6 +4371,140 @@ function verIDSS() {
 }
 
 function verificarRol() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
+
+// ════════════════════════════════════════════════════════════
+//  RESSARCIMENTO AO SUS (ABI / GRU)
+// ════════════════════════════════════════════════════════════
+var _rsStatusBadge = {
+  recebido:'badge-gray', em_analise:'badge-warn', impugnado:'badge-warn',
+  deferido:'badge-ok', indeferido:'badge-danger', gru_emitida:'badge-warn', pago:'badge-ok', cancelado:'badge-gray'
+};
+// Próximas ações possíveis por status (fluxo do ABI)
+var _rsProximo = {
+  recebido:[['em_analise','Analisar']],
+  em_analise:[['impugnado','Impugnar'],['gru_emitida','Emitir GRU']],
+  impugnado:[['deferido','Deferir'],['indeferido','Indeferir']],
+  indeferido:[['gru_emitida','Emitir GRU']],
+  gru_emitida:[['pago','Marcar pago']],
+  deferido:[], pago:[], cancelado:[]
+};
+
+async function carregarRessarcimento() {
+  carregarRessarcKpis();
+  var busca = (document.getElementById('buscaRessarc')||{}).value || '';
+  var status = (document.getElementById('filtroStatusRessarc')||{}).value || '';
+  var params = new URLSearchParams();
+  if (busca.trim()) params.set('busca', busca.trim());
+  if (status) params.set('status', status);
+  var d = await api('/api/plano-saude/ressarcimento-sus?'+params.toString());
+  var lista = (d && d.ressarcimentos) || [];
+  var tb = document.getElementById('tbodyRessarc');
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum ABI registrado</td></tr>'; return; }
+  tb.innerHTML = lista.map(function(r){
+    var acoes = (_rsProximo[r.status]||[]).map(function(a){
+      return '<button class="btn btn-ghost btn-sm" onclick="mudarStatusRessarc('+r.id+',\''+a[0]+'\')">'+a[1]+'</button>';
+    }).join(' ') || '<span style="color:var(--muted);font-size:11px">—</span>';
+    return '<tr><td>'+(r.numero_abi||'--')+'</td>'+
+      '<td><strong>'+(r.beneficiario_nome||'--')+'</strong><div style="font-size:10.5px;color:var(--muted)">'+(r.beneficiario_cpf||'')+'</div></td>'+
+      '<td>'+(r.tipo_atendimento_label||'--')+'</td>'+
+      '<td>'+(r.estabelecimento_sus||'--')+'<div style="font-size:10.5px;color:var(--muted)">'+(r.procedimento||'')+'</div></td>'+
+      '<td>'+fmtData(r.data_atendimento)+'</td>'+
+      '<td>'+fmtMoeda(r.valor_cobrado)+'</td>'+
+      '<td><span class="badge '+(_rsStatusBadge[r.status]||'badge-gray')+'">'+(r.status_label||r.status)+'</span></td>'+
+      '<td>'+acoes+'</td></tr>';
+  }).join('');
+}
+
+async function carregarRessarcKpis() {
+  var k = await api('/api/plano-saude/ressarcimento-sus/kpis');
+  var box = document.getElementById('ressarcKpis');
+  if (!k || box == null) return;
+  box.innerHTML =
+    '<div class="kpi"><div class="kpi-val">'+(k.total_abis||0)+'</div><div class="kpi-lbl">ABIs recebidos</div></div>'+
+    '<div class="kpi warn"><div class="kpi-val" style="color:var(--warn)">'+(k.pendentes||0)+'</div><div class="kpi-lbl">Pendentes'+(k.prazo_impugnacao_vencendo_15d?' · '+k.prazo_impugnacao_vencendo_15d+' vencendo':'')+'</div></div>'+
+    '<div class="kpi"><div class="kpi-val">'+fmtMoeda(k.total_cobrado)+'</div><div class="kpi-lbl">Total cobrado</div></div>'+
+    '<div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">'+fmtMoeda(k.economia_impugnacao)+'</div><div class="kpi-lbl">Economia (impugnacao '+(k.taxa_sucesso_impugnacao||0)+'%)</div></div>';
+}
+
+function abrirModalRessarc() {
+  ['rsAbi','rsComp','rsNome','rsCpf','rsValor','rsProc','rsEstab','rsDataAtend','rsPrazo'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';});
+  document.getElementById('rsTipo').value='ambulatorial';
+  abrirModal('modalRessarc');
+}
+
+async function salvarRessarc() {
+  var body = {
+    numero_abi:v('rsAbi'), competencia:v('rsComp'), beneficiario_nome:v('rsNome'),
+    beneficiario_cpf:v('rsCpf'), tipo_atendimento:v('rsTipo'), procedimento:v('rsProc'),
+    estabelecimento_sus:v('rsEstab'), valor_cobrado:parseFloat(v('rsValor'))||0,
+    data_atendimento:v('rsDataAtend')||null, prazo_impugnacao:v('rsPrazo')||null,
+    data_recebimento:new Date().toISOString().slice(0,10)
+  };
+  if (!body.beneficiario_nome) { showToastPS('Informe o nome do beneficiário','warn'); return; }
+  if (!body.valor_cobrado) { showToastPS('Informe o valor cobrado','warn'); return; }
+  var resp = await fetch('/api/plano-saude/ressarcimento-sus', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  var r = await resp.json().catch(function(){return {};});
+  if (!resp.ok) { showToastPS(r.erro||'Erro ao registrar ABI','err'); return; }
+  fecharModal('modalRessarc');
+  carregarRessarcimento();
+}
+
+async function mudarStatusRessarc(id, status) {
+  var resp = await fetch('/api/plano-saude/ressarcimento-sus/'+id, {method:'PUT',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({status:status})});
+  if (!resp.ok) { showToastPS('Erro ao atualizar status','err'); return; }
+  showToastPS('Status atualizado','ok');
+  carregarRessarcimento();
+}
+
+// ════════════════════════════════════════════════════════════
+//  NPS — Satisfação do beneficiário
+// ════════════════════════════════════════════════════════════
+async function carregarNps() {
+  var d = await api('/api/plano-saude/nps');
+  var el = document.getElementById('npsScore');
+  var resp = document.getElementById('npsRespostas');
+  if (!d || d.nps == null) {
+    el.textContent = '--'; el.style.color = 'var(--muted)';
+    resp.textContent = 'sem respostas ainda';
+    document.getElementById('npsDist').innerHTML = '<div style="color:var(--muted);font-size:12px">Registre avaliações para calcular o NPS.</div>';
+    document.getElementById('npsComentarios').innerHTML = '<div style="color:var(--muted);font-size:12px">Nenhum comentário.</div>';
+    return;
+  }
+  el.textContent = d.nps;
+  el.style.color = d.nps >= 50 ? 'var(--ok)' : d.nps >= 0 ? 'var(--warn)' : 'var(--accent)';
+  resp.textContent = d.total_respostas + ' respostas';
+  function barra(label, pct, qtd, cor) {
+    return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>'+label+'</span><span>'+qtd+' · '+pct+'%</span></div>'+
+      '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+cor+'"></div></div></div>';
+  }
+  document.getElementById('npsDist').innerHTML =
+    barra('Promotores (9-10)', d.pct_promotores, d.promotores, 'var(--ok)')+
+    barra('Neutros (7-8)', d.pct_neutros, d.neutros, 'var(--warn)')+
+    barra('Detratores (0-6)', d.pct_detratores, d.detratores, 'var(--accent)');
+  var com = d.comentarios || [];
+  document.getElementById('npsComentarios').innerHTML = com.length ? com.map(function(c){
+    var cor = c.categoria==='promotor'?'var(--ok)':c.categoria==='detrator'?'var(--accent)':'var(--warn)';
+    return '<div style="border-left:3px solid '+cor+';padding:6px 12px;margin:8px 0"><strong style="color:'+cor+'">'+c.nota+'</strong> <span style="font-size:11px;color:var(--muted)">'+c.categoria+' · '+c.canal+'</span><div style="font-size:12.5px;margin-top:2px">'+(c.comentario||'')+'</div></div>';
+  }).join('') : '<div style="color:var(--muted);font-size:12px">Nenhum comentário.</div>';
+}
+
+function abrirModalNps() {
+  document.getElementById('npsNota').value='';
+  document.getElementById('npsCanal').value='app';
+  document.getElementById('npsComentario').value='';
+  abrirModal('modalNps');
+}
+
+async function salvarNps() {
+  if (!v('npsNota')) { showToastPS('Selecione a nota','warn'); return; }
+  var body = { nota:parseInt(v('npsNota'),10), canal:v('npsCanal'), comentario:v('npsComentario') };
+  var resp = await fetch('/api/plano-saude/nps', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  var r = await resp.json().catch(function(){return {};});
+  if (!resp.ok) { showToastPS(r.erro||'Erro ao registrar','err'); return; }
+  fecharModal('modalNps');
+  showToastPS('Avaliação registrada','ok');
+  carregarNps();
+}
 
 // ════════════════════════════════════════════════════════════
 //  COMUNICACAO

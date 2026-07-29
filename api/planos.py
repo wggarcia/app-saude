@@ -162,6 +162,8 @@ _PLANO_OPERADORA = [
     "plano.contratos",          # Contratos com histórico de utilização
     "plano.ans_relatorios",     # Relatórios ANS-compatíveis
     "plano.idss",               # IDSS — Índice de Desempenho da Saúde Suplementar (ANS)
+    "plano.ressarcimento_sus",  # Ressarcimento ao SUS (ABI/GRU — Lei 9.656/98 art. 32)
+    "plano.nps",                # Pesquisa de satisfação / NPS do beneficiário
     "plano.epidemiologia",      # Alertas de risco territorial por município (App Cidadão)
     "plano.corretores",         # Gestão de corretoras e comissões
     "plano.rede_credenciada",   # Rede credenciada — gestão e negociação

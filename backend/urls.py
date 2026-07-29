@@ -51,6 +51,8 @@ from api.views_plano_saude import (
     # Enterprise modules
     api_ps_dashboard_exec,
     api_ps_idss,
+    api_ps_ressarcimento, api_ps_ressarcimento_detalhe, api_ps_ressarcimento_kpis,
+    api_ps_nps,
     api_ps_sla,
     api_ps_auditoria,
     api_ps_contratos, api_ps_contrato_detalhe,
@@ -2621,6 +2623,10 @@ urlpatterns = [
     # ── Enterprise modules ──────────────────────────────────────────────────
     path('api/plano-saude/dashboard-exec/', api_ps_dashboard_exec),
     path('api/plano-saude/idss/', api_ps_idss),
+    path('api/plano-saude/ressarcimento-sus/kpis', api_ps_ressarcimento_kpis),
+    path('api/plano-saude/ressarcimento-sus', api_ps_ressarcimento),
+    path('api/plano-saude/ressarcimento-sus/<int:ress_id>', api_ps_ressarcimento_detalhe),
+    path('api/plano-saude/nps', api_ps_nps),
     path('api/plano-saude/sla/', api_ps_sla),
     path('api/plano-saude/auditoria/', api_ps_auditoria),
     path('api/plano-saude/contratos/', api_ps_contratos),
