@@ -849,6 +849,11 @@
 <body>
   <div id="map"></div>
 
+  <div id="dispersaoBanner" style="display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1200;background:rgba(155,124,244,.18);border:1px solid rgba(155,124,244,.6);color:#efe9ff;padding:8px 16px;border-radius:8px;font-size:.8rem;font-weight:600;letter-spacing:.01em;box-shadow:0 4px 18px rgba(0,0,0,.4);text-align:center;max-width:92vw;">
+    ⚠ PROJEÇÃO DE IA — estimativa de para onde o surto tende a ir (modelo de mobilidade populacional).
+    <span style="font-weight:400;opacity:.85;">Não é o reporte da população.</span>
+  </div>
+
   <div class="hud">
     <div class="topbar">
       <section class="card">
@@ -908,10 +913,14 @@
             <label>
               Modo do mapa
               <select id="modeFilter">
-                <option value="surtos">Surto detalhado</option>
-                <option value="radar">Radar saúde</option>
-                <option value="risco">Mapa de risco</option>
-                <option value="dispersao">Para onde vai (IA)</option>
+                <optgroup label="── Reporte da população (dados reais) ──">
+                  <option value="surtos">Surto detalhado</option>
+                  <option value="radar">Radar saúde</option>
+                  <option value="risco">Mapa de risco</option>
+                </optgroup>
+                <optgroup label="── Projeção de IA (estimativa) ──">
+                  <option value="dispersao">Para onde vai — projeção IA</option>
+                </optgroup>
               </select>
               <span id="modeHint" style="display:block;font-size:0.72rem;color:var(--muted,#8a9bb5);margin-top:4px;line-height:1.3;"></span>
             </label>
@@ -2026,11 +2035,15 @@
       markersLayer.addTo(map);
 
       // Modo "para onde vai": sobrepõe os arcos de dispersão projetados pela IA #9.
+      // Banner fixo deixa explícito que é PROJEÇÃO, não reporte da população.
+      const _banner = document.getElementById("dispersaoBanner");
       if (mode === "dispersao") {
         if (!map.hasLayer(dispersaoLayer)) dispersaoLayer.addTo(map);
+        if (_banner) _banner.style.display = "block";
         renderDispersao();
-      } else if (map.hasLayer(dispersaoLayer)) {
-        map.removeLayer(dispersaoLayer);
+      } else {
+        if (map.hasLayer(dispersaoLayer)) map.removeLayer(dispersaoLayer);
+        if (_banner) _banner.style.display = "none";
       }
 
       if (bounds.length && !mapUserMoved) {
@@ -2136,10 +2149,10 @@
     }
 
     const _modeHints = {
-      surtos: "Onde estão os focos ativos agora",
-      radar: "Intensidade geral da doença no território",
-      risco: "Áreas que precisam de ação prioritária",
-      dispersao: "Projeção de IA: para onde o surto tende a ir (mobilidade aérea)",
+      surtos: "Reporte da população: onde estão os focos ativos agora",
+      radar: "Reporte da população: intensidade geral da doença no território",
+      risco: "Reporte da população: áreas que precisam de ação prioritária",
+      dispersao: "⚠ PROJEÇÃO DE IA (estimativa) — para onde o surto tende a ir, por modelo de mobilidade populacional. Não é reporte da população.",
     };
     function updateModeHint() {
       const el = document.getElementById("modeHint");
