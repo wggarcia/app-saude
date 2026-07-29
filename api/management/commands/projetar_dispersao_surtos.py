@@ -38,14 +38,6 @@ from api import pipeline_mobilidade as pm
 from api.epidemiologia import build_panorama_payload, _estado_para_uf
 from api.models import MatrizMobilidade, ProjecaoDispersao, SurtoEpidemiologico
 
-# Panorama do tenant DEMO (estande) — inclui a simulação riw26-, que o panorama
-# real exclui por integridade. É trabalho da demo do estande e pode não existir
-# em todos os ambientes (ex.: Render); por isso o import é defensivo.
-try:
-    from api.epidemiologia import build_demo_panorama_payload
-except ImportError:  # pragma: no cover
-    build_demo_panorama_payload = None
-
 
 class Command(BaseCommand):
     help = "Projeta a dispersão dos surtos ativos (SEIR + mobilidade) para ProjecaoDispersao."
@@ -57,14 +49,10 @@ class Command(BaseCommand):
                             help="Ignora projeções com probabilidade abaixo disto (default 0.01).")
         parser.add_argument("--min-casos", type=int, default=15,
                             help="Nº mínimo de casos reportados num município p/ virar foco (default 15).")
-        parser.add_argument("--demo", action="store_true",
-                            help="Semeia do panorama do tenant DEMO (estande, simulação riw26-) "
-                                 "em vez do reporte real. Use na feira, junto de simulacao_estande_riw.")
         parser.add_argument("--dry-run", action="store_true", help="Não grava, só reporta.")
 
-    def _seeds_do_reporte(self, min_casos, demo=False):
-        """Focos vindos do REPORTE (mesmo dado do mapa) — real ou, se demo=True,
-        do tenant demo do estande.
+    def _seeds_do_reporte(self, min_casos):
+        """Focos vindos do REPORTE DA POPULAÇÃO (mesmo dado do mapa do gestor).
 
         Agrega o panorama por município: a doença dominante + casos ativos de
         cada município acima de `min_casos` viram semente. Retorna
@@ -72,17 +60,8 @@ class Command(BaseCommand):
         """
         seeds = defaultdict(dict)
         nao_resolvidos = []
-        if demo:
-            if build_demo_panorama_payload is None:
-                self.stdout.write(self.style.ERROR(
-                    "--demo indisponível: build_demo_panorama_payload não existe neste ambiente."
-                ))
-                return seeds, nao_resolvidos
-            payload_fn = build_demo_panorama_payload
-        else:
-            payload_fn = build_panorama_payload
         try:
-            payload = payload_fn()
+            payload = build_panorama_payload()
         except Exception as exc:  # panorama indisponível não pode derrubar o cron
             self.stdout.write(self.style.WARNING(f"Panorama indisponível ({exc}); sem focos do reporte."))
             return seeds, nao_resolvidos
@@ -116,21 +95,18 @@ class Command(BaseCommand):
         top = max(1, opts["top"])
         min_prob = opts["min_prob"]
         min_casos = opts["min_casos"]
-        demo = opts["demo"]
         dry = opts["dry_run"]
 
         seeds_por_doenca: dict = defaultdict(dict)
         nao_resolvidos = []
 
-        # 1) FONTE PRIMÁRIA — reporte (real ou, com --demo, do tenant demo do estande)
-        seeds_reporte, nr_rep = self._seeds_do_reporte(min_casos, demo=demo)
+        # 1) FONTE PRIMÁRIA — reporte da população (mesmo dado do mapa do gestor)
+        seeds_reporte, nr_rep = self._seeds_do_reporte(min_casos)
         for doenca, mun in seeds_reporte.items():
             for ibge, casos in mun.items():
                 seeds_por_doenca[doenca][ibge] = seeds_por_doenca[doenca].get(ibge, 0) + casos
         nao_resolvidos += nr_rep
         n_focos_reporte = sum(len(m) for m in seeds_reporte.values())
-        if demo:
-            self.stdout.write(self.style.WARNING("Modo --demo: semeando do panorama do tenant DEMO (estande)."))
 
         # 2) FONTE ADICIONAL — surtos registrados manualmente pelo gestor
         n_focos_manual = 0
@@ -148,8 +124,8 @@ class Command(BaseCommand):
         )
         if not seeds_por_doenca:
             self.stdout.write(self.style.WARNING(
-                "Nenhum foco com município resolvível. Sem reporte suficiente do cidadão "
-                "(rode simular_pandemia_brasil no ambiente de demo) nem surto manual ativo. Nada a projetar."
+                "Nenhum foco com município resolvível: ainda não há reporte suficiente do cidadão "
+                f"(>= {min_casos} casos num município) nem surto manual ativo. Nada a projetar."
             ))
             if nao_resolvidos:
                 self.stdout.write("Municípios não resolvidos: " + ", ".join(sorted(set(nao_resolvidos))))

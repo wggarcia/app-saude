@@ -107,9 +107,6 @@ class Command(BaseCommand):
         parser.add_argument("--duracao", type=int, default=10, help="Duração total em minutos")
         parser.add_argument("--seed",    type=int, default=7)
         parser.add_argument("--limpar",  action="store_true", help="Remove registros e sai")
-        parser.add_argument("--persistente", action="store_true",
-                            help="Só a Fase 1 (surto): popula e DEIXA no mapa — não anima "
-                                 "nem apaga. Para demo estático e para semear a projeção de dispersão.")
 
     def handle(self, *args, **options):
         if options["limpar"]:
@@ -181,15 +178,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"  ✓ {criados} casos no banco. Cache limpo — PANDEMIA ATIVA no mapa!"
         ))
-
-        if options.get("persistente"):
-            self.stdout.write(self.style.SUCCESS(
-                "  Modo --persistente: dados MANTIDOS no mapa (sem animação nem limpeza).\n"
-                "  Rode 'projetar_dispersao_surtos' para gerar a projeção 'para onde vai'.\n"
-                "  Para remover depois: simular_pandemia_brasil --limpar"
-            ))
-            return
-
         self.stdout.write(f"  ⏳ Próxima fase em {t_fase1 // 60}min {t_fase1 % 60}s...")
 
         self._esperar(t_fase1)
