@@ -418,3 +418,11 @@ if _SENTRY_DSN:
         environment=DJANGO_ENV,
         release=os.environ.get("RENDER_GIT_COMMIT", "local"),
     )
+
+
+# ── OpenSky Network (mobilidade aérea — IA #9 de dispersão) ──────────────────
+# Credenciais OAuth2 (client credentials) da conta gratuita OpenSky. Sem elas,
+# o acesso anônimo é rate-limited (HTTP 429) e a coleta de voos falha.
+# Cadastro: https://opensky-network.org/ -> Account -> API Client.
+OPENSKY_CLIENT_ID = os.environ.get("OPENSKY_CLIENT_ID", "")
+OPENSKY_CLIENT_SECRET = os.environ.get("OPENSKY_CLIENT_SECRET", "")
