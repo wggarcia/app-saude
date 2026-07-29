@@ -401,8 +401,8 @@ tr:hover td{background:rgba(255,107,157,.03)}
         </div>
       </div>
       <table>
-        <thead><tr><th>Nome</th><th>CPF</th><th>Carteirinha</th><th>Plano</th><th>Nascimento</th><th>Acomodacao</th><th>Situacao</th><th>Acoes</th></tr></thead>
-        <tbody id="tbodyBenef"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+        <thead><tr><th>Nome</th><th>CPF</th><th>Carteirinha</th><th>Plano</th><th>Vínculo</th><th>Nascimento</th><th>Acomodacao</th><th>Situacao</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyBenef"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1716,8 +1716,33 @@ tr:hover td{background:rgba(255,107,157,.03)}
 <div class="modal-bg" id="modalBenef">
   <div class="modal" style="max-width:620px">
     <h3>Cadastrar Beneficiario</h3>
-    <div class="form-group"><label>Plano *</label>
-      <select id="bfPlano"><option value="">selecione o plano</option></select>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de vínculo</label>
+        <select id="bfVinculo" onchange="toggleVinculoBenef()">
+          <option value="titular">Titular</option>
+          <option value="dependente">Dependente</option>
+        </select>
+      </div>
+      <div class="form-group" id="bfPlanoWrap"><label>Plano *</label>
+        <select id="bfPlano"><option value="">selecione o plano</option></select>
+      </div>
+    </div>
+    <div class="form-row" id="bfDependenteWrap" style="display:none">
+      <div class="form-group"><label>Titular *</label>
+        <select id="bfTitular"><option value="">selecione o titular</option></select>
+      </div>
+      <div class="form-group"><label>Grau de parentesco</label>
+        <select id="bfParentesco">
+          <option value="">--</option>
+          <option value="conjuge">Cônjuge / Companheiro(a)</option>
+          <option value="filho">Filho(a)</option>
+          <option value="pai_mae">Pai / Mãe</option>
+          <option value="enteado">Enteado(a)</option>
+          <option value="tutelado">Tutelado(a) / Menor sob guarda</option>
+          <option value="agregado">Agregado(a)</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Nome Completo *</label><input id="bfNome" placeholder="Nome do beneficiario"></div>
@@ -2384,11 +2409,20 @@ async function carregarBeneficiarios() {
   var d = await api('/api/plano-saude/beneficiarios?'+params.toString());
   var benefs = Array.isArray(d) ? d : (d.beneficiarios || d.results || []);
   var tb = document.getElementById('tbodyBenef');
-  if (!benefs.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum beneficiario encontrado</td></tr>'; return; }
+  if (!benefs.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhum beneficiario encontrado</td></tr>'; return; }
   var sitBadge = {ativo:'badge-ok',suspenso:'badge-warn',cancelado:'badge-danger'};
   tb.innerHTML = benefs.map(function(b){
+    var vinculo;
+    if (b.tipo_vinculo === 'dependente') {
+      var par = b.grau_parentesco_label ? ' · '+b.grau_parentesco_label : '';
+      vinculo = '<span class="badge badge-gray">Dependente'+par+'</span>' +
+        (b.titular_nome ? '<div style="font-size:10.5px;color:var(--muted);margin-top:2px">de '+b.titular_nome+'</div>' : '');
+    } else {
+      var dc = b.dependentes_count ? ' ('+b.dependentes_count+')' : '';
+      vinculo = '<span class="badge badge-ok">Titular'+dc+'</span>';
+    }
     return '<tr><td><strong>'+b.nome+'</strong></td><td>'+(b.cpf||'--')+'</td><td>'+(b.numero_carteirinha||'--')+'</td>'+
-      '<td>'+(b.plano_nome||b.plano||'--')+'</td><td>'+fmtData(b.data_nascimento)+'</td><td>'+(b.acomodacao_label||b.acomodacao||'--')+'</td>'+
+      '<td>'+(b.plano_nome||b.plano||'--')+'</td><td>'+vinculo+'</td><td>'+fmtData(b.data_nascimento)+'</td><td>'+(b.acomodacao_label||b.acomodacao||'--')+'</td>'+
       '<td><span class="badge '+(sitBadge[b.situacao]||'badge-gray')+'">'+(b.situacao_label||b.situacao||'--')+'</span></td>'+
       '<td><button class="btn btn-danger btn-sm" onclick="inativarBenef('+b.id+')">Inativar</button></td></tr>';
   }).join('');
@@ -2398,20 +2432,55 @@ function abrirModalBenef() {
   ['bfNome','bfCpf','bfCarteirinha','bfNasc','bfInicioVigencia'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('bfSexo').value='';
   document.getElementById('bfAcomodacao').value='enfermaria';
+  document.getElementById('bfVinculo').value='titular';
+  document.getElementById('bfParentesco').value='';
   popularSelectsPlanos();
+  toggleVinculoBenef();
   abrirModal('modalBenef');
 }
 
+function toggleVinculoBenef() {
+  var dep = v('bfVinculo') === 'dependente';
+  document.getElementById('bfDependenteWrap').style.display = dep ? '' : 'none';
+  // Titular carrega o plano do próprio titular — o seletor de plano fica oculto
+  // no modo dependente para não confundir (o dependente herda o plano).
+  document.getElementById('bfPlanoWrap').style.display = dep ? 'none' : '';
+  if (dep) carregarTitularesBenef();
+}
+
+async function carregarTitularesBenef() {
+  var sel = document.getElementById('bfTitular');
+  sel.innerHTML = '<option value="">carregando...</option>';
+  var d = await api('/api/plano-saude/beneficiarios?vinculo=titular');
+  var titulares = (d && d.beneficiarios) || [];
+  if (!titulares.length) { sel.innerHTML = '<option value="">nenhum titular cadastrado</option>'; return; }
+  sel.innerHTML = '<option value="">selecione o titular</option>' +
+    titulares.map(function(t){ return '<option value="'+t.id+'">'+t.nome+' — '+(t.plano_nome||'')+'</option>'; }).join('');
+}
+
 async function salvarBenef() {
+  var dep = v('bfVinculo') === 'dependente';
   var body = {
-    plano_id: v('bfPlano') ? parseInt(v('bfPlano'), 10) : null,
     nome: v('bfNome'), cpf: v('bfCpf'), numero_carteirinha: v('bfCarteirinha'),
     data_nascimento: v('bfNasc')||null, sexo: v('bfSexo'), acomodacao: v('bfAcomodacao'),
     data_inicio_vigencia: v('bfInicioVigencia')||null
   };
   if (!body.nome||!body.cpf) { showToastPS('Nome e CPF sao obrigatorios','warn'); return; }
-  if (!body.plano_id) { showToastPS('Selecione o plano','warn'); return; }
-  await api('/api/plano-saude/beneficiarios', {method:'POST',body:JSON.stringify(body)});
+  if (dep) {
+    if (!v('bfTitular')) { showToastPS('Selecione o titular do núcleo','warn'); return; }
+    body.titular_id = parseInt(v('bfTitular'), 10);
+    body.grau_parentesco = v('bfParentesco');
+  } else {
+    body.plano_id = v('bfPlano') ? parseInt(v('bfPlano'), 10) : null;
+    if (!body.plano_id) { showToastPS('Selecione o plano','warn'); return; }
+  }
+  var resp = await fetch('/api/plano-saude/beneficiarios', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body:JSON.stringify(body)
+  });
+  var r = await resp.json().catch(function(){return {};});
+  if (!resp.ok) { showToastPS(r.erro || 'Erro ao cadastrar beneficiário', 'err'); return; }
   fecharModal('modalBenef');
   _beneficiariosPorPlano = {};
   carregarBeneficiarios();

@@ -3715,6 +3715,23 @@ class BeneficiarioPlano(models.Model):
         (SITUACAO_CANCELADO, "Cancelado"),
     ]
 
+    # Núcleo familiar — titular x dependente
+    VINCULO_TITULAR = "titular"
+    VINCULO_DEPENDENTE = "dependente"
+    VINCULO_CHOICES = [
+        (VINCULO_TITULAR, "Titular"),
+        (VINCULO_DEPENDENTE, "Dependente"),
+    ]
+    PARENTESCO_CHOICES = [
+        ("conjuge", "Cônjuge / Companheiro(a)"),
+        ("filho", "Filho(a)"),
+        ("pai_mae", "Pai / Mãe"),
+        ("enteado", "Enteado(a)"),
+        ("tutelado", "Tutelado(a) / Menor sob guarda"),
+        ("agregado", "Agregado(a)"),
+        ("outro", "Outro"),
+    ]
+
     plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="beneficiarios")
     nome = models.CharField(max_length=200)
     cpf = models.CharField(max_length=14, blank=True, default="")
@@ -3728,6 +3745,19 @@ class BeneficiarioPlano(models.Model):
     situacao = models.CharField(max_length=15, choices=SITUACAO_CHOICES, default=SITUACAO_ATIVO)
     plano_tipo = models.CharField(max_length=100, blank=True, default="")
     acomodacao = models.CharField(max_length=50, blank=True, default="enfermaria", choices=[("enfermaria","Enfermaria"),("apartamento","Apartamento"),("uti","UTI")])
+    # Núcleo familiar: dependente aponta para o titular; titular fica com titular=None.
+    tipo_vinculo = models.CharField(
+        max_length=12, choices=VINCULO_CHOICES, default=VINCULO_TITULAR,
+    )
+    titular = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="dependentes",
+        help_text="Titular do núcleo familiar (vazio quando o próprio é titular)",
+    )
+    grau_parentesco = models.CharField(
+        max_length=12, choices=PARENTESCO_CHOICES, blank=True, default="",
+        help_text="Grau de parentesco do dependente em relação ao titular",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:

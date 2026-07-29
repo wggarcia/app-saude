@@ -569,6 +569,14 @@ def _beneficiario_dict(b):
         "situacao_label": b.get_situacao_display(),
         "data_inicio_vigencia": b.data_inicio_vigencia.isoformat() if b.data_inicio_vigencia else None,
         "data_fim_vigencia": b.data_fim_vigencia.isoformat() if b.data_fim_vigencia else None,
+        # Núcleo familiar
+        "tipo_vinculo": b.tipo_vinculo,
+        "tipo_vinculo_label": b.get_tipo_vinculo_display(),
+        "titular_id": b.titular_id,
+        "titular_nome": b.titular.nome if b.titular_id else "",
+        "grau_parentesco": b.grau_parentesco,
+        "grau_parentesco_label": b.get_grau_parentesco_display() if b.grau_parentesco else "",
+        "dependentes_count": b.dependentes.count() if b.tipo_vinculo == BeneficiarioPlano.VINCULO_TITULAR else 0,
         "criado_em": b.criado_em.strftime("%d/%m/%Y"),
     }
 
@@ -907,13 +915,19 @@ def api_ps_beneficiarios(request):
     if request.method == "GET":
         qs = BeneficiarioPlano.objects.filter(
             plano__empresa=empresa
-        ).select_related("plano")
+        ).select_related("plano", "titular")
         plano_id = request.GET.get("plano_id")
         if plano_id:
             qs = qs.filter(plano_id=plano_id)
         situacao = request.GET.get("situacao")
         if situacao:
             qs = qs.filter(situacao=situacao)
+        vinculo = request.GET.get("vinculo")
+        if vinculo in (BeneficiarioPlano.VINCULO_TITULAR, BeneficiarioPlano.VINCULO_DEPENDENTE):
+            qs = qs.filter(tipo_vinculo=vinculo)
+        titular_id = request.GET.get("titular_id")
+        if titular_id:
+            qs = qs.filter(titular_id=titular_id)
         busca = request.GET.get("busca", "").strip()
         if busca:
             qs = qs.filter(Q(nome__icontains=busca) | Q(cpf__icontains=busca) | Q(numero_carteirinha__icontains=busca))
@@ -924,15 +938,33 @@ def api_ps_beneficiarios(request):
             data = json.loads(request.body)
         except Exception:
             return JsonResponse({"erro": "JSON inválido"}, status=400)
-        plano_id = data.get("plano_id")
-        if not plano_id:
-            return JsonResponse({"erro": "plano_id obrigatório"}, status=400)
-        try:
-            plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
-        except PlanoSaude.DoesNotExist:
-            return JsonResponse({"erro": "Plano não encontrado"}, status=404)
         if not data.get("nome"):
             return JsonResponse({"erro": "Nome obrigatório"}, status=400)
+        # Núcleo familiar: se vier titular_id, valida que é da MESMA empresa
+        # (isolamento por tenant/LGPD) e o dependente herda o plano do titular.
+        titular_obj = None
+        tipo_vinculo = BeneficiarioPlano.VINCULO_TITULAR
+        titular_id = data.get("titular_id")
+        if titular_id:
+            try:
+                titular_obj = BeneficiarioPlano.objects.get(
+                    id=titular_id, plano__empresa=empresa
+                )
+            except BeneficiarioPlano.DoesNotExist:
+                return JsonResponse({"erro": "Titular não encontrado"}, status=404)
+            if titular_obj.tipo_vinculo == BeneficiarioPlano.VINCULO_DEPENDENTE:
+                return JsonResponse({"erro": "O titular informado é um dependente — vincule ao titular do núcleo."}, status=400)
+            tipo_vinculo = BeneficiarioPlano.VINCULO_DEPENDENTE
+            plano = titular_obj.plano
+        else:
+            plano_id = data.get("plano_id")
+            if not plano_id:
+                return JsonResponse({"erro": "plano_id obrigatório"}, status=400)
+            try:
+                plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
+            except PlanoSaude.DoesNotExist:
+                return JsonResponse({"erro": "Plano não encontrado"}, status=404)
+        grau_parentesco = data.get("grau_parentesco", "") if tipo_vinculo == BeneficiarioPlano.VINCULO_DEPENDENTE else ""
         from datetime import datetime
         dn = None
         if data.get("data_nascimento"):
@@ -969,6 +1001,9 @@ def api_ps_beneficiarios(request):
             situacao=data.get("situacao", "ativo"),
             data_inicio_vigencia=div,
             data_fim_vigencia=dfv,
+            tipo_vinculo=tipo_vinculo,
+            titular=titular_obj,
+            grau_parentesco=grau_parentesco,
         )
         enviar_email_novo_beneficiario(empresa, b)
         return JsonResponse({"beneficiario": _beneficiario_dict(b)}, status=201)
@@ -990,7 +1025,13 @@ def api_ps_beneficiario_detalhe(request, ben_id):
         return JsonResponse({"erro": "Beneficiário não encontrado"}, status=404)
 
     if request.method == "GET":
-        return JsonResponse({"beneficiario": _beneficiario_dict(b)})
+        resp = _beneficiario_dict(b)
+        if b.tipo_vinculo == BeneficiarioPlano.VINCULO_TITULAR:
+            resp["dependentes"] = [
+                _beneficiario_dict(d)
+                for d in b.dependentes.select_related("plano", "titular").all()
+            ]
+        return JsonResponse({"beneficiario": resp})
 
     if request.method in ("PUT", "PATCH"):
         try:
@@ -999,7 +1040,7 @@ def api_ps_beneficiario_detalhe(request, ben_id):
             return JsonResponse({"erro": "JSON inválido"}, status=400)
         from datetime import datetime
         for campo in ["nome", "cpf", "numero_carteirinha", "sexo", "telefone",
-                      "email", "plano_tipo", "acomodacao", "situacao"]:
+                      "email", "plano_tipo", "acomodacao", "situacao", "grau_parentesco"]:
             if campo in data:
                 setattr(b, campo, data[campo])
         for campo_data in ["data_nascimento", "data_inicio_vigencia", "data_fim_vigencia"]:
@@ -1008,6 +1049,28 @@ def api_ps_beneficiario_detalhe(request, ben_id):
                     setattr(b, campo_data, datetime.strptime(data[campo_data], "%Y-%m-%d").date())
                 except ValueError:
                     pass
+        # Alterar o vínculo de núcleo familiar (com isolamento por tenant).
+        if "titular_id" in data:
+            novo_titular_id = data.get("titular_id")
+            if not novo_titular_id:
+                b.titular = None
+                b.tipo_vinculo = BeneficiarioPlano.VINCULO_TITULAR
+                b.grau_parentesco = ""
+            else:
+                if str(novo_titular_id) == str(b.id):
+                    return JsonResponse({"erro": "Um beneficiário não pode ser titular de si mesmo."}, status=400)
+                try:
+                    novo_titular = BeneficiarioPlano.objects.get(
+                        id=novo_titular_id, plano__empresa=empresa
+                    )
+                except BeneficiarioPlano.DoesNotExist:
+                    return JsonResponse({"erro": "Titular não encontrado"}, status=404)
+                if novo_titular.tipo_vinculo == BeneficiarioPlano.VINCULO_DEPENDENTE:
+                    return JsonResponse({"erro": "O titular informado é um dependente."}, status=400)
+                if b.dependentes.exists():
+                    return JsonResponse({"erro": "Este beneficiário é titular de dependentes — realoque os dependentes antes de torná-lo dependente."}, status=400)
+                b.titular = novo_titular
+                b.tipo_vinculo = BeneficiarioPlano.VINCULO_DEPENDENTE
         b.save()
         return JsonResponse({"beneficiario": _beneficiario_dict(b)})
 
