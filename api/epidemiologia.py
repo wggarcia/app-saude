@@ -16,7 +16,7 @@ from django.db.models.functions import TruncDate
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 
-from .models import Empresa, RegistroSintoma
+from .models import Empresa, ProjecaoDispersao, RegistroSintoma
 from .services.public_integrity import q_registro_sintoma_sintetico
 from .utils_cidades import carregar_base
 from .epidemiologia_ml import mapa_risco_oficial_por_estado, mapa_risco_oficial_por_doenca
@@ -178,6 +178,22 @@ _EMPRESA_MISS_RETRY_S = 30  # retry interval when empresa not found (cold-start 
 _TESTING = ("test" in sys.argv) or (os.environ.get("DJANGO_ENV", "").lower() == "test")
 _PANORAMA_CACHE_VERSION_KEY = "epidemiologia:panorama:version"
 PUBLIC_APP_EMAIL = "populacao@solocrt.com"
+
+# Tenant isolado para a simulação de demo (estande/apresentação).
+# Nunca é acessado pelo endpoint real — só pelo endpoint de simulação.
+DEMO_APP_EMAIL = "demo.simulacao@soluscrt.com"
+DEMO_ACCESS_TOKEN = "riw2026-soluscrt-demo"
+
+
+def _get_demo_empresa():
+    """Retorna o objeto Empresa do tenant de demo, ou None se não existir."""
+    try:
+        return Empresa.objects.using("owner").filter(email=DEMO_APP_EMAIL).first()
+    except Exception:
+        try:
+            return Empresa.objects.filter(email=DEMO_APP_EMAIL).first()
+        except Exception:
+            return None
 
 
 def _current_panorama_cache_version():
@@ -825,7 +841,7 @@ def _serialize_symptoms(symptom_counts, total_cases):
     return payload
 
 
-def _build_layer_queryset(group_fields):
+def _build_layer_queryset(group_fields, empresa_pub=None):
     now = timezone.now()
     last_24h = now - timedelta(hours=24)
     previous_24h = now - timedelta(hours=48)
@@ -838,7 +854,13 @@ def _build_layer_queryset(group_fields):
         .exclude(longitude__isnull=True)
         .exclude(q_registro_sintoma_sintetico())
     )
-    queryset = _scope_public_population_queryset(queryset)
+    if empresa_pub is not None:
+        try:
+            queryset = queryset.using("owner").filter(empresa=empresa_pub)
+        except Exception:
+            queryset = queryset.filter(empresa=empresa_pub)
+    else:
+        queryset = _scope_public_population_queryset(queryset)
 
     for field in group_fields:
         queryset = queryset.exclude(**{f"{field}__isnull": True}).exclude(**{field: ""})
@@ -902,10 +924,10 @@ def _build_layer_queryset(group_fields):
     return sorted(visible_rows, key=lambda item: item["active_cases"], reverse=True)
 
 
-def _serialize_layer(level, group_fields, risco_oficial_map=None, risco_oficial_doenca_map=None):
+def _serialize_layer(level, group_fields, risco_oficial_map=None, risco_oficial_doenca_map=None, empresa_pub=None):
     risco_oficial_map = risco_oficial_map or {}
     risco_oficial_doenca_map = risco_oficial_doenca_map or {}
-    rows = _build_layer_queryset(group_fields)
+    rows = _build_layer_queryset(group_fields, empresa_pub=empresa_pub)
     max_total = max((float(row.get("active_cases") or 0) for row in rows), default=1)
     max_recent = max((row["recent_24h"] for row in rows), default=1)
     areas = []
@@ -1418,10 +1440,49 @@ def panorama_epidemiologico(request):
     return response
 
 
+def _briefing_dispersao_block():
+    """Projeções SEIR (horizonte 14d) para incluir no briefing exportado."""
+    corte = timezone.now() - timedelta(hours=48)
+    qs = (
+        ProjecaoDispersao.objects
+        .filter(criado_em__gte=corte, horizonte_dias=14)
+        .order_by("-probabilidade")[:100]
+    )
+    if not qs:
+        return None
+    doencas = {}
+    for p in qs:
+        d = p.doenca
+        if d not in doencas:
+            doencas[d] = {
+                "doenca": d,
+                "municipios_risco_14d": 0,
+                "top_destinos": [],
+            }
+        doencas[d]["municipios_risco_14d"] += 1
+        if len(doencas[d]["top_destinos"]) < 5:
+            doencas[d]["top_destinos"].append({
+                "municipio": p.municipio_nome,
+                "uf": p.uf,
+                "probabilidade_pct": round(p.probabilidade * 100, 1),
+                "casos_projetados": p.casos_projetados,
+                "origem_provavel": p.origem_provavel_nome or "",
+            })
+    return {
+        "horizonte_dias": 14,
+        "doencas": list(doencas.values()),
+        "nota": (
+            "Modelo SEIR metapopulacional com mobilidade gravitacional IBGE (IA #9). "
+            "Estimativa estatística — não é reporte da população."
+        ),
+    }
+
+
 def exportar_briefing_governo(request):
     payload = build_panorama_payload()
     briefing = payload.get("overview", {}).get("government_briefing", [])
     export_format = (request.GET.get("format") or "json").lower()
+    dispersao = _briefing_dispersao_block()
 
     if export_format == "csv":
         lines = ["titulo,prioridade,vigilancia,pressao,mensagem"]
@@ -1434,6 +1495,12 @@ def exportar_briefing_governo(request):
                 str(item.get("message", "")).replace(",", " "),
             ]
             lines.append(",".join(row))
+        if dispersao:
+            lines.append("")
+            lines.append("# Projecao dispersao SEIR 14d (IA #9)")
+            lines.append("doenca,municipios_risco_14d")
+            for d in dispersao.get("doencas", []):
+                lines.append(f"{d['doenca'].replace(',', ' ')},{d['municipios_risco_14d']}")
 
         response = HttpResponse("\n".join(lines), content_type="text/csv; charset=utf-8")
         response["Content-Disposition"] = 'attachment; filename="briefing_governo.csv"'
@@ -1447,6 +1514,7 @@ def exportar_briefing_governo(request):
                 "government_briefing": briefing,
                 "timeline": payload.get("overview", {}).get("timeline", {}),
                 "territorial_coverage": payload.get("overview", {}).get("territorial_coverage", {}),
+                "dispersao_projecao": dispersao,
             },
             ensure_ascii=False,
             indent=2,
@@ -1477,3 +1545,57 @@ def registrar_diagnostico_confirmado(empresa, cid10, data_hora):
         cidade=cidade,
         data_registro=data,
     )
+
+
+# ── Endpoint de simulação nacional (demo estande RIW) ─────────────────────────
+
+def build_demo_panorama_payload():
+    """Gera panorama usando o tenant demo isolado — nunca afeta dados reais."""
+    demo = _get_demo_empresa()
+    if demo is None:
+        return {"error": "tenant demo não configurado", "layers": {}, "overview": {}}
+
+    risco_oficial_map = _risco_oficial_map_seguro()
+    risco_oficial_doenca_map = _risco_oficial_doenca_map_seguro()
+
+    bairros = _serialize_layer(
+        "bairro", ("estado", "cidade", "bairro"),
+        risco_oficial_map=risco_oficial_map,
+        risco_oficial_doenca_map=risco_oficial_doenca_map,
+        empresa_pub=demo,
+    )
+    municipios = _serialize_layer(
+        "municipio", ("estado", "cidade"),
+        risco_oficial_map=risco_oficial_map,
+        risco_oficial_doenca_map=risco_oficial_doenca_map,
+        empresa_pub=demo,
+    )
+    estados = _build_state_layer(
+        municipios,
+        risco_oficial_map=risco_oficial_map,
+        risco_oficial_doenca_map=risco_oficial_doenca_map,
+    )
+    layers = {"bairros": bairros, "municipios": municipios, "estados": estados}
+
+    return {
+        "generated_at": timezone.now().isoformat(),
+        "demo": True,
+        "overview": _aggregate_overview(layers, empresa_pub=demo),
+        "layers": layers,
+        "filters": {
+            "estados": sorted({a["estado"] for a in bairros if a.get("estado")}),
+            "cidades": sorted({a["cidade"] for a in bairros if a.get("cidade")}),
+        },
+    }
+
+
+def panorama_simulacao_nacional(request, token):
+    """Endpoint exclusivo da simulação de estande — acesso por token fixo."""
+    if token != DEMO_ACCESS_TOKEN:
+        from django.http import Http404
+        raise Http404
+    payload = build_demo_panorama_payload()
+    response = JsonResponse(payload)
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "no-cache, no-store"
+    return response

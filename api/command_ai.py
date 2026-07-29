@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from .corporativo_ai import build_empresa_corporativo_payload
 from .epidemiologia import build_panorama_payload
-from .models import AuditoriaInstitucional, Empresa
+from .models import AuditoriaInstitucional, Empresa, ProjecaoDispersao
 from .planos import detalhes_pacote, normalizar_codigo_pacote
 from .views_enterprise import build_enterprise_command_center_payload
 
@@ -616,6 +616,7 @@ def _executive_cards(setor, overview, data_quality, recommendations):
             },
         ])
     elif setor == "governo":
+        dispersao = _dispersao_block()
         cards.extend([
             {
                 "label": "Cobertura territorial",
@@ -626,6 +627,11 @@ def _executive_cards(setor, overview, data_quality, recommendations):
                 "label": "Áreas ativas",
                 "value": str(overview.get("active_areas", 0)),
                 "detail": "focos territoriais em leitura epidemiológica",
+            },
+            {
+                "label": "Dispersão projetada (7d)",
+                "value": str(dispersao["total_municipios_risco_7d"]) if dispersao else "—",
+                "detail": "municípios em risco de receber surto em 7 dias (IA #9 SEIR)",
             },
         ])
     else:
@@ -836,6 +842,35 @@ def _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=6):
     }
 
 
+def _dispersao_block():
+    """Projeções SEIR ativas (últimas 24h) para a Sala de Decisão e briefing."""
+    corte = timezone.now() - timedelta(hours=24)
+    qs = (
+        ProjecaoDispersao.objects
+        .filter(criado_em__gte=corte, horizonte_dias=7)
+        .order_by("-probabilidade")
+    )
+    if not qs.exists():
+        return None
+    doencas = {}
+    for p in qs:
+        d = p.doenca
+        if d not in doencas:
+            doencas[d] = {"doenca": d, "municipios_risco": 0, "principal_destino": None, "principal_prob": 0.0, "origem": p.origem_provavel_nome or ""}
+        doencas[d]["municipios_risco"] += 1
+        if p.probabilidade > doencas[d]["principal_prob"]:
+            doencas[d]["principal_prob"] = round(p.probabilidade * 100, 1)
+            doencas[d]["principal_destino"] = p.municipio_nome
+    projecoes = list(doencas.values())
+    total_municipios = sum(d["municipios_risco"] for d in projecoes)
+    return {
+        "total_municipios_risco_7d": total_municipios,
+        "doencas": projecoes,
+        "horizonte_dias": 7,
+        "nota": "Modelo SEIR metapopulacional (mobilidade gravitacional IBGE). Estimativa — não é reporte da população.",
+    }
+
+
 def build_command_ai_payload(empresa, limit=6):
     setor = _company_sector(empresa)
     config = SECTOR_CONFIG.get(setor, SECTOR_CONFIG["empresa"])
@@ -855,6 +890,7 @@ def build_command_ai_payload(empresa, limit=6):
         _build_recommendation(area, setor, config, data_quality)
         for area in candidates[:limit]
     ]
+    dispersao = _dispersao_block() if setor == "governo" else None
     return {
         "generated_at": timezone.now().isoformat(),
         "mode": "read_only_decision_layer",
@@ -867,6 +903,7 @@ def build_command_ai_payload(empresa, limit=6):
         "summary": _build_summary(empresa, setor, config, overview, recommendations),
         "recommendations": recommendations,
         "executive_cards": _executive_cards(setor, overview, data_quality, recommendations),
+        "dispersao_projecao": dispersao,
         "enterprise_command_center": build_enterprise_command_center_payload(empresa),
         "learning": _learning_block(empresa),
         "safeguards": [
@@ -877,6 +914,6 @@ def build_command_ai_payload(empresa, limit=6):
         ],
         "source": {
             "engine": "SoloCRT panorama epidemiológico",
-            "generated_from": "sinais agregados, série temporal, sintomas dominantes e fontes oficiais quando disponíveis",
+            "generated_from": "sinais agregados, série temporal, sintomas dominantes, fontes oficiais e projeção SEIR quando disponíveis",
         },
     }

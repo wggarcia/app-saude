@@ -18,6 +18,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from api.models import Empresa, FonteOficialAgregado, NoticiaEpidemiologica
+from api.push_service import enviar_push_one_health, push_disponivel
 
 FONTE_ID  = "ms_epizootias_fa"
 INDICADOR = "febre_amarela_epizootias_pnh"
@@ -128,6 +129,7 @@ class Command(BaseCommand):
                 hour=0, minute=0, second=0, microsecond=0,
             )
 
+            novo_nesta_uf = False
             for empresa in empresas_gov:
                 try:
                     NoticiaEpidemiologica.objects.create(
@@ -158,8 +160,22 @@ class Command(BaseCommand):
                         alerta_disparado=True,
                     )
                     criados += 1
+                    novo_nesta_uf = True
                 except IntegrityError:
                     pass  # unique_together (empresa, url) — já existe, ignora
+
+            # Push Firebase para cidadãos da UF quando há alerta novo
+            if novo_nesta_uf and push_disponivel():
+                push_titulo = f"Alerta One Health — {nome_uf}"
+                push_msg = (
+                    f"{total} epizootia(s) de primatas confirmadas em {nome_uf} ({mes:02d}/{ano}). "
+                    "Sinal de risco silvestre para Febre Amarela. Mantenha vacinação em dia."
+                )
+                resultado_push = enviar_push_one_health(uf, push_titulo, push_msg)
+                self.stdout.write(
+                    f"  Push {uf}: {resultado_push.get('status')} "
+                    f"({resultado_push.get('enviados', 0)}/{resultado_push.get('destinatarios', 0)} destinatários)"
+                )
 
         self.stdout.write(self.style.SUCCESS(
             f"One Health: {criados} alerta(s) gerado(s) para {len(empresas_gov)} empresa(s) governo. "

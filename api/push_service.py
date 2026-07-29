@@ -361,6 +361,78 @@ def enviar_alerta_governamental(alerta):
         }
 
 
+def enviar_push_one_health(uf: str, titulo: str, mensagem: str) -> dict:
+    """
+    Push One Health para cidadãos de uma UF específica.
+    Dispara multicast para DispositivoPushPublico ativos que tenham o estado
+    correspondente à UF informada (aceita sigla ou nome completo).
+    """
+    app = _firebase_app()
+    if app is None or messaging is None:
+        return {"status": "push_indisponivel", "enviados": 0, "destinatarios": 0}
+
+    termos = _state_term_set(uf)
+    if not termos:
+        return {"status": "uf_invalida", "enviados": 0, "destinatarios": 0}
+
+    tokens = list(
+        DispositivoPushPublico.objects.filter(ativo=True)
+        .values_list("token", "estado")
+        .distinct()
+    )
+    tokens_filtrados = [
+        t for t, estado in tokens
+        if not estado or _normalize_text(estado) in termos
+    ]
+    if not tokens_filtrados:
+        return {"status": "sem_destinatarios", "enviados": 0, "destinatarios": 0}
+
+    total_sucesso = 0
+    total_falha = 0
+    invalid_tokens = []
+
+    for start in range(0, len(tokens_filtrados), 500):
+        lote = tokens_filtrados[start:start + 500]
+        message = messaging.MulticastMessage(
+            notification=messaging.Notification(
+                title=titulo,
+                body=mensagem[:180],
+            ),
+            data={
+                "tipo": "one_health",
+                "uf": uf.upper() if len(uf) == 2 else uf,
+                "nivel": "alerta",
+            },
+            tokens=lote,
+        )
+        try:
+            response = messaging.send_each_for_multicast(message, app=app)
+            total_sucesso += response.success_count
+            total_falha += response.failure_count
+            for i, resp in enumerate(response.responses):
+                if not resp.success:
+                    code = getattr(resp.exception, "code", None) or resp.exception.__class__.__name__
+                    if str(code) in {
+                        "unregistered", "registration-token-not-registered",
+                        "invalid-argument", "invalid-registration-token",
+                        "UnregisteredError", "SenderIdMismatchError",
+                    }:
+                        invalid_tokens.append(lote[i])
+        except Exception:
+            total_falha += len(lote)
+
+    if invalid_tokens:
+        DispositivoPushPublico.objects.filter(token__in=invalid_tokens).update(ativo=False)
+
+    return {
+        "status": "ok" if total_sucesso > 0 else "falha_total",
+        "enviados": total_sucesso,
+        "falhas": total_falha,
+        "destinatarios": len(tokens_filtrados),
+        "tokens_invalidados": len(invalid_tokens),
+    }
+
+
 def enviar_push_alerta_cidadao(alerta):
     """
     Envia push FCM para os devices ativos do app da população pertencentes ao
