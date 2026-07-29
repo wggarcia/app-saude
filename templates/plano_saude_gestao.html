@@ -166,7 +166,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
 <body>
 
 <aside class="sidebar">
-  <div class="logo">Operadora Cooperativa</div>
+  <div class="logo">{{ ps_operadora_label|default:"Operadora de Saúde" }}</div>
   <details class="nav-group" data-nav-group data-group-key="plano-principal" open>
     <summary><div class="nav-section">Navegação</div></summary>
     <div class="nav-group-body">
@@ -1167,7 +1167,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
         <div style="font-size:12px;color:var(--muted);margin-top:2px">DIOPS, TISS, SIB, IDSS — geracao e envio obrigatorio ANS</div>
       </div>
       <div style="display:flex;gap:8px">
-        <select class="filter-sel" id="regAno">
+        <select class="filter-sel" id="regAno" onchange="carregarIDSS()">
           <option value="2026">2026</option>
           <option value="2025">2025</option>
         </select>
@@ -1182,7 +1182,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
       <div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">3</div><div class="kpi-lbl">Relatorios enviados</div></div>
       <div class="kpi warn"><div class="kpi-val" style="color:var(--warn)">1</div><div class="kpi-lbl">Pendentes</div></div>
-      <div class="kpi"><div class="kpi-val" style="color:var(--accent)">87.4</div><div class="kpi-lbl">IDSS Score</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--accent)" id="idssScoreKpi">--</div><div class="kpi-lbl" id="idssFaixaKpi">IDSS Score</div></div>
       <div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">0</div><div class="kpi-lbl">Multas ANS</div></div>
     </div>
     <div class="card">
@@ -1227,9 +1227,9 @@ tr:hover td{background:rgba(255,107,157,.03)}
           <div class="reg-icon" style="background:rgba(192,132,252,.1);color:#c084fc">&#9733;</div>
           <div class="reg-info">
             <div class="reg-title">IDSS — Indice de Desempenho da Saude Suplementar</div>
-            <div class="reg-sub">Avaliacao anual ANS · Score atual: 87.4/100</div>
+            <div class="reg-sub" id="idssRegSub">Avaliacao anual ANS · calculado a partir dos dados reais da operadora</div>
           </div>
-          <span class="badge badge-ok">Enviado</span>
+          <span class="badge badge-ok" id="idssRegBadge">Calculado</span>
           <div class="reg-actions">
             <button class="btn btn-ghost btn-sm" onclick="verIDSS()">Ver componentes</button>
           </div>
@@ -1405,6 +1405,17 @@ tr:hover td{background:rgba(255,107,157,.03)}
   </div>
 
 </main>
+
+<!-- MODAL: IDSS — componentes -->
+<div class="modal-bg" id="modalIDSS">
+  <div class="modal" style="max-width:640px">
+    <h3>&#9733; IDSS — Componentes do Índice</h3>
+    <div id="idssModalBody" style="max-height:64vh;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalIDSS')">Fechar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: Novo Contrato Corporativo -->
 <div class="modal-bg" id="modalContrato">
@@ -2206,7 +2217,8 @@ function setTab(name) {
     fila:carregarFilaClinica,
     guias:carregarGuias,
     sinistros:carregarSinistros,
-    reembolsos:carregarReembolsos
+    reembolsos:carregarReembolsos,
+    regulatorio:carregarIDSS
   };
   if (loaders[name]) loaders[name]();
 }
@@ -4079,7 +4091,81 @@ async function enviarRelatorio(tipo) {
     showToastPS('Erro ao gerar ' + tipo + '. Verifique os dados.', 'err');
   }
 }
-function verIDSS() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
+// ════════════════════════════════════════════════════════════
+//  IDSS — Índice de Desempenho da Saúde Suplementar (ANS)
+// ════════════════════════════════════════════════════════════
+let _idssCache = null;
+
+function idssCorVar(cor) {
+  return { ok:'var(--ok)', warn:'var(--warn)', crit:'var(--accent)', muted:'var(--muted)' }[cor] || 'var(--accent)';
+}
+
+async function carregarIDSS() {
+  var anoEl = document.getElementById('regAno');
+  var ano = anoEl ? anoEl.value : new Date().getFullYear().toString();
+  var kpi = document.getElementById('idssScoreKpi');
+  var faixaKpi = document.getElementById('idssFaixaKpi');
+  var regSub = document.getElementById('idssRegSub');
+  var regBadge = document.getElementById('idssRegBadge');
+  if (kpi) kpi.textContent = '...';
+  var r = await api('/api/plano-saude/idss/?ano=' + ano);
+  _idssCache = r;
+  if (!r || r.nota_final_100 == null) {
+    if (kpi) kpi.textContent = '--';
+    if (faixaKpi) faixaKpi.textContent = 'IDSS — sem dados';
+    if (regSub) regSub.textContent = 'Cadastre carteira, guias e faturamento para calcular o IDSS.';
+    if (regBadge) { regBadge.textContent = 'Sem dados'; regBadge.className = 'badge badge-warn'; }
+    return;
+  }
+  if (kpi) { kpi.textContent = r.nota_final_100.toFixed(1); kpi.style.color = idssCorVar(r.faixa.cor); }
+  if (faixaKpi) faixaKpi.textContent = 'IDSS ' + r.ano + ' · Faixa ' + r.faixa.faixa;
+  if (regSub) regSub.textContent = r.faixa.label + ' · nota ' + r.nota_final.toFixed(4) + ' (cobertura de dados ' + Math.round(r.cobertura_pesos*100) + '%)';
+  if (regBadge) {
+    regBadge.textContent = 'Faixa ' + r.faixa.faixa;
+    regBadge.className = 'badge ' + (r.faixa.cor === 'ok' ? 'badge-ok' : 'badge-warn');
+  }
+}
+
+function verIDSS() {
+  if (!_idssCache || _idssCache.nota_final_100 == null) {
+    carregarIDSS();
+    showToastPS('Sem dados suficientes para detalhar o IDSS ainda.', 'warn');
+    return;
+  }
+  var r = _idssCache;
+  var html = '';
+  html += '<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">';
+  html += '<div style="font-size:38px;font-weight:800;color:' + idssCorVar(r.faixa.cor) + '">' + r.nota_final_100.toFixed(1) + '</div>';
+  html += '<div style="font-size:12px;color:var(--muted)">/100 · nota ' + r.nota_final.toFixed(4) + '</div></div>';
+  html += '<div style="font-size:13px;font-weight:700;color:' + idssCorVar(r.faixa.cor) + ';margin-bottom:4px">' + r.faixa.label + '</div>';
+  html += '<div style="font-size:11px;color:var(--muted);margin-bottom:16px">Ano-base ' + r.ano + ' · cobertura de dados ' + Math.round(r.cobertura_pesos*100) + '% dos pesos · fonte: cálculo sobre dados reais da operadora</div>';
+
+  (r.dimensoes || []).forEach(function(d) {
+    var notaTxt = d.nota == null ? '<span style="color:var(--muted)">sem dados</span>' : (d.nota*100).toFixed(0) + '/100';
+    html += '<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+    html += '<div><span style="font-weight:700">' + d.codigo + '</span> · ' + d.label + ' <span style="font-size:11px;color:var(--muted)">(peso ' + Math.round(d.peso*100) + '%)</span></div>';
+    html += '<div style="font-weight:800">' + notaTxt + '</div></div>';
+    (d.componentes || []).forEach(function(c) {
+      var barra = c.disponivel && c.valor != null ? Math.round(c.valor*100) : 0;
+      var cor = !c.disponivel ? 'var(--muted)' : (c.valor >= 0.8 ? 'var(--ok)' : c.valor >= 0.4 ? 'var(--warn)' : 'var(--accent)');
+      var valTxt = c.disponivel && c.valor != null ? (c.valor*100).toFixed(0) : 'n/d';
+      html += '<div style="margin:6px 0">';
+      html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>' + c.label + '</span><span style="color:' + cor + '">' + valTxt + '</span></div>';
+      html += '<div style="height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden"><div style="height:100%;width:' + barra + '%;background:' + cor + '"></div></div>';
+      if (c.detalhe) html += '<div style="font-size:10.5px;color:var(--muted);margin-top:3px">' + c.detalhe + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+
+  if (r.recomendacao) {
+    html += '<div style="background:rgba(255,179,71,.1);border:1px solid rgba(255,179,71,.25);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--warn)">💡 ' + r.recomendacao + '</div>';
+  }
+  document.getElementById('idssModalBody').innerHTML = html;
+  abrirModal('modalIDSS');
+}
+
 function verificarRol() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
 
 // ════════════════════════════════════════════════════════════

@@ -2883,6 +2883,284 @@ def api_ps_dashboard_exec(request):
 
 
 # ════════════════════════════════════════════════════════════════════════════════
+#  IDSS — Índice de Desempenho da Saúde Suplementar (ANS)
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# Estrutura oficial ANS (RN 386/2015 e revisões): 4 dimensões com pesos
+#   IDQS — Qualidade em Atenção à Saúde ............ 30%
+#   IDGA — Garantia de Acesso ...................... 30%
+#   IDSF — Sustentabilidade no Mercado ............. 30%
+#   IDGR — Gestão de Processos e Regulação ......... 10%
+# Nota final 0.0000–1.0000, classificada em 5 faixas.
+#
+# Cada componente é calculado a partir de dados REAIS da operadora (guias,
+# sinistros, beneficiários, rede, reembolsos, DIOPS/SIB). Componente sem base
+# suficiente é marcado disponivel=False e NÃO entra na média — mesma política
+# honesta já usada para o NPS em api_ps_dashboard_exec (não fabricar número).
+
+_IDSS_PESOS = {"IDQS": 0.30, "IDGA": 0.30, "IDSF": 0.30, "IDGR": 0.10}
+
+_IDSS_DIM_LABEL = {
+    "IDQS": "Qualidade em Atenção à Saúde",
+    "IDGA": "Garantia de Acesso",
+    "IDSF": "Sustentabilidade no Mercado",
+    "IDGR": "Gestão de Processos e Regulação",
+}
+
+
+def _idss_faixa(nota):
+    """Faixa de desempenho ANS a partir da nota final (0-1)."""
+    if nota is None:
+        return {"faixa": 0, "label": "Sem dados suficientes", "cor": "muted"}
+    if nota >= 0.80:
+        return {"faixa": 1, "label": "Faixa 1 — Excelência", "cor": "ok"}
+    if nota >= 0.60:
+        return {"faixa": 2, "label": "Faixa 2 — Bom desempenho", "cor": "ok"}
+    if nota >= 0.40:
+        return {"faixa": 3, "label": "Faixa 3 — Desempenho intermediário", "cor": "warn"}
+    if nota >= 0.20:
+        return {"faixa": 4, "label": "Faixa 4 — Baixo desempenho", "cor": "warn"}
+    return {"faixa": 5, "label": "Faixa 5 — Desempenho crítico", "cor": "crit"}
+
+
+def _idss_comp(codigo, label, valor, disponivel=True, detalhe=""):
+    return {
+        "codigo": codigo,
+        "label": label,
+        "valor": (round(float(valor), 4) if (disponivel and valor is not None) else None),
+        "disponivel": bool(disponivel),
+        "detalhe": detalhe,
+    }
+
+
+def _idss_media(componentes):
+    """Média dos componentes com dado disponível; None se nenhum tiver base."""
+    vals = [c["valor"] for c in componentes if c["disponivel"] and c["valor"] is not None]
+    if not vals:
+        return None
+    return sum(vals) / len(vals)
+
+
+@api_requer_feature("plano.idss")
+@csrf_exempt
+def api_ps_idss(request):
+    """GET /api/plano-saude/idss/?ano=2026
+    IDSS calculado dos dados reais da operadora. Retorna nota final, faixa,
+    e o detalhamento por dimensão/componente para o painel 'Ver componentes'.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    hoje = date.today()
+    try:
+        ano = int(request.GET.get("ano") or hoje.year)
+    except (TypeError, ValueError):
+        ano = hoje.year
+    inicio_ano = date(ano, 1, 1)
+    fim_ano = date(ano, 12, 31)
+
+    # ── Bases, todas isoladas pelo tenant (empresa) ──
+    guias_qs = GuiaAutorizacao.objects.filter(plano__empresa=empresa)
+    benef_qs = BeneficiarioPlano.objects.filter(plano__empresa=empresa)
+    sinistros_qs = Sinistro.objects.filter(empresa=empresa)
+    reembolsos_qs = Reembolso.objects.filter(empresa=empresa)
+    prestadores_qs = PrestadorPlanoSaude.objects.filter(empresa=empresa)
+
+    benef_total = benef_qs.count()
+    benef_ativos = benef_qs.filter(situacao="ativo").count()
+
+    # Guias decididas / autorizadas (resolutividade de autorização)
+    guias_decididas = guias_qs.filter(status__in=["autorizada", "negada"]).count()
+    guias_autorizadas = guias_qs.filter(status="autorizada").count()
+    taxa_aprovacao = (guias_autorizadas / guias_decididas) if guias_decididas else None
+
+    # Guias pendentes e SLA (garantia de acesso no prazo ANS)
+    guias_pendentes = guias_qs.filter(
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
+    ).count()
+    guias_vencidas = guias_qs.filter(
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+        prazo_sla_em__lt=timezone.now(),
+    ).count()
+    sla_ok = (1 - guias_vencidas / guias_pendentes) if guias_pendentes else None
+
+    # ── IDQS — Qualidade em Atenção à Saúde ──
+    # Promoção da saúde: inscrições ativas em programas / vidas ativas (cap 1).
+    try:
+        inscritos = InscricaoPrograma.objects.filter(
+            programa__empresa=empresa, status="ativo"
+        ).count()
+        promocao = min(1.0, inscritos / benef_ativos) if benef_ativos else None
+        promocao_disp = benef_ativos > 0
+        promocao_det = f"{inscritos} inscrições ativas em programas de saúde / {benef_ativos} vidas ativas"
+    except Exception:
+        promocao, promocao_disp, promocao_det = None, False, "Sem dados de programas de saúde"
+
+    continuidade = (benef_ativos / benef_total) if benef_total else None
+    idqs_comps = [
+        _idss_comp("IDQS-1", "Promoção da saúde (programas)", promocao, promocao_disp, promocao_det),
+        _idss_comp("IDQS-2", "Resolutividade de autorizações", taxa_aprovacao, taxa_aprovacao is not None,
+                   f"{guias_autorizadas}/{guias_decididas} guias autorizadas" if guias_decididas else "Sem guias decididas no período"),
+        _idss_comp("IDQS-3", "Continuidade de cobertura", continuidade, benef_total > 0,
+                   f"{benef_ativos}/{benef_total} beneficiários ativos"),
+    ]
+
+    # ── IDGA — Garantia de Acesso ──
+    # Rede credenciada: proxy de suficiência ~1 prestador ativo / 1.000 vidas.
+    prest_ativos = prestadores_qs.filter(status=PrestadorPlanoSaude.STATUS_CREDENCIADO).count()
+    if benef_ativos:
+        rede = min(1.0, prest_ativos / max(1.0, benef_ativos / 1000.0))
+        rede_disp = True
+        rede_det = f"{prest_ativos} prestadores credenciados p/ {benef_ativos} vidas ativas"
+    elif prest_ativos:
+        rede, rede_disp, rede_det = 1.0, True, f"{prest_ativos} prestadores credenciados"
+    else:
+        rede, rede_disp, rede_det = None, False, "Sem rede credenciada cadastrada"
+
+    # Acesso financeiro: reembolsos resolvidos (pagos/aprovados) sobre solicitados.
+    reemb_total = reembolsos_qs.count()
+    reemb_resolvidos = reembolsos_qs.filter(status__in=["aprovado", "pago"]).count()
+    reemb_score = (reemb_resolvidos / reemb_total) if reemb_total else None
+
+    idga_comps = [
+        _idss_comp("IDGA-1", "Cumprimento de prazo (SLA ANS)", sla_ok, sla_ok is not None,
+                   f"{guias_pendentes - guias_vencidas}/{guias_pendentes} guias pendentes no prazo" if guias_pendentes else "Sem guias pendentes"),
+        _idss_comp("IDGA-2", "Suficiência de rede credenciada", rede, rede_disp, rede_det),
+        _idss_comp("IDGA-3", "Acesso a reembolso", reemb_score, reemb_total > 0,
+                   f"{reemb_resolvidos}/{reemb_total} reembolsos resolvidos" if reemb_total else "Sem reembolsos no período"),
+    ]
+
+    # ── IDSF — Sustentabilidade no Mercado ──
+    receita = float(
+        FaturamentoBeneficiario.objects.filter(
+            plano__empresa=empresa, competencia__gte=inicio_ano.strftime("%Y-%m"),
+            competencia__lte=fim_ano.strftime("%Y-%m"),
+        ).aggregate(s=Sum("valor_mensalidade"))["s"] or 0
+    )
+    custo = float(
+        sinistros_qs.filter(
+            data_abertura__date__gte=inicio_ano, data_abertura__date__lte=fim_ano
+        ).aggregate(s=Sum("valor_total"))["s"] or 0
+    )
+    if receita > 0:
+        mlr = custo / receita * 100.0
+        # Faixa saudável de sinistralidade 70–85%; nota cai fora dela.
+        sinistralidade = max(0.0, min(1.0, 1 - abs(mlr - 77.5) / 45.0))
+        mlr_disp = True
+        mlr_det = f"Sinistralidade (MLR) {mlr:.1f}% — faixa saudável 70–85%"
+    else:
+        mlr, sinistralidade, mlr_disp = None, None, False
+        mlr_det = "Sem faturamento lançado para calcular sinistralidade"
+
+    cancelados = benef_qs.filter(situacao="cancelado").count()
+    retencao = (1 - cancelados / benef_total) if benef_total else None
+    idsf_comps = [
+        _idss_comp("IDSF-1", "Equilíbrio de sinistralidade", sinistralidade, mlr_disp, mlr_det),
+        _idss_comp("IDSF-2", "Retenção de carteira", retencao, benef_total > 0,
+                   f"{cancelados}/{benef_total} cancelamentos" if benef_total else "Sem carteira cadastrada"),
+    ]
+
+    # ── IDGR — Gestão de Processos e Regulação ──
+    trimestre_atual = (hoje.month - 1) // 3 + 1
+    if ano < hoje.year:
+        tri_esperados = 4
+    elif ano == hoje.year:
+        tri_esperados = trimestre_atual
+    else:
+        tri_esperados = 0
+    try:
+        from .models import DIOPSDeclaracao
+        diops_ok = DIOPSDeclaracao.objects.filter(
+            empresa=empresa, trimestre__startswith=str(ano),
+            status__in=["validada", "enviada", "retificada"],
+        ).count()
+        if tri_esperados > 0 and benef_total > 0:
+            # Só é obrigação (e portanto avaliável) se há carteira a declarar.
+            diops_score = min(1.0, diops_ok / tri_esperados)
+            diops_disp = True
+            diops_det = f"{diops_ok}/{tri_esperados} DIOPS trimestrais entregues em {ano}"
+        elif tri_esperados == 0:
+            diops_score, diops_disp, diops_det = None, False, "Sem trimestre de referência ainda"
+        else:
+            diops_score, diops_disp, diops_det = None, False, "Sem carteira cadastrada para declarar"
+    except Exception:
+        diops_score, diops_disp, diops_det = None, False, "Módulo DIOPS indisponível"
+
+    # Controle de processo: ausência de breach de SLA (mesma base do IDGA, aqui
+    # como métrica de gestão) + tratamento de glosas.
+    gestao_sla = sla_ok
+    try:
+        glosas_total = GlosaItem.objects.filter(sinistro__empresa=empresa).count()
+        glosas_tratadas = GlosaItem.objects.filter(
+            sinistro__empresa=empresa,
+            status__in=["recurso_enviado", "recurso_aceito", "mantida"],
+        ).count()
+        glosa_score = (glosas_tratadas / glosas_total) if glosas_total else None
+        glosa_disp = glosas_total > 0
+        glosa_det = f"{glosas_tratadas}/{glosas_total} glosas tratadas" if glosas_total else "Sem glosas no período"
+    except Exception:
+        glosa_score, glosa_disp, glosa_det = None, False, "Sem dados de glosas"
+
+    idgr_comps = [
+        _idss_comp("IDGR-1", "Entrega de obrigações ANS (DIOPS)", diops_score, diops_disp, diops_det),
+        _idss_comp("IDGR-2", "Controle de prazos de processo", gestao_sla, gestao_sla is not None,
+                   "Guias pendentes dentro do prazo" if gestao_sla is not None else "Sem guias pendentes"),
+        _idss_comp("IDGR-3", "Tratamento de glosas", glosa_score, glosa_disp, glosa_det),
+    ]
+
+    dims_raw = {
+        "IDQS": idqs_comps,
+        "IDGA": idga_comps,
+        "IDSF": idsf_comps,
+        "IDGR": idgr_comps,
+    }
+
+    dimensoes = []
+    soma_ponderada = 0.0
+    soma_pesos_disp = 0.0
+    for cod, comps in dims_raw.items():
+        nota_dim = _idss_media(comps)
+        peso = _IDSS_PESOS[cod]
+        if nota_dim is not None:
+            soma_ponderada += nota_dim * peso
+            soma_pesos_disp += peso
+        dimensoes.append({
+            "codigo": cod,
+            "label": _IDSS_DIM_LABEL[cod],
+            "peso": peso,
+            "nota": (round(nota_dim, 4) if nota_dim is not None else None),
+            "componentes": comps,
+        })
+
+    # Renormaliza pelos pesos das dimensões com dado — não penaliza o que ainda
+    # não tem base cadastrada (honesto), mas sinaliza a cobertura.
+    nota_final = (soma_ponderada / soma_pesos_disp) if soma_pesos_disp > 0 else None
+    cobertura = round(soma_pesos_disp, 2)
+
+    faixa = _idss_faixa(nota_final)
+
+    # Recomendação: aponta a dimensão com dado e menor nota.
+    dims_com_nota = [d for d in dimensoes if d["nota"] is not None]
+    if dims_com_nota:
+        pior = min(dims_com_nota, key=lambda d: d["nota"])
+        recomendacao = f"Priorizar '{pior['label']}' (menor nota: {pior['nota']:.2f})."
+    else:
+        recomendacao = "Cadastre carteira, guias e faturamento para calcular o IDSS."
+
+    return JsonResponse({
+        "ano": ano,
+        "nota_final": (round(nota_final, 4) if nota_final is not None else None),
+        "nota_final_100": (round(nota_final * 100, 1) if nota_final is not None else None),
+        "faixa": faixa,
+        "cobertura_pesos": cobertura,
+        "dimensoes": dimensoes,
+        "recomendacao": recomendacao,
+        "fonte": "calculado_dados_reais",
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
 #  REGULAÇÃO & SLA ANS  (RN 395/452)
 # ════════════════════════════════════════════════════════════════════════════════
 

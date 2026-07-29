@@ -50,6 +50,7 @@ from api.views_plano_saude import (
     api_ps_sinistralidade_ia,
     # Enterprise modules
     api_ps_dashboard_exec,
+    api_ps_idss,
     api_ps_sla,
     api_ps_auditoria,
     api_ps_contratos, api_ps_contrato_detalhe,
@@ -2619,6 +2620,7 @@ urlpatterns = [
     path('api/plano/epidemiologia/', api_plano_saude_painel),
     # ── Enterprise modules ──────────────────────────────────────────────────
     path('api/plano-saude/dashboard-exec/', api_ps_dashboard_exec),
+    path('api/plano-saude/idss/', api_ps_idss),
     path('api/plano-saude/sla/', api_ps_sla),
     path('api/plano-saude/auditoria/', api_ps_auditoria),
     path('api/plano-saude/contratos/', api_ps_contratos),

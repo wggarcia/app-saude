@@ -390,11 +390,42 @@ def rede_gestao_page(request):
     return render(request, "rede_gestao.html", {"setor": setor, **contexto_navegacao_setorial(request, setor)})
 
 
+_PS_MODALIDADE_LABEL = {
+    "cooperativa":  "Operadora · Cooperativa Médica",
+    "autogestao":   "Operadora · Autogestão",
+    "seguradora":   "Seguradora Especializada em Saúde",
+    "filantropico": "Operadora Filantrópica",
+    "outro":        "Operadora de Saúde",
+}
+
+
+def _ps_operadora_label(empresa):
+    """Rótulo de identidade da operadora conforme a modalidade cadastrada
+    (PlanoSaude.modalidade). Antes era fixo 'Operadora Cooperativa' — o que
+    só servia cooperativas. Agora reflete a modalidade real; sem modalidade
+    definida cai no rótulo neutro 'Operadora de Saúde'."""
+    if not empresa:
+        return "Operadora de Saúde"
+    try:
+        from .models import PlanoSaude
+        modalidade = (
+            PlanoSaude.objects.filter(empresa=empresa)
+            .exclude(modalidade="")
+            .values_list("modalidade", flat=True)
+            .first()
+        )
+        return _PS_MODALIDADE_LABEL.get(modalidade or "", "Operadora de Saúde")
+    except Exception:
+        return "Operadora de Saúde"
+
+
 @ensure_csrf_cookie
 @requer_setor('plano_saude')
 @requer_operacao_page
 def plano_saude_gestao_page(request):
-    return render(request, "plano_saude_gestao.html", contexto_navegacao_setorial(request, "plano_saude"))
+    ctx = contexto_navegacao_setorial(request, "plano_saude")
+    ctx["ps_operadora_label"] = _ps_operadora_label(getattr(request, "empresa", None))
+    return render(request, "plano_saude_gestao.html", ctx)
 
 
 @ensure_csrf_cookie

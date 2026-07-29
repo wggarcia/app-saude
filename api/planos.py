@@ -161,6 +161,7 @@ _PLANO_OPERADORA = [
     "plano.reembolsos",         # Reembolsos com prazo ANS rastreado
     "plano.contratos",          # Contratos com histórico de utilização
     "plano.ans_relatorios",     # Relatórios ANS-compatíveis
+    "plano.idss",               # IDSS — Índice de Desempenho da Saúde Suplementar (ANS)
     "plano.epidemiologia",      # Alertas de risco territorial por município (App Cidadão)
     "plano.corretores",         # Gestão de corretoras e comissões
     "plano.rede_credenciada",   # Rede credenciada — gestão e negociação
