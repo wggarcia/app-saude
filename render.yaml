@@ -284,15 +284,17 @@ services:
       - key: PUBLIC_BASE_URL
         value: https://app-saude-p9n8.onrender.com
 
-  # ── Vigilância epidemiológica internacional — 10:00 BRT (13:00 UTC) ─────────
+  # ── Vigilância epidemiológica internacional — seg e qui, 10:00 BRT (13:00 UTC) ─
   # Coleta de fontes internacionais: WHO DON, Fiocruz, ECDC, GDELT-inglês.
-  # O cron BR (soluscrt-monitor-noticias no painel Render) cobre GDELT-BR + OPAS + SVS + CDC-EID.
+  # Frequência: 2x/semana (segunda e quinta) — "1,4" = Mon,Thu no campo dia-da-semana.
+  # O cron BR (soluscrt-monitor-noticias no painel Render) cobre GDELT-BR + OPAS + SVS + CDC-EID;
+  # ajuste ele no painel do Render para o MESMO schedule "0 13 * * 1,4".
   - type: cron
     name: monitor-epidemiologico-intl
     env: python
     plan: starter
     buildCommand: "./build_cron.sh"
-    schedule: "0 13 * * *"
+    schedule: "0 13 * * 1,4"
     startCommand: "python3 manage.py monitorar_noticias --fontes gdelt-intl,who,fiocruz,ecdc,bbc-health,who-africa,nicd-za,reliefweb,india-pib,nhc-china,sciencedaily,healio-id && python3 manage.py analisar_noticias_ia && python3 manage.py gerar_alertas_noticias && python3 manage.py limpar_noticias_antigas"
     envVars:
       - key: PYTHON_VERSION
