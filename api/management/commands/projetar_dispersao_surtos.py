@@ -1,20 +1,32 @@
 """
-Roda o modelo de dispersão (api/modelo_dispersao.py — 9º sistema de IA) sobre
-os surtos ativos e grava as projeções em ProjecaoDispersao.
+Roda o modelo de dispersão (api/modelo_dispersao.py — 9º sistema de IA) sobre os
+focos ativos e grava as projeções em ProjecaoDispersao.
+
+De onde vêm as SEMENTES (focos): do REPORTE DA POPULAÇÃO — exatamente o mesmo
+dado que o mapa do gestor mostra (build_panorama_payload → layer de municípios,
+que agrega RegistroSintoma do app do cidadão). A doença dominante de cada
+município e o nº de casos ativos viram a semente. Assim a projeção "para onde
+vai" parte do que o cidadão reportou, não de tabela paralela.
+
+Como fonte ADICIONAL, também incorpora SurtoEpidemiologico ativos (surtos que o
+gestor registrou manualmente), se houver.
 
 Fluxo:
-  1. Lê SurtoEpidemiologico ativos (seed = município + casos + doença).
-  2. Resolve município (texto) → código IBGE.
-  3. Carrega a matriz de mobilidade mais recente (MatrizMobilidade).
-  4. Para cada doença, projeta 7/14/30 dias com o SEIR metapopulacional.
-  5. Grava as projeções (probabilidade de chegada + casos + rota provável).
+  1. Agrega o panorama por município → (doença dominante, casos) acima do limiar.
+  2. (+) Soma SurtoEpidemiologico ativos registrados manualmente.
+  3. Resolve município (texto) → código IBGE.
+  4. Carrega a matriz de mobilidade real (MatrizMobilidade); se não houver, usa
+     o modelo gravitacional (pipeline_mobilidade.matriz_gravitacional).
+  5. Para cada doença, projeta 7/14/30 dias com o SEIR metapopulacional e grava.
 
 Uso:
     python manage.py projetar_dispersao_surtos
-    python manage.py projetar_dispersao_surtos --top 40   # grava só os 40 municípios de maior risco por doença/horizonte
+    python manage.py projetar_dispersao_surtos --min-casos 30   # foco só onde há >=30 casos reportados
+    python manage.py projetar_dispersao_surtos --top 40
     python manage.py projetar_dispersao_surtos --dry-run
 
-Roda como cron logo depois de coletar_mobilidade_aerea e de detectar surtos.
+Roda como cron logo depois de coletar_mobilidade_aerea (opcional) e da chegada
+de novos reportes do cidadão.
 """
 from collections import defaultdict
 
@@ -23,6 +35,7 @@ from django.db import transaction
 
 from api import modelo_dispersao as md
 from api import pipeline_mobilidade as pm
+from api.epidemiologia import build_panorama_payload, _estado_para_uf
 from api.models import MatrizMobilidade, ProjecaoDispersao, SurtoEpidemiologico
 
 
@@ -34,7 +47,37 @@ class Command(BaseCommand):
                             help="Máx. de municípios gravados por doença/horizonte (default 50).")
         parser.add_argument("--min-prob", type=float, default=0.01,
                             help="Ignora projeções com probabilidade abaixo disto (default 0.01).")
+        parser.add_argument("--min-casos", type=int, default=15,
+                            help="Nº mínimo de casos reportados num município p/ virar foco (default 15).")
         parser.add_argument("--dry-run", action="store_true", help="Não grava, só reporta.")
+
+    def _seeds_do_reporte(self, min_casos):
+        """Focos vindos do REPORTE DA POPULAÇÃO (mesmo dado do mapa do gestor).
+
+        Agrega o panorama por município: a doença dominante + casos ativos de
+        cada município acima de `min_casos` viram semente. Retorna
+        ({doenca: {ibge: casos}}, [municipios_nao_resolvidos]).
+        """
+        seeds = defaultdict(dict)
+        nao_resolvidos = []
+        try:
+            payload = build_panorama_payload()
+        except Exception as exc:  # panorama indisponível não pode derrubar o cron
+            self.stdout.write(self.style.WARNING(f"Panorama indisponível ({exc}); sem focos do reporte."))
+            return seeds, nao_resolvidos
+
+        for area in payload.get("layers", {}).get("municipios", []):
+            casos = int(round(area.get("total_cases") or 0))
+            doenca = (area.get("dominant_disease") or "").strip()
+            if casos < min_casos or doenca in ("", "Indefinido", "Sem dados"):
+                continue
+            uf = _estado_para_uf(area.get("estado"))
+            ibge = pm.resolver_ibge(area.get("cidade") or "", uf)
+            if not ibge:
+                nao_resolvidos.append(f"{area.get('cidade')}/{uf or '?'}")
+                continue
+            seeds[doenca][ibge] = seeds[doenca].get(ibge, 0) + casos
+        return seeds, nao_resolvidos
 
     def _carregar_matriz_norm(self):
         """MatrizMobilidade (período mais recente) → {origem: {destino: peso}}."""
@@ -51,21 +94,39 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         top = max(1, opts["top"])
         min_prob = opts["min_prob"]
+        min_casos = opts["min_casos"]
         dry = opts["dry_run"]
 
-        # 1+2) seeds por doença
         seeds_por_doenca: dict = defaultdict(dict)
         nao_resolvidos = []
+
+        # 1) FONTE PRIMÁRIA — reporte da população (mesmo dado do mapa do gestor)
+        seeds_reporte, nr_rep = self._seeds_do_reporte(min_casos)
+        for doenca, mun in seeds_reporte.items():
+            for ibge, casos in mun.items():
+                seeds_por_doenca[doenca][ibge] = seeds_por_doenca[doenca].get(ibge, 0) + casos
+        nao_resolvidos += nr_rep
+        n_focos_reporte = sum(len(m) for m in seeds_reporte.values())
+
+        # 2) FONTE ADICIONAL — surtos registrados manualmente pelo gestor
+        n_focos_manual = 0
         for s in SurtoEpidemiologico.objects.filter(status="ativo"):
             ibge = pm.resolver_ibge(s.municipio, s.uf)
             if not ibge:
                 nao_resolvidos.append(f"{s.municipio}/{s.uf}")
                 continue
-            # acumula casos se houver mais de um surto no mesmo município/doença
             seeds_por_doenca[s.doenca][ibge] = seeds_por_doenca[s.doenca].get(ibge, 0) + (s.total_casos or 0)
+            n_focos_manual += 1
 
+        self.stdout.write(
+            f"Focos: {n_focos_reporte} do reporte da população (>= {min_casos} casos) "
+            f"+ {n_focos_manual} de surto manual."
+        )
         if not seeds_por_doenca:
-            self.stdout.write(self.style.WARNING("Nenhum surto ativo com município resolvível. Nada a projetar."))
+            self.stdout.write(self.style.WARNING(
+                "Nenhum foco com município resolvível. Sem reporte suficiente do cidadão "
+                "(rode simular_pandemia_brasil no ambiente de demo) nem surto manual ativo. Nada a projetar."
+            ))
             if nao_resolvidos:
                 self.stdout.write("Municípios não resolvidos: " + ", ".join(sorted(set(nao_resolvidos))))
             return
