@@ -68,6 +68,12 @@ DOENCAS_REGISTRADAS = [
     ("sinan_chikungunya", "chikungunya_notificacoes_sinan", "Chikungunya"),
     ("sinan_zika", "zika_notificacoes_sinan", "Zika"),
     ("sivep_gripe", "srag_notificacoes_amostra", "Gripe"),
+    # ONE HEALTH (Módulo 4): sinal de saúde ANIMAL como alerta precoce do humano.
+    # Epizootias de primatas não-humanos precedem o caso humano de febre amarela
+    # no ciclo silvestre. Fonte oficial MS/DEMAS, ver api/pipeline_one_health.py.
+    # Série esparsa (dezenas/ano) — o treino da IA #5 pode recusar de forma
+    # transparente; o dado segue disponível como sinal no mapa de risco oficial.
+    ("ms_epizootias_fa", "febre_amarela_epizootias_pnh", "Febre Amarela"),
     # Fontes via TabNet/DATASUS (formulario publico, sem export .csv.zip
     # direto — ver api/pipeline_oficial.py FONTES_TABNET_CONFIG). Treinam e
     # ficam disponiveis em mapa_risco_oficial_por_doenca() normalmente, mas
