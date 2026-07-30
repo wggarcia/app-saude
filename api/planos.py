@@ -164,6 +164,10 @@ _PLANO_OPERADORA = [
     "plano.idss",               # IDSS — Índice de Desempenho da Saúde Suplementar (ANS)
     "plano.ressarcimento_sus",  # Ressarcimento ao SUS (ABI/GRU — Lei 9.656/98 art. 32)
     "plano.nps",                # Pesquisa de satisfação / NPS do beneficiário
+    "plano.atuarial",           # Análise atuarial — PMPM por faixa etária/produto, reajuste técnico
+    "plano.rpc",                # Rol de Procedimentos e Eventos em Saúde (RN 465) — cobertura obrigatória
+    "plano.intercambio",        # Intercâmbio entre operadoras (GTO) — cooperativas
+    "plano.portal_rh",          # Portal RH B2B — empresa contratante gerencia vidas
     "plano.epidemiologia",      # Alertas de risco territorial por município (App Cidadão)
     "plano.corretores",         # Gestão de corretoras e comissões
     "plano.rede_credenciada",   # Rede credenciada — gestão e negociação

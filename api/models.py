@@ -3758,6 +3758,11 @@ class BeneficiarioPlano(models.Model):
         max_length=12, choices=PARENTESCO_CHOICES, blank=True, default="",
         help_text="Grau de parentesco do dependente em relação ao titular",
     )
+    contrato_grupo = models.ForeignKey(
+        "ContratoGrupo", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="vidas",
+        help_text="Contrato corporativo (empresa-contratante) a que esta vida pertence",
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -4303,6 +4308,131 @@ class AvaliacaoNPS(models.Model):
 
     def __str__(self):
         return f"NPS {self.nota} ({self.categoria}) — {self.empresa_id}"
+
+
+class GuiaIntercambio(models.Model):
+    """Intercâmbio entre operadoras (GTO — Guia de Transação Odontológica/Origem).
+    Usado por cooperativas (Unimed etc.): beneficiário de uma operadora é
+    atendido na praça de outra. 'emitida' = atendi beneficiário visitante e vou
+    COBRAR da operadora dele; 'recebida' = meu beneficiário foi atendido fora e
+    vou PAGAR a operadora que atendeu."""
+    TIPO_EMITIDA = "emitida"
+    TIPO_RECEBIDA = "recebida"
+    TIPO_CHOICES = [
+        (TIPO_EMITIDA, "Emitida (a receber)"),
+        (TIPO_RECEBIDA, "Recebida (a pagar)"),
+    ]
+    STATUS_ABERTA = "aberta"
+    STATUS_FATURADA = "faturada"
+    STATUS_PAGA = "paga"
+    STATUS_GLOSADA = "glosada"
+    STATUS_CANCELADA = "cancelada"
+    STATUS_CHOICES = [
+        (STATUS_ABERTA, "Aberta"),
+        (STATUS_FATURADA, "Faturada"),
+        (STATUS_PAGA, "Paga"),
+        (STATUS_GLOSADA, "Glosada"),
+        (STATUS_CANCELADA, "Cancelada"),
+    ]
+    TIPO_ATENDIMENTO_CHOICES = [
+        ("consulta", "Consulta"),
+        ("exame", "Exame / Diagnóstico"),
+        ("internacao", "Internação"),
+        ("urgencia", "Urgência / Emergência"),
+        ("terapia", "Terapia / Procedimento"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="guias_intercambio")
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default=TIPO_EMITIDA)
+    numero_gto = models.CharField(max_length=40, blank=True, default="")
+    operadora_correspondente = models.CharField(max_length=200, blank=True, default="", help_text="Operadora da outra praça")
+    registro_ans_correspondente = models.CharField(max_length=20, blank=True, default="")
+    beneficiario = models.ForeignKey(
+        BeneficiarioPlano, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="intercambios",
+        help_text="Preenchido quando o beneficiário é da própria operadora (tipo=recebida)",
+    )
+    beneficiario_nome = models.CharField(max_length=200, blank=True, default="")
+    beneficiario_carteirinha = models.CharField(max_length=50, blank=True, default="")
+    tipo_atendimento = models.CharField(max_length=20, choices=TIPO_ATENDIMENTO_CHOICES, default="consulta")
+    procedimento = models.CharField(max_length=255, blank=True, default="")
+    praca_atendimento = models.CharField(max_length=120, blank=True, default="", help_text="Cidade/UF onde ocorreu o atendimento")
+    data_atendimento = models.DateField(null=True, blank=True)
+    valor = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_ABERTA)
+    data_faturamento = models.DateField(null=True, blank=True)
+    data_liquidacao = models.DateField(null=True, blank=True)
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_atendimento", "-criado_em"]
+
+    def __str__(self):
+        return f"GTO {self.numero_gto or self.id} — {self.get_tipo_display()}"
+
+
+class PortalRHToken(models.Model):
+    """Token de acesso do RH da empresa-contratante ao Portal RH B2B (sem login).
+    Vinculado a um contrato corporativo (ContratoGrupo)."""
+    contrato = models.OneToOneField(
+        "ContratoGrupo", on_delete=models.CASCADE, related_name="portal_rh_token",
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    expira_em = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"Portal RH — {self.contrato_id}"
+
+
+class SolicitacaoVidaRH(models.Model):
+    """Solicitação de inclusão/exclusão de vida feita pelo RH da empresa-contratante
+    via Portal RH. A operadora aprova ou rejeita."""
+    TIPO_INCLUSAO = "inclusao"
+    TIPO_EXCLUSAO = "exclusao"
+    TIPO_CHOICES = [
+        (TIPO_INCLUSAO, "Inclusão de vida"),
+        (TIPO_EXCLUSAO, "Exclusão de vida"),
+    ]
+    STATUS_PENDENTE = "pendente"
+    STATUS_APROVADA = "aprovada"
+    STATUS_REJEITADA = "rejeitada"
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_APROVADA, "Aprovada"),
+        (STATUS_REJEITADA, "Rejeitada"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="solicitacoes_vida_rh")
+    contrato = models.ForeignKey("ContratoGrupo", on_delete=models.CASCADE, related_name="solicitacoes_vida")
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default=TIPO_INCLUSAO)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    # dados da vida
+    nome = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=14, blank=True, default="")
+    data_nascimento = models.DateField(null=True, blank=True)
+    grau_parentesco = models.CharField(max_length=12, blank=True, default="")
+    beneficiario = models.ForeignKey(
+        BeneficiarioPlano, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="solicitacoes_rh",
+        help_text="Vida-alvo (exclusão) ou vida criada (inclusão aprovada)",
+    )
+    observacao = models.TextField(blank=True, default="")
+    resposta = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    processado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.nome} [{self.status}]"
 
 
 class ProgramaSaude(models.Model):

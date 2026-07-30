@@ -11,7 +11,7 @@ from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q,
 from django.db.models.functions import Now, TruncDate, TruncMonth, TruncWeek
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
@@ -23,7 +23,7 @@ from .models import (
     BeneficiarioOdonto, GuiaOdonto, MensagemPlano,
     CarenciaBeneficiario, RegraAutorizacaoAutomatica,
     RedeCredenciadaPlano, ProcedimentoTUSS,
-    RessarcimentoSUS, AvaliacaoNPS,
+    RessarcimentoSUS, AvaliacaoNPS, GuiaIntercambio,
 )
 from .views_dashboard import _empresa_autenticada
 from .utils import validar_cpf_cadastro
@@ -4406,4 +4406,625 @@ def api_ps_nps(request):
         "serie": serie,
         "comentarios": comentarios,
         "fonte": "calculado_dados_reais",
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  ANÁLISE ATUARIAL — PMPM por faixa etária/produto, sinistralidade e reajuste
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# Faixas etárias ANS (RN 63/2003) — 10 faixas obrigatórias.
+
+_FAIXAS_ETARIAS_ANS = [
+    ("0-18", 0, 18), ("19-23", 19, 23), ("24-28", 24, 28), ("29-33", 29, 33),
+    ("34-38", 34, 38), ("39-43", 39, 43), ("44-48", 44, 48), ("49-53", 49, 53),
+    ("54-58", 54, 58), ("59+", 59, 200),
+]
+
+
+def _idade(data_nasc, hoje):
+    if not data_nasc:
+        return None
+    anos = hoje.year - data_nasc.year - ((hoje.month, hoje.day) < (data_nasc.month, data_nasc.day))
+    return max(0, anos)
+
+
+def _faixa_de_idade(idade):
+    if idade is None:
+        return None
+    for label, mn, mx in _FAIXAS_ETARIAS_ANS:
+        if mn <= idade <= mx:
+            return label
+    return None
+
+
+@api_requer_feature("plano.atuarial")
+@csrf_exempt
+def api_ps_atuarial(request):
+    """GET /api/plano-saude/atuarial?meses=12
+    Análise atuarial calculada dos dados reais: PMPM por faixa etária (RN63),
+    PMPM por produto, sinistralidade do período e sugestão de reajuste técnico.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    try:
+        meses = max(1, min(36, int(request.GET.get("meses") or 12)))
+    except (TypeError, ValueError):
+        meses = 12
+
+    hoje = date.today()
+    total_meses = hoje.year * 12 + (hoje.month - 1) - (meses - 1)
+    ano_ini, mes_ini = total_meses // 12, (total_meses % 12) + 1
+    inicio = date(ano_ini, mes_ini, 1)
+
+    beneficiarios = list(
+        BeneficiarioPlano.objects.filter(plano__empresa=empresa, situacao="ativo")
+        .values("id", "data_nascimento", "plano_id")
+    )
+    # Custo de sinistros por beneficiário no período
+    sin_por_benef = {}
+    for row in (
+        Sinistro.objects.filter(empresa=empresa, data_abertura__date__gte=inicio)
+        .values("beneficiario_id")
+        .annotate(custo=Sum("valor_total"))
+    ):
+        sin_por_benef[row["beneficiario_id"]] = float(row["custo"] or 0)
+
+    # ── PMPM por faixa etária ──
+    faixa_agg = {label: {"vidas": 0, "custo": 0.0} for label, _, _ in _FAIXAS_ETARIAS_ANS}
+    sem_data = {"vidas": 0, "custo": 0.0}
+    for b in beneficiarios:
+        idade = _idade(b["data_nascimento"], hoje)
+        faixa = _faixa_de_idade(idade)
+        custo = sin_por_benef.get(b["id"], 0.0)
+        if faixa is None:
+            sem_data["vidas"] += 1
+            sem_data["custo"] += custo
+        else:
+            faixa_agg[faixa]["vidas"] += 1
+            faixa_agg[faixa]["custo"] += custo
+
+    pmpm_faixa = []
+    for label, _, _ in _FAIXAS_ETARIAS_ANS:
+        v = faixa_agg[label]["vidas"]
+        c = faixa_agg[label]["custo"]
+        pmpm = round(c / v / meses, 2) if v else 0.0
+        pmpm_faixa.append({"faixa": label, "vidas": v, "custo": round(c, 2), "pmpm": pmpm})
+
+    # ── PMPM por produto (plano) ──
+    planos = {p.id: p.nome for p in PlanoSaude.objects.filter(empresa=empresa)}
+    prod_agg = {pid: {"vidas": 0, "custo": 0.0} for pid in planos}
+    for b in beneficiarios:
+        pid = b["plano_id"]
+        if pid not in prod_agg:
+            prod_agg[pid] = {"vidas": 0, "custo": 0.0}
+        prod_agg[pid]["vidas"] += 1
+        prod_agg[pid]["custo"] += sin_por_benef.get(b["id"], 0.0)
+    pmpm_produto = []
+    for pid, nome in planos.items():
+        v = prod_agg.get(pid, {}).get("vidas", 0)
+        c = prod_agg.get(pid, {}).get("custo", 0.0)
+        pmpm_produto.append({
+            "produto": nome, "vidas": v, "custo": round(c, 2),
+            "pmpm": round(c / v / meses, 2) if v else 0.0,
+        })
+    pmpm_produto.sort(key=lambda x: x["pmpm"], reverse=True)
+
+    # ── Sinistralidade (MLR) do período ──
+    receita = float(
+        FaturamentoBeneficiario.objects.filter(
+            plano__empresa=empresa, competencia__gte=inicio.strftime("%Y-%m")
+        ).aggregate(s=Sum("valor_mensalidade"))["s"] or 0
+    )
+    custo_total = float(
+        Sinistro.objects.filter(empresa=empresa, data_abertura__date__gte=inicio)
+        .aggregate(s=Sum("valor_total"))["s"] or 0
+    )
+    mlr = round(custo_total / receita * 100, 1) if receita > 0 else None
+
+    vidas_total = len(beneficiarios)
+    pmpm_global = round(custo_total / vidas_total / meses, 2) if vidas_total else 0.0
+
+    # ── Reajuste técnico sugerido ──
+    # Traz a sinistralidade para a meta de 70% (VCMH simplificado). Sem receita
+    # lançada não há base para sugerir reajuste (honesto).
+    META_MLR = 70.0
+    if mlr is not None and mlr > META_MLR:
+        reajuste_sugerido = round((mlr / META_MLR - 1) * 100, 1)
+        reajuste_base = f"Sinistralidade {mlr}% acima da meta de {META_MLR}%"
+    elif mlr is not None:
+        reajuste_sugerido = 0.0
+        reajuste_base = f"Sinistralidade {mlr}% dentro da meta — sem reajuste técnico necessário"
+    else:
+        reajuste_sugerido = None
+        reajuste_base = "Sem faturamento lançado para calcular reajuste técnico"
+
+    return JsonResponse({
+        "periodo_meses": meses,
+        "vidas_ativas": vidas_total,
+        "pmpm_global": pmpm_global,
+        "mlr": mlr,
+        "receita_periodo": round(receita, 2),
+        "custo_periodo": round(custo_total, 2),
+        "pmpm_por_faixa": pmpm_faixa,
+        "pmpm_por_produto": pmpm_produto[:12],
+        "vidas_sem_data_nascimento": sem_data["vidas"],
+        "reajuste_tecnico_sugerido": reajuste_sugerido,
+        "reajuste_base": reajuste_base,
+        "fonte": "calculado_dados_reais",
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  RPC — Rol de Procedimentos e Eventos em Saúde (RN 465/2021)
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# Verifica cobertura obrigatória a partir do catálogo TUSS da própria operadora
+# (ProcedimentoTUSS.cobertura_obrigatoria) e cruza com as guias emitidas para
+# apontar procedimentos autorizados que NÃO constam no Rol cadastrado.
+
+@api_requer_feature("plano.rpc")
+@csrf_exempt
+def api_ps_rpc(request):
+    """GET /api/plano-saude/rpc            → panorama de cobertura do catálogo
+       GET /api/plano-saude/rpc?codigo=X   → checa um código TUSS específico
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    catalogo = ProcedimentoTUSS.objects.filter(empresa=empresa, ativo=True)
+
+    codigo = (request.GET.get("codigo") or "").strip()
+    if codigo:
+        proc = catalogo.filter(codigo_tuss=codigo).first()
+        if not proc:
+            return JsonResponse({
+                "codigo": codigo,
+                "encontrado": False,
+                "mensagem": "Código não consta no catálogo TUSS da operadora. "
+                            "Verifique o cadastro ou se é procedimento fora do Rol (RN 465).",
+            })
+        return JsonResponse({
+            "codigo": codigo,
+            "encontrado": True,
+            "descricao": proc.descricao,
+            "segmento": proc.segmento,
+            "segmento_label": proc.get_segmento_display(),
+            "cobertura_obrigatoria": proc.cobertura_obrigatoria,
+            "prazo_atendimento_dias": proc.prazo_atendimento,
+            "mensagem": ("Cobertura obrigatória pelo Rol ANS (RN 465)."
+                         if proc.cobertura_obrigatoria else
+                         "Consta no catálogo, mas NÃO marcado como cobertura obrigatória."),
+        })
+
+    # Panorama do catálogo
+    total = catalogo.count()
+    cobertos = catalogo.filter(cobertura_obrigatoria=True).count()
+    por_segmento = list(
+        catalogo.values("segmento")
+        .annotate(total=Count("id"), cobertos=Count("id", filter=Q(cobertura_obrigatoria=True)))
+        .order_by("-total")
+    )
+
+    # Cruzamento com guias: códigos autorizados que não estão no Rol cadastrado
+    codigos_rol = set(catalogo.filter(cobertura_obrigatoria=True).values_list("codigo_tuss", flat=True))
+    codigos_catalogo = set(catalogo.values_list("codigo_tuss", flat=True))
+    guias_codigos = (
+        GuiaAutorizacao.objects.filter(plano__empresa=empresa)
+        .exclude(codigo_procedimento="")
+        .values("codigo_procedimento")
+        .annotate(qtd=Count("id"))
+        .order_by("-qtd")
+    )
+    fora_do_rol = []
+    for g in guias_codigos:
+        cod = g["codigo_procedimento"]
+        if cod not in codigos_catalogo:
+            fora_do_rol.append({"codigo": cod, "guias": g["qtd"], "situacao": "nao_catalogado"})
+        elif cod not in codigos_rol:
+            fora_do_rol.append({"codigo": cod, "guias": g["qtd"], "situacao": "fora_cobertura_obrigatoria"})
+
+    return JsonResponse({
+        "catalogo_total": total,
+        "cobertura_obrigatoria": cobertos,
+        "pct_cobertura": round(cobertos / total * 100, 1) if total else 0,
+        "por_segmento": por_segmento,
+        "alertas_fora_do_rol": fora_do_rol[:30],
+        "total_alertas": len(fora_do_rol),
+        "fonte": "catalogo_tuss_operadora",
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  INTERCÂMBIO ENTRE OPERADORAS (GTO) — cooperativas / atendimento fora de praça
+# ════════════════════════════════════════════════════════════════════════════════
+
+def _intercambio_dict(g):
+    return {
+        "id": g.id,
+        "tipo": g.tipo,
+        "tipo_label": g.get_tipo_display(),
+        "numero_gto": g.numero_gto,
+        "operadora_correspondente": g.operadora_correspondente,
+        "registro_ans_correspondente": g.registro_ans_correspondente,
+        "beneficiario_id": g.beneficiario_id,
+        "beneficiario_nome": g.beneficiario_nome or (g.beneficiario.nome if g.beneficiario_id else ""),
+        "beneficiario_carteirinha": g.beneficiario_carteirinha,
+        "tipo_atendimento": g.tipo_atendimento,
+        "tipo_atendimento_label": g.get_tipo_atendimento_display(),
+        "procedimento": g.procedimento,
+        "praca_atendimento": g.praca_atendimento,
+        "data_atendimento": g.data_atendimento.isoformat() if g.data_atendimento else None,
+        "valor": float(g.valor or 0),
+        "status": g.status,
+        "status_label": g.get_status_display(),
+        "data_faturamento": g.data_faturamento.isoformat() if g.data_faturamento else None,
+        "data_liquidacao": g.data_liquidacao.isoformat() if g.data_liquidacao else None,
+        "observacoes": g.observacoes,
+        "criado_em": g.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+@api_requer_feature("plano.intercambio")
+@csrf_exempt
+def api_ps_intercambio(request):
+    """GET  /api/plano-saude/intercambio?tipo=&status=&busca=
+       POST /api/plano-saude/intercambio  (registra uma GTO)"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "GET":
+        qs = GuiaIntercambio.objects.filter(empresa=empresa).select_related("beneficiario")
+        tipo = request.GET.get("tipo")
+        if tipo in (GuiaIntercambio.TIPO_EMITIDA, GuiaIntercambio.TIPO_RECEBIDA):
+            qs = qs.filter(tipo=tipo)
+        status = request.GET.get("status")
+        if status:
+            qs = qs.filter(status=status)
+        busca = (request.GET.get("busca") or "").strip()
+        if busca:
+            qs = qs.filter(
+                Q(beneficiario_nome__icontains=busca)
+                | Q(numero_gto__icontains=busca)
+                | Q(operadora_correspondente__icontains=busca)
+            )
+        return JsonResponse({"intercambios": [_intercambio_dict(g) for g in qs[:300]]})
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        beneficiario = None
+        if data.get("beneficiario_id"):
+            try:
+                beneficiario = BeneficiarioPlano.objects.get(
+                    id=data["beneficiario_id"], plano__empresa=empresa
+                )
+            except BeneficiarioPlano.DoesNotExist:
+                return JsonResponse({"erro": "Beneficiário não encontrado"}, status=404)
+        g = GuiaIntercambio.objects.create(
+            empresa=empresa,
+            tipo=data.get("tipo", GuiaIntercambio.TIPO_EMITIDA),
+            numero_gto=data.get("numero_gto", ""),
+            operadora_correspondente=data.get("operadora_correspondente", ""),
+            registro_ans_correspondente=data.get("registro_ans_correspondente", ""),
+            beneficiario=beneficiario,
+            beneficiario_nome=data.get("beneficiario_nome", "") or (beneficiario.nome if beneficiario else ""),
+            beneficiario_carteirinha=data.get("beneficiario_carteirinha", "") or (beneficiario.numero_carteirinha if beneficiario else ""),
+            tipo_atendimento=data.get("tipo_atendimento", "consulta"),
+            procedimento=data.get("procedimento", ""),
+            praca_atendimento=data.get("praca_atendimento", ""),
+            data_atendimento=_parse_date_opt(data.get("data_atendimento")),
+            valor=data.get("valor") or 0,
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"intercambio": _intercambio_dict(g)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@api_requer_feature("plano.intercambio")
+@csrf_exempt
+def api_ps_intercambio_detalhe(request, gto_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        g = GuiaIntercambio.objects.select_related("beneficiario").get(id=gto_id, empresa=empresa)
+    except GuiaIntercambio.DoesNotExist:
+        return JsonResponse({"erro": "GTO não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"intercambio": _intercambio_dict(g)})
+
+    if request.method in ("PUT", "PATCH"):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for campo in ["numero_gto", "operadora_correspondente", "registro_ans_correspondente",
+                      "beneficiario_nome", "beneficiario_carteirinha", "tipo_atendimento",
+                      "procedimento", "praca_atendimento", "observacoes", "tipo"]:
+            if campo in data:
+                setattr(g, campo, data[campo])
+        if "valor" in data:
+            g.valor = data["valor"] or 0
+        for campo_data in ["data_atendimento", "data_faturamento", "data_liquidacao"]:
+            if campo_data in data:
+                setattr(g, campo_data, _parse_date_opt(data[campo_data]))
+        if "status" in data:
+            if data["status"] not in dict(GuiaIntercambio.STATUS_CHOICES):
+                return JsonResponse({"erro": "Status inválido"}, status=400)
+            g.status = data["status"]
+            if g.status == GuiaIntercambio.STATUS_FATURADA and not g.data_faturamento:
+                g.data_faturamento = timezone.now().date()
+            if g.status == GuiaIntercambio.STATUS_PAGA and not g.data_liquidacao:
+                g.data_liquidacao = timezone.now().date()
+        g.save()
+        return JsonResponse({"intercambio": _intercambio_dict(g)})
+
+    if request.method == "DELETE":
+        g.delete()
+        return JsonResponse({"status": "ok"})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@api_requer_feature("plano.intercambio")
+@csrf_exempt
+def api_ps_intercambio_kpis(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    qs = GuiaIntercambio.objects.filter(empresa=empresa)
+    emitidas = qs.filter(tipo=GuiaIntercambio.TIPO_EMITIDA)
+    recebidas = qs.filter(tipo=GuiaIntercambio.TIPO_RECEBIDA)
+    a_receber = float(emitidas.exclude(status__in=["paga", "cancelada"]).aggregate(s=Sum("valor"))["s"] or 0)
+    a_pagar = float(recebidas.exclude(status__in=["paga", "cancelada"]).aggregate(s=Sum("valor"))["s"] or 0)
+    return JsonResponse({
+        "total": qs.count(),
+        "emitidas": emitidas.count(),
+        "recebidas": recebidas.count(),
+        "a_receber": a_receber,
+        "a_pagar": a_pagar,
+        "saldo": round(a_receber - a_pagar, 2),
+        "por_status": list(qs.values("status").annotate(qtd=Count("id"), valor=Sum("valor")).order_by("-qtd")),
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  PORTAL RH B2B — empresa-contratante gerencia suas vidas (contrato corporativo)
+# ════════════════════════════════════════════════════════════════════════════════
+
+def _gerar_token_rh():
+    import secrets
+    return secrets.token_urlsafe(32)
+
+
+def _rh_resolver_token(token):
+    """Resolve (token_obj, contrato, empresa) a partir do token público do RH.
+    Retorna None se inválido/inativo/expirado."""
+    from .models import PortalRHToken
+    try:
+        t = PortalRHToken.objects.select_related("contrato", "contrato__empresa_operadora").get(
+            token=token, ativo=True
+        )
+    except PortalRHToken.DoesNotExist:
+        return None
+    if t.expira_em and t.expira_em < date.today():
+        return None
+    return t, t.contrato, t.contrato.empresa_operadora
+
+
+def _contrato_rh_dict(c):
+    from .models import PortalRHToken, SolicitacaoVidaRH
+    tok = PortalRHToken.objects.filter(contrato=c).first()
+    return {
+        "id": c.id,
+        "razao_social": c.razao_social,
+        "nome_fantasia": c.nome_fantasia,
+        "cnpj": c.cnpj,
+        "plano_nome": c.plano.nome if c.plano_id else "",
+        "total_vidas": c.vidas.filter(situacao="ativo").count(),
+        "mensalidade_total": float(c.mensalidade_total or 0),
+        "status": c.status,
+        "data_renovacao": c.data_renovacao.isoformat() if c.data_renovacao else None,
+        "tem_token": bool(tok),
+        "token_ativo": bool(tok and tok.ativo),
+        "portal_url": f"/plano-saude/portal-rh/{tok.token}/" if tok else "",
+        "solicitacoes_pendentes": SolicitacaoVidaRH.objects.filter(contrato=c, status="pendente").count(),
+    }
+
+
+@api_requer_feature("plano.portal_rh")
+@csrf_exempt
+def api_ps_rh_contratos(request):
+    """GET /api/plano-saude/rh/contratos — contratos corporativos + status do portal RH."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    from .models import ContratoGrupo
+    qs = ContratoGrupo.objects.filter(empresa_operadora=empresa).select_related("plano")
+    return JsonResponse({"contratos": [_contrato_rh_dict(c) for c in qs[:200]]})
+
+
+@api_requer_feature("plano.portal_rh")
+@csrf_exempt
+def api_ps_rh_token(request):
+    """POST /api/plano-saude/rh/token {contrato_id} — gera/regenera token de acesso RH."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    from .models import ContratoGrupo, PortalRHToken
+    try:
+        contrato = ContratoGrupo.objects.get(id=data.get("contrato_id"), empresa_operadora=empresa)
+    except ContratoGrupo.DoesNotExist:
+        return JsonResponse({"erro": "Contrato não encontrado"}, status=404)
+    tok, _ = PortalRHToken.objects.get_or_create(contrato=contrato, defaults={"token": _gerar_token_rh()})
+    if data.get("regenerar"):
+        tok.token = _gerar_token_rh()
+    tok.ativo = data.get("ativo", True)
+    tok.save()
+    return JsonResponse({"portal_url": f"/plano-saude/portal-rh/{tok.token}/", "ativo": tok.ativo})
+
+
+@api_requer_feature("plano.portal_rh")
+@csrf_exempt
+def api_ps_rh_solicitacoes(request):
+    """GET /api/plano-saude/rh/solicitacoes?status=pendente — fila de solicitações do RH."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    from .models import SolicitacaoVidaRH
+    qs = SolicitacaoVidaRH.objects.filter(empresa=empresa).select_related("contrato")
+    status = request.GET.get("status")
+    if status:
+        qs = qs.filter(status=status)
+    return JsonResponse({"solicitacoes": [{
+        "id": s.id, "tipo": s.tipo, "tipo_label": s.get_tipo_display(),
+        "status": s.status, "status_label": s.get_status_display(),
+        "nome": s.nome, "cpf": s.cpf, "grau_parentesco": s.grau_parentesco,
+        "contrato_id": s.contrato_id, "contrato_razao": s.contrato.razao_social,
+        "observacao": s.observacao, "resposta": s.resposta,
+        "criado_em": s.criado_em.strftime("%d/%m/%Y %H:%M"),
+    } for s in qs[:300]]})
+
+
+@api_requer_feature("plano.portal_rh")
+@csrf_exempt
+def api_ps_rh_solicitacao_acao(request, sol_id):
+    """PUT /api/plano-saude/rh/solicitacoes/<id> {acao: aprovar|rejeitar, resposta}
+    Aprovar inclusão cria a vida no contrato; aprovar exclusão cancela a vida."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    if request.method not in ("PUT", "PATCH", "POST"):
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    from .models import SolicitacaoVidaRH
+    try:
+        s = SolicitacaoVidaRH.objects.select_related("contrato").get(id=sol_id, empresa=empresa)
+    except SolicitacaoVidaRH.DoesNotExist:
+        return JsonResponse({"erro": "Solicitação não encontrada"}, status=404)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    acao = data.get("acao")
+    s.resposta = data.get("resposta", "")
+    if acao == "aprovar":
+        if s.tipo == SolicitacaoVidaRH.TIPO_INCLUSAO:
+            b = BeneficiarioPlano.objects.create(
+                plano=s.contrato.plano,
+                contrato_grupo=s.contrato,
+                nome=s.nome, cpf=s.cpf, data_nascimento=s.data_nascimento,
+                grau_parentesco=s.grau_parentesco or "",
+                tipo_vinculo=(BeneficiarioPlano.VINCULO_DEPENDENTE if s.grau_parentesco else BeneficiarioPlano.VINCULO_TITULAR),
+                situacao="ativo",
+            )
+            s.beneficiario = b
+        elif s.tipo == SolicitacaoVidaRH.TIPO_EXCLUSAO and s.beneficiario_id:
+            s.beneficiario.situacao = "cancelado"
+            s.beneficiario.save()
+        s.status = SolicitacaoVidaRH.STATUS_APROVADA
+    elif acao == "rejeitar":
+        s.status = SolicitacaoVidaRH.STATUS_REJEITADA
+    else:
+        return JsonResponse({"erro": "Ação inválida (aprovar|rejeitar)"}, status=400)
+    s.processado_em = timezone.now()
+    s.save()
+    return JsonResponse({"status": "ok", "novo_status": s.status})
+
+
+# ── Portal RH (público, token-gated) ────────────────────────────────────────────
+
+@csrf_exempt
+def api_ps_rh_portal_dados(request, token):
+    """GET /api/plano-saude/rh/portal/<token>/dados — dados do contrato p/ o RH."""
+    ctx = _rh_resolver_token(token)
+    if not ctx:
+        return JsonResponse({"erro": "Link inválido ou expirado"}, status=404)
+    _, contrato, _empresa = ctx
+    from .models import SolicitacaoVidaRH
+    vidas = contrato.vidas.select_related("plano").order_by("nome")
+    return JsonResponse({
+        "contrato": {
+            "razao_social": contrato.razao_social,
+            "nome_fantasia": contrato.nome_fantasia,
+            "cnpj": contrato.cnpj,
+            "plano_nome": contrato.plano.nome if contrato.plano_id else "",
+            "status": contrato.status,
+            "mensalidade_total": float(contrato.mensalidade_total or 0),
+            "data_renovacao": contrato.data_renovacao.isoformat() if contrato.data_renovacao else None,
+        },
+        "vidas": [{
+            "id": b.id, "nome": b.nome, "cpf": b.cpf,
+            "situacao": b.situacao, "situacao_label": b.get_situacao_display(),
+            "tipo_vinculo": b.tipo_vinculo,
+            "grau_parentesco": b.get_grau_parentesco_display() if b.grau_parentesco else "",
+        } for b in vidas[:1000]],
+        "vidas_ativas": vidas.filter(situacao="ativo").count(),
+        "solicitacoes": [{
+            "id": s.id, "tipo": s.tipo, "tipo_label": s.get_tipo_display(),
+            "nome": s.nome, "status": s.status, "status_label": s.get_status_display(),
+            "criado_em": s.criado_em.strftime("%d/%m/%Y"),
+        } for s in SolicitacaoVidaRH.objects.filter(contrato=contrato).order_by("-criado_em")[:50]],
+    })
+
+
+@csrf_exempt
+def api_ps_rh_portal_solicitar(request, token):
+    """POST /api/plano-saude/rh/portal/<token>/solicitar — RH pede inclusão/exclusão."""
+    ctx = _rh_resolver_token(token)
+    if not ctx:
+        return JsonResponse({"erro": "Link inválido ou expirado"}, status=404)
+    _, contrato, empresa = ctx
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    from .models import SolicitacaoVidaRH
+    tipo = data.get("tipo", SolicitacaoVidaRH.TIPO_INCLUSAO)
+    if tipo not in dict(SolicitacaoVidaRH.TIPO_CHOICES):
+        return JsonResponse({"erro": "Tipo inválido"}, status=400)
+    if not data.get("nome") and tipo == SolicitacaoVidaRH.TIPO_INCLUSAO:
+        return JsonResponse({"erro": "Nome obrigatório"}, status=400)
+    beneficiario = None
+    if tipo == SolicitacaoVidaRH.TIPO_EXCLUSAO and data.get("beneficiario_id"):
+        beneficiario = contrato.vidas.filter(id=data["beneficiario_id"]).first()
+    s = SolicitacaoVidaRH.objects.create(
+        empresa=empresa, contrato=contrato, tipo=tipo,
+        nome=data.get("nome", "") or (beneficiario.nome if beneficiario else ""),
+        cpf=data.get("cpf", ""),
+        data_nascimento=_parse_date_opt(data.get("data_nascimento")),
+        grau_parentesco=data.get("grau_parentesco", ""),
+        beneficiario=beneficiario,
+        observacao=data.get("observacao", ""),
+    )
+    return JsonResponse({"status": "ok", "id": s.id}, status=201)
+
+
+@ensure_csrf_cookie
+def plano_portal_rh_page(request, token):
+    """Página pública do Portal RH (sem login, via token)."""
+    from django.shortcuts import render
+    ctx = _rh_resolver_token(token)
+    if not ctx:
+        return render(request, "plano_portal_beneficiario_invalido.html", status=404)
+    _, contrato, _e = ctx
+    return render(request, "plano_portal_rh.html", {
+        "token": token,
+        "razao_social": contrato.razao_social,
     })

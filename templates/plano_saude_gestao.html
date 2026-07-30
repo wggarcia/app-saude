@@ -206,6 +206,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
       <button class="tab-btn" onclick="setTab('prestadores')"><span>&#127973;</span> Rede Credenciada</button>
       <button class="tab-btn" onclick="setTab('portal')"><span>&#128279;</span> Portal Prestador</button>
       <button class="tab-btn" onclick="setTab('integracoes')"><span>&#129309;</span> Cooperacao</button>
+      <button class="tab-btn" onclick="setTab('intercambio')"><span>&#128260;</span> Intercambio (GTO)</button>
       <button class="tab-btn" onclick="setTab('faturamento')"><span>&#128200;</span> Faturamento</button>
       <button class="tab-btn" onclick="setTab('coparticipacao')"><span>&#128181;</span> Coparticipacao</button>
       <button class="tab-btn" onclick="setTab('reembolsos')"><span>&#128176;</span> Reembolsos</button>
@@ -221,6 +222,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div class="nav-group-body">
       {% if ps_ver_autorizacao %}
       <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
+      <button class="tab-btn" onclick="setTab('atuarial')"><span>&#128200;</span> Analise Atuarial</button>
       <button class="tab-btn" onclick="setTab('epidemiologia')"><span>&#127757;</span> Radar Epidemiologico</button>
       <button class="tab-btn" onclick="setTab('auditoria')"><span>&#128269;</span> Auditoria Medica</button>
       <button class="tab-btn" onclick="setTab('carencias')"><span>&#8987;</span> Carencias</button>
@@ -237,6 +239,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
       <button class="tab-btn" onclick="setTab('telemedicina')"><span>&#128241;</span> Telemedicina</button>
       <button class="tab-btn" onclick="setTab('odontologia')"><span>&#129463;</span> Odontologia</button>
       <button class="tab-btn" onclick="setTab('contratos')"><span>&#128209;</span> Contratos Corp.</button>
+      <button class="tab-btn" onclick="setTab('portalrh')"><span>&#127970;</span> Portal RH (B2B)</button>
       {% endif %}
     </div>
   </details>
@@ -1307,6 +1310,44 @@ tr:hover td{background:rgba(255,107,157,.03)}
     </div>
   </div>
 
+  <!-- ═══ ANALISE ATUARIAL ═══ -->
+  <div class="tab-panel" id="tab-atuarial">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Analise Atuarial</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">PMPM por faixa etaria (RN 63) e por produto · sinistralidade e reajuste tecnico</div>
+      </div>
+      <select class="filter-sel" id="atuarialMeses" onchange="carregarAtuarial()">
+        <option value="12">Ultimos 12 meses</option>
+        <option value="6">Ultimos 6 meses</option>
+        <option value="24">Ultimos 24 meses</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px" id="atuarialKpis">
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">Vidas ativas</div></div>
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">PMPM global</div></div>
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">Sinistralidade</div></div>
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">Reajuste tecnico</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#128101; PMPM por faixa etaria (ANS RN 63)</span></div>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>Faixa</th><th>Vidas</th><th>Custo periodo</th><th>PMPM</th></tr></thead>
+          <tbody id="tbodyAtuFaixa"><tr><td colspan="4" class="empty">Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#128203; PMPM por produto</span></div>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>Produto</th><th>Vidas</th><th>Custo periodo</th><th>PMPM</th></tr></thead>
+          <tbody id="tbodyAtuProduto"><tr><td colspan="4" class="empty">Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px" id="atuarialNota"></div>
+  </div>
+
   <!-- ═══ NPS BENEFICIARIO ═══ -->
   <div class="tab-panel" id="tab-nps">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -1330,6 +1371,76 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div class="card">
       <div class="card-header"><span class="card-title">&#128172; Comentarios recentes</span></div>
       <div id="npsComentarios" style="padding:8px 20px 16px"></div>
+    </div>
+  </div>
+
+  <!-- ═══ INTERCAMBIO (GTO) ═══ -->
+  <div class="tab-panel" id="tab-intercambio">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Intercambio entre Operadoras (GTO)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Atendimento fora de praca · emitida = a receber · recebida = a pagar</div>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalGto()">+ Nova GTO</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px" id="gtoKpis">
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">GTOs</div></div>
+      <div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">--</div><div class="kpi-lbl">A receber</div></div>
+      <div class="kpi warn"><div class="kpi-val" style="color:var(--warn)">--</div><div class="kpi-lbl">A pagar</div></div>
+      <div class="kpi"><div class="kpi-val">--</div><div class="kpi-lbl">Saldo</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="gap:10px;flex-wrap:wrap">
+        <span class="card-title">&#128260; Guias de Intercambio</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="filter-sel" id="filtroTipoGto" onchange="carregarIntercambio()">
+            <option value="">Todos os tipos</option>
+            <option value="emitida">Emitida (a receber)</option>
+            <option value="recebida">Recebida (a pagar)</option>
+          </select>
+          <select class="filter-sel" id="filtroStatusGto" onchange="carregarIntercambio()">
+            <option value="">Todos os status</option>
+            <option value="aberta">Aberta</option>
+            <option value="faturada">Faturada</option>
+            <option value="paga">Paga</option>
+            <option value="glosada">Glosada</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>GTO</th><th>Tipo</th><th>Operadora</th><th>Beneficiario</th><th>Praca</th><th>Valor</th><th>Status</th><th>Acao</th></tr></thead>
+          <tbody id="tbodyGto"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PORTAL RH (B2B) ═══ -->
+  <div class="tab-panel" id="tab-portalrh">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Portal RH (B2B)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Gere um link para o RH da empresa-contratante gerenciar as proprias vidas · aprove inclusoes/exclusoes</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header"><span class="card-title">&#127970; Contratos corporativos</span></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Empresa</th><th>Plano</th><th>Vidas</th><th>Mensalidade</th><th>Link RH</th><th>Solic.</th><th>Acao</th></tr></thead>
+          <tbody id="tbodyRhContratos"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">&#128203; Solicitacoes pendentes do RH</span></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Data</th><th>Empresa</th><th>Tipo</th><th>Vida</th><th>Parentesco</th><th>Acao</th></tr></thead>
+          <tbody id="tbodyRhSolic"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1546,6 +1657,66 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalNps')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarNps()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: RPC — Rol de Procedimentos -->
+<div class="modal-bg" id="modalRpc">
+  <div class="modal" style="max-width:640px">
+    <h3>&#127973; RPC — Rol de Procedimentos (RN 465)</h3>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input id="rpcCodigo" placeholder="Digite um código TUSS (ex: 10101012)" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
+      <button class="btn btn-primary" onclick="checarRolCodigo()">Checar</button>
+    </div>
+    <div id="rpcResultado" style="margin-bottom:14px"></div>
+    <div id="rpcPanorama" style="max-height:44vh;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalRpc')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova GTO (Intercâmbio) -->
+<div class="modal-bg" id="modalGto">
+  <div class="modal" style="max-width:640px">
+    <h3>&#128260; Nova GTO — Intercâmbio</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="gtoTipo">
+          <option value="emitida">Emitida — atendi visitante (a receber)</option>
+          <option value="recebida">Recebida — meu beneficiário fora (a pagar)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Nº GTO</label><input id="gtoNumero" placeholder="Número da guia"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Operadora correspondente *</label><input id="gtoOperadora" placeholder="Ex: Unimed Rio"></div>
+      <div class="form-group"><label>Registro ANS</label><input id="gtoRegAns" placeholder="000000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Beneficiário</label><input id="gtoBenefNome" placeholder="Nome do beneficiário"></div>
+      <div class="form-group"><label>Carteirinha</label><input id="gtoCarteirinha" placeholder="Nº carteirinha"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de atendimento</label>
+        <select id="gtoTipoAtend">
+          <option value="consulta">Consulta</option>
+          <option value="exame">Exame / Diagnóstico</option>
+          <option value="internacao">Internação</option>
+          <option value="urgencia">Urgência / Emergência</option>
+          <option value="terapia">Terapia / Procedimento</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Valor (R$) *</label><input id="gtoValor" type="number" step="0.01" placeholder="0,00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Praça de atendimento</label><input id="gtoPraca" placeholder="Cidade/UF"></div>
+      <div class="form-group"><label>Data do atendimento</label><input type="date" id="gtoData"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalGto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarGto()">Registrar GTO</button>
     </div>
   </div>
 </div>
@@ -2378,7 +2549,10 @@ function setTab(name) {
     reembolsos:carregarReembolsos,
     regulatorio:carregarIDSS,
     ressarcimento:carregarRessarcimento,
-    nps:carregarNps
+    nps:carregarNps,
+    atuarial:carregarAtuarial,
+    intercambio:carregarIntercambio,
+    portalrh:carregarPortalRh
   };
   if (loaders[name]) loaders[name]();
 }
@@ -4370,7 +4544,56 @@ function verIDSS() {
   abrirModal('modalIDSS');
 }
 
-function verificarRol() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
+// ════════════════════════════════════════════════════════════
+//  RPC — Rol de Procedimentos (RN 465)
+// ════════════════════════════════════════════════════════════
+async function verificarRol() {
+  document.getElementById('rpcCodigo').value = '';
+  document.getElementById('rpcResultado').innerHTML = '';
+  document.getElementById('rpcPanorama').innerHTML = '<div style="color:var(--muted);font-size:12px">Carregando panorama...</div>';
+  abrirModal('modalRpc');
+  var d = await api('/api/plano-saude/rpc');
+  if (!d) { document.getElementById('rpcPanorama').innerHTML = '<div style="color:var(--muted)">Erro ao carregar.</div>'; return; }
+  if (!d.catalogo_total) {
+    document.getElementById('rpcPanorama').innerHTML = '<div style="color:var(--muted);font-size:12px">Nenhum procedimento no catálogo TUSS. Cadastre o catálogo para checar cobertura obrigatória (RN 465).</div>';
+    return;
+  }
+  var html = '<div class="card" style="padding:14px;margin-bottom:12px"><div style="display:flex;gap:20px;flex-wrap:wrap">'+
+    '<div><div style="font-size:22px;font-weight:800">'+d.catalogo_total+'</div><div style="font-size:11px;color:var(--muted)">no catálogo</div></div>'+
+    '<div><div style="font-size:22px;font-weight:800;color:var(--ok)">'+d.cobertura_obrigatoria+'</div><div style="font-size:11px;color:var(--muted)">cobertura obrigatória ('+d.pct_cobertura+'%)</div></div>'+
+    '<div><div style="font-size:22px;font-weight:800;color:'+(d.total_alertas?'var(--warn)':'var(--ok)')+'">'+d.total_alertas+'</div><div style="font-size:11px;color:var(--muted)">alertas fora do Rol</div></div>'+
+    '</div></div>';
+  if ((d.por_segmento||[]).length) {
+    html += '<div style="font-size:12px;font-weight:700;margin-bottom:6px">Por segmento</div>';
+    html += '<table style="margin-bottom:12px"><thead><tr><th>Segmento</th><th>Total</th><th>Cobertos</th></tr></thead><tbody>'+
+      d.por_segmento.map(function(s){return '<tr><td>'+s.segmento+'</td><td>'+s.total+'</td><td>'+s.cobertos+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+  if ((d.alertas_fora_do_rol||[]).length) {
+    html += '<div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--warn)">⚠ Guias com procedimento fora do Rol cadastrado</div>';
+    html += '<table><thead><tr><th>Código TUSS</th><th>Guias</th><th>Situação</th></tr></thead><tbody>'+
+      d.alertas_fora_do_rol.map(function(a){
+        var lbl = a.situacao==='nao_catalogado'?'Não catalogado':'Fora da cobertura obrigatória';
+        return '<tr><td>'+a.codigo+'</td><td>'+a.guias+'</td><td><span class="badge badge-warn">'+lbl+'</span></td></tr>';
+      }).join('')+'</tbody></table>';
+  }
+  document.getElementById('rpcPanorama').innerHTML = html;
+}
+
+async function checarRolCodigo() {
+  var cod = (document.getElementById('rpcCodigo').value||'').trim();
+  if (!cod) { showToastPS('Digite um código TUSS','warn'); return; }
+  var d = await api('/api/plano-saude/rpc?codigo='+encodeURIComponent(cod));
+  var box = document.getElementById('rpcResultado');
+  if (!d || !d.encontrado) {
+    box.innerHTML = '<div style="border:1px solid var(--border);border-radius:10px;padding:12px;background:rgba(255,179,71,.08)"><strong>'+cod+'</strong> — '+((d&&d.mensagem)||'Não encontrado')+'</div>';
+    return;
+  }
+  var cor = d.cobertura_obrigatoria ? 'var(--ok)' : 'var(--warn)';
+  box.innerHTML = '<div style="border:1px solid var(--border);border-left:3px solid '+cor+';border-radius:10px;padding:12px">'+
+    '<div style="font-weight:700">'+cod+' — '+d.descricao+'</div>'+
+    '<div style="font-size:12px;color:var(--muted);margin:4px 0">Segmento: '+d.segmento_label+(d.prazo_atendimento_dias?(' · Prazo: '+d.prazo_atendimento_dias+' dias úteis'):'')+'</div>'+
+    '<div style="font-size:12.5px;color:'+cor+'">'+d.mensagem+'</div></div>';
+}
 
 // ════════════════════════════════════════════════════════════
 //  RESSARCIMENTO AO SUS (ABI / GRU)
@@ -4454,6 +4677,172 @@ async function mudarStatusRessarc(id, status) {
   if (!resp.ok) { showToastPS('Erro ao atualizar status','err'); return; }
   showToastPS('Status atualizado','ok');
   carregarRessarcimento();
+}
+
+// ════════════════════════════════════════════════════════════
+//  ANÁLISE ATUARIAL
+// ════════════════════════════════════════════════════════════
+async function carregarAtuarial() {
+  var meses = (document.getElementById('atuarialMeses')||{}).value || '12';
+  var d = await api('/api/plano-saude/atuarial?meses=' + meses);
+  if (!d) return;
+  var box = document.getElementById('atuarialKpis');
+  var reaj = d.reajuste_tecnico_sugerido == null ? 'n/d' : (d.reajuste_tecnico_sugerido + '%');
+  var reajCor = (d.reajuste_tecnico_sugerido && d.reajuste_tecnico_sugerido > 0) ? 'var(--warn)' : 'var(--ok)';
+  box.innerHTML =
+    '<div class="kpi"><div class="kpi-val">'+(d.vidas_ativas||0)+'</div><div class="kpi-lbl">Vidas ativas</div></div>'+
+    '<div class="kpi"><div class="kpi-val">'+fmtMoeda(d.pmpm_global)+'</div><div class="kpi-lbl">PMPM global ('+d.periodo_meses+'m)</div></div>'+
+    '<div class="kpi"><div class="kpi-val">'+(d.mlr==null?'n/d':d.mlr+'%')+'</div><div class="kpi-lbl">Sinistralidade (MLR)</div></div>'+
+    '<div class="kpi"><div class="kpi-val" style="color:'+reajCor+'">'+reaj+'</div><div class="kpi-lbl">Reajuste tecnico</div></div>';
+
+  var maxFaixa = Math.max.apply(null, (d.pmpm_por_faixa||[]).map(function(f){return f.pmpm;}).concat([1]));
+  document.getElementById('tbodyAtuFaixa').innerHTML = (d.pmpm_por_faixa||[]).map(function(f){
+    var w = Math.round(f.pmpm / maxFaixa * 100);
+    return '<tr><td>'+f.faixa+'</td><td>'+f.vidas+'</td><td>'+fmtMoeda(f.custo)+'</td>'+
+      '<td><strong>'+fmtMoeda(f.pmpm)+'</strong><div style="height:4px;border-radius:3px;background:rgba(255,255,255,.06);margin-top:3px"><div style="height:100%;width:'+w+'%;background:var(--accent)"></div></div></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">Sem dados</td></tr>';
+
+  document.getElementById('tbodyAtuProduto').innerHTML = (d.pmpm_por_produto||[]).map(function(p){
+    return '<tr><td>'+p.produto+'</td><td>'+p.vidas+'</td><td>'+fmtMoeda(p.custo)+'</td><td><strong>'+fmtMoeda(p.pmpm)+'</strong></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">Sem produtos</td></tr>';
+
+  var alerta = d.vidas_sem_data_nascimento ? '<div style="font-size:11px;color:var(--warn);margin-top:6px">⚠ '+d.vidas_sem_data_nascimento+' vidas sem data de nascimento ficam fora da distribuicao por faixa etaria.</div>' : '';
+  document.getElementById('atuarialNota').innerHTML =
+    '<div style="padding:14px 18px"><strong>Reajuste tecnico:</strong> '+d.reajuste_base+
+    '<div style="font-size:11px;color:var(--muted);margin-top:4px">PMPM = custo assistencial medio por beneficiario por mes. Calculo sobre dados reais da carteira; meta de sinistralidade 70%.</div>'+alerta+'</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+//  PORTAL RH (B2B)
+// ════════════════════════════════════════════════════════════
+async function carregarPortalRh() {
+  var d = await api('/api/plano-saude/rh/contratos');
+  var contratos = (d && d.contratos) || [];
+  var tb = document.getElementById('tbodyRhContratos');
+  tb.innerHTML = contratos.length ? contratos.map(function(c){
+    var link = c.tem_token && c.token_ativo
+      ? '<button class="btn btn-ghost btn-sm" onclick="copiarLinkRh(\''+c.portal_url+'\')">Copiar link</button>'
+      : '<button class="btn btn-primary btn-sm" onclick="gerarLinkRh('+c.id+')">Gerar link</button>';
+    return '<tr><td><strong>'+c.razao_social+'</strong><div style="font-size:10.5px;color:var(--muted)">'+(c.cnpj||'')+'</div></td>'+
+      '<td>'+(c.plano_nome||'--')+'</td><td>'+c.total_vidas+'</td><td>'+fmtMoeda(c.mensalidade_total)+'</td>'+
+      '<td>'+link+'</td>'+
+      '<td>'+(c.solicitacoes_pendentes?'<span class="badge badge-warn">'+c.solicitacoes_pendentes+'</span>':'0')+'</td>'+
+      '<td>'+(c.tem_token?'<button class="btn btn-ghost btn-sm" onclick="gerarLinkRh('+c.id+',true)">Regenerar</button>':'')+'</td></tr>';
+  }).join('') : '<tr><td colspan="7" class="empty">Nenhum contrato corporativo. Cadastre em "Contratos Corp.".</td></tr>';
+  carregarRhSolicitacoes();
+}
+
+async function carregarRhSolicitacoes() {
+  var d = await api('/api/plano-saude/rh/solicitacoes?status=pendente');
+  var lista = (d && d.solicitacoes) || [];
+  var tb = document.getElementById('tbodyRhSolic');
+  tb.innerHTML = lista.length ? lista.map(function(s){
+    return '<tr><td>'+s.criado_em+'</td><td>'+s.contrato_razao+'</td>'+
+      '<td><span class="badge '+(s.tipo==='inclusao'?'badge-ok':'badge-warn')+'">'+s.tipo_label+'</span></td>'+
+      '<td>'+s.nome+(s.cpf?'<div style="font-size:10.5px;color:var(--muted)">'+s.cpf+'</div>':'')+'</td>'+
+      '<td>'+(s.grau_parentesco||'Titular')+'</td>'+
+      '<td><button class="btn btn-ok btn-sm" onclick="acaoRhSolic('+s.id+',\'aprovar\')">Aprovar</button> '+
+      '<button class="btn btn-danger btn-sm" onclick="acaoRhSolic('+s.id+',\'rejeitar\')">Rejeitar</button></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty">Nenhuma solicitação pendente.</td></tr>';
+}
+
+async function gerarLinkRh(contratoId, regenerar) {
+  var resp = await fetch('/api/plano-saude/rh/token', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({contrato_id:contratoId, regenerar:!!regenerar})});
+  var r = await resp.json().catch(function(){return {};});
+  if (!resp.ok) { showToastPS(r.erro||'Erro ao gerar link','err'); return; }
+  copiarLinkRh(r.portal_url);
+  carregarPortalRh();
+}
+
+function copiarLinkRh(url) {
+  var full = window.location.origin + url;
+  if (navigator.clipboard) navigator.clipboard.writeText(full);
+  showToastPS('Link copiado: '+full, 'ok');
+}
+
+async function acaoRhSolic(id, acao) {
+  var resposta = acao==='rejeitar' ? (prompt('Motivo da rejeição (opcional):')||'') : '';
+  var resp = await fetch('/api/plano-saude/rh/solicitacoes/'+id, {method:'PUT',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({acao:acao, resposta:resposta})});
+  if (!resp.ok) { showToastPS('Erro ao processar','err'); return; }
+  showToastPS(acao==='aprovar'?'Solicitação aprovada':'Solicitação rejeitada','ok');
+  carregarPortalRh();
+}
+
+// ════════════════════════════════════════════════════════════
+//  INTERCÂMBIO (GTO)
+// ════════════════════════════════════════════════════════════
+var _gtoStatusBadge = {aberta:'badge-warn', faturada:'badge-gray', paga:'badge-ok', glosada:'badge-danger', cancelada:'badge-gray'};
+var _gtoProximo = {
+  aberta:[['faturada','Faturar']], faturada:[['paga','Liquidar'],['glosada','Glosar']],
+  glosada:[['faturada','Refaturar']], paga:[], cancelada:[]
+};
+
+async function carregarIntercambio() {
+  carregarGtoKpis();
+  var tipo = (document.getElementById('filtroTipoGto')||{}).value || '';
+  var status = (document.getElementById('filtroStatusGto')||{}).value || '';
+  var params = new URLSearchParams();
+  if (tipo) params.set('tipo', tipo);
+  if (status) params.set('status', status);
+  var d = await api('/api/plano-saude/intercambio?'+params.toString());
+  var lista = (d && d.intercambios) || [];
+  var tb = document.getElementById('tbodyGto');
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma GTO registrada</td></tr>'; return; }
+  tb.innerHTML = lista.map(function(g){
+    var acoes = (_gtoProximo[g.status]||[]).map(function(a){
+      return '<button class="btn btn-ghost btn-sm" onclick="mudarStatusGto('+g.id+',\''+a[0]+'\')">'+a[1]+'</button>';
+    }).join(' ') || '<span style="color:var(--muted);font-size:11px">—</span>';
+    var tipoBadge = g.tipo==='emitida' ? '<span class="badge badge-ok">A receber</span>' : '<span class="badge badge-warn">A pagar</span>';
+    return '<tr><td>'+(g.numero_gto||'--')+'</td><td>'+tipoBadge+'</td>'+
+      '<td>'+(g.operadora_correspondente||'--')+'</td>'+
+      '<td>'+(g.beneficiario_nome||'--')+'<div style="font-size:10.5px;color:var(--muted)">'+(g.beneficiario_carteirinha||'')+'</div></td>'+
+      '<td>'+(g.praca_atendimento||'--')+'</td>'+
+      '<td>'+fmtMoeda(g.valor)+'</td>'+
+      '<td><span class="badge '+(_gtoStatusBadge[g.status]||'badge-gray')+'">'+(g.status_label||g.status)+'</span></td>'+
+      '<td>'+acoes+'</td></tr>';
+  }).join('');
+}
+
+async function carregarGtoKpis() {
+  var k = await api('/api/plano-saude/intercambio/kpis');
+  var box = document.getElementById('gtoKpis');
+  if (!k || !box) return;
+  var saldoCor = (k.saldo||0) >= 0 ? 'var(--ok)' : 'var(--accent)';
+  box.innerHTML =
+    '<div class="kpi"><div class="kpi-val">'+(k.total||0)+'</div><div class="kpi-lbl">GTOs ('+(k.emitidas||0)+'e / '+(k.recebidas||0)+'r)</div></div>'+
+    '<div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">'+fmtMoeda(k.a_receber)+'</div><div class="kpi-lbl">A receber</div></div>'+
+    '<div class="kpi warn"><div class="kpi-val" style="color:var(--warn)">'+fmtMoeda(k.a_pagar)+'</div><div class="kpi-lbl">A pagar</div></div>'+
+    '<div class="kpi"><div class="kpi-val" style="color:'+saldoCor+'">'+fmtMoeda(k.saldo)+'</div><div class="kpi-lbl">Saldo</div></div>';
+}
+
+function abrirModalGto() {
+  ['gtoNumero','gtoOperadora','gtoRegAns','gtoBenefNome','gtoCarteirinha','gtoValor','gtoPraca','gtoData'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';});
+  document.getElementById('gtoTipo').value='emitida';
+  document.getElementById('gtoTipoAtend').value='consulta';
+  abrirModal('modalGto');
+}
+
+async function salvarGto() {
+  var body = {
+    tipo:v('gtoTipo'), numero_gto:v('gtoNumero'), operadora_correspondente:v('gtoOperadora'),
+    registro_ans_correspondente:v('gtoRegAns'), beneficiario_nome:v('gtoBenefNome'),
+    beneficiario_carteirinha:v('gtoCarteirinha'), tipo_atendimento:v('gtoTipoAtend'),
+    valor:parseFloat(v('gtoValor'))||0, praca_atendimento:v('gtoPraca'), data_atendimento:v('gtoData')||null
+  };
+  if (!body.operadora_correspondente) { showToastPS('Informe a operadora correspondente','warn'); return; }
+  if (!body.valor) { showToastPS('Informe o valor','warn'); return; }
+  var resp = await fetch('/api/plano-saude/intercambio', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  var r = await resp.json().catch(function(){return {};});
+  if (!resp.ok) { showToastPS(r.erro||'Erro ao registrar GTO','err'); return; }
+  fecharModal('modalGto');
+  carregarIntercambio();
+}
+
+async function mudarStatusGto(id, status) {
+  var resp = await fetch('/api/plano-saude/intercambio/'+id, {method:'PUT',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({status:status})});
+  if (!resp.ok) { showToastPS('Erro ao atualizar','err'); return; }
+  showToastPS('Status atualizado','ok');
+  carregarIntercambio();
 }
 
 // ════════════════════════════════════════════════════════════

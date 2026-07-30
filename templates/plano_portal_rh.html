@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portal RH — {{ razao_social }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f7ff;--surface:#ffffff;--surface2:#f5f9ff;--accent:#0078c8;--accent2:#00b89a;
+  --danger:#e53e3e;--warn:#d97706;--ok:#059669;--text:#1a2e42;--muted:#6b8ba4;
+  --radius:12px;--border:#dce8f5;--shadow:0 2px 12px rgba(0,120,200,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;box-shadow:var(--shadow)}
+.logo{font-size:20px;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:10px}
+.main{max-width:1100px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:24px}
+.hero{background:linear-gradient(135deg,var(--accent) 0%,#004c88 100%);border-radius:18px;padding:28px 32px;color:#fff;box-shadow:0 8px 32px rgba(0,120,200,.25)}
+.hero h1{font-size:22px;font-weight:800;margin-bottom:4px}
+.hero .sub{font-size:13px;opacity:.85}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+.kpi{background:rgba(255,255,255,.12);border-radius:12px;padding:14px 16px}
+.kpi .v{font-size:24px;font-weight:800}
+.kpi .l{font-size:11px;opacity:.8}
+.section-title{font-size:16px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:var(--surface2)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(5,150,105,.1);color:var(--ok)}
+.badge-warn{background:rgba(217,119,6,.1);color:var(--warn)}
+.badge-danger{background:rgba(229,62,62,.1);color:var(--danger)}
+.badge-gray{background:rgba(107,139,164,.1);color:var(--muted)}
+.btn{border:none;border-radius:10px;padding:9px 16px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:rgba(229,62,62,.1);color:var(--danger)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:20px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:26px;min-width:340px;max-width:480px;width:100%}
+.modal h3{font-size:16px;font-weight:800;color:var(--accent);margin-bottom:18px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.fg input,.fg select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;background:var(--surface2);color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;display:none}
+.toast.show{display:block}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🏢 Portal RH <span style="font-size:12px;font-weight:500;color:var(--muted)">· gestão de vidas</span></div>
+  <div class="badge" style="background:rgba(0,120,200,.1);color:var(--accent)" id="hRazao">{{ razao_social }}</div>
+</header>
+
+<div class="main">
+  <div class="hero">
+    <h1 id="heroRazao">{{ razao_social }}</h1>
+    <div class="sub" id="heroSub">Carregando contrato...</div>
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="kVidas">--</div><div class="l">Vidas ativas</div></div>
+      <div class="kpi"><div class="v" id="kMensalidade">--</div><div class="l">Mensalidade total</div></div>
+      <div class="kpi"><div class="v" id="kRenovacao">--</div><div class="l">Renovação</div></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title"><span>👥 Vidas do contrato</span>
+      <button class="btn btn-primary btn-sm" onclick="abrirInclusao()">+ Solicitar inclusão</button>
+    </div>
+    <div class="card"><div style="overflow-x:auto"><table>
+      <thead><tr><th>Nome</th><th>CPF</th><th>Vínculo</th><th>Situação</th><th>Ação</th></tr></thead>
+      <tbody id="tbVidas"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+    </table></div></div>
+  </div>
+
+  <div>
+    <div class="section-title"><span>📋 Minhas solicitações</span></div>
+    <div class="card"><div style="overflow-x:auto"><table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Vida</th><th>Status</th></tr></thead>
+      <tbody id="tbSolic"><tr><td colspan="4" class="empty">Nenhuma solicitação.</td></tr></tbody>
+    </table></div></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalInc">
+  <div class="modal">
+    <h3>Solicitar inclusão de vida</h3>
+    <div class="fg"><label>Nome completo *</label><input id="incNome" placeholder="Nome da vida"></div>
+    <div class="fg"><label>CPF</label><input id="incCpf" placeholder="000.000.000-00"></div>
+    <div class="fg"><label>Data de nascimento</label><input type="date" id="incNasc"></div>
+    <div class="fg"><label>Grau de parentesco (deixe vazio se titular)</label>
+      <select id="incParentesco">
+        <option value="">Titular</option>
+        <option value="conjuge">Cônjuge / Companheiro(a)</option>
+        <option value="filho">Filho(a)</option>
+        <option value="pai_mae">Pai / Mãe</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fechar('modalInc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="enviarInclusao()">Enviar solicitação</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = "{{ token }}";
+var BASE = "/api/plano-saude/rh/portal/" + TOKEN;
+function getCsrf(){var c=document.cookie.split(';').map(function(x){return x.trim();}).find(function(x){return x.startsWith('csrftoken=');});return c?c.split('=')[1]:'';}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2600);}
+function abrir(id){document.getElementById(id).classList.add('open');}
+function fechar(id){document.getElementById(id).classList.remove('open');}
+function fmtMoeda(v){return v==null?'--':'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});}
+function fmtData(s){if(!s)return '--';var p=s.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:s;}
+
+async function carregar(){
+  var r = await fetch(BASE + '/dados', {credentials:'include'});
+  if(!r.ok){document.getElementById('heroSub').textContent='Link inválido ou expirado.';return;}
+  var d = await r.json();
+  document.getElementById('heroSub').textContent = (d.contrato.plano_nome||'') + ' · CNPJ ' + (d.contrato.cnpj||'—') + ' · ' + d.contrato.status;
+  document.getElementById('kVidas').textContent = d.vidas_ativas;
+  document.getElementById('kMensalidade').textContent = fmtMoeda(d.contrato.mensalidade_total);
+  document.getElementById('kRenovacao').textContent = fmtData(d.contrato.data_renovacao);
+  var sit={ativo:'badge-ok',suspenso:'badge-warn',cancelado:'badge-danger'};
+  document.getElementById('tbVidas').innerHTML = (d.vidas||[]).length ? d.vidas.map(function(b){
+    var acao = b.situacao==='ativo' ? '<button class="btn btn-danger btn-sm" onclick="solicitarExclusao('+b.id+',\''+(b.nome.replace(/'/g,""))+'\')">Excluir</button>' : '--';
+    return '<tr><td><strong>'+b.nome+'</strong></td><td>'+(b.cpf||'--')+'</td>'+
+      '<td>'+(b.tipo_vinculo==='dependente'?('Dependente'+(b.grau_parentesco?' · '+b.grau_parentesco:'')):'Titular')+'</td>'+
+      '<td><span class="badge '+(sit[b.situacao]||'badge-gray')+'">'+b.situacao_label+'</span></td><td>'+acao+'</td></tr>';
+  }).join('') : '<tr><td colspan="5" class="empty">Nenhuma vida cadastrada neste contrato.</td></tr>';
+  var st={pendente:'badge-warn',aprovada:'badge-ok',rejeitada:'badge-danger'};
+  document.getElementById('tbSolic').innerHTML = (d.solicitacoes||[]).length ? d.solicitacoes.map(function(s){
+    return '<tr><td>'+s.criado_em+'</td><td>'+s.tipo_label+'</td><td>'+s.nome+'</td>'+
+      '<td><span class="badge '+(st[s.status]||'badge-gray')+'">'+s.status_label+'</span></td></tr>';
+  }).join('') : '<tr><td colspan="4" class="empty">Nenhuma solicitação.</td></tr>';
+}
+
+function abrirInclusao(){['incNome','incCpf','incNasc'].forEach(function(i){document.getElementById(i).value='';});document.getElementById('incParentesco').value='';abrir('modalInc');}
+async function enviarInclusao(){
+  var nome=(document.getElementById('incNome').value||'').trim();
+  if(!nome){toast('Informe o nome');return;}
+  var body={tipo:'inclusao',nome:nome,cpf:document.getElementById('incCpf').value,data_nascimento:document.getElementById('incNasc').value||null,grau_parentesco:document.getElementById('incParentesco').value};
+  var r=await fetch(BASE+'/solicitar',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  if(!r.ok){toast('Erro ao enviar');return;}
+  fechar('modalInc');toast('Solicitação enviada à operadora');carregar();
+}
+async function solicitarExclusao(id,nome){
+  if(!confirm('Solicitar exclusão de '+nome+'?'))return;
+  var r=await fetch(BASE+'/solicitar',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({tipo:'exclusao',beneficiario_id:id,nome:nome})});
+  if(!r.ok){toast('Erro ao enviar');return;}
+  toast('Solicitação de exclusão enviada');carregar();
+}
+carregar();
+</script>
+</body>
+</html>
