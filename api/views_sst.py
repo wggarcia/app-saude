@@ -973,6 +973,130 @@ def api_documentos_sst(request):
     return JsonResponse({"erro": "método não permitido"}, status=405)
 
 
+@csrf_exempt
+def api_documento_sst_detalhe(request, doc_id):
+    """PATCH/DELETE de um documento SST. PATCH atualiza status e campos
+    editáveis (ex.: marcar 'em_revisao'). Isolado por empresa (tenant)."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    try:
+        doc = DocumentoSST.objects.get(id=doc_id, empresa=empresa)
+    except DocumentoSST.DoesNotExist:
+        return JsonResponse({"erro": "Documento não encontrado"}, status=404)
+
+    if request.method in ("PATCH", "PUT"):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        if "status" in data:
+            validos = {s[0] for s in DocumentoSST.STATUS}
+            if data["status"] not in validos:
+                return JsonResponse({"erro": "Status inválido"}, status=400)
+            doc.status = data["status"]
+        for campo, attr in (("titulo", "titulo"), ("responsavel", "responsavel_tecnico"),
+                            ("registro", "registro_profissional"), ("observacoes", "observacoes")):
+            if campo in data:
+                setattr(doc, attr, data[campo])
+        from datetime import datetime
+        for campo, attr in (("data_emissao", "data_emissao"), ("data_validade", "data_validade")):
+            if campo in data:
+                try:
+                    setattr(doc, attr, datetime.strptime(data[campo], "%Y-%m-%d").date() if data[campo] else None)
+                except Exception:
+                    pass
+        doc.save()
+        return JsonResponse({"id": doc.id, "status": doc.status, "ok": True})
+
+    if request.method == "DELETE":
+        doc.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── Rede de Apoio (psicossocial / NR-1) ─────────────────────────────────────────
+
+def _rede_apoio_dict(a):
+    return {
+        "id": a.id, "nome": a.nome, "tipo": a.tipo, "tipo_label": a.get_tipo_display(),
+        "categoria": a.categoria, "categoria_label": a.get_categoria_display(),
+        "contato": a.contato, "telefone": a.telefone, "email": a.email,
+        "descricao": a.descricao, "disponibilidade": a.disponibilidade, "ativo": a.ativo,
+    }
+
+
+@csrf_exempt
+def api_rede_apoio_sst(request):
+    """GET/POST /api/sst/rede-apoio — recursos da rede de apoio psicossocial."""
+    from .models import RedeApoioSST
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        qs = RedeApoioSST.objects.filter(empresa=empresa)
+        categoria = request.GET.get("categoria")
+        if categoria:
+            qs = qs.filter(categoria=categoria)
+        if request.GET.get("ativo") == "1":
+            qs = qs.filter(ativo=True)
+        return JsonResponse({"recursos": [_rede_apoio_dict(a) for a in qs]})
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        if not (data.get("nome") or "").strip():
+            return JsonResponse({"erro": "Nome é obrigatório"}, status=400)
+        a = RedeApoioSST.objects.create(
+            empresa=empresa,
+            nome=data.get("nome", "").strip(),
+            tipo=data.get("tipo", "interno"),
+            categoria=data.get("categoria", "psicologico"),
+            contato=data.get("contato", ""),
+            telefone=data.get("telefone", ""),
+            email=data.get("email", ""),
+            descricao=data.get("descricao", ""),
+            disponibilidade=data.get("disponibilidade", ""),
+        )
+        return JsonResponse({"recurso": _rede_apoio_dict(a)}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_rede_apoio_sst_detalhe(request, apoio_id):
+    """PATCH/DELETE de um recurso da rede de apoio."""
+    from .models import RedeApoioSST
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    try:
+        a = RedeApoioSST.objects.get(id=apoio_id, empresa=empresa)
+    except RedeApoioSST.DoesNotExist:
+        return JsonResponse({"erro": "Recurso não encontrado"}, status=404)
+
+    if request.method in ("PATCH", "PUT"):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for campo in ["nome", "tipo", "categoria", "contato", "telefone", "email", "descricao", "disponibilidade", "ativo"]:
+            if campo in data:
+                setattr(a, campo, data[campo])
+        a.save()
+        return JsonResponse({"recurso": _rede_apoio_dict(a)})
+
+    if request.method == "DELETE":
+        a.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
 # ── Afastamentos ──────────────────────────────────────────────────────────────
 
 @csrf_exempt

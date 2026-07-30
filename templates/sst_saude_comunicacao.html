@@ -581,7 +581,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
               <p>Recursos internos e externos de apoio psicossocial e saúde para encaminhamento.</p>
             </div>
             <div class="ph-actions">
-              <button class="btn-main" style="font-size:.7rem;padding:6px 12px" onclick="showToast('Módulo de cadastro de apoio: em breve')">+ Adicionar</button>
+              <button class="btn-main" style="font-size:.7rem;padding:6px 12px" onclick="abrirModalApoio()">+ Adicionar</button>
             </div>
           </div>
           <div class="card-list" id="apoio-lista">
@@ -784,6 +784,67 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModal('modal-conflito')">Cancelar</button>
       <button class="btn-submit" id="btn-modal-conf" onclick="salvarConflito()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-apoio">
+  <div class="modal">
+    <h3>Adicionar recurso à Rede de Apoio</h3>
+    <div class="modal-sub">Cadastre um recurso interno ou externo de apoio psicossocial/saúde para encaminhamento de trabalhadores.</div>
+    <div class="form-field">
+      <label class="form-label">Nome do recurso *</label>
+      <input type="text" class="form-input" id="ap-nome" placeholder="Ex: Ambulatório de Psicologia, CAPS, CVV…">
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="ap-tipo">
+          <option value="interno">Interno</option>
+          <option value="externo">Externo</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Categoria</label>
+        <select class="form-select" id="ap-categoria">
+          <option value="psicologico">Apoio Psicológico</option>
+          <option value="psiquiatrico">Psiquiátrico</option>
+          <option value="juridico">Jurídico</option>
+          <option value="social">Assistência Social</option>
+          <option value="saude">Saúde / Médico</option>
+          <option value="financeiro">Orientação Financeira</option>
+          <option value="dependencia">Dependência Química</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Contato (pessoa/serviço)</label>
+        <input type="text" class="form-input" id="ap-contato" placeholder="Nome do responsável ou serviço">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Telefone</label>
+        <input type="text" class="form-input" id="ap-telefone" placeholder="(00) 00000-0000 ou 188">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">E-mail</label>
+        <input type="text" class="form-input" id="ap-email" placeholder="contato@servico.org">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Disponibilidade</label>
+        <input type="text" class="form-input" id="ap-disp" placeholder="Ex: 24h · seg-sex 8-18h">
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Descrição</label>
+      <textarea class="form-textarea" id="ap-desc" rows="3" placeholder="Como acionar, público-alvo, observações…"></textarea>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-apoio')">Cancelar</button>
+      <button class="btn-submit" onclick="salvarApoio()">Adicionar</button>
     </div>
   </div>
 </div>
@@ -1253,12 +1314,8 @@ async function carregarAlertas() {
     // burnout count
     const burnoutWrap = document.getElementById('burnout-count');
     if (burnoutWrap) burnoutWrap.textContent = data.burnout_alto ?? '—';
-    renderApoio((data.apoios || []).map(a => ({
-      nome: a['alias__nome'] || 'Colaborador',
-      tipo: a.deseja_contato ? 'Contato solicitado' : 'Apoio monitorado',
-      contato: a['setor__nome'] || '',
-      disponivel: a.status !== 'concluido',
-    })));
+    // A "Rede de apoio disponível" é um diretório curado próprio (carregarApoio),
+    // não os alertas — não sobrescreve mais o #apoio-lista aqui.
   } catch (_) {
     document.getElementById('alertas-lista').innerHTML = '<div class="empty">Não foi possível carregar alertas.</div>';
   }
@@ -1313,17 +1370,68 @@ async function marcarResolvido(id) {
   }
 }
 
+async function carregarApoio() {
+  try {
+    const r = await fetch('/api/sst/rede-apoio');
+    const d = await r.json();
+    renderApoio(d.recursos || []);
+  } catch (_) {
+    document.getElementById('apoio-lista').innerHTML = '<div class="empty">Não foi possível carregar a rede de apoio.</div>';
+  }
+}
+
 function renderApoio(recursos) {
   const wrap = document.getElementById('apoio-lista');
-  if (!recursos.length) { wrap.innerHTML = '<div class="empty">Nenhum recurso de apoio cadastrado ainda.</div>'; return; }
-  wrap.innerHTML = recursos.map(r => `
+  if (!recursos.length) { wrap.innerHTML = '<div class="empty">Nenhum recurso de apoio cadastrado ainda. Use "+ Adicionar" para começar.</div>'; return; }
+  wrap.innerHTML = recursos.map(r => {
+    const contato = [r.categoria_label || r.categoria, r.contato, r.telefone].filter(Boolean).join(' · ');
+    const ativo = r.ativo !== false;
+    return `
     <div class="card-item">
       <div class="card-item-body">
-        <div class="card-item-title">${escHtml(r.nome)}</div>
-        <div class="card-item-sub">${escHtml(r.tipo || r.categoria || '')}${r.contato ? ' · ' + escHtml(r.contato) : ''}</div>
+        <div class="card-item-title">${escHtml(r.nome)} <span style="font-size:.62rem;color:var(--muted)">(${escHtml(r.tipo_label || r.tipo || '')})</span></div>
+        <div class="card-item-sub">${escHtml(contato)}${r.disponibilidade ? ' · ' + escHtml(r.disponibilidade) : ''}</div>
       </div>
-      <span class="badge ${r.disponivel !== false ? 'b-ok' : 'b-muted'}">${r.disponivel !== false ? 'Disponível' : 'Indisponível'}</span>
-    </div>`).join('');
+      <div class="card-item-right">
+        <span class="badge ${ativo ? 'b-ok' : 'b-muted'}">${ativo ? 'Disponível' : 'Inativo'}</span>
+        <button class="btn-ghost" style="font-size:.62rem;padding:3px 8px" onclick="removerApoio(${r.id})">Remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function removerApoio(id) {
+  if (!confirm('Remover este recurso da rede de apoio?')) return;
+  const r = await fetch('/api/sst/rede-apoio/' + id, {method:'DELETE', headers:{'X-CSRFToken': getCookie('csrftoken')}});
+  if (r.ok) { showToast('Recurso removido'); carregarApoio(); } else showToast('Erro ao remover', true);
+}
+
+function abrirModalApoio() { document.getElementById('modal-apoio').classList.add('open'); }
+
+async function salvarApoio() {
+  const nome = (document.getElementById('ap-nome').value || '').trim();
+  if (!nome) { showToast('Informe o nome do recurso', true); return; }
+  const body = {
+    nome: nome,
+    tipo: document.getElementById('ap-tipo').value,
+    categoria: document.getElementById('ap-categoria').value,
+    contato: document.getElementById('ap-contato').value.trim(),
+    telefone: document.getElementById('ap-telefone').value.trim(),
+    email: document.getElementById('ap-email').value.trim(),
+    disponibilidade: document.getElementById('ap-disp').value.trim(),
+    descricao: document.getElementById('ap-desc').value.trim(),
+  };
+  const r = await fetch('/api/sst/rede-apoio', {
+    method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json().catch(()=>({}));
+  if (r.ok) {
+    showToast('Recurso adicionado à rede de apoio');
+    document.getElementById('modal-apoio').classList.remove('open');
+    ['ap-nome','ap-contato','ap-telefone','ap-email','ap-disp','ap-desc'].forEach(i=>document.getElementById(i).value='');
+    carregarApoio();
+  } else showToast(d.erro || 'Erro ao adicionar', true);
 }
 
 function renderTriagem(triagens) {
@@ -1520,6 +1628,7 @@ document.querySelectorAll('.modal-bg').forEach(bg => {
 // INIT
 // ════════════════════════════════════════════════════════
 carregarPainel();
+carregarApoio();
 </script>
 </body>
 </html>

@@ -221,7 +221,11 @@ async function salvar(){
   btn.textContent="Cadastrar Documento";btn.disabled=false;
 }
 
-function marcarRevisao(id){_t("Funcionalidade de atualização de status em desenvolvimento.",'warn');}
+async function marcarRevisao(id){
+  const r=await fetch("/api/sst/documentos/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"em_revisao"})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){_t("Documento marcado como Em Revisão",'ok');carregar();}else _t(d.erro||"Erro ao atualizar status",'err');
+}
 
 carregar();
 

@@ -1567,6 +1567,40 @@ class DocumentoSST(models.Model):
         return f"{self.tipo} — {self.empresa.nome} ({self.status})"
 
 
+class RedeApoioSST(models.Model):
+    """Recurso da rede de apoio psicossocial/saúde para encaminhamento de
+    trabalhadores (NR-1 / gestão de riscos psicossociais)."""
+    TIPO = [("interno", "Interno"), ("externo", "Externo")]
+    CATEGORIA = [
+        ("psicologico", "Apoio Psicológico"),
+        ("psiquiatrico", "Psiquiátrico"),
+        ("juridico", "Jurídico"),
+        ("social", "Assistência Social"),
+        ("saude", "Saúde / Médico"),
+        ("financeiro", "Orientação Financeira"),
+        ("dependencia", "Dependência Química"),
+        ("outro", "Outro"),
+    ]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="rede_apoio_sst")
+    nome = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=10, choices=TIPO, default="interno")
+    categoria = models.CharField(max_length=15, choices=CATEGORIA, default="psicologico")
+    contato = models.CharField(max_length=200, blank=True, default="")
+    telefone = models.CharField(max_length=40, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    descricao = models.TextField(blank=True, default="")
+    disponibilidade = models.CharField(max_length=120, blank=True, default="", help_text="Ex: 24h, seg-sex 8-18h")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["categoria", "nome"]
+        indexes = [models.Index(fields=["empresa", "categoria"])]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_categoria_display()})"
+
+
 class AfastamentoSST(models.Model):
     MOTIVO = [
         ("acidente_trabalho", "Acidente de Trabalho"),
