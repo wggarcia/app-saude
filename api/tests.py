@@ -7798,7 +7798,11 @@ class HospitalPaginasOrfasSemTemplateTests(TestCase):
                     resp.status_code, 200,
                     msg=f"{url} retornou {resp.status_code} (esperado 200 — verifique TemplateDoesNotExist)",
                 )
-                self.assertIn(b"constru", resp.content.lower())
+                corpo = resp.content.lower()
+                # Antes essas telas eram placeholder "em construção"; hoje
+                # renderizam o módulo real (hospital_modulo_generico.html).
+                self.assertNotIn(b"em constru", corpo, msg=f"{url} voltou a ser placeholder")
+                self.assertIn(b"hospitalos", corpo, msg=f"{url} não renderizou o módulo real")
 
     def test_sem_feature_liberada_cai_no_upgrade_nao_no_500(self):
         """Confirma o comportamento hoje (sem mock): nenhum pacote tem essas

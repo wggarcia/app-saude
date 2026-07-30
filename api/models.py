@@ -6134,6 +6134,9 @@ class TwoFactorTOTP(models.Model):
     ativo = models.BooleanField(default=False)
     backup_codes = models.JSONField(default=list, blank=True)  # lista de hashes SHA-256
     confirmado_em = models.DateTimeField(null=True, blank=True)
+    # Throttling do step-up (RFC 4226 §7.3): 6 dígitos sem limite caem por força bruta.
+    falhas_2fa = models.PositiveSmallIntegerField(default=0)
+    bloqueado_ate = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

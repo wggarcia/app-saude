@@ -1217,7 +1217,7 @@ select option{background:#0b1822}
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="card glass">
           <div class="section-title">🔐 Autenticação em Dois Fatores (TOTP)</div>
-          <div class="section-sub">2FA por app autenticador (Google Authenticator, Authy, 1Password) para o acesso ao console de TI</div>
+          <div class="section-sub">App autenticador (Google Authenticator, Authy, 1Password). Com o 2FA ativo, a entrada neste console passa a pedir o código — a confirmação vale 12h por sessão e o login normal continua igual.</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px">
             <div>
               <div id="twoFaStatus" style="font-size:.95rem;font-weight:700;color:var(--danger)">Desativado</div>
@@ -1729,6 +1729,12 @@ async function api(path, opts={}) {
       headers: {"Content-Type":"application/json","X-CSRFToken":getCsrf(), ...(opts.headers||{})},
       ...opts
     });
+    // Step-up de 2FA expirou com a aba aberta: recarrega para cair na tela de desafio.
+    if (r.status === 403) {
+      const d = await r.json().catch(() => ({}));
+      if (d && d.stepup_2fa) { location.reload(); return {ok: false}; }
+      return {ok: false};
+    }
     if (!r.ok) return {ok: false};
     const d = await r.json();
     d.ok = true;

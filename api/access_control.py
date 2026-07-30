@@ -4,6 +4,7 @@ from functools import wraps
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .planos import detalhes_pacote
+from .services import stepup as stepup_2fa
 from .services.auth_session import dono_autenticado_from_request
 
 logger = logging.getLogger(__name__)
@@ -271,6 +272,21 @@ def acesso_plataforma_ti_em_bootstrap(request):
     return False
 
 
+def sem_stepup_2fa(view_func):
+    """Marca a view como exceção ao step-up de 2FA.
+
+    Só para os próprios endpoints do 2FA — sem isso o step-up viraria deadlock
+    (não dá para confirmar o código se confirmar o código exige o step-up)."""
+    view_func.stepup_2fa_exempt = True
+    return view_func
+
+
+def _stepup_2fa_pendente(view_func, request):
+    if getattr(view_func, "stepup_2fa_exempt", False):
+        return False
+    return stepup_2fa.pendente(request)
+
+
 def requer_plataforma_ti_page(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
@@ -294,6 +310,17 @@ def requer_plataforma_ti_page(view_func):
                 },
                 status=403,
             )
+        if _stepup_2fa_pendente(view_func, request):
+            setor = get_setor(empresa)
+            return render(
+                request,
+                "plataforma_ti_2fa.html",
+                {
+                    "empresa_nome": empresa.nome,
+                    "return_url": _destino_correto(setor),
+                    "validade_horas": stepup_2fa.VALIDADE // 3600,
+                },
+            )
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -307,6 +334,11 @@ def api_requer_plataforma_ti(view_func):
         if not (pode_acessar_plataforma_ti(request) or _gerencia_usuario_empresa(request)):
             return JsonResponse({
                 "erro": "Acesso restrito à Plataforma TI. Entre com um usuário de TI ou gerência autorizada.",
+            }, status=403)
+        if _stepup_2fa_pendente(view_func, request):
+            return JsonResponse({
+                "erro": "Confirme o 2FA para acessar o console de TI.",
+                "stepup_2fa": True,
             }, status=403)
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -1039,6 +1071,11 @@ def api_requer_plataforma_ti_ou_gestor(view_func):
         if not (pode_acessar_plataforma_ti(request) or _principal_gestor_ti(request) or _gerencia_usuario_empresa(request)):
             return JsonResponse({
                 "erro": "Acesso restrito à TI ou gestão autorizada.",
+            }, status=403)
+        if _stepup_2fa_pendente(view_func, request):
+            return JsonResponse({
+                "erro": "Confirme o 2FA para acessar o console de TI.",
+                "stepup_2fa": True,
             }, status=403)
         return view_func(request, *args, **kwargs)
     return wrapper

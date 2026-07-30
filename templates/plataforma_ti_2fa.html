@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmação em Dois Fatores — Plataforma TI</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#041018;
+  --panel:rgba(7,28,40,.88);
+  --line:rgba(126,225,195,.12);
+  --line2:rgba(126,225,195,.22);
+  --text:#e8f4f1;
+  --muted:#7fa2b1;
+  --teal:#00c9a7;
+  --blue:#52a6ff;
+  --danger:#ff6b7d;
+}
+html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 48%);color:var(--text)}
+body{display:grid;place-items:center;padding:24px}
+.card{width:min(520px,100%);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(0,201,167,.12);color:var(--teal);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+h1{font-size:1.6rem;line-height:1.15;margin:16px 0 10px}
+p{font-size:.9rem;line-height:1.65;color:var(--muted)}
+label{display:block;font-size:.74rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+input{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1.5rem;letter-spacing:.35em;text-align:center;padding:14px;border-radius:14px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--text)}
+input:focus{outline:none;border-color:var(--teal)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:12px;font-size:.85rem;font-weight:800;text-decoration:none;border:0;cursor:pointer;transition:opacity .15s}
+.btn-main{background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;flex:1}
+.btn-main:disabled{opacity:.5;cursor:not-allowed}
+.btn-ghost{border:1px solid var(--line2);color:var(--text);background:transparent}
+.btn-ghost:hover{background:rgba(255,255,255,.05)}
+.msg{margin-top:14px;font-size:.82rem;font-weight:700;min-height:1.2em;color:var(--danger)}
+.hint{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);font-size:.78rem;color:var(--muted);line-height:1.6}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">🔐 Verificação em dois fatores</div>
+    <h1>Confirme o código para entrar no console de TI</h1>
+    <p>O 2FA está ativo nesta conta. Abra seu app autenticador (Google Authenticator, Authy, 1Password) e digite o código de 6 dígitos de <strong>{{ empresa_nome }}</strong>.</p>
+
+    <form id="form2fa" autocomplete="off">
+      <label for="codigo">Código de 6 dígitos ou backup code</label>
+      <input id="codigo" name="codigo" inputmode="numeric" maxlength="9" placeholder="000000" autofocus>
+      <div class="msg" id="msg"></div>
+      <div class="actions">
+        <button class="btn btn-main" id="btnConfirmar" type="submit">Confirmar e entrar</button>
+        <a class="btn btn-ghost" href="{{ return_url|default:'/dashboard/' }}">Voltar</a>
+      </div>
+    </form>
+
+    <div class="hint">
+      Perdeu o celular? Use um dos <strong>códigos de backup</strong> gerados na ativação — cada um funciona uma vez.
+      A confirmação vale {{ validade_horas|default:12 }} horas nesta sessão; um novo login pede o código de novo.
+    </div>
+  </main>
+
+<script>
+const form = document.getElementById('form2fa');
+const input = document.getElementById('codigo');
+const btn = document.getElementById('btnConfirmar');
+const msg = document.getElementById('msg');
+
+function csrf() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+
+form.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const codigo = input.value.trim();
+  if (!codigo) { msg.textContent = 'Digite o código.'; return; }
+
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const r = await fetch('/api/gestao/2fa/verificar', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
+      body: JSON.stringify({codigo}),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) {
+      msg.style.color = 'var(--teal)';
+      msg.textContent = d.backup_usado
+        ? 'Backup code aceito (' + d.backup_restantes + ' restantes). Entrando...'
+        : 'Confirmado. Entrando...';
+      location.reload();
+      return;
+    }
+    msg.style.color = 'var(--danger)';
+    msg.textContent = d.erro || 'Não foi possível confirmar o código.';
+    input.select();
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Falha de conexão. Tente de novo.';
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

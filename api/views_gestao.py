@@ -29,6 +29,7 @@ from .models import (
     TwoFactorTOTP,
     UsoApiEmpresa,
 )
+from .services import stepup as stepup_2fa
 from .services import totp as totp_service
 from .access_control import (
     contexto_navegacao_setorial,
@@ -38,6 +39,7 @@ from .access_control import (
     requer_operacao_page,
     requer_plataforma_ti_page,
     requer_setor,
+    sem_stepup_2fa,
 )
 from .services.dashboard_core import setor_conta
 from .views_dashboard import _empresa_autenticada
@@ -1187,6 +1189,7 @@ def _conta_2fa_label(empresa, usuario):
 
 @csrf_exempt
 @api_requer_plataforma_ti_ou_gestor
+@sem_stepup_2fa
 def api_2fa_setup(request):
     """POST — inicia a configuração do 2FA: gera um segredo novo (ainda NÃO
     ativo) e devolve a URI otpauth + o segredo para digitação manual. Só passa
@@ -1213,6 +1216,7 @@ def api_2fa_setup(request):
 
 @csrf_exempt
 @api_requer_plataforma_ti_ou_gestor
+@sem_stepup_2fa
 def api_2fa_confirmar(request):
     """POST {codigo} — valida o primeiro código e ATIVA o 2FA. Retorna os
     backup codes UMA única vez (guardamos só o hash)."""
@@ -1235,16 +1239,20 @@ def api_2fa_confirmar(request):
     cfg.ativo = True
     cfg.confirmado_em = timezone.now()
     cfg.save(update_fields=["backup_codes", "ativo", "confirmado_em", "atualizado_em"])
-    return JsonResponse({
+    resposta = JsonResponse({
         "ok": True,
         "ativo": True,
         "backup_codes": codes,
         "aviso": "Guarde estes códigos de backup em local seguro. Eles não serão mostrados novamente.",
     })
+    # Acabou de provar o fator agora — já vale como step-up desta sessão, senão
+    # o próximo reload da página cobraria o código de novo sem motivo.
+    return stepup_2fa.marcar(resposta, request, empresa, usuario)
 
 
 @csrf_exempt
 @api_requer_plataforma_ti_ou_gestor
+@sem_stepup_2fa
 def api_2fa_desativar(request):
     """POST {codigo} — desativa o 2FA. Aceita um código TOTP válido ou um
     backup code (uso único)."""
@@ -1260,19 +1268,93 @@ def api_2fa_desativar(request):
     if not cfg:
         return JsonResponse({"erro": "2FA não está ativo."}, status=400)
 
+    espera = stepup_2fa.bloqueio_restante(cfg)
+    if espera:
+        return JsonResponse(_erro_bloqueado(espera), status=429)
+
     valido = totp_service.verificar(cfg.secret, codigo)
     if not valido:
         h = totp_service.hash_backup(codigo)
         valido = h in (cfg.backup_codes or [])
     if not valido:
-        return JsonResponse({"erro": "Código inválido."}, status=400)
+        return JsonResponse(_erro_codigo_invalido(stepup_2fa.registrar_falha(cfg)), status=400)
 
     cfg.ativo = False
     cfg.secret = ""
     cfg.backup_codes = []
     cfg.confirmado_em = None
-    cfg.save(update_fields=["ativo", "secret", "backup_codes", "confirmado_em", "atualizado_em"])
-    return JsonResponse({"ok": True, "ativo": False})
+    cfg.falhas_2fa = 0
+    cfg.bloqueado_ate = None
+    cfg.save(update_fields=[
+        "ativo", "secret", "backup_codes", "confirmado_em",
+        "falhas_2fa", "bloqueado_ate", "atualizado_em",
+    ])
+    # Sem 2FA ativo o step-up perde sentido: derruba o cookie junto.
+    return stepup_2fa.limpar(JsonResponse({"ok": True, "ativo": False}))
+
+
+def _erro_bloqueado(espera):
+    return {
+        "erro": f"Muitas tentativas erradas. Tente de novo em {max(1, espera // 60)} min.",
+        "bloqueado_por": espera,
+    }
+
+
+def _erro_codigo_invalido(espera):
+    if espera:
+        return {
+            "erro": f"Código inválido. Bloqueado por {max(1, espera // 60)} min por excesso de tentativas.",
+            "bloqueado_por": espera,
+        }
+    return {"erro": "Código inválido. Confira o horário do celular e tente de novo."}
+
+
+@csrf_exempt
+@api_requer_plataforma_ti_ou_gestor
+@sem_stepup_2fa
+def api_2fa_verificar(request):
+    """POST {codigo} — step-up: confirma o 2FA e libera o console de TI nesta
+    sessão (12h). Aceita código do app autenticador ou backup code (uso único).
+
+    É este endpoint que a tela de desafio na entrada do console chama."""
+    empresa, usuario = _principal_2fa(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    cfg = stepup_2fa.config_ativa(empresa, usuario)
+    if not cfg:
+        # 2FA não ativado: nada a confirmar, o console já está liberado.
+        return JsonResponse({"ok": True, "stepup": "nao_requerido"})
+
+    espera = stepup_2fa.bloqueio_restante(cfg)
+    if espera:
+        return JsonResponse(_erro_bloqueado(espera), status=429)
+
+    dados = _parse_json(request) or {}
+    codigo = str(dados.get("codigo") or "")
+
+    backup_usado = False
+    if not totp_service.verificar(cfg.secret, codigo):
+        h = totp_service.hash_backup(codigo)
+        restantes = list(cfg.backup_codes or [])
+        if h not in restantes:
+            return JsonResponse(_erro_codigo_invalido(stepup_2fa.registrar_falha(cfg)), status=400)
+        # backup code é de uso único: queima na hora
+        restantes.remove(h)
+        cfg.backup_codes = restantes
+        cfg.save(update_fields=["backup_codes", "atualizado_em"])
+        backup_usado = True
+
+    stepup_2fa.registrar_sucesso(cfg)
+    resposta = JsonResponse({
+        "ok": True,
+        "validade_horas": stepup_2fa.VALIDADE // 3600,
+        "backup_usado": backup_usado,
+        "backup_restantes": len(cfg.backup_codes or []),
+    })
+    return stepup_2fa.marcar(resposta, request, empresa, usuario)
 
 
 def _2fa_ativo_para(request):
