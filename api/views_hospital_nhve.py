@@ -44,9 +44,10 @@ def _get_nhve_model():
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_nhve_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "NHVE (Notificação Compulsória)"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "NHVE (Notificacao Compulsoria)", "modulo_icon": "📢",
+        "kpis_url": "/api/hospital/nhve/kpis", "lista_url": "/api/hospital/nhve/notificacoes", "lista_titulo": "Notificacoes",
+    })
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _notificacao_dict(n):

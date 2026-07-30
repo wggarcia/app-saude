@@ -44,9 +44,10 @@ def _get_qualidade_models():
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_qualidade_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Qualidade (NSP)"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Qualidade (NSP)", "modulo_icon": "✅",
+        "kpis_url": "/api/hospital/qualidade/kpis", "lista_url": "/api/hospital/qualidade/incidentes", "lista_titulo": "Incidentes de seguranca",
+    })
 # ── Incidentes de Segurança do Paciente ───────────────────────────────────────
 
 @csrf_exempt

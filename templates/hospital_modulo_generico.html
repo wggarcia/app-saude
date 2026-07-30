@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ modulo_nome|default:"Módulo" }} — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2a3d;--accent:#00c2ff;--ok:#00e5b0;--warn:#ffb347;--danger:#ff6b6b;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--border:rgba(255,255,255,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding:20px 26px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.top h1{font-size:19px;font-weight:800;display:flex;align-items:center;gap:10px}
+.top .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.btn{border:none;border-radius:8px;padding:8px 14px;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.wrap{padding:22px 26px;display:flex;flex-direction:column;gap:20px;max-width:1200px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.kpi .v{font-size:24px;font-weight:800}
+.kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-h{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card-h input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 11px;color:var(--text);font-family:inherit;font-size:12.5px;min-width:200px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:var(--surface2);white-space:nowrap}
+td{padding:10px 14px;border-top:1px solid var(--border);white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.14);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.14);color:var(--warn)}
+.badge-danger{background:rgba(255,107,107,.14);color:var(--danger)}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.empty{text-align:center;color:var(--muted);padding:26px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <h1><span>{{ modulo_icon|default:"🏥" }}</span> {{ modulo_nome }}</h1>
+    <div class="sub">Dados reais deste ambiente · módulo integrado ao HospitalOS</div>
+  </div>
+  <a class="btn btn-ghost" href="/hospital/gestao/">← Gestão Hospitalar</a>
+</div>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="card">
+    <div class="card-h"><span>{{ lista_titulo|default:"Registros" }}</span>
+      <input id="busca" placeholder="Filtrar na tabela…" oninput="filtrar()">
+    </div>
+    <div class="tw"><table><thead id="thead"></thead><tbody id="tbody"><tr><td class="empty">Carregando…</td></tr></tbody></table></div>
+  </div>
+</div>
+<script>
+var MOD = {
+  kpisUrl: "{{ kpis_url|default:'' }}",
+  listaUrl: "{{ lista_url|default:'' }}"
+};
+var _rows = [], _cols = [];
+
+function humaniza(k){
+  return String(k).replace(/_/g,' ').replace(/\bid\b/gi,'ID').replace(/(^|\s)\S/g, function(t){return t.toUpperCase();});
+}
+function ehMoeda(k){ return /valor|custo|receita|total_r|preco|montante|faturado|glosa/i.test(k) && !/total$|qtd|quant|dias|count/i.test(k); }
+function fmtValor(k, v){
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "boolean") return v ? '<span class="badge badge-ok">Sim</span>' : '<span class="badge badge-muted">Não</span>';
+  if (typeof v === "number"){ return ehMoeda(k) ? 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2}) : v.toLocaleString('pt-BR'); }
+  var s = String(v);
+  // ISO date/datetime → dd/mm/aaaa
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[3]+'/'+m[2]+'/'+m[1];
+  if (/^(ativo|aprovado|pago|conclu|enviado|ok|operacional|encerrado|deferid)/i.test(s)) return '<span class="badge badge-ok">'+s+'</span>';
+  if (/^(pendente|analise|aberto|aberta|em_|processand|aguard)/i.test(s)) return '<span class="badge badge-warn">'+s+'</span>';
+  if (/^(negad|glosad|cancelad|erro|falh|indeferid|descartad|critico|grave)/i.test(s)) return '<span class="badge badge-danger">'+s+'</span>';
+  return s;
+}
+
+async function jget(url){ try{ var r=await fetch(url,{credentials:'same-origin'}); if(!r.ok) return null; return await r.json(); }catch(e){ return null; } }
+
+async function carregarKpis(){
+  var box=document.getElementById('kpis');
+  if(!MOD.kpisUrl){ box.style.display='none'; return; }
+  var d=await jget(MOD.kpisUrl);
+  if(!d){ box.style.display='none'; return; }
+  var cards='';
+  Object.keys(d).forEach(function(k){
+    var v=d[k];
+    if(v===null||typeof v==='object') return;           // só escalares viram card
+    if(typeof v==='boolean') v=v?'Sim':'Não';
+    var disp = (typeof v==='number') ? (ehMoeda(k)?'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2}):v.toLocaleString('pt-BR')) : v;
+    cards+='<div class="kpi"><div class="v">'+disp+'</div><div class="l">'+humaniza(k)+'</div></div>';
+  });
+  box.innerHTML = cards || '';
+  if(!cards) box.style.display='none';
+}
+
+function acharLista(d){
+  if(Array.isArray(d)) return d;
+  if(!d||typeof d!=='object') return [];
+  // primeira propriedade que é array de objetos
+  var best=[];
+  Object.keys(d).forEach(function(k){
+    if(Array.isArray(d[k]) && d[k].length && typeof d[k][0]==='object' && best.length===0) best=d[k];
+  });
+  if(best.length===0){ // pega qualquer array mesmo vazio
+    Object.keys(d).forEach(function(k){ if(Array.isArray(d[k]) && best.length===0) best=d[k]; });
+  }
+  return best;
+}
+
+function colunasDe(rows){
+  if(!rows.length) return [];
+  var keys=Object.keys(rows[0]);
+  // remove pares crus quando existe *_display
+  var displays=keys.filter(function(k){return /_display$/.test(k);}).map(function(k){return k.replace(/_display$/,'');});
+  keys=keys.filter(function(k){ return !(displays.indexOf(k)>=0); });
+  // remove objetos/arrays e textos gigantes
+  keys=keys.filter(function(k){ var v=rows[0][k]; return !(v&&typeof v==='object'); });
+  return keys.slice(0,9);
+}
+
+function render(){
+  var thead=document.getElementById('thead'), tbody=document.getElementById('tbody');
+  if(!_rows.length){ thead.innerHTML=''; tbody.innerHTML='<tr><td class="empty">Nenhum registro neste módulo ainda.</td></tr>'; return; }
+  var q=(document.getElementById('busca').value||'').toLowerCase();
+  var rows=_rows;
+  if(q) rows=_rows.filter(function(r){ return JSON.stringify(r).toLowerCase().indexOf(q)>=0; });
+  thead.innerHTML='<tr>'+_cols.map(function(c){return '<th>'+humaniza(c)+'</th>';}).join('')+'</tr>';
+  tbody.innerHTML=rows.length? rows.map(function(r){
+    return '<tr>'+_cols.map(function(c){ return '<td>'+fmtValor(c, r[c]!==undefined?r[c]:'')+'</td>'; }).join('')+'</tr>';
+  }).join('') : '<tr><td class="empty" colspan="'+_cols.length+'">Nada encontrado no filtro.</td></tr>';
+}
+function filtrar(){ render(); }
+
+async function carregarLista(){
+  if(!MOD.listaUrl){ document.getElementById('tbody').innerHTML='<tr><td class="empty">—</td></tr>'; return; }
+  var d=await jget(MOD.listaUrl);
+  if(d===null){ document.getElementById('tbody').innerHTML='<tr><td class="empty">Não foi possível carregar (verifique permissão do módulo).</td></tr>'; return; }
+  _rows=acharLista(d); _cols=colunasDe(_rows); render();
+}
+carregarKpis(); carregarLista();
+</script>
+</body>
+</html>

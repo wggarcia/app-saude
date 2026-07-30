@@ -41,9 +41,10 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_betha_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Betha (Integração ERP)"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Betha (Integracao ERP)", "modulo_icon": "🔗",
+        "kpis_url": "/api/hospital/betha/kpis", "lista_url": "/api/hospital/betha/fila", "lista_titulo": "Fila de sincronizacao",
+    })
 # ─── Status ──────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])

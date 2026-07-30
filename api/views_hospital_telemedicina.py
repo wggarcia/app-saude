@@ -49,9 +49,10 @@ def _consulta_to_dict(c):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_telemedicina_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Telemedicina"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Telemedicina", "modulo_icon": "📹",
+        "kpis_url": "/api/hospital/telemedicina/kpis", "lista_url": "/api/hospital/telemedicina/consultas", "lista_titulo": "Consultas",
+    })
 # ─── Consultas ────────────────────────────────────────────────────────────────
 
 @csrf_exempt

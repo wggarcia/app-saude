@@ -160,9 +160,10 @@ def _sessao_to_dict(s) -> dict:
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_radioterapia_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Radioterapia"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Radioterapia", "modulo_icon": "☢️",
+        "kpis_url": "/api/hospital/radioterapia/kpis", "lista_url": "/api/hospital/radioterapia/sessoes", "lista_titulo": "Sessoes de radioterapia",
+    })
 # ─── POST /api/hospital/radioterapia/hl7/receber ─────────────────────────────
 
 @csrf_exempt

@@ -85,9 +85,10 @@ def _ciclo_to_dict(c):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_cme_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "CME (Central de Materiais)"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "CME (Central de Materiais)", "modulo_icon": "🧼",
+        "kpis_url": "/api/hospital/cme/kpis", "lista_url": "/api/hospital/cme/instrumentais", "lista_titulo": "Instrumentais",
+    })
 # ─── API: Instrumentais ───────────────────────────────────────────────────────
 
 @csrf_exempt

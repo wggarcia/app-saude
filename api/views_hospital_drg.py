@@ -40,9 +40,10 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_drg_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "DRG"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "DRG", "modulo_icon": "🏷️",
+        "kpis_url": "/api/hospital/drg/kpis", "lista_url": "/api/hospital/drg/historico", "lista_titulo": "Historico de envios DRG",
+    })
 # ─── Status ──────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])

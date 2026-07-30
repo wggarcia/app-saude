@@ -40,9 +40,10 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_epimed_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Epimed"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Epimed", "modulo_icon": "📊",
+        "kpis_url": "/api/hospital/epimed/kpis", "lista_url": "/api/hospital/epimed/historico", "lista_titulo": "Historico de envios",
+    })
 # ─── Status ──────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])

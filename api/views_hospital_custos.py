@@ -39,9 +39,10 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_custos_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Custos Hospitalares"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Custos Hospitalares", "modulo_icon": "💰",
+        "kpis_url": "/api/hospital/custos/kpis", "lista_url": "/api/hospital/custos/lancamentos", "lista_titulo": "Lancamentos de custo",
+    })
 # ─── Centros de Responsabilidade ─────────────────────────────────────────────
 
 @csrf_exempt

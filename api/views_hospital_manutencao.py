@@ -63,9 +63,10 @@ def _os_to_dict(o):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_manutencao_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Manutenção Predial"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Manutencao Predial", "modulo_icon": "🔧",
+        "kpis_url": "/api/hospital/manutencao/kpis", "lista_url": "/api/hospital/manutencao/ordens", "lista_titulo": "Ordens de servico",
+    })
 # ── Ordens de Serviço ─────────────────────────────────────────────────────────
 
 @csrf_exempt

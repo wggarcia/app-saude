@@ -103,9 +103,10 @@ def _triagem_to_dict(a):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_nutricao_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Nutrição"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Nutricao", "modulo_icon": "🍽️",
+        "kpis_url": "/api/hospital/nutricao/kpis", "lista_url": "/api/hospital/nutricao/dietas", "lista_titulo": "Dietas prescritas",
+    })
 # ── Dietas ───────────────────────────────────────────────────────────────────
 
 @csrf_exempt

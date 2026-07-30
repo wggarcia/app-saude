@@ -71,9 +71,10 @@ def _registro_to_dict(r, detalhe=False):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_rhc_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "RHC (Registro Hospitalar de Câncer)"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "RHC (Registro Hospitalar de Cancer)", "modulo_icon": "🎗️",
+        "kpis_url": "/api/hospital/rhc/kpis", "lista_url": "/api/hospital/rhc/registros", "lista_titulo": "Registros oncologicos",
+    })
 # ── Registros — lista / criação ────────────────────────────────────────────────
 
 @csrf_exempt

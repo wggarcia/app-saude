@@ -334,6 +334,28 @@ tr:hover td{background:rgba(255,255,255,.018)}
     </div>
   </details>
 
+  {% if hosp_ver_clinico or hosp_ver_operacional %}
+  <details class="nav-group" data-nav-group data-group-key="hospital-apoio">
+    <summary><div class="nav-section">Apoio, Qualidade e Integrações</div></summary>
+    <div class="nav-group-body">
+      <button class="nav-link" onclick="openModulePanel('/hospital/qualidade/','✅ Qualidade (NSP)')"><div class="nav-link-inner"><span>✅</span><span>Qualidade (NSP)</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/cme/','🧼 CME')"><div class="nav-link-inner"><span>🧼</span><span>CME</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/nutricao/','🍽️ Nutrição')"><div class="nav-link-inner"><span>🍽️</span><span>Nutrição</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/radioterapia/','☢️ Radioterapia')"><div class="nav-link-inner"><span>☢️</span><span>Radioterapia</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/rhc/','🎗️ RHC — Reg. Câncer')"><div class="nav-link-inner"><span>🎗️</span><span>RHC — Reg. Câncer</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/nhve/','📢 NHVE — Notificação')"><div class="nav-link-inner"><span>📢</span><span>NHVE — Notificação</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/same/','🗄️ SAME')"><div class="nav-link-inner"><span>🗄️</span><span>SAME — Prontuários</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/telemedicina/','📹 Telemedicina')"><div class="nav-link-inner"><span>📹</span><span>Telemedicina</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/custos/','💰 Custos Hospitalares')"><div class="nav-link-inner"><span>💰</span><span>Custos Hospitalares</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/drg/','🏷️ DRG')"><div class="nav-link-inner"><span>🏷️</span><span>DRG</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/manutencao/','🔧 Manutenção Predial')"><div class="nav-link-inner"><span>🔧</span><span>Manutenção Predial</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/lavanderia/','🧺 Lavanderia')"><div class="nav-link-inner"><span>🧺</span><span>Lavanderia</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/epimed/','📊 Epimed')"><div class="nav-link-inner"><span>📊</span><span>Epimed (UTI)</span></div></button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/betha/','🔗 Betha (ERP)')"><div class="nav-link-inner"><span>🔗</span><span>Betha (ERP)</span></div></button>
+    </div>
+  </details>
+  {% endif %}
+
   <details class="nav-group" data-nav-group data-group-key="hospital-gestao">
     <summary><div class="nav-section">Rede e Gestão</div></summary>
     <div class="nav-group-body">

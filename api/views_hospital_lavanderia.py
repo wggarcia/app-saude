@@ -44,9 +44,10 @@ def _get_lavanderia_models():
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_lavanderia_page(request):
-    return render(request, "hospital_modulo_em_construcao.html", {"modulo_nome": "Lavanderia"})
-
-
+    return render(request, "hospital_modulo_generico.html", {
+        "modulo_nome": "Lavanderia", "modulo_icon": "🧺",
+        "kpis_url": "/api/hospital/lavanderia/kpis", "lista_url": "/api/hospital/lavanderia/itens", "lista_titulo": "Itens de rouparia",
+    })
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _item_to_dict(item):
