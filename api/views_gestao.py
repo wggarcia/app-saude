@@ -26,8 +26,10 @@ from .models import (
     ProgramaCorporativo,
     SubscricaoEvento,
     TrialEmpresa,
+    TwoFactorTOTP,
     UsoApiEmpresa,
 )
+from .services import totp as totp_service
 from .access_control import (
     contexto_navegacao_setorial,
     api_requer_plataforma_ti,
@@ -746,11 +748,16 @@ def api_integracao_status(request, integracao_id):
 
 # ── API KEYS (acesso programático) ────────────────────────────────────────────
 
-def _key_dict(k, mostrar_chave=False):
+def _key_dict(k, chave_crua=None):
+    """Serializa a chave. A chave em texto puro só é incluída quando
+    chave_crua é passada explicitamente (no momento da criação) — nunca é
+    lida do banco, porque lá só existe o hash."""
     return {
         "id": k.id,
         "nome": k.nome,
-        "chave": k.chave if mostrar_chave else k.chave[:8] + "…",
+        # Exibição: prefixo salvo + reticências. Nunca o valor completo (não existe no banco).
+        "chave": chave_crua if chave_crua else (k.chave_prefixo + "…" if k.chave_prefixo else "••••••••…"),
+        "chave_completa": chave_crua,  # presente só na resposta de criação
         "ativa": k.ativa,
         "total_chamadas": k.total_chamadas,
         "ultimo_uso_em": k.ultimo_uso_em.strftime("%d/%m/%Y %H:%M") if k.ultimo_uso_em else None,
@@ -778,9 +785,8 @@ def api_chaves(request):
         if ApiKeyEmpresa.objects.filter(empresa=empresa, ativa=True).count() >= 10:
             return JsonResponse({"erro": "limite de 10 chaves ativas atingido"}, status=400)
 
-        chave = secrets.token_hex(32)
-        key = ApiKeyEmpresa.objects.create(empresa=empresa, nome=nome, chave=chave)
-        return JsonResponse({"chave": _key_dict(key, mostrar_chave=True)}, status=201)
+        key, chave_crua = ApiKeyEmpresa.criar_para(empresa, nome)
+        return JsonResponse({"chave": _key_dict(key, chave_crua=chave_crua)}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
 
@@ -1027,7 +1033,7 @@ def api_plataforma_seguranca(request):
 
     return JsonResponse({
         "lgpd_checklist": checklist,
-        "2fa_ativo": False,
+        "2fa_ativo": _2fa_ativo_para(request),
         "sessoes_ativas": [
             {
                 "id": item.device_id,
@@ -1162,6 +1168,120 @@ def api_benchmark(request):
     })
 
 
+# ── 2FA / TOTP (autenticação em dois fatores para o console de TI) ────────────
+
+def _principal_2fa(request):
+    """Retorna (empresa, usuario|None) do principal logado, para vincular o 2FA.
+    usuario=None => conta principal da empresa."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return None, None
+    principal = getattr(request, "principal", None)
+    usuario = principal if (principal is not None and principal.__class__.__name__ == "EmpresaUsuario") else None
+    return empresa, usuario
+
+
+def _conta_2fa_label(empresa, usuario):
+    return (usuario.email if usuario and getattr(usuario, "email", None) else empresa.email) or empresa.nome
+
+
+@csrf_exempt
+@api_requer_plataforma_ti_ou_gestor
+def api_2fa_setup(request):
+    """POST — inicia a configuração do 2FA: gera um segredo novo (ainda NÃO
+    ativo) e devolve a URI otpauth + o segredo para digitação manual. Só passa
+    a valer depois do /confirmar."""
+    empresa, usuario = _principal_2fa(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    cfg, _ = TwoFactorTOTP.objects.get_or_create(empresa=empresa, usuario=usuario)
+    if cfg.ativo:
+        return JsonResponse({"erro": "2FA já está ativo. Desative antes de reconfigurar."}, status=400)
+    cfg.secret = totp_service.gerar_secret()
+    cfg.save(update_fields=["secret", "atualizado_em"])
+    conta = _conta_2fa_label(empresa, usuario)
+    return JsonResponse({
+        "secret": cfg.secret,
+        "otpauth_uri": totp_service.uri_otpauth(cfg.secret, conta),
+        "conta": conta,
+        "instrucao": "Escaneie o QR no app autenticador (ou digite o segredo) e confirme com o código gerado.",
+    })
+
+
+@csrf_exempt
+@api_requer_plataforma_ti_ou_gestor
+def api_2fa_confirmar(request):
+    """POST {codigo} — valida o primeiro código e ATIVA o 2FA. Retorna os
+    backup codes UMA única vez (guardamos só o hash)."""
+    empresa, usuario = _principal_2fa(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+    dados = _parse_json(request) or {}
+    codigo = str(dados.get("codigo") or "")
+
+    cfg = TwoFactorTOTP.objects.filter(empresa=empresa, usuario=usuario).first()
+    if not cfg or not cfg.secret:
+        return JsonResponse({"erro": "Inicie a configuração primeiro (setup)."}, status=400)
+    if not totp_service.verificar(cfg.secret, codigo):
+        return JsonResponse({"erro": "Código inválido. Confira o horário do celular e tente de novo."}, status=400)
+
+    codes = totp_service.gerar_backup_codes(8)
+    cfg.backup_codes = [totp_service.hash_backup(c) for c in codes]
+    cfg.ativo = True
+    cfg.confirmado_em = timezone.now()
+    cfg.save(update_fields=["backup_codes", "ativo", "confirmado_em", "atualizado_em"])
+    return JsonResponse({
+        "ok": True,
+        "ativo": True,
+        "backup_codes": codes,
+        "aviso": "Guarde estes códigos de backup em local seguro. Eles não serão mostrados novamente.",
+    })
+
+
+@csrf_exempt
+@api_requer_plataforma_ti_ou_gestor
+def api_2fa_desativar(request):
+    """POST {codigo} — desativa o 2FA. Aceita um código TOTP válido ou um
+    backup code (uso único)."""
+    empresa, usuario = _principal_2fa(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+    dados = _parse_json(request) or {}
+    codigo = str(dados.get("codigo") or "")
+
+    cfg = TwoFactorTOTP.objects.filter(empresa=empresa, usuario=usuario, ativo=True).first()
+    if not cfg:
+        return JsonResponse({"erro": "2FA não está ativo."}, status=400)
+
+    valido = totp_service.verificar(cfg.secret, codigo)
+    if not valido:
+        h = totp_service.hash_backup(codigo)
+        valido = h in (cfg.backup_codes or [])
+    if not valido:
+        return JsonResponse({"erro": "Código inválido."}, status=400)
+
+    cfg.ativo = False
+    cfg.secret = ""
+    cfg.backup_codes = []
+    cfg.confirmado_em = None
+    cfg.save(update_fields=["ativo", "secret", "backup_codes", "confirmado_em", "atualizado_em"])
+    return JsonResponse({"ok": True, "ativo": False})
+
+
+def _2fa_ativo_para(request):
+    empresa, usuario = _principal_2fa(request)
+    if not empresa:
+        return False
+    return TwoFactorTOTP.objects.filter(empresa=empresa, usuario=usuario, ativo=True).exists()
+
+
 # ── AUTENTICAÇÃO VIA API KEY (helper para endpoints públicos) ─────────────────
 
 def _empresa_por_api_key(request):
@@ -1170,11 +1290,16 @@ def _empresa_por_api_key(request):
     if not auth.startswith("ApiKey "):
         return None, None
     chave = auth[7:].strip()
-    key = None
-    for candidata in ApiKeyEmpresa.objects.filter(ativa=True).select_related("empresa"):
-        if hmac.compare_digest(candidata.chave, chave):
-            key = candidata
-            break
+    if not chave:
+        return None, None
+    # Lookup direto por hash indexado (O(1)) — não guardamos a chave crua,
+    # então comparamos hash com hash.
+    chave_hash = ApiKeyEmpresa.hash_de(chave)
+    key = (
+        ApiKeyEmpresa.objects.filter(ativa=True, chave_hash=chave_hash)
+        .select_related("empresa")
+        .first()
+    )
     if not key:
         return None, None
 

@@ -1216,14 +1216,35 @@ select option{background:#0b1822}
 
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="card glass">
-          <div class="section-title">🔐 Autenticação em Dois Fatores</div>
-          <div class="section-sub">2FA para acesso de administradores e gestores de SST</div>
+          <div class="section-title">🔐 Autenticação em Dois Fatores (TOTP)</div>
+          <div class="section-sub">2FA por app autenticador (Google Authenticator, Authy, 1Password) para o acesso ao console de TI</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px">
             <div>
               <div id="twoFaStatus" style="font-size:.95rem;font-weight:700;color:var(--danger)">Desativado</div>
               <div style="font-size:.76rem;color:var(--muted);margin-top:3px">Recomendado para proteção de dados sensíveis de saúde</div>
             </div>
-            <button class="btn sm primary" id="btn2fa" onclick="toggle2fa()">Ativar 2FA</button>
+            <button class="btn sm primary" id="btn2fa" onclick="iniciar2fa()">Ativar 2FA</button>
+          </div>
+
+          <!-- Passo 1: configurar -->
+          <div id="fa2Setup" style="display:none;margin-top:14px;border-top:1px solid var(--line,rgba(255,255,255,.08));padding-top:12px">
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:6px">1. Escaneie no app autenticador</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Se não puder escanear, digite este segredo manualmente no app:</div>
+            <div id="fa2Secret" style="font-family:monospace;font-size:.9rem;background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.25);border-radius:6px;padding:8px 10px;word-break:break-all;margin-bottom:6px"></div>
+            <div id="fa2Uri" style="font-size:.68rem;color:var(--muted);word-break:break-all;margin-bottom:12px"></div>
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:6px">2. Digite o código de 6 dígitos gerado</div>
+            <div style="display:flex;gap:8px">
+              <input id="fa2Codigo" inputmode="numeric" maxlength="6" placeholder="000000" style="flex:1;font-family:monospace;letter-spacing:3px;text-align:center;padding:8px;border-radius:6px;border:1px solid var(--line,rgba(255,255,255,.15));background:rgba(255,255,255,.05);color:var(--ink,#fff)">
+              <button class="btn sm primary" onclick="confirmar2fa()">Confirmar</button>
+              <button class="btn sm" onclick="cancelar2faSetup()">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- Passo 3: backup codes -->
+          <div id="fa2Backup" style="display:none;margin-top:14px;border-top:1px solid var(--line,rgba(255,255,255,.08));padding-top:12px">
+            <div style="font-size:.82rem;font-weight:700;color:var(--ok,#00e5b0);margin-bottom:4px">✅ 2FA ativado</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Guarde os códigos de backup abaixo em local seguro — cada um funciona uma vez, para entrar se você perder o celular. <strong>Não serão mostrados de novo.</strong></div>
+            <div id="fa2BackupCodes" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-family:monospace;font-size:.85rem"></div>
           </div>
         </div>
 
@@ -2127,20 +2148,16 @@ async function loadSeguranca() {
       </div>`).join('');
   }
 
-  // Audit log placeholder entries
+  // Log de auditoria — apenas eventos REAIS da conta. Nunca preenche com
+  // exemplos fictícios: se não há evento, mostra estado vazio honesto.
   const auditEl = jq('auditLog');
-  const exemplos = [
-    {tipo:'ok', msg:'Login realizado', detalhe:'Acesso ao painel SST', ts:'Hoje'},
-    {tipo:'info', msg:'ASO gerado', detalhe:'Funcionário Ana Souza — Periódico', ts:'Hoje'},
-    {tipo:'warn', msg:'Chave API criada', detalhe:'Nova credencial gerada', ts:'Ontem'},
-  ];
   const auditoria = (d.auditoria && d.auditoria.length) ? d.auditoria.map(item => ({
     tipo:item.status === 'ok' ? 'ok' : item.status === 'erro' ? 'danger' : 'warn',
     msg:`${(item.sistema||'plataforma').toUpperCase()} · ${item.acao || 'evento'}`,
     detalhe:item.detalhes || 'Registro operacional',
     ts:item.timestamp || 'Agora',
-  })) : exemplos;
-  auditEl.innerHTML = auditoria.map(ex => `
+  })) : [];
+  auditEl.innerHTML = auditoria.length ? auditoria.map(ex => `
       <div class="log-row">
         <div class="log-dot ${ex.tipo}"></div>
         <div style="flex:1">
@@ -2148,22 +2165,53 @@ async function loadSeguranca() {
           <div style="font-size:.75rem;color:var(--muted)">${ex.detalhe}</div>
         </div>
         <div style="font-size:.74rem;color:var(--muted);white-space:nowrap">${ex.ts}</div>
-      </div>`).join('');
+      </div>`).join('')
+    : '<div class="empty" style="font-size:.8rem;color:var(--muted);padding:8px 0">Nenhuma atividade registrada ainda.</div>';
 }
 
-async function toggle2fa() {
+// ── 2FA / TOTP — fluxo real (setup → confirmar → backup codes / desativar) ──
+async function iniciar2fa() {
   const btn = document.getElementById('btn2fa');
   const ativo = btn && btn.textContent.includes('Desativar');
-  const r = await api('/api/gestao/seguranca/2fa/', {
-    method: 'POST',
-    body: JSON.stringify({acao: ativo ? 'desativar' : 'ativar'})
-  });
-  if (r && !r.erro) {
-    if (btn) { btn.textContent = ativo ? 'Ativar 2FA' : 'Desativar 2FA'; btn.className = ativo ? 'btn sm primary' : 'btn sm warn'; }
-    showToast('toast-main', ativo ? '2FA desativado' : '2FA ativado — configure o app autenticador', 'ok');
-  } else {
-    showToast('toast-main', 'Para configurar 2FA entre em contato com suporte@solocrt.com', 'warn');
-  }
+  if (ativo) return desativar2fa();
+  const r = await api('/api/gestao/2fa/setup', {method:'POST', body:'{}'});
+  if (!r || r.erro) { showToast('toast-main', (r && r.erro) || 'Erro ao iniciar 2FA', true); return; }
+  jq('fa2Secret').textContent = r.secret;
+  jq('fa2Uri').textContent = r.otpauth_uri || '';
+  jq('fa2Setup').style.display = 'block';
+  jq('fa2Backup').style.display = 'none';
+  jq('fa2Codigo').value = '';
+  jq('fa2Codigo').focus();
+}
+
+function cancelar2faSetup() {
+  jq('fa2Setup').style.display = 'none';
+}
+
+async function confirmar2fa() {
+  const codigo = (jq('fa2Codigo').value || '').trim();
+  if (codigo.length < 6) { showToast('toast-main', 'Digite o código de 6 dígitos', true); return; }
+  const r = await api('/api/gestao/2fa/confirmar', {method:'POST', body:JSON.stringify({codigo})});
+  if (!r || r.erro) { showToast('toast-main', (r && r.erro) || 'Código inválido', true); return; }
+  jq('fa2Setup').style.display = 'none';
+  jq('fa2Backup').style.display = 'block';
+  jq('fa2BackupCodes').innerHTML = (r.backup_codes || []).map(c => `<div style="background:rgba(255,255,255,.05);border:1px solid var(--line,rgba(255,255,255,.1));border-radius:5px;padding:5px 8px;text-align:center">${esc(c)}</div>`).join('');
+  jq('twoFaStatus').textContent = 'Ativado';
+  jq('twoFaStatus').style.color = 'var(--ok,#00e5b0)';
+  const btn = jq('btn2fa'); btn.textContent = 'Desativar 2FA'; btn.className = 'btn sm warn';
+  showToast('toast-main', '2FA ativado com sucesso', 'ok');
+}
+
+async function desativar2fa() {
+  const codigo = prompt('Para desativar o 2FA, digite um código do app autenticador (ou um backup code):');
+  if (!codigo) return;
+  const r = await api('/api/gestao/2fa/desativar', {method:'POST', body:JSON.stringify({codigo:codigo.trim()})});
+  if (!r || r.erro) { showToast('toast-main', (r && r.erro) || 'Código inválido', true); return; }
+  jq('twoFaStatus').textContent = 'Desativado';
+  jq('twoFaStatus').style.color = 'var(--danger)';
+  jq('fa2Backup').style.display = 'none';
+  const btn = jq('btn2fa'); btn.textContent = 'Ativar 2FA'; btn.className = 'btn sm primary';
+  showToast('toast-main', '2FA desativado', 'ok');
 }
 
 async function revogarSessao(id) {

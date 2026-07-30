@@ -426,6 +426,7 @@ from api.views_gestao import (
     api_uso_api,
     api_plataforma_webhooks,
     api_plataforma_seguranca,
+    api_2fa_setup, api_2fa_confirmar, api_2fa_desativar,
     api_plataforma_logs,
     api_benchmark,
     api_dados_empresa,
@@ -2570,6 +2571,9 @@ urlpatterns = [
     path('api/gestao/uso-api', api_uso_api),
     path('api/gestao/plataforma/webhooks/', api_plataforma_webhooks),
     path('api/gestao/plataforma/seguranca/', api_plataforma_seguranca),
+    path('api/gestao/2fa/setup', api_2fa_setup),
+    path('api/gestao/2fa/confirmar', api_2fa_confirmar),
+    path('api/gestao/2fa/desativar', api_2fa_desativar),
     path('api/gestao/plataforma/logs/', api_plataforma_logs),
 
     # ── Benchmark setorial ────────────────────────────────────────────────────

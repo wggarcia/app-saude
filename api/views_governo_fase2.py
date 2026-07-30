@@ -1214,13 +1214,14 @@ def api_governo_plataforma_chaves(request):
         if request.method == "POST":
             dados = json.loads(request.body or "{}")
             nome = (dados.get("nome") or "Chave API").strip()[:100]
-            key = ApiKeyEmpresa.objects.create(empresa=empresa, nome=nome)
+            key, chave_crua = ApiKeyEmpresa.criar_para(empresa, nome)
             AuditoriaInstitucional.objects.create(
                 empresa=empresa, acao="api_key_criada",
                 objeto_tipo="ApiKeyEmpresa", objeto_id=str(key.id),
                 detalhes={"nome": nome},
             )
-            return JsonResponse({"chave": key.chave, "id": key.id, "nome": key.nome, "criado": True}, status=201)
+            # chave_crua só existe nesta resposta — o banco guarda apenas o hash
+            return JsonResponse({"chave": chave_crua, "id": key.id, "nome": key.nome, "criado": True}, status=201)
 
         # GET — lista chaves com uso de hoje
         hoje = date.today().strftime("%Y-%m")
@@ -1235,7 +1236,7 @@ def api_governo_plataforma_chaves(request):
                 {
                     "id": k.id,
                     "nome": k.nome,
-                    "chave_prefixo": k.chave[:8] + "••••••••",
+                    "chave_prefixo": (k.chave_prefixo or "••••••••") + "••••••••",
                     "ativa": k.ativa,
                     "total_chamadas": k.total_chamadas,
                     "ultimo_uso_em": k.ultimo_uso_em.isoformat() if k.ultimo_uso_em else None,

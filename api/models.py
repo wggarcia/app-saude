@@ -6058,10 +6058,19 @@ class IntegracaoRH(models.Model):
 
 
 class ApiKeyEmpresa(models.Model):
-    """Chave de API para acesso programático aos dados da empresa."""
+    """Chave de API para acesso programático aos dados da empresa.
+
+    A chave em texto puro é mostrada UMA única vez ao cliente, no momento da
+    criação. O banco guarda apenas o hash SHA-256 (chave_hash) + um prefixo
+    curto (chave_prefixo) para exibição. Se o banco vazar, as chaves não são
+    reutilizáveis — mesmo princípio de Stripe/GitHub/AWS."""
     empresa    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="api_keys")
     nome       = models.CharField(max_length=100)
-    chave      = models.CharField(max_length=64, unique=True, default=_codigo_acesso)
+    # Legado: coluna que guardava a chave crua. Mantida nullable só para a
+    # migração de dados; novas chaves nunca a preenchem.
+    chave      = models.CharField(max_length=64, unique=True, null=True, blank=True, default=None)
+    chave_hash = models.CharField(max_length=64, db_index=True, blank=True, default="")
+    chave_prefixo = models.CharField(max_length=12, blank=True, default="")
     ativa      = models.BooleanField(default=True)
     total_chamadas = models.PositiveBigIntegerField(default=0)
     ultimo_uso_em  = models.DateTimeField(null=True, blank=True)
@@ -6070,6 +6079,23 @@ class ApiKeyEmpresa(models.Model):
 
     class Meta:
         ordering = ["-criado_em"]
+
+    @staticmethod
+    def hash_de(chave_crua: str) -> str:
+        import hashlib
+        return hashlib.sha256((chave_crua or "").encode()).hexdigest()
+
+    @classmethod
+    def criar_para(cls, empresa, nome):
+        """Cria a chave e devolve (objeto, chave_crua). A chave crua só existe
+        aqui e no retorno — nunca é persistida em texto puro."""
+        import secrets
+        crua = secrets.token_hex(32)
+        obj = cls.objects.create(
+            empresa=empresa, nome=nome,
+            chave_hash=cls.hash_de(crua), chave_prefixo=crua[:8],
+        )
+        return obj, crua
 
     def __str__(self):
         return f"{self.empresa.nome} / {self.nome} ({'ativa' if self.ativa else 'revogada'})"
@@ -6090,6 +6116,33 @@ class UsoApiEmpresa(models.Model):
 
     def __str__(self):
         return f"{self.empresa.nome} {self.ano_mes} {self.endpoint}: {self.chamadas}"
+
+
+class TwoFactorTOTP(models.Model):
+    """2FA por TOTP (RFC 6238) para o acesso ao console de TI/Plataforma.
+
+    Vinculado a um 'principal': a conta principal da empresa (usuario=None) ou
+    um EmpresaUsuario específico. O segredo fica no banco (necessário para
+    validar o código), mas nunca sai pela API depois de confirmado. Backup
+    codes são guardados só como hash — recuperação quando se perde o app."""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="totp_configs")
+    usuario = models.ForeignKey(
+        "EmpresaUsuario", on_delete=models.CASCADE, null=True, blank=True,
+        related_name="totp_configs",
+    )
+    secret = models.CharField(max_length=64, blank=True, default="")
+    ativo = models.BooleanField(default=False)
+    backup_codes = models.JSONField(default=list, blank=True)  # lista de hashes SHA-256
+    confirmado_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa", "usuario")]
+
+    def __str__(self):
+        alvo = self.usuario_id or "conta-principal"
+        return f"2FA {self.empresa_id}/{alvo} ({'ativo' if self.ativo else 'inativo'})"
 
 
 class ConteudoSSTPublicado(models.Model):
