@@ -9039,14 +9039,18 @@ class SstAssistenteIaBypassTests(TestCase):
         self.assertEqual(resp.status_code, 403, msg=resp.content)
 
 
-class GovernoSuasSemGatingTests(TestCase):
-    """Item de severidade ALTA que ficou de fora do lote anterior: o módulo
-    SUAS-em-Governo (views_governo_suas_gestao/cras/creas/cadun.py) não tinha
-    NENHUM feature-gate — qualquer cliente Governo, de qualquer plano,
-    acessava de graça o que é vendido separado como o segmento Assistência
-    Social. Confirma que agora está bloqueado (nenhum plano Governo tem a
-    feature "governo.suas" de propósito — é legado, não deve ser vendido
-    junto)."""
+class GovernoSuasGatingTests(TestCase):
+    """Política de produto (confirmada): o módulo SUAS-em-Governo
+    (views_governo_suas_gestao/cras/creas/cadun.py) É incluído em TODOS os
+    pacotes Governo por contrato — o ambiente Governo cobre a gestão social
+    (CRAS/CREAS/CadÚnico/BPC/SICON) sem add-on pago (feature "governo.suas"
+    em _GOVERNO_TODOS, api/planos.py). O gate @api_requer_feature/permissao
+    serve apenas ao RBAC granular por operador, não para vender à parte.
+    A Assistência Social continua ofertada isolada via pacotes assistencia_*
+    (setor próprio) para secretarias que não contratam a saúde pública.
+
+    Este teste confirma que o principal de um plano Governo — que detém todas
+    as permissões de módulo por padrão — acessa o dashboard SUAS (HTTP 200)."""
 
     def setUp(self):
         self.empresa = Empresa.objects.create(
@@ -9065,9 +9069,9 @@ class GovernoSuasSemGatingTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200, msg=resp.content)
 
-    def test_dashboard_suas_bloqueado_para_qualquer_plano_governo(self):
+    def test_dashboard_suas_incluido_em_plano_governo(self):
         resp = self.client.get("/api/governo/suas/dashboard", secure=True)
-        self.assertEqual(resp.status_code, 403, msg=resp.content)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
 
 
 class HospitalWhatsappAgendamentoGatingTests(TestCase):
