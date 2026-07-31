@@ -316,7 +316,8 @@ Formate com Markdown (negrito para títulos de seção, listas para encaminhamen
         )
         _u = getattr(response, "usage", None)
         if _u is not None:
-            logger.info(
+            # warning (não info): sem config de LOGGING o Django descarta INFO em prod
+            logger.warning(
                 "IA_USAGE ata_reuniao in=%s out=%s",
                 getattr(_u, "input_tokens", 0), getattr(_u, "output_tokens", 0),
             )

@@ -588,7 +588,9 @@ def assistente_sst(request):
             )
             _u = getattr(response, "usage", None)
             if _u is not None:
-                logger.info(
+                # warning (não info) de propósito: sem config de LOGGING, o Django
+                # descarta INFO de api.* em produção; warning chega ao journald.
+                logger.warning(
                     "IA_USAGE rag_sst in=%s out=%s cache_read=%s cache_write=%s",
                     getattr(_u, "input_tokens", 0), getattr(_u, "output_tokens", 0),
                     getattr(_u, "cache_read_input_tokens", 0),

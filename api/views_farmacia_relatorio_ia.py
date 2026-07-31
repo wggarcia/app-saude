@@ -112,7 +112,8 @@ def api_farmacia_relatorio_ia(request):
 
         _u = getattr(response, "usage", None)
         if _u is not None:
-            logger.info(
+            # warning (não info): sem config de LOGGING o Django descarta INFO em prod
+            logger.warning(
                 "IA_USAGE relatorio_farmacia in=%s out=%s",
                 getattr(_u, "input_tokens", 0), getattr(_u, "output_tokens", 0),
             )
