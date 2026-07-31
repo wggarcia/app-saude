@@ -1747,6 +1747,11 @@ setInterval(() => {
 // Tab guard — keeps each tab isolated by token+tab_key.
 (function tabGuard() {
   async function syncTab() {
+    // Esta aba já tem identidade própria (tab_session_key vive só no sessionStorage,
+    // não é compartilhado entre abas). Reconsultar o localStorage aqui pegaria o token
+    // global, que outra aba pode ter sobrescrito ao logar em outra conta — foi assim
+    // que um refresh trocava a conta exibida para a última logada em qualquer aba.
+    if (sessionStorage.getItem("tab_session_key")) return null;
     var token = sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || localStorage.getItem("auth_token") || localStorage.getItem("token");
     if (!token) return null;
     try {
