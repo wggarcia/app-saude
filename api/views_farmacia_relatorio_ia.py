@@ -9,6 +9,7 @@ no Assistente SST (views_sst_rag.py), aplicada à farmácia.
 Requer ANTHROPIC_API_KEY configurada no ambiente.
 """
 import json
+import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -19,6 +20,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import MedicamentoFarmacia, PDVVenda, PDVItemVenda
 from .access_control import api_requer_gerencia, api_requer_feature
+
+logger = logging.getLogger(__name__)
 
 
 def _coletar_dados_farmacia(empresa):
@@ -106,6 +109,13 @@ def api_farmacia_relatorio_ia(request):
                 "content": f"Dados da farmácia (JSON):\n{json.dumps(dados, ensure_ascii=False)}",
             }],
         )
+
+        _u = getattr(response, "usage", None)
+        if _u is not None:
+            logger.info(
+                "IA_USAGE relatorio_farmacia in=%s out=%s",
+                getattr(_u, "input_tokens", 0), getattr(_u, "output_tokens", 0),
+            )
 
         texto = next((b.text for b in response.content if hasattr(b, "text")), "")
         if not texto:

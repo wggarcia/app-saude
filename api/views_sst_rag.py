@@ -11,6 +11,7 @@ Requer ANTHROPIC_API_KEY configurada no ambiente.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date, timedelta
 
 from django.conf import settings
@@ -29,6 +30,8 @@ from .models import (
     FuncionarioSST,
     TreinamentoNR,
 )
+
+logger = logging.getLogger(__name__)
 
 # ── Limite de segurança: evita loops infinitos de tool calls ──────────────────
 _MAX_TOOL_ROUNDS = 5
@@ -583,6 +586,14 @@ def assistente_sst(request):
                 tools=TOOLS,
                 messages=messages,
             )
+            _u = getattr(response, "usage", None)
+            if _u is not None:
+                logger.info(
+                    "IA_USAGE rag_sst in=%s out=%s cache_read=%s cache_write=%s",
+                    getattr(_u, "input_tokens", 0), getattr(_u, "output_tokens", 0),
+                    getattr(_u, "cache_read_input_tokens", 0),
+                    getattr(_u, "cache_creation_input_tokens", 0),
+                )
 
             if response.stop_reason == "end_turn":
                 texto = next(

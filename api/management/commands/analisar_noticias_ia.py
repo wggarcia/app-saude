@@ -137,6 +137,8 @@ class Command(BaseCommand):
         analisadas = 0
         erros = 0
         erros_consecutivos = 0
+        self._tok_in = 0
+        self._tok_out = 0
         # Se a API falhar repetidamente (ex: crédito esgotado, chave inválida),
         # abortar cedo em vez de percorrer o resto da fila com falhas garantidas.
         LIMITE_ERROS_CONSECUTIVOS = 5
@@ -167,6 +169,12 @@ class Command(BaseCommand):
                 f"Análise IA concluída: {analisadas} processadas, {erros} erros."
             )
         )
+        # Custo estimado (Haiku 4.5: US$1/MTok entrada, US$5/MTok saída) — medição real
+        custo = self._tok_in / 1_000_000 * 1.0 + self._tok_out / 1_000_000 * 5.0
+        self.stdout.write(
+            f"IA_USAGE analisar_noticias tokens_in={self._tok_in} tokens_out={self._tok_out} "
+            f"custo_estimado_usd={custo:.4f}"
+        )
 
     def _analisar(self, client, noticia) -> dict | None:
         user_msg = USER_TEMPLATE.format(
@@ -182,6 +190,10 @@ class Command(BaseCommand):
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_msg}],
             )
+            _u = getattr(response, "usage", None)
+            if _u is not None:
+                self._tok_in += getattr(_u, "input_tokens", 0) or 0
+                self._tok_out += getattr(_u, "output_tokens", 0) or 0
             raw = response.content[0].text.strip()
             # Remove blocos markdown se o modelo inserir
             if raw.startswith("```"):

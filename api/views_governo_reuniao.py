@@ -314,6 +314,12 @@ Formate com Markdown (negrito para títulos de seção, listas para encaminhamen
             max_tokens=2500,
             messages=[{"role": "user", "content": prompt}],
         )
+        _u = getattr(response, "usage", None)
+        if _u is not None:
+            logger.info(
+                "IA_USAGE ata_reuniao in=%s out=%s",
+                getattr(_u, "input_tokens", 0), getattr(_u, "output_tokens", 0),
+            )
         return response.content[0].text
     except Exception as exc:
         logger.warning("Falha ao gerar ata por IA: %s", exc)
