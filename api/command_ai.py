@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 
 from django.db.models import Avg, Count
@@ -11,6 +12,8 @@ from .models import AuditoriaInstitucional, Empresa, ProjecaoDispersao
 from .planos import detalhes_pacote, normalizar_codigo_pacote
 from .views_enterprise import build_enterprise_command_center_payload
 
+
+logger = logging.getLogger(__name__)
 
 PRODUCT_NAME = "Sala de Decisão IA"
 
@@ -843,11 +846,27 @@ def _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=6):
 
 
 def _dispersao_block():
-    """Projeções SEIR ativas (últimas 24h) para a Sala de Decisão e briefing."""
+    """Projeções SEIR ativas (últimas 24h) para a Sala de Decisão e briefing.
+
+    Bloco auxiliar (IA #9 dispersão), chamado em dois pontos (aqui e em
+    _executive_cards). Qualquer falha aqui — dados ausentes, schema em
+    transição — retorna None em vez de propagar: a Sala nunca deve cair
+    inteira por causa deste bloco. Foi exatamente esse acoplamento (um
+    FieldError isolado derrubando /api/command-ai só para governo) que
+    deixou a tela em branco.
+    """
+    try:
+        return _dispersao_block_inner()
+    except Exception:
+        logger.exception("Falha ao montar bloco de dispersão SEIR; seguindo sem ele.")
+        return None
+
+
+def _dispersao_block_inner():
     corte = timezone.now() - timedelta(hours=24)
     qs = (
         ProjecaoDispersao.objects
-        .filter(criado_em__gte=corte, horizonte_dias=7)
+        .filter(calculado_em__gte=corte, horizonte_dias=7)
         .order_by("-probabilidade")
     )
     if not qs.exists():

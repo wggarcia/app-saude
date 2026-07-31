@@ -58,6 +58,7 @@ from .models import (
     EmpresaTurno,
     EmpresaUnidade,
     PedidoApoioCorporativo,
+    ProjecaoDispersao,
     RegistroSintoma,
 )
 
@@ -166,6 +167,59 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
         self.assertIn("Não altera mapa", " ".join(payload["safeguards"]))
         self.assertEqual(payload["enterprise_command_center"]["setor"], "hospital")
         self.assertIn("radar_concorrencial", payload["enterprise_command_center"])
+
+    def test_payload_governo_monta_bloco_dispersao_sem_field_error(self):
+        """Regressão: o bloco de dispersão SEIR (IA #9), que só roda para
+        governo, filtrava ProjecaoDispersao por `criado_em` — campo inexistente
+        (o correto é `calculado_em`). Isso lançava FieldError → HTTP 500 em
+        /api/command-ai apenas para contas governo, deixando a Sala de Decisão
+        IA em branco. Este teste exercita o caminho governo com uma projeção
+        ativa e garante que o payload é montado com o bloco de dispersão."""
+        governo = Empresa.objects.create(
+            nome="Secretaria Estadual de Saúde",
+            email="gov-dispersao@example.com",
+            senha=make_password("123456"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_estado",
+        )
+        # calculado_em é auto_now=True → grava "agora", dentro da janela de 24h.
+        ProjecaoDispersao.objects.create(
+            doenca="dengue",
+            municipio_ibge="3550308",
+            municipio_nome="São Paulo",
+            uf="SP",
+            horizonte_dias=7,
+            probabilidade=0.73,
+            casos_projetados=120.0,
+            origem_provavel_nome="Campinas",
+        )
+
+        payload = build_command_ai_payload(governo)  # antes: FieldError
+
+        self.assertEqual(payload["summary"]["setor"], "governo")
+        self.assertIsNotNone(payload.get("dispersao_projecao"))
+        self.assertEqual(payload["dispersao_projecao"]["horizonte_dias"], 7)
+        self.assertGreaterEqual(payload["dispersao_projecao"]["total_municipios_risco_7d"], 1)
+
+    def test_payload_governo_resiliente_a_falha_no_bloco_dispersao(self):
+        """O bloco de dispersão é auxiliar e nunca deve derrubar a Sala inteira.
+        Se _dispersao_block levantar, o payload deve seguir com dispersao=None."""
+        governo = Empresa.objects.create(
+            nome="Secretaria Municipal de Saúde",
+            email="gov-resiliente@example.com",
+            senha=make_password("123456"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_medio",
+        )
+        from unittest.mock import patch
+
+        with patch("api.command_ai._dispersao_block_inner", side_effect=RuntimeError("boom")):
+            payload = build_command_ai_payload(governo)
+
+        self.assertEqual(payload["summary"]["setor"], "governo")
+        self.assertIsNone(payload.get("dispersao_projecao"))
 
     def test_farmacia_recebe_direcao_de_abastecimento_e_laboratorio(self):
         farmacia = Empresa.objects.create(
