@@ -17,13 +17,28 @@ import logging
 import math
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils import timezone
 
-from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
+from .access_control import (
+    get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .services.auth_session import empresa_autenticada_from_request
+from .views_dashboard import contexto_navegacao_setorial
 
 logger = logging.getLogger(__name__)
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("governo")
+@requer_operacao_page
+@requer_permissao_modulo("governo.administrativo")
+def governo_cnes_page(request):
+    return render(request, "governo_cnes.html", contexto_navegacao_setorial(request, "governo"))
 
 _CNES_API_BASE   = "https://apidadosabertos.saude.gov.br/cnes"
 _CNES_TIMEOUT    = 10  # segundos

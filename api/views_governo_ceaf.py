@@ -18,16 +18,31 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
+from .access_control import (
+    get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .utils import validar_cpf_cadastro
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .services.rnds_fhir import transmitir_bundle, get_cred as _rnds_cred
+from .views_dashboard import contexto_navegacao_setorial
 
 logger = logging.getLogger(__name__)
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("governo")
+@requer_operacao_page
+@requer_permissao_modulo("governo.farmacia", "governo.atencao_clinica")
+def governo_ceaf_page(request):
+    return render(request, "governo_ceaf.html", contexto_navegacao_setorial(request, "governo"))
 
 
 def _e(request):

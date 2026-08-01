@@ -169,6 +169,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
       {% endif %}
       {% if gov_ver_farmacia or gov_ver_atencao_clinica %}
       <button class="nav-link" onclick="openModulePanel('/governo/farmacia-basica/','💊 Farmácia Básica UBS')"><span>💊</span> Farmácia Básica UBS</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/ceaf/','💉 CEAF — Alto Custo')"><span>💉</span> CEAF — Alto Custo</button>
+      {% endif %}
+      {% if gov_ver_atencao_clinica or gov_ver_epidemiologia %}
+      <button class="nav-link" onclick="openModulePanel('/governo/sipni/','💉 SIPNI — Imunizações')"><span>💉</span> SIPNI — Imunizações</button>
       {% endif %}
       {% if gov_ver_laboratorio or gov_ver_atencao_clinica %}
       <button class="nav-link" onclick="openModulePanel('/governo/laboratorio/','🧪 Laboratório')"><span>🧪</span> Laboratório</button>
@@ -184,6 +188,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="nav-link" onclick="openModulePanel('/governo/bi/','📈 Business Intelligence')"><span>📈</span> Business Intelligence</button>
       <button class="nav-link" onclick="openModulePanel('/governo/ppi/','🗺️ PPI — Programação Pactuada')"><span>🗺️</span> PPI — Prog. Pactuada</button>
       <button class="nav-link" onclick="openModulePanel('/governo/almoxarifado/','📦 Almoxarifado')"><span>📦</span> Almoxarifado</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/cnes/','🏥 CNES — Estabelecimentos')"><span>🏥</span> CNES — Estabelecimentos</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/escala-rede/','🗓️ Escala de Profissionais')"><span>🗓️</span> Escala de Profissionais</button>
+      {% endif %}
+      {% if gov_ver_secretaria or gov_ver_administrativo %}
+      <button class="nav-link" onclick="openModulePanel('/governo/ouvidoria/','📢 Ouvidoria do SUS')"><span>📢</span> Ouvidoria do SUS</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/conselho-saude/','🏛️ Conselho de Saúde')"><span>🏛️</span> Conselho de Saúde</button>
       {% endif %}
       {% if gov_ver_suas %}
       <button class="nav-link" onclick="openModulePanel('/governo/suas/','🏘️ SUAS / CRAS / CREAS')"><span>🏘️</span> SUAS / CRAS / CREAS</button>

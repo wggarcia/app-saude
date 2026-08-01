@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ouvidoria do SUS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters input,.filters select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.form-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.detail-row .k{color:var(--muted);flex-shrink:0}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Ouvidoria do SUS</div>
+      <div class="page-sub">Manifestações do cidadão — reclamação, denúncia, sugestão, elogio e solicitação de informação (LAI)</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalNova()">+ Registrar Manifestação</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Total de Manifestações</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiAbertas">—</div><div class="kpi-lbl">Abertas / Em Análise</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiRespondidas">—</div><div class="kpi-lbl">Respondidas</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiVencidas">—</div><div class="kpi-lbl">Prazo LAI Vencido</div></div>
+  </div>
+
+  <!-- Manifestações -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Manifestações</span>
+      <div class="filters">
+        <input id="fBusca" placeholder="Protocolo, nome ou CPF" oninput="carregarManifestacoes()">
+        <select id="fTipo" onchange="carregarManifestacoes()">
+          <option value="">Todos os tipos</option>
+          <option value="reclamacao">Reclamação</option>
+          <option value="denuncia">Denúncia</option>
+          <option value="sugestao">Sugestão</option>
+          <option value="elogio">Elogio</option>
+          <option value="solicitacao">Solicitação de Informação</option>
+        </select>
+        <select id="fStatus" onchange="carregarManifestacoes()">
+          <option value="">Todos os status</option>
+          <option value="aberta">Aberta</option>
+          <option value="em_analise">Em Análise</option>
+          <option value="respondida">Respondida</option>
+          <option value="encerrada">Encerrada</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Protocolo</th><th>Tipo</th><th>Manifestante</th><th>Canal</th><th>Status</th><th>Prazo LAI</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyMan"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Nova Manifestação -->
+<div class="modal-bg" id="modalNova">
+  <div class="modal">
+    <h3>Registrar Manifestação</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="mTipo">
+          <option value="reclamacao">Reclamação</option>
+          <option value="denuncia">Denúncia</option>
+          <option value="sugestao">Sugestão</option>
+          <option value="elogio">Elogio</option>
+          <option value="solicitacao">Solicitação de Informação</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Canal</label>
+        <select id="mCanal">
+          <option value="app">App do Cidadão</option>
+          <option value="presencial">Presencial</option>
+          <option value="telefone">Telefone / 156</option>
+          <option value="site">Site / Portal</option>
+          <option value="carta">Carta / Ofício</option>
+        </select>
+      </div>
+    </div>
+    <label class="form-check"><input type="checkbox" id="mAnonima" onchange="toggleAnonima()"> Manifestação anônima</label>
+    <div id="dadosManifestante">
+      <div class="form-row">
+        <div class="form-group"><label>Nome do Manifestante</label><input id="mNome"></div>
+        <div class="form-group"><label>CPF</label><input id="mCpf" maxlength="14"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Telefone</label><input id="mTelefone"></div>
+        <div class="form-group"><label>E-mail</label><input id="mEmail" type="email"></div>
+      </div>
+    </div>
+    <div class="form-group"><label>Descrição *</label><textarea id="mDescricao" rows="4"></textarea></div>
+    <label class="form-check"><input type="checkbox" id="mSigiloso"> Tratar como sigiloso</label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNova')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarManifestacao()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe / Responder -->
+<div class="modal-bg" id="modalDetalhe">
+  <div class="modal">
+    <h3 id="dTitulo">Manifestação</h3>
+    <div id="dCorpo"></div>
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div class="card-title" style="margin-bottom:10px">Responder</div>
+      <div class="form-group"><label>Resposta ao manifestante</label><textarea id="rResposta" rows="4"></textarea></div>
+      <div class="form-group"><label>Respondido por</label><input id="rPor"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modalDetalhe')">Fechar</button>
+        <button class="btn btn-ok" onclick="responder()">Enviar Resposta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let MAN_ATUAL = null;
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+const STATUS_BADGE = {
+  aberta:     '<span class="badge badge-info">Aberta</span>',
+  em_analise: '<span class="badge badge-warn">Em Análise</span>',
+  respondida: '<span class="badge badge-ok">Respondida</span>',
+  encerrada:  '<span class="badge badge-ok">Encerrada</span>',
+};
+
+function fmtData(iso) { return iso ? new Date(iso + "T00:00:00").toLocaleDateString("pt-BR") : "—"; }
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/ouvidoria/kpis");
+  document.getElementById("kpiTotal").textContent = d.total ?? 0;
+  document.getElementById("kpiAbertas").textContent = d.abertas ?? 0;
+  document.getElementById("kpiRespondidas").textContent = (d.por_status || {}).respondida ?? 0;
+  document.getElementById("kpiVencidas").textContent = d.prazo_vencido ?? 0;
+}
+
+async function carregarManifestacoes() {
+  const busca = document.getElementById("fBusca").value.trim();
+  const tipo = document.getElementById("fTipo").value;
+  const status = document.getElementById("fStatus").value;
+  const params = new URLSearchParams();
+  if (busca) params.set("q", busca);
+  if (tipo) params.set("tipo", tipo);
+  if (status) params.set("status", status);
+  const d = await fetchJSON("/api/governo/ouvidoria/manifestacoes?" + params.toString());
+  const tbody = document.getElementById("tbodyMan");
+  const items = d.manifestacoes || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma manifestação encontrada.</td></tr>'; return; }
+  tbody.innerHTML = items.map(m => `<tr>
+    <td><strong>${m.protocolo}</strong>${m.sigiloso ? ' 🔒' : ''}</td>
+    <td>${m.tipo_display}</td>
+    <td>${m.manifestante_nome}</td>
+    <td>${m.canal_display}</td>
+    <td>${STATUS_BADGE[m.status] || m.status}${m.prazo_vencido ? ' <span class="badge badge-danger">Prazo vencido</span>' : ''}</td>
+    <td>${fmtData(m.prazo_resposta)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalhe(${m.id})">Ver / Responder</button></td>
+  </tr>`).join("");
+}
+
+function toggleAnonima() {
+  document.getElementById("dadosManifestante").style.display =
+    document.getElementById("mAnonima").checked ? "none" : "block";
+}
+
+function abrirModalNova() { document.getElementById("modalNova").classList.add("open"); }
+
+async function salvarManifestacao() {
+  const descricao = document.getElementById("mDescricao").value.trim();
+  if (!descricao) { alert("Descrição é obrigatória."); return; }
+  const body = {
+    tipo: document.getElementById("mTipo").value,
+    canal: document.getElementById("mCanal").value,
+    anonima: document.getElementById("mAnonima").checked,
+    manifestante_nome: document.getElementById("mNome").value.trim(),
+    manifestante_cpf: document.getElementById("mCpf").value.trim(),
+    manifestante_telefone: document.getElementById("mTelefone").value.trim(),
+    manifestante_email: document.getElementById("mEmail").value.trim(),
+    descricao,
+    sigiloso: document.getElementById("mSigiloso").checked,
+  };
+  const d = await fetchJSON("/api/governo/ouvidoria/manifestacoes", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalNova");
+  alert(`Manifestação registrada — protocolo ${d.protocolo}`);
+  carregarManifestacoes(); carregarKpis();
+}
+
+async function abrirDetalhe(id) {
+  const d = await fetchJSON(`/api/governo/ouvidoria/manifestacoes/${id}`);
+  MAN_ATUAL = d;
+  document.getElementById("dTitulo").textContent = `${d.protocolo} — ${d.tipo_display}`;
+  document.getElementById("dCorpo").innerHTML = `
+    <div class="detail-row"><span class="k">Manifestante</span><span>${d.anonima ? "(anônimo)" : (d.manifestante_nome || "—")}</span></div>
+    <div class="detail-row"><span class="k">Canal</span><span>${d.canal_display}</span></div>
+    <div class="detail-row"><span class="k">Unidade</span><span>${d.unidade_relacionada || "—"}</span></div>
+    <div class="detail-row"><span class="k">Status</span><span>${STATUS_BADGE[d.status] || d.status}</span></div>
+    <div class="detail-row"><span class="k">Prazo LAI</span><span>${fmtData(d.prazo_resposta)}</span></div>
+    <div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Descrição</span><span style="margin-top:4px">${d.descricao}</span></div>
+    ${d.resposta ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Resposta (${d.respondido_por || "—"})</span><span style="margin-top:4px">${d.resposta}</span></div>` : ""}
+  `;
+  document.getElementById("rResposta").value = d.resposta || "";
+  document.getElementById("rPor").value = d.respondido_por || "";
+  document.getElementById("modalDetalhe").classList.add("open");
+}
+
+async function responder() {
+  if (!MAN_ATUAL) return;
+  const resposta = document.getElementById("rResposta").value.trim();
+  if (!resposta) { alert("Escreva a resposta antes de enviar."); return; }
+  const d = await fetchJSON(`/api/governo/ouvidoria/manifestacoes/${MAN_ATUAL.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ resposta, respondido_por: document.getElementById("rPor").value.trim() }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  alert("Resposta registrada.");
+  fecharModal("modalDetalhe");
+  carregarManifestacoes(); carregarKpis();
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarManifestacoes();
+</script>
+</body>
+</html>

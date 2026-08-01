@@ -767,6 +767,27 @@ from api.views_governo_faturamento import (
     api_faturamento_sus_transmitir,
     api_faturamento_sus_gerar_bpa,
 )
+from api.views_governo_ouvidoria import (
+    governo_ouvidoria_page,
+    api_ouvidoria_manifestacoes,
+    api_ouvidoria_manifestacao_detalhe,
+    api_ouvidoria_kpis,
+)
+from api.views_governo_conselho_saude import (
+    governo_conselho_saude_page,
+    api_conselho_conselheiros,
+    api_conselho_conselheiro_detalhe,
+    api_conselho_reunioes,
+    api_conselho_reuniao_detalhe,
+    api_conselho_deliberacoes,
+    api_conselho_kpis,
+)
+from api.views_governo_escala_rede import (
+    governo_escala_rede_page,
+    api_escala_rede_lista,
+    api_escala_rede_detalhe,
+    api_escala_rede_kpis,
+)
 from api.views_governo_teleconsulta import (
     governo_teleconsulta_page,
     teleconsulta_sala_medico,
@@ -892,6 +913,7 @@ from api.views_governo_ceaf import (
     api_ceaf_dispensar,
     api_ceaf_horus_enviar,
     api_ceaf_kpis,
+    governo_ceaf_page,
 )
 from api.views_plano_portabilidade import (
     api_portabilidade_lista,
@@ -923,6 +945,7 @@ from api.views_governo_sipni import (
     api_sipni_transmitir,
     api_sipni_reprocessar,
     api_sipni_kpis,
+    governo_sipni_page,
 )
 from api.views_hospital_assinatura import (
     api_assinatura_pendentes,
@@ -939,6 +962,7 @@ from api.views_governo_cnes import (
     api_cnes_sincronizar_todas,
     api_cnes_status,
     api_cnes_kpis,
+    governo_cnes_page,
 )
 from api.views_hospital_hemoterapia import (
     api_hemo_bolsas,
@@ -1378,6 +1402,9 @@ urlpatterns = [
     path('governo/app-cidadao/', governo_app_cidadao_page),
     path('governo/regulacao-assistencial/', governo_regulacao_page),
     path('governo/faturamento-sus/', governo_faturamento_sus_page),
+    path('governo/ouvidoria/', governo_ouvidoria_page),
+    path('governo/conselho-saude/', governo_conselho_saude_page),
+    path('governo/escala-rede/', governo_escala_rede_page),
     path('governo/teleconsulta/', governo_teleconsulta_page),
     path('governo/teleconsulta/<int:tc_id>/sala/', teleconsulta_sala_medico),
     path('teleconsulta/paciente/<str:token>/', teleconsulta_sala_paciente),
@@ -2232,6 +2259,36 @@ urlpatterns = [
     path('api/governo/faturamento-sus/<int:lote_id>/transmitir/', api_faturamento_sus_transmitir),
     path('api/governo/faturamento-sus/lotes/<int:lote_id>/gerar-bpa', api_faturamento_sus_gerar_bpa),
     path('api/governo/faturamento-sus/lotes/<int:lote_id>/gerar-bpa/', api_faturamento_sus_gerar_bpa),
+
+    # ── Ouvidoria do SUS ──────────────────────────────────────────────────────
+    path('api/governo/ouvidoria/manifestacoes',                 api_ouvidoria_manifestacoes),
+    path('api/governo/ouvidoria/manifestacoes/',                api_ouvidoria_manifestacoes),
+    path('api/governo/ouvidoria/manifestacoes/<int:man_id>',    api_ouvidoria_manifestacao_detalhe),
+    path('api/governo/ouvidoria/manifestacoes/<int:man_id>/',   api_ouvidoria_manifestacao_detalhe),
+    path('api/governo/ouvidoria/kpis',                          api_ouvidoria_kpis),
+    path('api/governo/ouvidoria/kpis/',                         api_ouvidoria_kpis),
+
+    # ── Conselho Municipal/Estadual de Saúde ─────────────────────────────────
+    path('api/governo/conselho-saude/conselheiros',             api_conselho_conselheiros),
+    path('api/governo/conselho-saude/conselheiros/',            api_conselho_conselheiros),
+    path('api/governo/conselho-saude/conselheiros/<int:c_id>',  api_conselho_conselheiro_detalhe),
+    path('api/governo/conselho-saude/conselheiros/<int:c_id>/', api_conselho_conselheiro_detalhe),
+    path('api/governo/conselho-saude/reunioes',                 api_conselho_reunioes),
+    path('api/governo/conselho-saude/reunioes/',                api_conselho_reunioes),
+    path('api/governo/conselho-saude/reunioes/<int:r_id>',      api_conselho_reuniao_detalhe),
+    path('api/governo/conselho-saude/reunioes/<int:r_id>/',     api_conselho_reuniao_detalhe),
+    path('api/governo/conselho-saude/deliberacoes',             api_conselho_deliberacoes),
+    path('api/governo/conselho-saude/deliberacoes/',            api_conselho_deliberacoes),
+    path('api/governo/conselho-saude/kpis',                     api_conselho_kpis),
+    path('api/governo/conselho-saude/kpis/',                    api_conselho_kpis),
+
+    # ── Escala de Profissionais da Rede Assistencial ─────────────────────────
+    path('api/governo/escala-rede/escalas',                     api_escala_rede_lista),
+    path('api/governo/escala-rede/escalas/',                    api_escala_rede_lista),
+    path('api/governo/escala-rede/escalas/<int:esc_id>',        api_escala_rede_detalhe),
+    path('api/governo/escala-rede/escalas/<int:esc_id>/',       api_escala_rede_detalhe),
+    path('api/governo/escala-rede/kpis',                        api_escala_rede_kpis),
+    path('api/governo/escala-rede/kpis/',                       api_escala_rede_kpis),
     path('api/governo/teleconsulta/kpis/', api_teleconsulta_kpis),
     path('api/governo/teleconsulta/', api_teleconsulta_lista),
     path('api/governo/teleconsulta/agendar/', api_teleconsulta_agendar),
@@ -2780,6 +2837,7 @@ urlpatterns = [
     path('api/hospital/ccih/indicadores/',                       api_ccih_indicadores),
 
     # ── CEAF — Componente Especializado da Assistência Farmacêutica ──────────
+    path('governo/ceaf/',                                        governo_ceaf_page),
     path('api/governo/ceaf/kpis',                                api_ceaf_kpis),
     path('api/governo/ceaf/kpis/',                               api_ceaf_kpis),
     path('api/governo/ceaf/medicamentos',                        api_ceaf_medicamentos),
@@ -2841,6 +2899,7 @@ urlpatterns = [
     path('api/hospital/obstetrico/partos/<int:parto_id>/dnv/',                api_obstetrico_dnv),
 
     # ── SIPNI — Imunizações via RNDS ─────────────────────────────────────────
+    path('governo/sipni/',                                      governo_sipni_page),
     path('api/governo/sipni/status',                            api_sipni_status),
     path('api/governo/sipni/status/',                           api_sipni_status),
     path('api/governo/sipni/historico',                         api_sipni_historico),
@@ -2865,6 +2924,7 @@ urlpatterns = [
     path('api/hospital/assinatura/verificar/<int:evolucao_id>/', api_assinatura_verificar),
 
     # ── CNES — Sincronização com DATASUS ─────────────────────────────────────
+    path('governo/cnes/',                                       governo_cnes_page),
     path('api/governo/cnes/buscar',                             api_cnes_buscar),
     path('api/governo/cnes/buscar/',                            api_cnes_buscar),
     path('api/governo/cnes/sincronizar',                        api_cnes_sincronizar),

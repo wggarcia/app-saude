@@ -16,13 +16,28 @@ import math
 from datetime import date
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils import timezone
 
-from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo
+from .access_control import (
+    get_setor, principal_pode_operacao_setorial, api_requer_permissao_modulo,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .services.auth_session import empresa_autenticada_from_request
+from .views_dashboard import contexto_navegacao_setorial
 
 logger = logging.getLogger(__name__)
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("governo")
+@requer_operacao_page
+@requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
+def governo_sipni_page(request):
+    return render(request, "governo_sipni.html", contexto_navegacao_setorial(request, "governo"))
 
 # Catálogo de imunobiológicos com código SIPNI
 _IMUNO_CATALOGO = {

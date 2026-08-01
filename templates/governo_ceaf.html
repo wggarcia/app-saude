@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CEAF — Medicamentos de Alto Custo</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:26px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters input,.filters select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.detail-row .k{color:var(--muted)}
+@media(max-width:1000px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">CEAF — Componente Especializado da Assistência Farmacêutica</div>
+      <div class="page-sub">LME, dispensação de medicamentos de alto custo e transmissão ao HÓRUS/BNAFAR</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalNovaSolicitacao()">+ Nova Solicitação (LME)</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiEmAnalise">—</div><div class="kpi-lbl">Em Análise</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiAprovadas">—</div><div class="kpi-lbl">Aprovadas</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiVencidas">—</div><div class="kpi-lbl">LMEs Vencidas</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiVencendo">—</div><div class="kpi-lbl">Vencendo em 30d</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiPendHorus">—</div><div class="kpi-lbl">Pendente HÓRUS</div></div>
+  </div>
+
+  <!-- Solicitações -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Solicitações (LME)</span>
+      <div class="filters">
+        <input id="fBusca" placeholder="Paciente, CPF ou nº LME" oninput="carregarSolicitacoes()">
+        <select id="fStatus" onchange="carregarSolicitacoes()">
+          <option value="">Todos os status</option>
+          <option value="em_analise">Em análise</option>
+          <option value="aprovada">Aprovada</option>
+          <option value="negada">Negada</option>
+          <option value="renovacao">Aguardando Renovação</option>
+          <option value="suspensa">Suspensa</option>
+          <option value="encerrada">Encerrada</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>LME</th><th>Paciente</th><th>Medicamento</th><th>CID-10</th><th>Status</th><th>Validade</th><th>Ações</th></tr></thead>
+      <tbody id="tbodySol"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Nova Solicitação -->
+<div class="modal-bg" id="modalNovaSolicitacao">
+  <div class="modal">
+    <h3>Nova Solicitação (LME)</h3>
+    <div class="form-group">
+      <label>Medicamento (RENAME) *</label>
+      <select id="sMedicamento"><option value="">Carregando catálogo…</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nome do Paciente *</label><input id="sPacienteNome"></div>
+      <div class="form-group"><label>CPF do Paciente *</label><input id="sCpf" maxlength="11" placeholder="Somente números"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNS do Paciente</label><input id="sCns"></div>
+      <div class="form-group"><label>Data de Nascimento</label><input id="sNascimento" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CID-10 Principal *</label><input id="sCid1" placeholder="Ex: M06.9"></div>
+      <div class="form-group"><label>CID-10 Secundário</label><input id="sCid2"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Médico Solicitante *</label><input id="sMedico"></div>
+      <div class="form-group"><label>CRM</label><input id="sCrm"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Dose Prescrita</label><input id="sDose"></div>
+      <div class="form-group"><label>Duração do Tratamento</label><input id="sDuracao"></div>
+    </div>
+    <div class="form-group"><label>Justificativa Clínica</label><textarea id="sJustificativa" rows="3"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNovaSolicitacao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSolicitacao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe / Dispensar -->
+<div class="modal-bg" id="modalDetalhe">
+  <div class="modal">
+    <h3 id="dTitulo">Solicitação</h3>
+    <div id="dCorpo"></div>
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div class="card-title" style="margin-bottom:10px">Registrar Dispensação</div>
+      <div class="form-row">
+        <div class="form-group"><label>Quantidade</label><input id="dispQtd" type="number" min="1" value="1"></div>
+        <div class="form-group"><label>Lote</label><input id="dispLote"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Validade do Lote</label><input id="dispValidade" type="date"></div>
+        <div class="form-group"><label>Fabricante</label><input id="dispFabricante"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Farmacêutico</label><input id="dispFarmaceutico"></div>
+        <div class="form-group"><label>CRF</label><input id="dispCrf"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modalDetalhe')">Fechar</button>
+        <button class="btn btn-ok" onclick="dispensar()">Registrar Dispensação</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let CATALOGO = [];
+let SOL_ATUAL = null;
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+const STATUS_BADGE = {
+  em_analise: '<span class="badge badge-info">Em análise</span>',
+  aprovada:   '<span class="badge badge-ok">Aprovada</span>',
+  negada:     '<span class="badge badge-danger">Negada</span>',
+  renovacao:  '<span class="badge badge-warn">Aguard. Renovação</span>',
+  suspensa:   '<span class="badge badge-warn">Suspensa</span>',
+  encerrada:  '<span class="badge badge-danger">Encerrada</span>',
+};
+
+function fmtData(iso) { return iso ? new Date(iso + "T00:00:00").toLocaleDateString("pt-BR") : "—"; }
+
+async function carregarCatalogo() {
+  const d = await fetchJSON("/api/governo/ceaf/medicamentos");
+  CATALOGO = d.medicamentos || [];
+  const sel = document.getElementById("sMedicamento");
+  sel.innerHTML = '<option value="">Selecione…</option>' + CATALOGO.map(m =>
+    `<option value="${m.id}">${m.principio_ativo} ${m.concentracao} (${m.componente_display})</option>`).join("");
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/ceaf/kpis");
+  const p = d.solicitacoes_por_status || {};
+  document.getElementById("kpiEmAnalise").textContent = p.em_analise ?? 0;
+  document.getElementById("kpiAprovadas").textContent = p.aprovada ?? 0;
+  document.getElementById("kpiVencidas").textContent = d.lmes_vencidas ?? 0;
+  document.getElementById("kpiVencendo").textContent = d.lmes_vencendo_30d ?? 0;
+  document.getElementById("kpiPendHorus").textContent = d.pendente_horus ?? 0;
+}
+
+async function carregarSolicitacoes() {
+  const busca = document.getElementById("fBusca").value.trim();
+  const status = document.getElementById("fStatus").value;
+  const params = new URLSearchParams();
+  if (busca) params.set("q", busca);
+  if (status) params.set("status", status);
+  const d = await fetchJSON("/api/governo/ceaf/solicitacoes?" + params.toString());
+  const tbody = document.getElementById("tbodySol");
+  const sols = d.solicitacoes || [];
+  if (!sols.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma solicitação encontrada.</td></tr>'; return; }
+  tbody.innerHTML = sols.map(s => `<tr>
+    <td><strong>${s.numero_lme}</strong></td>
+    <td>${s.paciente_nome}</td>
+    <td>${s.medicamento_pa}</td>
+    <td>${s.cid10_principal}</td>
+    <td>${STATUS_BADGE[s.status] || s.status}${s.vencida ? ' <span class="badge badge-danger">Vencida</span>' : ''}</td>
+    <td>${fmtData(s.data_validade)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalhe(${s.id})">Ver / Dispensar</button></td>
+  </tr>`).join("");
+}
+
+function abrirModalNovaSolicitacao() {
+  document.getElementById("modalNovaSolicitacao").classList.add("open");
+}
+
+async function salvarSolicitacao() {
+  const medId = document.getElementById("sMedicamento").value;
+  const nome = document.getElementById("sPacienteNome").value.trim();
+  const cpf = document.getElementById("sCpf").value.trim();
+  const cid1 = document.getElementById("sCid1").value.trim();
+  const medico = document.getElementById("sMedico").value.trim();
+  if (!medId || !nome || !cpf || !cid1 || !medico) { alert("Preencha os campos obrigatórios (*)."); return; }
+  const body = {
+    medicamento_id: parseInt(medId),
+    paciente_nome: nome,
+    cpf_paciente: cpf,
+    cns_paciente: document.getElementById("sCns").value.trim(),
+    data_nascimento: document.getElementById("sNascimento").value || null,
+    cid10_principal: cid1,
+    cid10_secundario: document.getElementById("sCid2").value.trim(),
+    medico_solicitante: medico,
+    crm_medico: document.getElementById("sCrm").value.trim(),
+    dose_prescrita: document.getElementById("sDose").value.trim(),
+    duracao_tratamento: document.getElementById("sDuracao").value.trim(),
+    justificativa: document.getElementById("sJustificativa").value.trim(),
+  };
+  const d = await fetchJSON("/api/governo/ceaf/solicitacoes", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalNovaSolicitacao");
+  alert(`Solicitação criada — LME ${d.numero_lme}`);
+  carregarSolicitacoes(); carregarKpis();
+}
+
+async function abrirDetalhe(id) {
+  const d = await fetchJSON(`/api/governo/ceaf/solicitacoes/${id}`);
+  SOL_ATUAL = d;
+  document.getElementById("dTitulo").textContent = `LME ${d.numero_lme} — ${d.paciente_nome}`;
+  const disps = (d.dispensacoes || []).map(x => `
+    <div class="detail-row"><span class="k">${fmtData(x.data_dispensacao)} — qtd ${x.quantidade}, lote ${x.lote || "—"}</span>
+    <span>${x.horus_enviado
+      ? '<span class="badge badge-ok">HÓRUS enviado</span>'
+      : `<button class="btn btn-ghost btn-sm" onclick="enviarHorus(${x.id})">Enviar HÓRUS</button>`}</span></div>`).join("") || '<div class="empty" style="padding:12px">Nenhuma dispensação registrada.</div>';
+  document.getElementById("dCorpo").innerHTML = `
+    <div class="detail-row"><span class="k">Medicamento</span><span>${d.medicamento.principio_ativo} ${d.medicamento.concentracao}</span></div>
+    <div class="detail-row"><span class="k">CID-10</span><span>${d.cid10_principal}</span></div>
+    <div class="detail-row"><span class="k">Médico</span><span>${d.medico_solicitante}</span></div>
+    <div class="detail-row"><span class="k">Status</span><span>${STATUS_BADGE[d.status] || d.status}</span></div>
+    <div class="detail-row"><span class="k">Validade</span><span>${fmtData(d.data_validade)}</span></div>
+    <div style="margin-top:12px"><div class="card-title" style="margin-bottom:8px">Dispensações</div>${disps}</div>`;
+  document.getElementById("modalDetalhe").classList.add("open");
+}
+
+async function dispensar() {
+  if (!SOL_ATUAL) return;
+  const body = {
+    quantidade: parseInt(document.getElementById("dispQtd").value) || 1,
+    lote: document.getElementById("dispLote").value.trim(),
+    validade_lote: document.getElementById("dispValidade").value || null,
+    fabricante: document.getElementById("dispFabricante").value.trim(),
+    farmaceutico: document.getElementById("dispFarmaceutico").value.trim(),
+    crf_farmaceutico: document.getElementById("dispCrf").value.trim(),
+  };
+  const d = await fetchJSON(`/api/governo/ceaf/solicitacoes/${SOL_ATUAL.id}/dispensar`, { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  alert("Dispensação registrada.");
+  abrirDetalhe(SOL_ATUAL.id);
+  carregarSolicitacoes(); carregarKpis();
+}
+
+async function enviarHorus(dispId) {
+  const d = await fetchJSON(`/api/governo/ceaf/dispensacoes/${dispId}/horus`, { method: "POST", body: "{}" });
+  if (d.erro) { alert(d.erro + (d.instrucao ? "\n" + d.instrucao : "")); return; }
+  alert(d.mensagem || "Enviado ao HÓRUS.");
+  if (SOL_ATUAL) abrirDetalhe(SOL_ATUAL.id);
+  carregarKpis();
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarCatalogo();
+carregarKpis();
+carregarSolicitacoes();
+</script>
+</body>
+</html>

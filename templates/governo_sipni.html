@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SIPNI — Imunizações</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:16px 20px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.aviso{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.3);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--warn);display:flex;gap:10px;align-items:flex-start}
+.status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:18px 20px}
+.status-item{display:flex;flex-direction:column;gap:4px}
+.status-item .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.status-item .val{font-size:14px;font-weight:700}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:400px;max-width:480px;width:100%}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+@media(max-width:900px){.kpi-row,.status-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">SIPNI — Imunizações (RNDS)</div>
+      <div class="page-sub">Cobertura vacinal e transmissão de registros de vacinação ao SIPNI/RNDS</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalTransmitir()">+ Transmitir Competência</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div id="avisoBox"></div>
+
+  <!-- Status RNDS -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Status da Integração RNDS</span></div>
+    <div class="status-grid">
+      <div class="status-item"><span class="lbl">Configurado</span><span class="val" id="stConfigurado">—</span></div>
+      <div class="status-item"><span class="lbl">Ambiente</span><span class="val" id="stAmbiente">—</span></div>
+      <div class="status-item"><span class="lbl">CNES</span><span class="val" id="stCnes">—</span></div>
+      <div class="status-item"><span class="lbl">Última Transmissão</span><span class="val" id="stUltima">—</span></div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi ok"><div class="kpi-val" id="kpiCobertura">—</div><div class="kpi-lbl">Cobertura Transmitida ao SIPNI</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiTotalReg">—</div><div class="kpi-lbl">Registros no Sistema</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiTransmitidos">—</div><div class="kpi-lbl">Transmitidos ao SIPNI</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiErros">—</div><div class="kpi-lbl">Transmissões com Erro</div></div>
+  </div>
+
+  <!-- Histórico -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Histórico de Transmissões</span></div>
+    <table>
+      <thead><tr><th>Competência</th><th>Total</th><th>Transmitidos</th><th>Erros</th><th>Status</th><th>Protocolo</th><th>Criado em</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyHist"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Transmitir -->
+<div class="modal-bg" id="modalTransmitir">
+  <div class="modal">
+    <h3>Transmitir Competência ao SIPNI</h3>
+    <div class="form-group">
+      <label>Competência (AAAAMM) *</label>
+      <input id="txComp" type="text" placeholder="202601" maxlength="6">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalTransmitir')">Cancelar</button>
+      <button class="btn btn-primary" onclick="transmitirCompetencia()">Transmitir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+function compAtual() {
+  const d = new Date();
+  return String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, "0");
+}
+
+function fmtData(iso) {
+  return iso ? new Date(iso).toLocaleString("pt-BR") : "—";
+}
+
+const STATUS_BADGE = {
+  transmitido: '<span class="badge badge-ok">Transmitido</span>',
+  parcial:     '<span class="badge badge-warn">Parcial</span>',
+  erro:        '<span class="badge badge-danger">Erro</span>',
+  pendente:    '<span class="badge badge-info">Pendente</span>',
+};
+
+async function carregarStatus() {
+  const d = await fetchJSON("/api/governo/sipni/status");
+  document.getElementById("stConfigurado").innerHTML = d.configurado
+    ? '<span class="badge badge-ok">Configurado</span>' : '<span class="badge badge-warn">Não configurado</span>';
+  document.getElementById("stAmbiente").textContent = d.ambiente || "—";
+  document.getElementById("stCnes").textContent = d.cnes || "—";
+  document.getElementById("stUltima").textContent = fmtData(d.ultima_transmissao);
+  const avisoBox = document.getElementById("avisoBox");
+  avisoBox.innerHTML = d.aviso ? `<div class="aviso">⚠️ ${d.aviso}</div>` : "";
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/sipni/kpis");
+  document.getElementById("kpiCobertura").textContent = (d.cobertura_pct ?? 0) + "%";
+  document.getElementById("kpiTotalReg").textContent = d.total_registros_sistema ?? "—";
+  document.getElementById("kpiTransmitidos").textContent = d.total_transmitidos_sipni ?? "—";
+  document.getElementById("kpiErros").textContent = d.transmissoes_com_erro ?? "—";
+}
+
+async function carregarHistorico() {
+  const d = await fetchJSON("/api/governo/sipni/historico");
+  const tbody = document.getElementById("tbodyHist");
+  const txs = d.transmissoes || [];
+  if (!txs.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma transmissão registrada ainda.</td></tr>'; return; }
+  tbody.innerHTML = txs.map(t => `<tr>
+    <td><strong>${t.competencia}</strong></td>
+    <td>${t.total}</td>
+    <td>${t.transmitidos}</td>
+    <td>${t.erros}</td>
+    <td>${STATUS_BADGE[t.status] || t.status}</td>
+    <td>${t.protocolo || "—"}</td>
+    <td>${fmtData(t.criado_em)}</td>
+    <td>${t.status !== "transmitido" ? `<button class="btn btn-ghost btn-sm" onclick="reprocessar(${t.id})">Reprocessar</button>` : ""}</td>
+  </tr>`).join("");
+}
+
+function abrirModalTransmitir() {
+  document.getElementById("txComp").value = compAtual();
+  document.getElementById("modalTransmitir").classList.add("open");
+}
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+
+async function transmitirCompetencia() {
+  const comp = document.getElementById("txComp").value.trim();
+  if (comp.length !== 6 || isNaN(comp)) { alert("Competência inválida (AAAAMM)."); return; }
+  const d = await fetchJSON("/api/governo/sipni/transmitir", { method: "POST", body: JSON.stringify({ competencia: comp }) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalTransmitir");
+  alert(d.mensagem || "Transmissão processada.");
+  carregarStatus(); carregarKpis(); carregarHistorico();
+}
+
+async function reprocessar(id) {
+  if (!confirm("Reprocessar esta transmissão?")) return;
+  const d = await fetchJSON(`/api/governo/sipni/reprocessar/${id}`, { method: "POST", body: "{}" });
+  alert(d.mensagem || (d.ok ? "Reprocessado." : "Erro ao reprocessar."));
+  carregarKpis(); carregarHistorico();
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarStatus();
+carregarKpis();
+carregarHistorico();
+</script>
+</body>
+</html>

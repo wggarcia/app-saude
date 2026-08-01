@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conselho de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.detail-row .k{color:var(--muted);flex-shrink:0}
+.delib-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_governo_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Conselho de Saúde</div>
+      <div class="page-sub">Controle social do SUS — conselheiros, reuniões e deliberações (Lei 8.142/1990)</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="abrirModalConselheiro()">+ Conselheiro</button>
+      <button class="btn btn-primary" onclick="abrirModalReuniao()">+ Agendar Reunião</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiConselheiros">—</div><div class="kpi-lbl">Conselheiros Ativos</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiVencidos">—</div><div class="kpi-lbl">Mandatos Vencidos</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiReunioes">—</div><div class="kpi-lbl">Reuniões no Ano</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiDeliberacoes">—</div><div class="kpi-lbl">Deliberações Registradas</div></div>
+  </div>
+
+  <!-- Conselheiros -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Conselheiros (paridade por segmento)</span></div>
+    <table>
+      <thead><tr><th>Nome</th><th>Segmento</th><th>Condição</th><th>Entidade</th><th>Mandato</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyConselheiros"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Reuniões -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Reuniões</span></div>
+    <table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Pauta</th><th>Presentes</th><th>Deliberações</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyReunioes"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Novo Conselheiro -->
+<div class="modal-bg" id="modalConselheiro">
+  <div class="modal">
+    <h3>Novo Conselheiro</h3>
+    <div class="form-group"><label>Nome *</label><input id="cNome"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Segmento *</label>
+        <select id="cSegmento">
+          <option value="usuarios">Usuários</option>
+          <option value="trabalhadores">Trabalhadores de Saúde</option>
+          <option value="gestores_prestadores">Gestores / Prestadores</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Condição</label>
+        <select id="cTitular"><option value="true">Titular</option><option value="false">Suplente</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Entidade Representada</label><input id="cEntidade"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Início do Mandato *</label><input id="cInicio" type="date"></div>
+      <div class="form-group"><label>Fim do Mandato *</label><input id="cFim" type="date"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalConselheiro')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarConselheiro()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Reunião -->
+<div class="modal-bg" id="modalReuniao">
+  <div class="modal">
+    <h3>Agendar Reunião</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Data e Hora *</label><input id="rData" type="datetime-local"></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="rTipo"><option value="ordinaria">Ordinária</option><option value="extraordinaria">Extraordinária</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Pauta</label><textarea id="rPauta" rows="3"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalReuniao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarReuniao()">Agendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe da Reunião -->
+<div class="modal-bg" id="modalDetalheReuniao">
+  <div class="modal">
+    <h3 id="drTitulo">Reunião</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="drStatus" onchange="atualizarReuniao()">
+          <option value="agendada">Agendada</option>
+          <option value="realizada">Realizada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Presentes</label><input id="drPresentes" type="number" min="0" onchange="atualizarReuniao()"></div>
+    </div>
+    <div class="form-group"><label>Ata da Reunião</label><textarea id="drAta" rows="4" onblur="atualizarReuniao()"></textarea></div>
+    <div>
+      <div class="card-title" style="margin-bottom:8px">Deliberações</div>
+      <div id="drDeliberacoes"></div>
+      <div class="form-row" style="margin-top:12px">
+        <div class="form-group"><label>Tipo</label>
+          <select id="dlTipo"><option value="resolucao">Resolução</option><option value="recomendacao">Recomendação</option><option value="mocao">Moção</option></select>
+        </div>
+        <div class="form-group"><label>Número</label><input id="dlNumero" placeholder="Ex: 012/2026"></div>
+      </div>
+      <div class="form-group"><label>Texto</label><textarea id="dlTexto" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Votos Favor</label><input id="dlFavor" type="number" min="0" value="0"></div>
+        <div class="form-group"><label>Votos Contra</label><input id="dlContra" type="number" min="0" value="0"></div>
+      </div>
+      <button class="btn btn-ok btn-sm" onclick="salvarDeliberacao()">+ Registrar Deliberação</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalDetalheReuniao')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let REUNIAO_ATUAL = null;
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+function fmtData(iso) { return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—"; }
+function fmtDataHora(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/conselho-saude/kpis");
+  document.getElementById("kpiConselheiros").textContent = d.conselheiros_ativos ?? 0;
+  document.getElementById("kpiVencidos").textContent = d.mandatos_vencidos ?? 0;
+  document.getElementById("kpiReunioes").textContent = d.reunioes_ano_atual ?? 0;
+  document.getElementById("kpiDeliberacoes").textContent = d.deliberacoes_total ?? 0;
+}
+
+async function carregarConselheiros() {
+  const d = await fetchJSON("/api/governo/conselho-saude/conselheiros");
+  const tbody = document.getElementById("tbodyConselheiros");
+  const items = d.conselheiros || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum conselheiro cadastrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(c => `<tr>
+    <td>${c.nome}</td>
+    <td><span class="badge badge-info">${c.segmento_display}</span></td>
+    <td>${c.titular ? "Titular" : "Suplente"}</td>
+    <td>${c.entidade_representada || "—"}</td>
+    <td>${fmtData(c.mandato_inicio)} — ${fmtData(c.mandato_fim)}${c.mandato_vencido ? ' <span class="badge badge-danger">Vencido</span>' : ''}</td>
+    <td>${c.ativo ? `<button class="btn btn-ghost btn-sm" onclick="desativarConselheiro(${c.id})">Desativar</button>` : '<span class="badge badge-warn">Inativo</span>'}</td>
+  </tr>`).join("");
+}
+
+async function carregarReunioes() {
+  const d = await fetchJSON("/api/governo/conselho-saude/reunioes");
+  const tbody = document.getElementById("tbodyReunioes");
+  const items = d.reunioes || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma reunião agendada.</td></tr>'; return; }
+  const STATUS_BADGE = { agendada: '<span class="badge badge-info">Agendada</span>', realizada: '<span class="badge badge-ok">Realizada</span>', cancelada: '<span class="badge badge-danger">Cancelada</span>' };
+  tbody.innerHTML = items.map(r => `<tr>
+    <td>${fmtDataHora(r.data_reuniao)}</td>
+    <td>${r.tipo_display}</td>
+    <td>${r.pauta || "—"}</td>
+    <td>${r.presentes_count}</td>
+    <td>${r.total_deliberacoes}</td>
+    <td>${STATUS_BADGE[r.status] || r.status}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalheReuniao(${r.id})">Abrir</button></td>
+  </tr>`).join("");
+}
+
+function abrirModalConselheiro() { document.getElementById("modalConselheiro").classList.add("open"); }
+async function salvarConselheiro() {
+  const nome = document.getElementById("cNome").value.trim();
+  const inicio = document.getElementById("cInicio").value;
+  const fim = document.getElementById("cFim").value;
+  if (!nome || !inicio || !fim) { alert("Preencha nome, início e fim do mandato."); return; }
+  const body = {
+    nome, segmento: document.getElementById("cSegmento").value,
+    titular: document.getElementById("cTitular").value === "true",
+    entidade_representada: document.getElementById("cEntidade").value.trim(),
+    mandato_inicio: inicio, mandato_fim: fim,
+  };
+  const d = await fetchJSON("/api/governo/conselho-saude/conselheiros", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalConselheiro"); carregarConselheiros(); carregarKpis();
+}
+async function desativarConselheiro(id) {
+  if (!confirm("Desativar este conselheiro?")) return;
+  await fetchJSON(`/api/governo/conselho-saude/conselheiros/${id}`, { method: "PATCH", body: JSON.stringify({ ativo: false }) });
+  carregarConselheiros(); carregarKpis();
+}
+
+function abrirModalReuniao() { document.getElementById("modalReuniao").classList.add("open"); }
+async function salvarReuniao() {
+  const dataR = document.getElementById("rData").value;
+  if (!dataR) { alert("Informe a data e hora."); return; }
+  const body = { data_reuniao: dataR, tipo: document.getElementById("rTipo").value, pauta: document.getElementById("rPauta").value.trim() };
+  const d = await fetchJSON("/api/governo/conselho-saude/reunioes", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalReuniao"); carregarReunioes(); carregarKpis();
+}
+
+async function abrirDetalheReuniao(id) {
+  const d = await fetchJSON(`/api/governo/conselho-saude/reunioes/${id}`);
+  REUNIAO_ATUAL = d;
+  document.getElementById("drTitulo").textContent = `Reunião ${d.tipo_display} — ${fmtDataHora(d.data_reuniao)}`;
+  document.getElementById("drStatus").value = d.status;
+  document.getElementById("drPresentes").value = d.presentes_count;
+  document.getElementById("drAta").value = d.ata_texto || "";
+  renderDeliberacoes(d.deliberacoes || []);
+  document.getElementById("modalDetalheReuniao").classList.add("open");
+}
+
+function renderDeliberacoes(delibs) {
+  const box = document.getElementById("drDeliberacoes");
+  if (!delibs.length) { box.innerHTML = '<div class="empty" style="padding:10px">Nenhuma deliberação registrada.</div>'; return; }
+  box.innerHTML = delibs.map(d => `<div class="delib-item">
+    <strong>${d.tipo_display} ${d.numero || ""}</strong> ${d.aprovada ? '<span class="badge badge-ok">Aprovada</span>' : '<span class="badge badge-danger">Rejeitada</span>'}
+    <div style="margin-top:4px">${d.texto}</div>
+    <div style="margin-top:4px;color:var(--muted);font-size:11px">Favor: ${d.votos_favor} · Contra: ${d.votos_contra} · Abstenção: ${d.votos_abstencao}</div>
+  </div>`).join("");
+}
+
+async function atualizarReuniao() {
+  if (!REUNIAO_ATUAL) return;
+  const body = {
+    status: document.getElementById("drStatus").value,
+    presentes_count: parseInt(document.getElementById("drPresentes").value) || 0,
+    ata_texto: document.getElementById("drAta").value,
+  };
+  await fetchJSON(`/api/governo/conselho-saude/reunioes/${REUNIAO_ATUAL.id}`, { method: "PATCH", body: JSON.stringify(body) });
+  carregarReunioes(); carregarKpis();
+}
+
+async function salvarDeliberacao() {
+  if (!REUNIAO_ATUAL) return;
+  const texto = document.getElementById("dlTexto").value.trim();
+  if (!texto) { alert("Escreva o texto da deliberação."); return; }
+  const body = {
+    reuniao_id: REUNIAO_ATUAL.id,
+    tipo: document.getElementById("dlTipo").value,
+    numero: document.getElementById("dlNumero").value.trim(),
+    texto,
+    votos_favor: parseInt(document.getElementById("dlFavor").value) || 0,
+    votos_contra: parseInt(document.getElementById("dlContra").value) || 0,
+    aprovada: (parseInt(document.getElementById("dlFavor").value) || 0) >= (parseInt(document.getElementById("dlContra").value) || 0),
+  };
+  const d = await fetchJSON("/api/governo/conselho-saude/deliberacoes", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  document.getElementById("dlTexto").value = ""; document.getElementById("dlNumero").value = "";
+  abrirDetalheReuniao(REUNIAO_ATUAL.id);
+  carregarReunioes(); carregarKpis();
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarConselheiros();
+carregarReunioes();
+</script>
+</body>
+</html>

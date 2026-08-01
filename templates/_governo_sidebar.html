@@ -29,6 +29,12 @@
   {% if gov_ver_farmacia or gov_ver_atencao_clinica %}
   <div class="nav-section">Farmácia</div>
   <a class="nav-link{% if request.path == '/governo/farmacia-basica/' %} active{% endif %}" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica UBS</a>
+  <a class="nav-link{% if request.path == '/governo/ceaf/' %} active{% endif %}" href="/governo/ceaf/"><span>💉</span> CEAF — Alto Custo</a>
+  {% endif %}
+
+  {% if gov_ver_atencao_clinica or gov_ver_epidemiologia %}
+  <div class="nav-section">Imunização</div>
+  <a class="nav-link{% if request.path == '/governo/sipni/' %} active{% endif %}" href="/governo/sipni/"><span>💉</span> SIPNI — Imunizações</a>
   {% endif %}
 
   {% if gov_ver_laboratorio or gov_ver_atencao_clinica %}
@@ -72,6 +78,14 @@
   <a class="nav-link{% if request.path == '/governo/bi/' %} active{% endif %}" href="/governo/bi/"><span>📈</span> Business Intelligence</a>
   <a class="nav-link{% if request.path == '/governo/ppi/' %} active{% endif %}" href="/governo/ppi/"><span>🗺️</span> PPI — Prog. Pactuada</a>
   <a class="nav-link{% if request.path == '/governo/almoxarifado/' %} active{% endif %}" href="/governo/almoxarifado/"><span>📦</span> Almoxarifado</a>
+  <a class="nav-link{% if request.path == '/governo/cnes/' %} active{% endif %}" href="/governo/cnes/"><span>🏥</span> CNES — Estabelecimentos</a>
+  <a class="nav-link{% if request.path == '/governo/escala-rede/' %} active{% endif %}" href="/governo/escala-rede/"><span>🗓️</span> Escala de Profissionais</a>
+  {% endif %}
+
+  {% if gov_ver_secretaria or gov_ver_administrativo %}
+  <div class="nav-section">Controle Social</div>
+  <a class="nav-link{% if request.path == '/governo/ouvidoria/' %} active{% endif %}" href="/governo/ouvidoria/"><span>📢</span> Ouvidoria do SUS</a>
+  <a class="nav-link{% if request.path == '/governo/conselho-saude/' %} active{% endif %}" href="/governo/conselho-saude/"><span>🏛️</span> Conselho de Saúde</a>
   {% endif %}
 
   <div class="sidebar-footer">

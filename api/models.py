@@ -9745,6 +9745,230 @@ class DispensacaoCEAF(models.Model):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Ouvidoria do SUS — Lei de Acesso à Informação (Lei 12.527/2011)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ManifestacaoOuvidoria(models.Model):
+    """Manifestação do cidadão à Ouvidoria (reclamação, denúncia, sugestão, elogio, solicitação)."""
+    TIPO = [
+        ("reclamacao",  "Reclamação"),
+        ("denuncia",    "Denúncia"),
+        ("sugestao",    "Sugestão"),
+        ("elogio",      "Elogio"),
+        ("solicitacao", "Solicitação de Informação"),
+    ]
+    CANAL = [
+        ("presencial", "Presencial"),
+        ("telefone",   "Telefone / 156"),
+        ("app",        "App do Cidadão"),
+        ("site",       "Site / Portal"),
+        ("carta",      "Carta / Ofício"),
+    ]
+    STATUS = [
+        ("aberta",      "Aberta"),
+        ("em_analise",  "Em Análise"),
+        ("respondida",  "Respondida"),
+        ("encerrada",   "Encerrada"),
+    ]
+    empresa               = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                               related_name="manifestacoes_ouvidoria")
+    protocolo             = models.CharField(max_length=30, unique=True, db_index=True)
+    tipo                  = models.CharField(max_length=15, choices=TIPO)
+    canal                 = models.CharField(max_length=15, choices=CANAL, default="app")
+    anonima               = models.BooleanField(default=False)
+    manifestante_nome     = models.CharField(max_length=150, blank=True, default="")
+    manifestante_cpf      = models.CharField(max_length=14, blank=True, default="")
+    manifestante_telefone = models.CharField(max_length=20, blank=True, default="")
+    manifestante_email    = models.EmailField(blank=True, default="")
+    unidade_relacionada   = models.ForeignKey("UnidadeSaude", on_delete=models.SET_NULL,
+                                               null=True, blank=True, related_name="manifestacoes_ouvidoria")
+    descricao             = models.TextField()
+    sigiloso              = models.BooleanField(default=False)
+    status                = models.CharField(max_length=15, choices=STATUS, default="aberta")
+    resposta              = models.TextField(blank=True, default="")
+    respondido_por        = models.CharField(max_length=150, blank=True, default="")
+    prazo_resposta        = models.DateField(null=True, blank=True,
+                                              help_text="LAI: 20 dias úteis, prorrogável por +10")
+    criado_em             = models.DateTimeField(auto_now_add=True)
+    respondido_em         = models.DateTimeField(null=True, blank=True)
+    atualizado_em         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Manifestação de Ouvidoria"
+        verbose_name_plural = "Manifestações de Ouvidoria"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo"]),
+        ]
+
+    def __str__(self):
+        return f"{self.protocolo} — {self.get_tipo_display()}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Conselho Municipal/Estadual de Saúde — controle social do SUS (Lei 8.142/1990)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ConselheiroSaude(models.Model):
+    """Conselheiro titular/suplente do Conselho de Saúde, por segmento (paridade)."""
+    SEGMENTO = [
+        ("usuarios",             "Usuários"),
+        ("trabalhadores",        "Trabalhadores de Saúde"),
+        ("gestores_prestadores", "Gestores / Prestadores"),
+    ]
+    empresa               = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                               related_name="conselheiros_saude")
+    nome                  = models.CharField(max_length=150)
+    segmento              = models.CharField(max_length=25, choices=SEGMENTO)
+    titular               = models.BooleanField(default=True, help_text="False = suplente")
+    entidade_representada = models.CharField(max_length=200, blank=True, default="")
+    mandato_inicio        = models.DateField()
+    mandato_fim           = models.DateField()
+    ativo                 = models.BooleanField(default=True)
+    criado_em             = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Conselheiro de Saúde"
+        verbose_name_plural = "Conselheiros de Saúde"
+        ordering            = ["segmento", "nome"]
+        indexes             = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_segmento_display()})"
+
+
+class ReuniaoConselhoSaude(models.Model):
+    """Reunião ordinária/extraordinária do Conselho de Saúde, com pauta e ata."""
+    TIPO = [
+        ("ordinaria",      "Ordinária"),
+        ("extraordinaria", "Extraordinária"),
+    ]
+    STATUS = [
+        ("agendada",  "Agendada"),
+        ("realizada", "Realizada"),
+        ("cancelada", "Cancelada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="reunioes_conselho_saude")
+    data_reuniao     = models.DateTimeField()
+    tipo             = models.CharField(max_length=15, choices=TIPO, default="ordinaria")
+    pauta            = models.TextField(blank=True, default="")
+    ata_texto        = models.TextField(blank=True, default="")
+    presentes_count  = models.PositiveSmallIntegerField(default=0)
+    status           = models.CharField(max_length=15, choices=STATUS, default="agendada")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Reunião do Conselho de Saúde"
+        verbose_name_plural = "Reuniões do Conselho de Saúde"
+        ordering            = ["-data_reuniao"]
+        indexes             = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"Reunião {self.get_tipo_display()} — {self.data_reuniao:%d/%m/%Y}"
+
+
+class DeliberacaoConselhoSaude(models.Model):
+    """Resolução, recomendação ou moção deliberada em reunião do Conselho de Saúde."""
+    TIPO = [
+        ("resolucao",    "Resolução"),
+        ("recomendacao", "Recomendação"),
+        ("mocao",        "Moção"),
+    ]
+    empresa         = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                         related_name="deliberacoes_conselho_saude")
+    reuniao         = models.ForeignKey(ReuniaoConselhoSaude, on_delete=models.CASCADE,
+                                         related_name="deliberacoes")
+    numero          = models.CharField(max_length=30, blank=True, default="")
+    tipo            = models.CharField(max_length=15, choices=TIPO, default="resolucao")
+    texto           = models.TextField()
+    votos_favor     = models.PositiveSmallIntegerField(default=0)
+    votos_contra    = models.PositiveSmallIntegerField(default=0)
+    votos_abstencao = models.PositiveSmallIntegerField(default=0)
+    aprovada        = models.BooleanField(default=True)
+    criado_em       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Deliberação do Conselho de Saúde"
+        verbose_name_plural = "Deliberações do Conselho de Saúde"
+        ordering            = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} {self.numero}".strip()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Escala de Profissionais da Rede Assistencial (RH da rede — SUS)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class EscalaProfissionalRede(models.Model):
+    """Escala/lotação de profissionais de saúde nas unidades da rede assistencial."""
+    CATEGORIA = [
+        ("medico",             "Médico"),
+        ("enfermeiro",         "Enfermeiro"),
+        ("tecnico_enfermagem", "Técnico de Enfermagem"),
+        ("odontologo",         "Odontólogo"),
+        ("farmaceutico",       "Farmacêutico"),
+        ("fisioterapeuta",     "Fisioterapeuta"),
+        ("acs",                "Agente Comunitário de Saúde"),
+        ("administrativo",     "Administrativo"),
+        ("outro",              "Outro"),
+    ]
+    VINCULO = [
+        ("estatutario", "Estatutário"),
+        ("clt",         "CLT"),
+        ("temporario",  "Temporário"),
+        ("rt",          "Responsável Técnico"),
+        ("cooperado",   "Cooperado"),
+    ]
+    TURNO = [
+        ("manha",          "Manhã"),
+        ("tarde",          "Tarde"),
+        ("noite",          "Noite"),
+        ("plantao_12x36",  "Plantão 12x36"),
+        ("plantao_24x72",  "Plantão 24x72"),
+    ]
+    STATUS = [
+        ("ativo",      "Ativo"),
+        ("afastado",   "Afastado"),
+        ("desligado",  "Desligado"),
+    ]
+    empresa               = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                               related_name="escalas_rede")
+    unidade               = models.ForeignKey("UnidadeSaude", on_delete=models.SET_NULL,
+                                               null=True, blank=True, related_name="escalas_profissionais")
+    profissional_nome     = models.CharField(max_length=150)
+    categoria             = models.CharField(max_length=25, choices=CATEGORIA)
+    cbo                   = models.CharField(max_length=10, blank=True, default="", verbose_name="CBO")
+    conselho_registro     = models.CharField(max_length=30, blank=True, default="",
+                                              help_text="Ex: CRM 12345, COREN 6789")
+    vinculo               = models.CharField(max_length=15, choices=VINCULO, default="estatutario")
+    turno                 = models.CharField(max_length=15, choices=TURNO, default="manha")
+    dias_semana           = models.JSONField(default=list, blank=True,
+                                              help_text='Ex: ["seg","ter","qua","qui","sex"]')
+    carga_horaria_semanal = models.PositiveSmallIntegerField(default=40)
+    data_inicio           = models.DateField()
+    data_fim              = models.DateField(null=True, blank=True)
+    status                = models.CharField(max_length=15, choices=STATUS, default="ativo")
+    observacoes           = models.TextField(blank=True, default="")
+    criado_em             = models.DateTimeField(auto_now_add=True)
+    atualizado_em         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Escala de Profissional da Rede"
+        verbose_name_plural = "Escalas de Profissionais da Rede"
+        ordering            = ["profissional_nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "unidade"]),
+        ]
+
+    def __str__(self):
+        return f"{self.profissional_nome} — {self.get_categoria_display()}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Portabilidade ANS Formal (RN 438/2018)
 # ═══════════════════════════════════════════════════════════════════════════════
 
