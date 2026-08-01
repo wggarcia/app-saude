@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unidades da Farmácia</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.aviso{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.3);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--warn)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:400px;max-width:480px;width:100%}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+</style>
+</head>
+<body>
+{% include "_farmacia_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Unidades da Farmácia</div>
+      <div class="page-sub">Lojas físicas registradas nessa conta (multi-loja) — controlado pelo limite do seu plano</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalUnidade()">+ Nova Unidade</button>
+      <a href="/farmacia/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div id="avisoBox"></div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Unidades Cadastradas</span></div>
+    <table>
+      <thead><tr><th>Nome</th><th>Código</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyUnidades"><tr><td colspan="3" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Nova Unidade -->
+<div class="modal-bg" id="modalUnidade">
+  <div class="modal">
+    <h3>Nova Unidade</h3>
+    <div class="form-group"><label>Nome *</label><input id="uNome" placeholder="Ex: Loja Centro"></div>
+    <div class="form-group"><label>Código</label><input id="uCodigo" placeholder="Ex: LJ-01"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalUnidade')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarUnidade()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+function csrfToken() { const m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ""; }
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+async function carregarUnidades() {
+  const d = await fetchJSON("/api/farmacia/unidades/");
+  const tbody = document.getElementById("tbodyUnidades");
+  const items = d.unidades || [];
+  document.getElementById("avisoBox").innerHTML = "";
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhuma unidade cadastrada — sua conta opera com uma única loja.</td></tr>'; return; }
+  tbody.innerHTML = items.map(u => `<tr>
+    <td>${u.nome}</td>
+    <td>${u.codigo || "—"}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="removerUnidade(${u.id})">Remover</button></td>
+  </tr>`).join("");
+}
+
+function abrirModalUnidade() { document.getElementById("modalUnidade").classList.add("open"); }
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+
+async function salvarUnidade() {
+  const nome = document.getElementById("uNome").value.trim();
+  if (!nome) { alert("Informe o nome da unidade."); return; }
+  const res = await fetch("/api/farmacia/unidades/", {
+    method: "POST",
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E },
+    credentials: "include",
+    body: JSON.stringify({ nome, codigo: document.getElementById("uCodigo").value.trim() }),
+  });
+  const d = await res.json();
+  if (!res.ok) {
+    if (d.upgrade_necessario) {
+      document.getElementById("avisoBox").innerHTML = `<div class="aviso">⚠️ ${d.erro}</div>`;
+      fecharModal("modalUnidade");
+      return;
+    }
+    alert(d.erro || "Erro ao salvar.");
+    return;
+  }
+  fecharModal("modalUnidade");
+  document.getElementById("uNome").value = ""; document.getElementById("uCodigo").value = "";
+  carregarUnidades();
+}
+
+async function removerUnidade(id) {
+  if (!confirm("Remover esta unidade?")) return;
+  await fetchJSON(`/api/farmacia/unidades/${id}/`, { method: "DELETE" });
+  carregarUnidades();
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarUnidades();
+</script>
+</body>
+</html>

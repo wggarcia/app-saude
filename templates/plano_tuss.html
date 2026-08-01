@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TUSS / Rol ANS / NIP</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:700;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;font-family:Manrope,sans-serif}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:flex;flex-direction:column;gap:20px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:26px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:18px 20px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters input,.filters select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.detail-row .k{color:var(--muted);flex-shrink:0}
+.search-row{display:flex;gap:10px}
+.search-row input{flex:1}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_plano_saude_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">TUSS / Rol ANS / NIP</div>
+      <div class="page-sub">Catálogo TUSS, cobertura obrigatória (RN 465/2021) e Notificação Intermediária de Pendência (RN 389/2015)</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalNip()">+ Nova NIP</button>
+      <a href="/plano-saude/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiTuss">—</div><div class="kpi-lbl">Procedimentos TUSS Ativos</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiRol">—</div><div class="kpi-lbl">Coberturas Rol ANS</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiNipAbertas">—</div><div class="kpi-lbl">NIPs Abertas</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiNipVencidas">—</div><div class="kpi-lbl">NIPs com Prazo Vencido (RN 389)</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('nip')">Notificações NIP</button>
+    <button class="tab-btn" onclick="setTab('catalogo')">Catálogo TUSS</button>
+    <button class="tab-btn" onclick="setTab('verificar')">Verificar Cobertura</button>
+  </div>
+
+  <!-- NIP -->
+  <div class="tab-panel active" id="tab-nip">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Notificações Intermediárias de Pendência</span>
+        <div class="filters">
+          <input id="fNipBusca" placeholder="Beneficiário, CPF ou número" oninput="carregarNips()">
+          <select id="fNipStatus" onchange="carregarNips()">
+            <option value="">Todos os status</option>
+            <option value="aberta">Aberta</option>
+            <option value="em_analise">Em Análise</option>
+            <option value="respondida">Respondida</option>
+          </select>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Nº NIP</th><th>Beneficiário</th><th>Tipo</th><th>Status</th><th>Prazo (5 dias úteis)</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyNips"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Catálogo TUSS -->
+  <div class="tab-panel" id="tab-catalogo">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Catálogo TUSS</span>
+        <div class="filters">
+          <input id="fTussBusca" placeholder="Código ou descrição" oninput="carregarTuss()">
+          <select id="fTussSegmento" onchange="carregarTuss()">
+            <option value="">Todos os segmentos</option>
+            <option value="consulta">Consulta</option>
+            <option value="exame">Exame</option>
+            <option value="terapia">Terapia</option>
+            <option value="cirurgia">Cirurgia</option>
+            <option value="internacao">Internação</option>
+            <option value="urgencia">Urgência</option>
+            <option value="obstetricia">Obstetrícia</option>
+            <option value="saude_mental">Saúde Mental</option>
+            <option value="fisioterapia">Fisioterapia</option>
+          </select>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Código TUSS</th><th>Descrição</th><th>Segmento</th><th>Cobertura Obrigatória</th><th>Prazo (dias)</th></tr></thead>
+        <tbody id="tbodyTuss"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Verificar Cobertura -->
+  <div class="tab-panel" id="tab-verificar">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Verificar Cobertura de Procedimento</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group"><label>Código TUSS *</label><input id="vCodigo" placeholder="Ex: 10101012"></div>
+          <div class="form-group"><label>CID-10 (opcional)</label><input id="vCid" placeholder="Ex: M06.9"></div>
+        </div>
+        <button class="btn btn-primary" onclick="verificar()">Verificar</button>
+        <div id="vResultado" style="margin-top:20px"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Nova NIP -->
+<div class="modal-bg" id="modalNip">
+  <div class="modal">
+    <h3>Nova Notificação NIP</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Beneficiário *</label><input id="nBeneficiario"></div>
+      <div class="form-group"><label>CPF</label><input id="nCpf" maxlength="11"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Carteirinha</label><input id="nCarteirinha"></div>
+      <div class="form-group"><label>Tipo *</label>
+        <select id="nTipo">
+          <option value="negativa_cobertura">Negativa de Cobertura</option>
+          <option value="atraso_atendimento">Atraso no Atendimento</option>
+          <option value="reembolso">Reembolso</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Descrição *</label><textarea id="nDescricao" rows="3"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNip')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNip()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe / Responder NIP -->
+<div class="modal-bg" id="modalDetalheNip">
+  <div class="modal">
+    <h3 id="dTitulo">NIP</h3>
+    <div id="dCorpo"></div>
+    <div id="dRespostaForm" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div class="card-title" style="margin-bottom:10px">Registrar Resposta</div>
+      <div class="form-group"><label>Respondido por</label><input id="rPor"></div>
+      <div class="form-group"><label>Conteúdo da Resposta *</label><textarea id="rConteudo" rows="3"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modalDetalheNip')">Fechar</button>
+        <button class="btn btn-ok" onclick="responderNip()">Registrar Resposta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let NIP_ATUAL = null;
+
+function csrfToken() { const m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ""; }
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+function fmtData(iso) { return iso ? new Date(iso + "T00:00:00").toLocaleDateString("pt-BR") : "—"; }
+
+function setTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById("tab-" + tab).classList.add("active");
+}
+
+const NIP_STATUS_BADGE = {
+  aberta: '<span class="badge badge-info">Aberta</span>',
+  em_analise: '<span class="badge badge-warn">Em Análise</span>',
+  respondida: '<span class="badge badge-ok">Respondida</span>',
+};
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/plano-saude/tuss/kpis");
+  document.getElementById("kpiTuss").textContent = d.procedimentos_tuss_ativos ?? 0;
+  document.getElementById("kpiRol").textContent = d.coberturas_rol_ans_ativas ?? 0;
+  const porStatus = d.nip_por_status || {};
+  document.getElementById("kpiNipAbertas").textContent = (porStatus.aberta || 0) + (porStatus.em_analise || 0);
+  document.getElementById("kpiNipVencidas").textContent = d.nip_prazo_vencido ?? 0;
+}
+
+async function carregarNips() {
+  const params = new URLSearchParams();
+  const busca = document.getElementById("fNipBusca").value.trim();
+  const status = document.getElementById("fNipStatus").value;
+  if (busca) params.set("q", busca);
+  if (status) params.set("status", status);
+  const d = await fetchJSON("/api/plano-saude/nip?" + params.toString());
+  const tbody = document.getElementById("tbodyNips");
+  const items = d.nips || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma NIP registrada.</td></tr>'; return; }
+  tbody.innerHTML = items.map(n => `<tr>
+    <td><strong>${n.numero_nip}</strong></td>
+    <td>${n.beneficiario_nome}</td>
+    <td>${n.tipo_display}</td>
+    <td>${NIP_STATUS_BADGE[n.status] || n.status}${n.prazo_vencido ? ' <span class="badge badge-danger">Vencido</span>' : ''}</td>
+    <td>${fmtData(n.prazo_resposta)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalheNip(${n.id})">Ver</button></td>
+  </tr>`).join("");
+}
+
+async function carregarTuss() {
+  const params = new URLSearchParams();
+  const busca = document.getElementById("fTussBusca").value.trim();
+  const segmento = document.getElementById("fTussSegmento").value;
+  if (busca) params.set("q", busca);
+  if (segmento) params.set("segmento", segmento);
+  const d = await fetchJSON("/api/plano-saude/tuss/procedimentos?" + params.toString());
+  const tbody = document.getElementById("tbodyTuss");
+  const items = d.procedimentos || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum procedimento encontrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(p => `<tr>
+    <td><strong>${p.codigo_tuss}</strong></td>
+    <td>${p.descricao}</td>
+    <td><span class="badge badge-info">${p.segmento_display}</span></td>
+    <td>${p.cobertura_obrigatoria ? '<span class="badge badge-ok">Sim (Rol ANS)</span>' : '<span class="badge badge-warn">Não</span>'}</td>
+    <td>${p.prazo_atendimento ?? "—"}</td>
+  </tr>`).join("");
+}
+
+function abrirModalNip() { document.getElementById("modalNip").classList.add("open"); }
+async function salvarNip() {
+  const beneficiario = document.getElementById("nBeneficiario").value.trim();
+  const descricao = document.getElementById("nDescricao").value.trim();
+  if (!beneficiario || !descricao) { alert("Beneficiário e descrição são obrigatórios."); return; }
+  const d = await fetchJSON("/api/plano-saude/nip", {
+    method: "POST",
+    body: JSON.stringify({
+      beneficiario_nome: beneficiario,
+      cpf_beneficiario: document.getElementById("nCpf").value.trim(),
+      carteirinha: document.getElementById("nCarteirinha").value.trim(),
+      tipo: document.getElementById("nTipo").value,
+      descricao,
+    }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalNip");
+  alert(d.mensagem || `NIP registrada — ${d.numero_nip}`);
+  carregarNips(); carregarKpis();
+}
+
+async function abrirDetalheNip(id) {
+  const d = await fetchJSON(`/api/plano-saude/nip/${id}`);
+  NIP_ATUAL = d;
+  document.getElementById("dTitulo").textContent = `${d.numero_nip} — ${d.beneficiario_nome}`;
+  document.getElementById("dCorpo").innerHTML = `
+    <div class="detail-row"><span class="k">Tipo</span><span>${d.tipo_display}</span></div>
+    <div class="detail-row"><span class="k">Status</span><span>${NIP_STATUS_BADGE[d.status] || d.status}</span></div>
+    <div class="detail-row"><span class="k">Prazo de Resposta</span><span>${fmtData(d.prazo_resposta)}</span></div>
+    <div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Descrição</span><span style="margin-top:4px">${d.descricao}</span></div>
+    ${d.resposta ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Resposta (${d.resposta.respondido_por || "—"})</span><span style="margin-top:4px">${d.resposta.conteudo}</span></div>` : ""}
+  `;
+  document.getElementById("dRespostaForm").style.display = d.resposta ? "none" : "block";
+  document.getElementById("modalDetalheNip").classList.add("open");
+}
+
+async function responderNip() {
+  if (!NIP_ATUAL) return;
+  const conteudo = document.getElementById("rConteudo").value.trim();
+  if (!conteudo) { alert("Escreva o conteúdo da resposta."); return; }
+  const d = await fetchJSON(`/api/plano-saude/nip/${NIP_ATUAL.id}/responder`, {
+    method: "POST",
+    body: JSON.stringify({ respondido_por: document.getElementById("rPor").value.trim(), conteudo }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  alert(d.mensagem);
+  fecharModal("modalDetalheNip");
+  carregarNips(); carregarKpis();
+}
+
+async function verificar() {
+  const codigo = document.getElementById("vCodigo").value.trim();
+  if (!codigo) { alert("Informe o código TUSS."); return; }
+  const params = new URLSearchParams({ codigo_tuss: codigo, cid: document.getElementById("vCid").value.trim() });
+  const d = await fetchJSON("/api/plano-saude/tuss/verificar?" + params.toString());
+  const box = document.getElementById("vResultado");
+  if (d.motivo) { box.innerHTML = `<div class="empty">${d.motivo}</div>`; return; }
+  box.innerHTML = `
+    <div class="detail-row"><span class="k">Procedimento</span><span>${d.descricao}</span></div>
+    <div class="detail-row"><span class="k">Coberto</span><span>${d.coberto ? '<span class="badge badge-ok">Sim</span>' : '<span class="badge badge-danger">Não</span>'}</span></div>
+    <div class="detail-row"><span class="k">Prazo Máximo de Atendimento</span><span>${d.data_prazo_maxima ? fmtData(d.data_prazo_maxima) : (d.prazo_consulta_dias_uteis ? d.prazo_consulta_dias_uteis + ' dias úteis' : '—')}</span></div>
+    ${d.dut ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Diretriz de Utilização — ${d.dut.titulo}</span><span style="margin-top:4px">${d.dut.criterios_acesso}</span></div>` : ""}
+  `;
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarNips();
+carregarTuss();
+</script>
+</body>
+</html>

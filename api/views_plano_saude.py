@@ -3699,6 +3699,62 @@ def api_ps_comunicacao_thread(request, destinatario_id):
 
 
 # ════════════════════════════════════════════════════════════════════════════════
+#  CAMPANHAS — comunicação em massa aos beneficiários
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_campanhas(request):
+    """GET  /api/plano-saude/campanhas/  — lista campanhas já disparadas
+    POST /api/plano-saude/campanhas/  — cria e dispara uma campanha
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    from .models import CampanhaComunicacaoPlano
+
+    if request.method == "POST":
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        nome = (d.get("nome") or "").strip()
+        mensagem = (d.get("mensagem") or "").strip()
+        publico_alvo = d.get("publico_alvo", "todos")
+        if not nome or not mensagem:
+            return JsonResponse({"erro": "Nome e mensagem são obrigatórios"}, status=400)
+        if publico_alvo not in dict(CampanhaComunicacaoPlano.PUBLICO):
+            return JsonResponse({"erro": "Público-alvo inválido"}, status=400)
+
+        qs = BeneficiarioPlano.objects.filter(plano__empresa=empresa, situacao="ativo")
+        if publico_alvo == "titulares":
+            qs = qs.filter(tipo_vinculo=BeneficiarioPlano.VINCULO_TITULAR)
+        elif publico_alvo == "dependentes":
+            qs = qs.filter(tipo_vinculo=BeneficiarioPlano.VINCULO_DEPENDENTE)
+        total = qs.count()
+
+        campanha = CampanhaComunicacaoPlano.objects.create(
+            empresa=empresa, nome=nome, publico_alvo=publico_alvo,
+            mensagem=mensagem, total_enviado=total,
+        )
+        return JsonResponse({"ok": True, "id": campanha.pk, "total_enviado": total}, status=201)
+
+    campanhas = CampanhaComunicacaoPlano.objects.filter(empresa=empresa).order_by("-criado_em")[:100]
+    return JsonResponse({
+        "campanhas": [
+            {
+                "id": c.id, "nome": c.nome,
+                "publico_alvo": c.publico_alvo, "publico_alvo_display": c.get_publico_alvo_display(),
+                "mensagem": c.mensagem, "total_enviado": c.total_enviado,
+                "criado_em": c.criado_em.strftime("%d/%m/%Y"),
+            }
+            for c in campanhas
+        ]
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
 #  TELEMEDICINA — autorizações de teleconsulta
 # ════════════════════════════════════════════════════════════════════════════════
 

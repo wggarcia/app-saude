@@ -108,6 +108,7 @@ _HOSPITAL_REDE = _HOSPITAL_MEDIO + [
     "hospital.nutricao",            # Nutrição clínica hospitalar — EXCLUSIVO REDE/GRUPO
     "hospital.qualidade",           # Qualidade / Núcleo de Segurança do Paciente (NSP) — EXCLUSIVO REDE/GRUPO
     "hospital.whatsapp_agendamento",# Lembretes/confirmações de agendamento via WhatsApp — EXCLUSIVO REDE/GRUPO
+    "hospital.comissao_etica",      # Comissão de Ética Médica (CFM 2.147/2016) — EXCLUSIVO REDE/GRUPO
 ]
 
 # ── Governo ──────────────────────────────────────────────────────────────────

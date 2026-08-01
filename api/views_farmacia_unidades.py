@@ -8,6 +8,8 @@ Farmácia — Unidades físicas internas
 """
 import json
 from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .models import EmpresaUnidade
 from .views_dashboard import _empresa_autenticada
@@ -17,6 +19,9 @@ from .access_control import (
     dentro_do_limite,
     get_setor,
     principal_pode_operacao_setorial,
+    requer_setor,
+    requer_operacao_page,
+    requer_permissao_modulo,
 )
 
 
@@ -27,6 +32,16 @@ def _e(req):
     if empresa and not principal_pode_operacao_setorial(req):
         return None
     return empresa
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
+def farmacia_unidades_page(request):
+    return render(request, "farmacia_unidades.html")
 
 
 @require_http_methods(["GET", "POST"])

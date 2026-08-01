@@ -13,15 +13,29 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Case, F, IntegerField, Q, Sum, Count, Value, When
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
+from .access_control import (
+    get_setor, principal_pode_operacao_setorial, api_requer_feature,
+    requer_setor, requer_operacao_page, requer_permissao_modulo,
+)
 from .models import (
     MedicamentoFarmacia, LoteMedicamento,
     TransferenciaFarmaciaMed, Rede, UnidadeRede,
 )
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
+def farmacia_disponibilidade_rede_page(request):
+    return render(request, "farmacia_disponibilidade_rede.html")
 
 
 def _empresa_autenticada(request):

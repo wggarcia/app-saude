@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comissão de Ética Médica</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.form-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.detail-row .k{color:var(--muted);flex-shrink:0}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_hospital_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Comissão de Ética Médica</div>
+      <div class="page-sub">Denúncias, consultas éticas e sindicâncias — Resolução CFM nº 2.147/2016</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="abrirModalMembro()">+ Membro</button>
+      <button class="btn btn-primary" onclick="abrirModalCaso()">+ Novo Caso</button>
+      <a href="/hospital/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Total de Casos</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiAbertos">—</div><div class="kpi-lbl">Abertos / Em Análise</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiPareceres">—</div><div class="kpi-lbl">Pareceres Emitidos</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiMembros">—</div><div class="kpi-lbl">Membros Ativos</div></div>
+  </div>
+
+  <!-- Casos -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Casos Éticos</span>
+      <div class="filters">
+        <select id="fTipo" onchange="carregarCasos()">
+          <option value="">Todos os tipos</option>
+          <option value="denuncia">Denúncia</option>
+          <option value="consulta_etica">Consulta Ética</option>
+          <option value="sindicancia">Sindicância</option>
+        </select>
+        <select id="fStatus" onchange="carregarCasos()">
+          <option value="">Todos os status</option>
+          <option value="aberto">Aberto</option>
+          <option value="em_analise">Em Análise</option>
+          <option value="parecer_emitido">Parecer Emitido</option>
+          <option value="arquivado">Arquivado</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Protocolo</th><th>Tipo</th><th>Envolvido</th><th>Status</th><th>Aberto em</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyCasos"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Membros -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Membros da Comissão</span></div>
+    <table>
+      <thead><tr><th>Nome</th><th>CRM</th><th>Cargo</th><th>Mandato</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyMembros"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Novo Membro -->
+<div class="modal-bg" id="modalMembro">
+  <div class="modal">
+    <h3>Novo Membro</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="mNome"></div>
+      <div class="form-group"><label>CRM *</label><input id="mCrm"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Cargo</label>
+        <select id="mCargo">
+          <option value="presidente">Presidente</option>
+          <option value="vice_presidente">Vice-Presidente</option>
+          <option value="secretario">Secretário</option>
+          <option value="membro" selected>Membro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Início do Mandato *</label><input id="mInicio" type="date"></div>
+      <div class="form-group"><label>Fim do Mandato *</label><input id="mFim" type="date"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMembro')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMembro()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Caso -->
+<div class="modal-bg" id="modalCaso">
+  <div class="modal">
+    <h3>Novo Caso Ético</h3>
+    <div class="form-group"><label>Tipo *</label>
+      <select id="cTipo">
+        <option value="denuncia">Denúncia</option>
+        <option value="consulta_etica">Consulta Ética</option>
+        <option value="sindicancia">Sindicância</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Médico Envolvido (nome)</label><input id="cMedicoNome"></div>
+      <div class="form-group"><label>CRM</label><input id="cMedicoCrm"></div>
+    </div>
+    <div class="form-group"><label>Descrição *</label><textarea id="cDescricao" rows="4"></textarea></div>
+    <label class="form-check"><input type="checkbox" id="cSigiloso" checked> Tratar identidade do médico como sigilosa</label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCaso')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCaso()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe / Parecer -->
+<div class="modal-bg" id="modalDetalhe">
+  <div class="modal">
+    <h3 id="dTitulo">Caso</h3>
+    <div id="dCorpo"></div>
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div class="card-title" style="margin-bottom:10px">Emitir Parecer</div>
+      <div class="form-group"><label>Relator</label><input id="pRelator"></div>
+      <div class="form-group"><label>Parecer</label><textarea id="pTexto" rows="4"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modalDetalhe')">Fechar</button>
+        <button class="btn btn-ok" onclick="emitirParecer()">Emitir Parecer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let CASO_ATUAL = null;
+
+function csrfToken() { const m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ""; }
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+function fmtData(iso) { return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—"; }
+
+const STATUS_BADGE = {
+  aberto: '<span class="badge badge-info">Aberto</span>',
+  em_analise: '<span class="badge badge-warn">Em Análise</span>',
+  parecer_emitido: '<span class="badge badge-ok">Parecer Emitido</span>',
+  arquivado: '<span class="badge badge-ok">Arquivado</span>',
+};
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/hospital/comissao-etica/kpis");
+  document.getElementById("kpiTotal").textContent = d.total_casos ?? 0;
+  document.getElementById("kpiAbertos").textContent = d.abertos ?? 0;
+  document.getElementById("kpiPareceres").textContent = (d.por_status || {}).parecer_emitido ?? 0;
+  document.getElementById("kpiMembros").textContent = d.membros_ativos ?? 0;
+}
+
+async function carregarCasos() {
+  const params = new URLSearchParams();
+  const tipo = document.getElementById("fTipo").value;
+  const status = document.getElementById("fStatus").value;
+  if (tipo) params.set("tipo", tipo);
+  if (status) params.set("status", status);
+  const d = await fetchJSON("/api/hospital/comissao-etica/casos?" + params.toString());
+  const tbody = document.getElementById("tbodyCasos");
+  const items = d.casos || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum caso registrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(c => `<tr>
+    <td><strong>${c.protocolo}</strong>${c.sigiloso ? ' 🔒' : ''}</td>
+    <td>${c.tipo_display}</td>
+    <td>${c.medico_envolvido_nome}</td>
+    <td>${STATUS_BADGE[c.status] || c.status}</td>
+    <td>${fmtData(c.data_abertura)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalhe(${c.id})">Ver / Parecer</button></td>
+  </tr>`).join("");
+}
+
+async function carregarMembros() {
+  const d = await fetchJSON("/api/hospital/comissao-etica/membros");
+  const tbody = document.getElementById("tbodyMembros");
+  const items = d.membros || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum membro cadastrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(m => `<tr>
+    <td>${m.nome}</td>
+    <td>${m.crm}</td>
+    <td><span class="badge badge-info">${m.cargo_display}</span></td>
+    <td>${fmtData(m.mandato_inicio)} — ${fmtData(m.mandato_fim)}${m.mandato_vencido ? ' <span class="badge badge-danger">Vencido</span>' : ''}</td>
+    <td>${m.ativo ? `<button class="btn btn-ghost btn-sm" onclick="desativarMembro(${m.id})">Desativar</button>` : '<span class="badge badge-warn">Inativo</span>'}</td>
+  </tr>`).join("");
+}
+
+function abrirModalMembro() { document.getElementById("modalMembro").classList.add("open"); }
+async function salvarMembro() {
+  const nome = document.getElementById("mNome").value.trim();
+  const crm = document.getElementById("mCrm").value.trim();
+  const inicio = document.getElementById("mInicio").value;
+  const fim = document.getElementById("mFim").value;
+  if (!nome || !crm || !inicio || !fim) { alert("Preencha todos os campos obrigatórios."); return; }
+  const d = await fetchJSON("/api/hospital/comissao-etica/membros", {
+    method: "POST",
+    body: JSON.stringify({ nome, crm, cargo: document.getElementById("mCargo").value, mandato_inicio: inicio, mandato_fim: fim }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalMembro"); carregarMembros(); carregarKpis();
+}
+async function desativarMembro(id) {
+  if (!confirm("Desativar este membro?")) return;
+  await fetchJSON(`/api/hospital/comissao-etica/membros/${id}`, { method: "PATCH", body: JSON.stringify({ ativo: false }) });
+  carregarMembros(); carregarKpis();
+}
+
+function abrirModalCaso() { document.getElementById("modalCaso").classList.add("open"); }
+async function salvarCaso() {
+  const descricao = document.getElementById("cDescricao").value.trim();
+  if (!descricao) { alert("Descrição é obrigatória."); return; }
+  const body = {
+    tipo: document.getElementById("cTipo").value,
+    medico_envolvido_nome: document.getElementById("cMedicoNome").value.trim(),
+    medico_envolvido_crm: document.getElementById("cMedicoCrm").value.trim(),
+    descricao,
+    sigiloso: document.getElementById("cSigiloso").checked,
+  };
+  const d = await fetchJSON("/api/hospital/comissao-etica/casos", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalCaso");
+  alert(`Caso registrado — protocolo ${d.protocolo}`);
+  carregarCasos(); carregarKpis();
+}
+
+async function abrirDetalhe(id) {
+  const d = await fetchJSON(`/api/hospital/comissao-etica/casos/${id}`);
+  CASO_ATUAL = d;
+  document.getElementById("dTitulo").textContent = `${d.protocolo} — ${d.tipo_display}`;
+  document.getElementById("dCorpo").innerHTML = `
+    <div class="detail-row"><span class="k">Envolvido</span><span>${d.sigiloso ? "(sigiloso)" : (d.medico_envolvido_nome || "—")}</span></div>
+    <div class="detail-row"><span class="k">Status</span><span>${STATUS_BADGE[d.status] || d.status}</span></div>
+    <div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Descrição</span><span style="margin-top:4px">${d.descricao}</span></div>
+    ${d.parecer_texto ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Parecer (${d.relator || "—"})</span><span style="margin-top:4px">${d.parecer_texto}</span></div>` : ""}
+  `;
+  document.getElementById("pRelator").value = d.relator || "";
+  document.getElementById("pTexto").value = d.parecer_texto || "";
+  document.getElementById("modalDetalhe").classList.add("open");
+}
+
+async function emitirParecer() {
+  if (!CASO_ATUAL) return;
+  const parecer_texto = document.getElementById("pTexto").value.trim();
+  if (!parecer_texto) { alert("Escreva o parecer antes de emitir."); return; }
+  const d = await fetchJSON(`/api/hospital/comissao-etica/casos/${CASO_ATUAL.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ parecer_texto, relator: document.getElementById("pRelator").value.trim() }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  alert("Parecer emitido.");
+  fecharModal("modalDetalhe");
+  carregarCasos(); carregarKpis();
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarCasos();
+carregarMembros();
+</script>
+</body>
+</html>

@@ -35,6 +35,7 @@
   {% if gov_ver_atencao_clinica or gov_ver_epidemiologia %}
   <div class="nav-section">Imunização</div>
   <a class="nav-link{% if request.path == '/governo/sipni/' %} active{% endif %}" href="/governo/sipni/"><span>💉</span> SIPNI — Imunizações</a>
+  <a class="nav-link{% if request.path == '/governo/sim/' %} active{% endif %}" href="/governo/sim/"><span>⚰️</span> SIM — Mortalidade</a>
   {% endif %}
 
   {% if gov_ver_laboratorio or gov_ver_atencao_clinica %}

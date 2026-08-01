@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prontuário PAIF</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:460px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.detail-row .k{color:var(--muted);flex-shrink:0}
+</style>
+</head>
+<body>
+{% include "_assistencia_social_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Prontuário PAIF</div>
+      <div class="page-sub">Acompanhamento familiar do Serviço de Proteção e Atendimento Integral à Família</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalNovo()">+ Novo Prontuário</button>
+      <a href="/assistencia-social/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Prontuários</span>
+      <div class="filters">
+        <select id="fAtivo" onchange="carregarProntuarios()">
+          <option value="true">Ativos</option>
+          <option value="false">Encerrados</option>
+          <option value="">Todos</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Família</th><th>Unidade CRAS</th><th>Técnico</th><th>Modalidade</th><th>Abertura</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyProntuarios"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Novo Prontuário -->
+<div class="modal-bg" id="modalNovo">
+  <div class="modal">
+    <h3>Novo Prontuário PAIF</h3>
+    <div class="form-group"><label>Família *</label><select id="pFamilia"><option value="">Carregando famílias…</option></select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Técnico Responsável</label><input id="pTecnico"></div>
+      <div class="form-group"><label>Modalidade</label>
+        <select id="pModalidade">
+          <option value="acompanhamento_paif">Acompanhamento PAIF</option>
+          <option value="acompanhamento_familiar">Acompanhamento Familiar Individual</option>
+          <option value="grupo_convivencia">Grupo de Convivência</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Situações de Vulnerabilidade (separadas por vírgula)</label><input id="pVulnerabilidades" placeholder="Ex: pobreza, violência doméstica"></div>
+    <div class="form-group"><label>Objetivos do Acompanhamento</label><textarea id="pObjetivos" rows="2"></textarea></div>
+    <div class="form-group"><label>Plano de Ação Familiar</label><textarea id="pPlano" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNovo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProntuario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe / Evolução -->
+<div class="modal-bg" id="modalDetalhe">
+  <div class="modal">
+    <h3 id="dTitulo">Prontuário</h3>
+    <div id="dResumo"></div>
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div class="form-group"><label>Evolução</label><textarea id="dEvolucao" rows="3"></textarea></div>
+      <div class="form-group"><label>Encaminhamentos</label><textarea id="dEncaminhamentos" rows="2"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modalDetalhe')">Fechar</button>
+        <button class="btn btn-ghost" onclick="encerrarProntuario()">Encerrar Acompanhamento</button>
+        <button class="btn btn-primary" onclick="salvarEvolucao()">Salvar Evolução</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let FAMILIAS = [];
+let PRONT_ATUAL = null;
+
+function csrfToken() { const m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ""; }
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+function fmtData(iso) { return iso ? new Date(iso + "T00:00:00").toLocaleDateString("pt-BR") : "—"; }
+
+async function carregarFamilias() {
+  const d = await fetchJSON("/api/assistencia-social/cras/familias");
+  FAMILIAS = d.familias || [];
+  document.getElementById("pFamilia").innerHTML = '<option value="">Selecione…</option>' +
+    FAMILIAS.map(f => `<option value="${f.id}">${f.responsavel_nome}${f.numero_prontuario ? ' — ' + f.numero_prontuario : ''}</option>`).join("");
+}
+
+async function carregarProntuarios() {
+  const ativo = document.getElementById("fAtivo").value;
+  const params = new URLSearchParams();
+  if (ativo !== "") params.set("ativo", ativo);
+  const d = await fetchJSON("/api/assistencia-social/cras/prontuarios-paif?" + params.toString());
+  const tbody = document.getElementById("tbodyProntuarios");
+  const items = d.prontuarios || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum prontuário encontrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(p => `<tr>
+    <td>${p.familia_nome}</td>
+    <td>${p.unidade_cras_nome || "—"}</td>
+    <td>${p.tecnico_responsavel || "—"}</td>
+    <td><span class="badge badge-info">${p.modalidade.replace(/_/g, ' ')}</span></td>
+    <td>${fmtData(p.data_abertura)}</td>
+    <td>${p.ativo ? '<span class="badge badge-ok">Ativo</span>' : '<span class="badge badge-warn">Encerrado</span>'}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalhe(${p.id})">Ver / Evoluir</button></td>
+  </tr>`).join("");
+}
+
+function abrirModalNovo() { document.getElementById("modalNovo").classList.add("open"); }
+async function salvarProntuario() {
+  const familiaId = document.getElementById("pFamilia").value;
+  if (!familiaId) { alert("Selecione uma família."); return; }
+  const vuln = document.getElementById("pVulnerabilidades").value.trim();
+  const body = {
+    familia_id: parseInt(familiaId),
+    tecnico_responsavel: document.getElementById("pTecnico").value.trim(),
+    modalidade: document.getElementById("pModalidade").value,
+    situacoes_vulnerabilidade: vuln ? vuln.split(",").map(s => s.trim()).filter(Boolean) : [],
+    objetivos: document.getElementById("pObjetivos").value.trim(),
+    plano_acao_familiar: document.getElementById("pPlano").value.trim(),
+  };
+  const d = await fetchJSON("/api/assistencia-social/cras/prontuarios-paif", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalNovo");
+  carregarProntuarios();
+}
+
+async function abrirDetalhe(id) {
+  const d = await fetchJSON(`/api/assistencia-social/cras/prontuarios-paif/${id}`);
+  const p = d.prontuario;
+  PRONT_ATUAL = p;
+  document.getElementById("dTitulo").textContent = `Prontuário — ${p.familia_nome}`;
+  document.getElementById("dResumo").innerHTML = `
+    <div class="detail-row"><span class="k">Técnico</span><span>${p.tecnico_responsavel || "—"}</span></div>
+    <div class="detail-row"><span class="k">Modalidade</span><span>${p.modalidade.replace(/_/g, ' ')}</span></div>
+    <div class="detail-row"><span class="k">Vulnerabilidades</span><span>${(p.situacoes_vulnerabilidade || []).join(", ") || "—"}</span></div>
+    <div class="detail-row"><span class="k">Objetivos</span><span>${p.objetivos || "—"}</span></div>
+    <div class="detail-row"><span class="k">Plano de Ação Familiar</span><span>${p.plano_acao_familiar || "—"}</span></div>
+  `;
+  document.getElementById("dEvolucao").value = p.evolucao || "";
+  document.getElementById("dEncaminhamentos").value = p.encaminhamentos || "";
+  document.getElementById("modalDetalhe").classList.add("open");
+}
+
+async function salvarEvolucao() {
+  if (!PRONT_ATUAL) return;
+  const d = await fetchJSON(`/api/assistencia-social/cras/prontuarios-paif/${PRONT_ATUAL.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      evolucao: document.getElementById("dEvolucao").value,
+      encaminhamentos: document.getElementById("dEncaminhamentos").value,
+    }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  alert("Evolução registrada.");
+  fecharModal("modalDetalhe");
+  carregarProntuarios();
+}
+
+async function encerrarProntuario() {
+  if (!PRONT_ATUAL || !confirm("Encerrar o acompanhamento desta família?")) return;
+  await fetchJSON(`/api/assistencia-social/cras/prontuarios-paif/${PRONT_ATUAL.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ ativo: false, data_encerramento: new Date().toISOString().slice(0, 10) }),
+  });
+  fecharModal("modalDetalhe");
+  carregarProntuarios();
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarFamilias();
+carregarProntuarios();
+</script>
+</body>
+</html>

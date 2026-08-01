@@ -3,13 +3,30 @@ import logging
 from datetime import date
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial
+from .access_control import (
+    api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial,
+    contexto_navegacao_setorial, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 from .services.auth_session import empresa_autenticada_from_request
 
 logger = logging.getLogger(__name__)
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("assistencia_social")
+@requer_feature_pacote("assistencia.cras_paif", "Prontuário PAIF")
+@requer_operacao_page
+@requer_permissao_modulo("assistencia.cras_paif")
+def assistencia_prontuario_paif_page(request):
+    return render(request, "assistencia_prontuario_paif.html",
+                  contexto_navegacao_setorial(request, "assistencia_social"))
 
 
 def _assoc(request):

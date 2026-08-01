@@ -61,7 +61,7 @@ from api.views_plano_saude import (
     api_ps_sla,
     api_ps_auditoria,
     api_ps_contratos, api_ps_contrato_detalhe,
-    api_ps_comunicacao, api_ps_comunicacao_thread,
+    api_ps_comunicacao, api_ps_comunicacao_thread, api_ps_campanhas,
     api_ps_telemedicina, api_ps_telemedicina_autorizar,
     api_ps_odontologia, api_ps_guia_odonto_detalhe,
     api_ps_regulatorio_gerar,
@@ -495,6 +495,7 @@ from api.views_farmacia_fase2 import (
     api_rede_farmacia_transferencias,
     api_rede_farmacia_transferencia_acao,
     api_rede_farmacia_kpis,
+    farmacia_disponibilidade_rede_page,
 )
 from api.views_farmacia_fase3 import (
     api_verificar_interacoes,
@@ -517,7 +518,7 @@ from api.views_farmacia_ops import (
     api_pedidos_compra_farmacia, api_pedido_compra_status,
     api_farmacia_ops_kpis, api_farmacia_pdf_estoque, api_farmacia_pdf_dispensacoes,
 )
-from api.views_farmacia_unidades import api_farmacia_unidades, api_farmacia_unidade_detalhe
+from api.views_farmacia_unidades import api_farmacia_unidades, api_farmacia_unidade_detalhe, farmacia_unidades_page
 from api.views_farmacia_pdv import (
     farmacia_pdv_page,
     api_pdv_buscar_produto,
@@ -526,6 +527,14 @@ from api.views_farmacia_pdv import (
     api_pdv_fechar_sessao,
     api_pdv_registrar_venda,
     api_pdv_historico,
+)
+from api.views_farmacia_fidelidade import (
+    farmacia_fidelidade_page,
+    api_fidelidade_clientes,
+    api_fidelidade_cliente_detalhe,
+    api_fidelidade_acumular,
+    api_fidelidade_resgatar,
+    api_fidelidade_kpis,
 )
 from api.views_farmacia_pbm import (
     farmacia_pbm_page,
@@ -906,6 +915,14 @@ from api.views_hospital_ccih import (
     api_ccih_kpis,
     hospital_ccih_page,
 )
+from api.views_hospital_comissao_etica import (
+    hospital_comissao_etica_page,
+    api_comissao_etica_membros,
+    api_comissao_etica_membro_detalhe,
+    api_comissao_etica_casos,
+    api_comissao_etica_caso_detalhe,
+    api_comissao_etica_kpis,
+)
 from api.views_governo_ceaf import (
     api_ceaf_medicamentos,
     api_ceaf_solicitacoes,
@@ -938,6 +955,13 @@ from api.views_hospital_obstetrico import (
     api_obstetrico_dnv,
     api_obstetrico_kpis,
     hospital_obstetrico_page,
+)
+from api.views_governo_sim import (
+    governo_sim_page,
+    api_sim_obitos,
+    api_sim_obito_detalhe,
+    api_sim_obito_transmitir,
+    api_sim_kpis,
 )
 from api.views_governo_sipni import (
     api_sipni_status,
@@ -1067,6 +1091,7 @@ from api.views_plano_tuss import (
     api_nip_detalhe,
     api_nip_responder,
     api_tuss_kpis,
+    plano_tuss_page,
 )
 from api.views_governo_acs import (
     api_acs_lista,
@@ -1250,7 +1275,7 @@ from api.views_governo_ppi import (governo_ppi_page, api_ppi_programacoes, api_p
 from api.views_governo_agendamento import (governo_agendamento_page, api_governo_agenda, api_governo_agendar, api_governo_agendamento_detalhe, api_governo_agendamento_confirmar, api_governo_agendamento_cancelar, api_governo_agendamento_realizar, api_governo_enviar_lembretes, api_governo_agendamento_kpis, api_governo_agendamento_disponibilidade)
 from api.views_governo_sia_sus import (api_sia_sus_status, api_sia_sus_competencia, api_sia_sus_validar, api_sia_sus_transmitir, api_sia_sus_historico, api_sia_sus_reprocessar)
 from api.views_governo_icp_brasil import (api_gov_icp_assinar_prescricao, api_gov_icp_assinar_atestado, api_gov_icp_certificados, api_gov_icp_validar, api_gov_icp_status)
-from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis)
+from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis, hospital_whatsapp_agendamento_page)
 from api.views_governo_suas_cras import (
     api_cras_unidades, api_cras_unidade_detalhe,
     api_cras_familias, api_cras_familia_detalhe,
@@ -1280,6 +1305,14 @@ from api.views_assistencia_cras import (
     api_ass_cras_visitas, api_ass_cras_visita_detalhe,
     api_ass_prontuarios_paif, api_ass_prontuario_paif_detalhe,
     api_ass_cras_kpis,
+    assistencia_prontuario_paif_page,
+)
+from api.views_assistencia_protecao_especial import (
+    assistencia_protecao_especial_page,
+    api_ass_conselho_tutelar, api_ass_conselho_tutelar_detalhe,
+    api_ass_vigilancia_territorios, api_ass_vigilancia_territorio_detalhe,
+    api_ass_busca_ativa, api_ass_busca_ativa_detalhe,
+    api_ass_protecao_especial_kpis,
 )
 from api.views_assistencia_creas import (
     api_ass_creas_unidades, api_ass_creas_unidade_detalhe,
@@ -1297,6 +1330,7 @@ from api.views_assistencia_gestao import (
     api_ass_suas_dashboard, api_ass_suas_censo,
     api_ass_ia_inconsistencias, api_ass_ia_inconsistencia_resolver,
     api_ass_suas_relatorio_mensal,
+    assistencia_relatorio_mensal_page,
 )
 
 
@@ -1370,6 +1404,7 @@ urlpatterns = [
     path('hospital/assinatura/', hospital_assinatura_page),
     path('hospital/rnds/', hospital_rnds_page),
     path('hospital/ccih/', hospital_ccih_page),
+    path('hospital/comissao-etica/', hospital_comissao_etica_page),
     path('hospital/hemoterapia/', hospital_hemoterapia_page),
     path('hospital/obstetrico/', hospital_obstetrico_page),
     path('hospital/oncologia/', hospital_oncologia_page),
@@ -1939,6 +1974,18 @@ urlpatterns = [
     path('api/farmacia/fornecedores/<int:fornecedor_id>/', api_fornecedor_farmacia_detalhe),
     path('api/farmacia/itens/', api_itens_farmacia),
     path('api/farmacia/itens/<int:item_id>/', api_item_farmacia_detalhe),
+    path('farmacia/unidades/', farmacia_unidades_page),
+    path('farmacia/fidelidade/', farmacia_fidelidade_page),
+    path('api/farmacia/fidelidade/clientes', api_fidelidade_clientes),
+    path('api/farmacia/fidelidade/clientes/', api_fidelidade_clientes),
+    path('api/farmacia/fidelidade/clientes/<str:cpf>', api_fidelidade_cliente_detalhe),
+    path('api/farmacia/fidelidade/clientes/<str:cpf>/', api_fidelidade_cliente_detalhe),
+    path('api/farmacia/fidelidade/acumular', api_fidelidade_acumular),
+    path('api/farmacia/fidelidade/acumular/', api_fidelidade_acumular),
+    path('api/farmacia/fidelidade/resgatar', api_fidelidade_resgatar),
+    path('api/farmacia/fidelidade/resgatar/', api_fidelidade_resgatar),
+    path('api/farmacia/fidelidade/kpis', api_fidelidade_kpis),
+    path('api/farmacia/fidelidade/kpis/', api_fidelidade_kpis),
     path('api/farmacia/unidades/', api_farmacia_unidades),
     path('api/farmacia/unidades/<int:unidade_id>/', api_farmacia_unidade_detalhe),
     path('api/farmacia/movimentos/', api_movimentos_estoque),
@@ -1975,6 +2022,7 @@ urlpatterns = [
     path('api/farmacia/ia/interacoes/', api_verificar_interacoes),
     # ── Fase 2: Multi-unidade & Rede ─────────────────────────────
     path('api/farmacia/rede/estoque/', api_rede_farmacia_estoque),
+    path('farmacia/rede/disponibilidade/', farmacia_disponibilidade_rede_page),
     path('api/farmacia/rede/disponibilidade/<str:nome_med>/', api_rede_farmacia_disponibilidade),
     path('api/farmacia/rede/transferencias/', api_rede_farmacia_transferencias),
     path('api/farmacia/rede/transferencias/<int:transf_id>/acao/', api_rede_farmacia_transferencia_acao),
@@ -2716,6 +2764,7 @@ urlpatterns = [
     path('api/plano-saude/contratos/<int:contrato_id>/', api_ps_contrato_detalhe),
     path('api/plano-saude/comunicacao/', api_ps_comunicacao),
     path('api/plano-saude/comunicacao/<int:destinatario_id>/thread/', api_ps_comunicacao_thread),
+    path('api/plano-saude/campanhas/', api_ps_campanhas),
     path('api/plano-saude/telemedicina/', api_ps_telemedicina),
     path('api/plano-saude/telemedicina/<int:tele_id>/autorizar/', api_ps_telemedicina_autorizar),
     path('api/plano-saude/odontologia/', api_ps_odontologia),
@@ -2836,6 +2885,18 @@ urlpatterns = [
     path('api/hospital/ccih/indicadores',                        api_ccih_indicadores),
     path('api/hospital/ccih/indicadores/',                       api_ccih_indicadores),
 
+    # ── Comissão de Ética Médica ──────────────────────────────────────────────
+    path('api/hospital/comissao-etica/membros',                  api_comissao_etica_membros),
+    path('api/hospital/comissao-etica/membros/',                 api_comissao_etica_membros),
+    path('api/hospital/comissao-etica/membros/<int:m_id>',       api_comissao_etica_membro_detalhe),
+    path('api/hospital/comissao-etica/membros/<int:m_id>/',      api_comissao_etica_membro_detalhe),
+    path('api/hospital/comissao-etica/casos',                    api_comissao_etica_casos),
+    path('api/hospital/comissao-etica/casos/',                   api_comissao_etica_casos),
+    path('api/hospital/comissao-etica/casos/<int:c_id>',         api_comissao_etica_caso_detalhe),
+    path('api/hospital/comissao-etica/casos/<int:c_id>/',        api_comissao_etica_caso_detalhe),
+    path('api/hospital/comissao-etica/kpis',                     api_comissao_etica_kpis),
+    path('api/hospital/comissao-etica/kpis/',                    api_comissao_etica_kpis),
+
     # ── CEAF — Componente Especializado da Assistência Farmacêutica ──────────
     path('governo/ceaf/',                                        governo_ceaf_page),
     path('api/governo/ceaf/kpis',                                api_ceaf_kpis),
@@ -2899,6 +2960,15 @@ urlpatterns = [
     path('api/hospital/obstetrico/partos/<int:parto_id>/dnv/',                api_obstetrico_dnv),
 
     # ── SIPNI — Imunizações via RNDS ─────────────────────────────────────────
+    path('governo/sim/',                                        governo_sim_page),
+    path('api/governo/sim/obitos',                              api_sim_obitos),
+    path('api/governo/sim/obitos/',                             api_sim_obitos),
+    path('api/governo/sim/obitos/<int:obito_id>',                api_sim_obito_detalhe),
+    path('api/governo/sim/obitos/<int:obito_id>/',               api_sim_obito_detalhe),
+    path('api/governo/sim/obitos/<int:obito_id>/transmitir',     api_sim_obito_transmitir),
+    path('api/governo/sim/obitos/<int:obito_id>/transmitir/',    api_sim_obito_transmitir),
+    path('api/governo/sim/kpis',                                api_sim_kpis),
+    path('api/governo/sim/kpis/',                               api_sim_kpis),
     path('governo/sipni/',                                      governo_sipni_page),
     path('api/governo/sipni/status',                            api_sipni_status),
     path('api/governo/sipni/status/',                           api_sipni_status),
@@ -3083,6 +3153,7 @@ urlpatterns = [
     path('api/hospital/cme/kpis/',                              api_cme_kpis),
 
     # ── TUSS + Rol ANS + NIP (Plano de Saúde) ────────────────────────────────
+    path('plano-saude/tuss/',                                   plano_tuss_page),
     path('api/plano-saude/tuss/procedimentos',                  api_tuss_procedimentos),
     path('api/plano-saude/tuss/procedimentos/',                 api_tuss_procedimentos),
     path('api/plano-saude/tuss/rol-ans',                        api_rol_coberturas),
@@ -3274,6 +3345,7 @@ urlpatterns = [
     path('api/governo/icp-brasil/status/',                      api_gov_icp_status),
 
     # ── WhatsApp Agendamentos Hospitalares ────────────────────────────────────
+    path('hospital/whatsapp-agendamento/',                      hospital_whatsapp_agendamento_page),
     path('api/hospital/whatsapp-agendamento/status',            api_hosp_wa_status),
     path('api/hospital/whatsapp-agendamento/status/',           api_hosp_wa_status),
     path('api/hospital/whatsapp-agendamento/enviar-lembrete',   api_hosp_wa_enviar_lembrete),
@@ -3358,6 +3430,22 @@ urlpatterns = [
     path('api/assistencia-social/dashboard/',        api_ass_suas_dashboard),
     path('api/assistencia-social/censo',             api_ass_suas_censo),
     path('api/assistencia-social/censo/',            api_ass_suas_censo),
+    path('assistencia-social/relatorio-mensal/',     assistencia_relatorio_mensal_page),
+    path('assistencia-social/protecao-especial/',    assistencia_protecao_especial_page),
+    path('api/assistencia-social/conselho-tutelar',                          api_ass_conselho_tutelar),
+    path('api/assistencia-social/conselho-tutelar/',                         api_ass_conselho_tutelar),
+    path('api/assistencia-social/conselho-tutelar/<int:ct_id>',              api_ass_conselho_tutelar_detalhe),
+    path('api/assistencia-social/conselho-tutelar/<int:ct_id>/',             api_ass_conselho_tutelar_detalhe),
+    path('api/assistencia-social/vigilancia-social/territorios',             api_ass_vigilancia_territorios),
+    path('api/assistencia-social/vigilancia-social/territorios/',            api_ass_vigilancia_territorios),
+    path('api/assistencia-social/vigilancia-social/territorios/<int:t_id>',  api_ass_vigilancia_territorio_detalhe),
+    path('api/assistencia-social/vigilancia-social/territorios/<int:t_id>/', api_ass_vigilancia_territorio_detalhe),
+    path('api/assistencia-social/busca-ativa',                               api_ass_busca_ativa),
+    path('api/assistencia-social/busca-ativa/',                              api_ass_busca_ativa),
+    path('api/assistencia-social/busca-ativa/<int:b_id>',                    api_ass_busca_ativa_detalhe),
+    path('api/assistencia-social/busca-ativa/<int:b_id>/',                   api_ass_busca_ativa_detalhe),
+    path('api/assistencia-social/protecao-especial/kpis',                    api_ass_protecao_especial_kpis),
+    path('api/assistencia-social/protecao-especial/kpis/',                   api_ass_protecao_especial_kpis),
     path('api/assistencia-social/relatorio-mensal',  api_ass_suas_relatorio_mensal),
     path('api/assistencia-social/relatorio-mensal/', api_ass_suas_relatorio_mensal),
 
@@ -3384,6 +3472,7 @@ urlpatterns = [
     path('api/assistencia-social/cras/visitas/',                                  api_ass_cras_visitas),
     path('api/assistencia-social/cras/visitas/<int:visita_id>',                   api_ass_cras_visita_detalhe),
     path('api/assistencia-social/cras/visitas/<int:visita_id>/',                  api_ass_cras_visita_detalhe),
+    path('assistencia-social/cras/prontuario-paif/',                              assistencia_prontuario_paif_page),
     path('api/assistencia-social/cras/prontuarios-paif',                          api_ass_prontuarios_paif),
     path('api/assistencia-social/cras/prontuarios-paif/',                         api_ass_prontuarios_paif),
     path('api/assistencia-social/cras/prontuarios-paif/<int:prontuario_id>',      api_ass_prontuario_paif_detalhe),

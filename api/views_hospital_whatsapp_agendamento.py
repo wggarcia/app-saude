@@ -13,6 +13,7 @@ import json
 import logging
 from datetime import timedelta
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
@@ -28,6 +29,17 @@ def _hosp(request):
     if emp and get_setor(emp) == "hospital":
         return emp
     return None
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.whatsapp_agendamento", "WhatsApp de Agendamento")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.administrativo")
+def hospital_whatsapp_agendamento_page(request):
+    return render(request, "hospital_whatsapp_agendamento.html")
 
 
 def _get_wa_config():
@@ -217,6 +229,15 @@ def api_hosp_wa_confirmar(request):
         acao = "cancelado"
     else:
         acao = "ignorado"
+
+    try:
+        from .models import LogMensagemWhatsApp
+        log = LogMensagemWhatsApp.objects.filter(empresa=emp, telefone=telefone).first()
+        if log:
+            log.acao = acao
+            log.save(update_fields=["acao"])
+    except Exception:
+        pass
 
     logger.info(
         "WhatsApp confirmação | hospital=%s | telefone=%s | acao=%s",

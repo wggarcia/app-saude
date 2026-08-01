@@ -257,6 +257,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
       {% endif %}
       {% if ps_ver_compliance_ans %}
       <button class="nav-link" onclick="openModulePanel('/plano-saude/ans/','📋 ANS / DIOPS / SIB')"><span>📋</span> ANS / DIOPS / SIB</button>
+      <button class="nav-link" onclick="openModulePanel('/plano-saude/tuss/','📋 TUSS / Rol ANS / NIP')"><span>📋</span> TUSS / Rol ANS / NIP</button>
       {% endif %}
       {% if ps_ver_autorizacao %}
       <button class="nav-link" onclick="openModulePanel('/plano-saude/ia/','🤖 IA — Autorização')"><span>🤖</span> IA — Autorização</button>
@@ -1493,11 +1494,8 @@ tr:hover td{background:rgba(255,107,157,.03)}
       <div class="card-header"><span class="card-title">&#128228; Campanhas Enviadas</span><button class="btn btn-ghost btn-sm" onclick="novaCampanha()">+ Nova Campanha</button></div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Campanha</th><th>Publico</th><th>Enviado</th><th>Aberturas</th><th>Taxa</th><th>Status</th></tr></thead>
-          <tbody id="commCampanhas">
-            <tr><td>Lembrete Preventivo</td><td>Todos beneficiarios</td><td>01/05/2026</td><td>847</td><td><span style="color:var(--ok)">72%</span></td><td><span class="badge badge-ok">Concluida</span></td></tr>
-            <tr><td>Reajuste Anual 2026</td><td>Titulares</td><td>15/04/2026</td><td>612</td><td><span style="color:var(--ok)">68%</span></td><td><span class="badge badge-ok">Concluida</span></td></tr>
-          </tbody>
+          <thead><tr><th>Campanha</th><th>Publico</th><th>Data</th><th>Enviado (real)</th><th>Mensagem</th></tr></thead>
+          <tbody id="commCampanhas"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1757,6 +1755,25 @@ tr:hover td{background:rgba(255,107,157,.03)}
 </div>
 
 <!-- MODAL: Nova Mensagem / Campanha -->
+<div class="modal-bg" id="modalCampanha">
+  <div class="modal" style="max-width:520px">
+    <h3>&#128228; Nova Campanha</h3>
+    <div class="form-group"><label>Nome da Campanha *</label><input id="campNome" placeholder="Ex: Lembrete Preventivo Outubro"></div>
+    <div class="form-group"><label>Público-alvo</label>
+      <select id="campPublico">
+        <option value="todos">Todos os Beneficiários</option>
+        <option value="titulares">Apenas Titulares</option>
+        <option value="dependentes">Apenas Dependentes</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Mensagem *</label><textarea id="campMensagem" rows="4" placeholder="Digite a mensagem da campanha..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCampanha')">Cancelar</button>
+      <button class="btn btn-primary" onclick="dispararCampanha()">Disparar Campanha</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modalMensagem">
   <div class="modal" style="max-width:600px">
     <h3>&#128172; Nova Mensagem</h3>
@@ -4913,6 +4930,7 @@ async function loadComm() {
   } catch(e) {
     renderCommLista([]);
   }
+  carregarCampanhas();
 }
 function renderCommLista(lista) {
   const el = document.getElementById('commLista');
@@ -5024,7 +5042,52 @@ function enviarNotifMassa() {
   toggleMsgDestinatario();
   abrirModal('modalMensagem');
 }
-function novaCampanha() { showToastPS('Funcionalidade em desenvolvimento', 'warn'); }
+function novaCampanha() {
+  document.getElementById('campNome').value = '';
+  document.getElementById('campMensagem').value = '';
+  document.getElementById('campPublico').value = 'todos';
+  abrirModal('modalCampanha');
+}
+
+async function dispararCampanha() {
+  var nome = document.getElementById('campNome').value.trim();
+  var mensagem = document.getElementById('campMensagem').value.trim();
+  if (!nome || !mensagem) { showToastPS('Preencha nome e mensagem', 'warn'); return; }
+  var resp = await fetch('/api/plano-saude/campanhas/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify({ nome: nome, publico_alvo: document.getElementById('campPublico').value, mensagem: mensagem })
+  });
+  var d = await resp.json();
+  if (d.ok) {
+    showToastPS(`Campanha disparada para ${d.total_enviado} beneficiário(s)!`, 'ok');
+    fecharModal('modalCampanha');
+    carregarCampanhas();
+  } else {
+    showToastPS(d.erro || 'Erro ao disparar campanha', 'err');
+  }
+}
+
+async function carregarCampanhas() {
+  var tbody = document.getElementById('commCampanhas');
+  try {
+    var resp = await fetch('/api/plano-saude/campanhas/', { credentials: 'include' });
+    var d = await resp.json();
+    var campanhas = d.campanhas || [];
+    if (!campanhas.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhuma campanha disparada ainda.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = campanhas.map(function(c) {
+      return '<tr><td>' + c.nome + '</td><td>' + c.publico_alvo_display + '</td><td>' + c.criado_em +
+        '</td><td><strong>' + c.total_enviado + '</strong></td><td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' +
+        c.mensagem.replace(/"/g, '&quot;') + '">' + c.mensagem + '</td></tr>';
+    }).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro ao carregar campanhas.</td></tr>';
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 //  TELEMEDICINA

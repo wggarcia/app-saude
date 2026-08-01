@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WhatsApp Agendamento</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:18px 20px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.aviso{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.3);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--warn)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+{% include "_hospital_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">WhatsApp Agendamento</div>
+      <div class="page-sub">Lembretes automáticos de consulta, internação e cirurgia via WhatsApp (Meta Cloud API)</div>
+    </div>
+    <a href="/hospital/gestao/" class="btn btn-ghost">← Gestão</a>
+  </div>
+
+  <div id="avisoBox"></div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiEnviados">—</div><div class="kpi-lbl">Enviados Hoje</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiConfirmados">—</div><div class="kpi-lbl">Confirmados Hoje</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiCancelados">—</div><div class="kpi-lbl">Cancelados Hoje</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiTaxa">—</div><div class="kpi-lbl">Taxa de Confirmação</div></div>
+  </div>
+
+  <!-- Enviar lembrete -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">Enviar Lembrete</span></div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group"><label>Tipo</label>
+          <select id="fTipo">
+            <option value="consulta">Consulta</option>
+            <option value="internacao">Internação</option>
+            <option value="cirurgia">Cirurgia</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Setor</label><input id="fSetor" placeholder="Ex: Ambulatório, Centro Cirúrgico"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Nome do Paciente</label><input id="fPaciente"></div>
+        <div class="form-group"><label>Telefone (WhatsApp) *</label><input id="fTelefone" placeholder="(84) 99999-9999"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Data *</label><input id="fData" type="date"></div>
+        <div class="form-group"><label>Horário *</label><input id="fHorario" type="time"></div>
+      </div>
+      <div class="form-group"><label>Observações</label><input id="fObs" placeholder="Ex: trazer exames anteriores"></div>
+      <button class="btn btn-primary" onclick="enviarLembrete()">📱 Enviar Lembrete</button>
+    </div>
+  </div>
+
+  <!-- Histórico -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Histórico de Mensagens</span>
+      <select id="fFiltroTipo" onchange="carregarHistorico()">
+        <option value="">Todos os tipos</option>
+        <option value="consulta">Consulta</option>
+        <option value="internacao">Internação</option>
+        <option value="cirurgia">Cirurgia</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr><th>Data</th><th>Telefone</th><th>Tipo</th><th>Mensagem</th><th>Envio</th><th>Resposta</th><th>Simular Resposta</th></tr></thead>
+      <tbody id="tbodyHist"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+function fmtDataHora(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }
+
+const ACAO_BADGE = {
+  confirmado: '<span class="badge badge-ok">Confirmado</span>',
+  cancelado:  '<span class="badge badge-danger">Cancelado</span>',
+  ignorado:   '<span class="badge badge-warn">Ignorado</span>',
+  "":         '<span class="badge badge-info">Aguardando</span>',
+};
+
+async function carregarStatus() {
+  const d = await fetchJSON("/api/hospital/whatsapp-agendamento/status");
+  document.getElementById("avisoBox").innerHTML = d.aviso
+    ? `<div class="aviso">⚠️ ${d.aviso} (modo atual: <strong>${d.modo}</strong> — mensagens são registradas mas não enviadas de verdade até configurar)</div>` : "";
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/hospital/whatsapp-agendamento/kpis");
+  document.getElementById("kpiEnviados").textContent = d.enviados_hoje ?? 0;
+  document.getElementById("kpiConfirmados").textContent = d.confirmados_hoje ?? 0;
+  document.getElementById("kpiCancelados").textContent = d.cancelados_hoje ?? 0;
+  document.getElementById("kpiTaxa").textContent = d.taxa_confirmacao ?? "0%";
+}
+
+async function carregarHistorico() {
+  const tipo = document.getElementById("fFiltroTipo").value;
+  const params = new URLSearchParams();
+  if (tipo) params.set("tipo", tipo);
+  const d = await fetchJSON("/api/hospital/whatsapp-agendamento/historico?" + params.toString());
+  const tbody = document.getElementById("tbodyHist");
+  const msgs = d.mensagens || [];
+  if (!msgs.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty">${d.aviso || "Nenhuma mensagem enviada ainda."}</td></tr>`; return; }
+  tbody.innerHTML = msgs.map(m => `<tr>
+    <td>${fmtDataHora(m.criado_em)}</td>
+    <td>${m.telefone}</td>
+    <td><span class="badge badge-info">${m.tipo}</span></td>
+    <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.mensagem.replace(/"/g,'&quot;')}">${m.mensagem}</td>
+    <td>${m.enviado ? (m.simulado ? '<span class="badge badge-warn">Simulado</span>' : '<span class="badge badge-ok">Enviado</span>') : '<span class="badge badge-danger">Falhou</span>'}</td>
+    <td>${ACAO_BADGE[m.acao || ""] || m.acao}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-ok btn-sm" onclick="simularResposta('${m.telefone}','SIM')">✓</button>
+      <button class="btn btn-danger btn-sm" onclick="simularResposta('${m.telefone}','NAO')">✗</button>
+    </td>
+  </tr>`).join("");
+}
+
+async function enviarLembrete() {
+  const telefone = document.getElementById("fTelefone").value.trim();
+  const data = document.getElementById("fData").value;
+  const horario = document.getElementById("fHorario").value;
+  if (!telefone) { alert("Informe o telefone."); return; }
+  if (!data || !horario) { alert("Informe data e horário."); return; }
+  const body = {
+    tipo: document.getElementById("fTipo").value,
+    paciente_nome: document.getElementById("fPaciente").value.trim(),
+    telefone, data, horario,
+    setor: document.getElementById("fSetor").value.trim(),
+    observacoes: document.getElementById("fObs").value.trim(),
+  };
+  const d = await fetchJSON("/api/hospital/whatsapp-agendamento/enviar-lembrete", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  alert(d.simulado ? "Lembrete registrado em modo simulado (WhatsApp não configurado)." : "Lembrete enviado!");
+  carregarHistorico(); carregarKpis();
+}
+
+async function simularResposta(telefone, resposta) {
+  await fetchJSON("/api/hospital/whatsapp-agendamento/confirmar-via-wa", {
+    method: "POST", body: JSON.stringify({ telefone, resposta }),
+  });
+  carregarHistorico(); carregarKpis();
+}
+
+carregarStatus();
+carregarKpis();
+carregarHistorico();
+</script>
+</body>
+</html>

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proteção Especial e Vigilância Social</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:700;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;font-family:Manrope,sans-serif}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:flex;flex-direction:column;gap:20px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}.kpi.ok::before{background:var(--ok)}
+.kpi-val{font-size:26px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.ok .kpi-val{color:var(--ok)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.form-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:12px}
+.detail-row .k{color:var(--muted);flex-shrink:0}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_assistencia_social_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Proteção Especial e Vigilância Social</div>
+      <div class="page-sub">Conselho Tutelar, mapeamento territorial de vulnerabilidade e busca ativa de famílias</div>
+    </div>
+    <a href="/assistencia-social/gestao/" class="btn btn-ghost">← Gestão</a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi warn"><div class="kpi-val" id="kpiCtAbertos">—</div><div class="kpi-lbl">Conselho Tutelar — Em Aberto</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiTerritoriosRisco">—</div><div class="kpi-lbl">Territórios de Alto Risco</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiBuscaPendente">—</div><div class="kpi-lbl">Buscas Ativas Pendentes</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiBuscaLocalizada">—</div><div class="kpi-lbl">Famílias Localizadas</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('ct')">Conselho Tutelar</button>
+    <button class="tab-btn" onclick="setTab('vig')">Vigilância Socioassistencial</button>
+    <button class="tab-btn" onclick="setTab('busca')">Busca Ativa</button>
+  </div>
+
+  <!-- Conselho Tutelar -->
+  <div class="tab-panel active" id="tab-ct">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Encaminhamentos ao Conselho Tutelar</span>
+        <div style="display:flex;gap:8px">
+          <select id="fCtStatus" onchange="carregarCt()">
+            <option value="">Todos os status</option>
+            <option value="encaminhado">Encaminhado</option>
+            <option value="em_acompanhamento">Em Acompanhamento</option>
+            <option value="concluido">Concluído</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalCt()">+ Novo Encaminhamento</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Protocolo</th><th>Criança/Adolescente</th><th>Tipo</th><th>Status</th><th>Encaminhado em</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyCt"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Vigilância Socioassistencial -->
+  <div class="tab-panel" id="tab-vig">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Territórios Mapeados</span>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalTerritorio()">+ Novo Território</button>
+      </div>
+      <table>
+        <thead><tr><th>Bairro</th><th>População</th><th>Famílias CadÚnico</th><th>Extrema Pobreza</th><th>Cobertura</th><th>Vulnerabilidade</th></tr></thead>
+        <tbody id="tbodyTerritorios"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Busca Ativa -->
+  <div class="tab-panel" id="tab-busca">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Buscas Ativas</span>
+        <div style="display:flex;gap:8px">
+          <select id="fBuscaStatus" onchange="carregarBusca()">
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="em_busca">Em Busca</option>
+            <option value="localizada">Localizada</option>
+            <option value="nao_localizada">Não Localizada</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalBusca()">+ Nova Busca</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Referência</th><th>Motivo</th><th>Status</th><th>Início</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyBusca"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Novo Encaminhamento CT -->
+<div class="modal-bg" id="modalCt">
+  <div class="modal">
+    <h3>Novo Encaminhamento — Conselho Tutelar</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome da Criança/Adolescente *</label><input id="ctCrianca"></div>
+      <div class="form-group"><label>Data de Nascimento</label><input id="ctNascimento" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Responsável</label><input id="ctResponsavel"></div>
+      <div class="form-group"><label>Tipo de Violação *</label>
+        <select id="ctTipo">
+          <option value="negligencia">Negligência</option>
+          <option value="violencia_fisica">Violência Física</option>
+          <option value="violencia_psicologica">Violência Psicológica</option>
+          <option value="violencia_sexual">Violência Sexual</option>
+          <option value="trabalho_infantil">Trabalho Infantil</option>
+          <option value="evasao_escolar">Evasão Escolar</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Descrição *</label><textarea id="ctDescricao" rows="3"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCt')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCt()">Encaminhar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe CT -->
+<div class="modal-bg" id="modalDetalheCt">
+  <div class="modal">
+    <h3 id="dCtTitulo">Encaminhamento</h3>
+    <div id="dCtCorpo"></div>
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div class="card-title" style="margin-bottom:10px">Registrar Retorno / Parecer</div>
+      <div class="form-group"><label>Parecer de Retorno</label><textarea id="ctParecer" rows="3"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modalDetalheCt')">Fechar</button>
+        <button class="btn btn-ok" onclick="registrarRetornoCt()">Registrar Retorno</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Território -->
+<div class="modal-bg" id="modalTerritorio">
+  <div class="modal">
+    <h3>Novo Território</h3>
+    <div class="form-group"><label>Bairro *</label><input id="tBairro"></div>
+    <div class="form-row">
+      <div class="form-group"><label>População Estimada</label><input id="tPopulacao" type="number" min="0"></div>
+      <div class="form-group"><label>Índice de Vulnerabilidade</label>
+        <select id="tIndice">
+          <option value="baixo">Baixo</option>
+          <option value="medio" selected>Médio</option>
+          <option value="alto">Alto</option>
+          <option value="muito_alto">Muito Alto</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Famílias no CadÚnico</label><input id="tCadunico" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Famílias em Extrema Pobreza</label><input id="tExtremaPobreza" type="number" min="0" value="0"></div>
+    </div>
+    <label class="form-check"><input type="checkbox" id="tCobreCras"> Possui CRAS de referência</label>
+    <label class="form-check"><input type="checkbox" id="tCobreCreas"> Possui CREAS de referência</label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalTerritorio')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTerritorio()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Busca -->
+<div class="modal-bg" id="modalBusca">
+  <div class="modal">
+    <h3>Nova Busca Ativa</h3>
+    <div class="form-group"><label>Nome de Referência *</label><input id="bNome"></div>
+    <div class="form-group"><label>Endereço de Referência</label><input id="bEndereco"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Motivo *</label>
+        <select id="bMotivo">
+          <option value="cadastro_desatualizado">CadÚnico Desatualizado</option>
+          <option value="descumprimento_condicionalidade">Descumprimento de Condicionalidade</option>
+          <option value="evasao_servico">Evasão de Serviço</option>
+          <option value="denuncia_conselho_tutelar">Denúncia / Conselho Tutelar</option>
+          <option value="criterio_territorial">Critério Territorial</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Técnico Responsável</label><input id="bTecnico"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalBusca')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarBusca()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let CT_ATUAL = null;
+
+function csrfToken() { const m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ""; }
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+function fmtData(iso) { return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—"; }
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); }
+
+function setTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById("tab-" + tab).classList.add("active");
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/assistencia-social/protecao-especial/kpis");
+  document.getElementById("kpiCtAbertos").textContent = d.conselho_tutelar_abertos ?? 0;
+  document.getElementById("kpiTerritoriosRisco").textContent = d.territorios_alto_risco ?? 0;
+  document.getElementById("kpiBuscaPendente").textContent = d.busca_ativa_pendentes ?? 0;
+  document.getElementById("kpiBuscaLocalizada").textContent = d.busca_ativa_localizadas ?? 0;
+}
+
+const CT_STATUS_BADGE = {
+  encaminhado: '<span class="badge badge-info">Encaminhado</span>',
+  em_acompanhamento: '<span class="badge badge-warn">Em Acompanhamento</span>',
+  concluido: '<span class="badge badge-ok">Concluído</span>',
+};
+
+async function carregarCt() {
+  const status = document.getElementById("fCtStatus").value;
+  const params = status ? "?status=" + status : "";
+  const d = await fetchJSON("/api/assistencia-social/conselho-tutelar" + params);
+  const tbody = document.getElementById("tbodyCt");
+  const items = d.encaminhamentos || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum encaminhamento registrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(e => `<tr>
+    <td><strong>${e.protocolo}</strong></td>
+    <td>${e.crianca_nome}</td>
+    <td><span class="badge badge-info">${e.tipo_violacao_display}</span></td>
+    <td>${CT_STATUS_BADGE[e.status] || e.status}</td>
+    <td>${fmtData(e.data_encaminhamento)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalheCt(${e.id})">Ver</button></td>
+  </tr>`).join("");
+}
+
+function abrirModalCt() { document.getElementById("modalCt").classList.add("open"); }
+async function salvarCt() {
+  const crianca = document.getElementById("ctCrianca").value.trim();
+  const descricao = document.getElementById("ctDescricao").value.trim();
+  if (!crianca || !descricao) { alert("Preencha nome da criança e descrição."); return; }
+  const d = await fetchJSON("/api/assistencia-social/conselho-tutelar", {
+    method: "POST",
+    body: JSON.stringify({
+      crianca_nome: crianca,
+      crianca_data_nascimento: document.getElementById("ctNascimento").value || null,
+      responsavel_nome: document.getElementById("ctResponsavel").value.trim(),
+      tipo_violacao: document.getElementById("ctTipo").value,
+      descricao,
+    }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalCt");
+  alert(`Encaminhamento registrado — protocolo ${d.protocolo}`);
+  carregarCt(); carregarKpis();
+}
+
+async function abrirDetalheCt(id) {
+  const d = await fetchJSON(`/api/assistencia-social/conselho-tutelar/${id}`);
+  CT_ATUAL = d;
+  document.getElementById("dCtTitulo").textContent = `${d.protocolo} — ${d.crianca_nome}`;
+  document.getElementById("dCtCorpo").innerHTML = `
+    <div class="detail-row"><span class="k">Responsável</span><span>${d.responsavel_nome || "—"}</span></div>
+    <div class="detail-row"><span class="k">Tipo</span><span>${d.tipo_violacao_display}</span></div>
+    <div class="detail-row"><span class="k">Status</span><span>${CT_STATUS_BADGE[d.status] || d.status}</span></div>
+    <div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Descrição</span><span style="margin-top:4px">${d.descricao}</span></div>
+    ${d.parecer_retorno ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start"><span class="k">Parecer de Retorno</span><span style="margin-top:4px">${d.parecer_retorno}</span></div>` : ""}
+  `;
+  document.getElementById("ctParecer").value = d.parecer_retorno || "";
+  document.getElementById("modalDetalheCt").classList.add("open");
+}
+
+async function registrarRetornoCt() {
+  if (!CT_ATUAL) return;
+  const parecer = document.getElementById("ctParecer").value.trim();
+  if (!parecer) { alert("Escreva o parecer de retorno."); return; }
+  await fetchJSON(`/api/assistencia-social/conselho-tutelar/${CT_ATUAL.id}`, {
+    method: "PATCH", body: JSON.stringify({ parecer_retorno: parecer }),
+  });
+  fecharModal("modalDetalheCt");
+  carregarCt(); carregarKpis();
+}
+
+const VULN_BADGE = {
+  baixo: '<span class="badge badge-ok">Baixo</span>',
+  medio: '<span class="badge badge-info">Médio</span>',
+  alto: '<span class="badge badge-warn">Alto</span>',
+  muito_alto: '<span class="badge badge-danger">Muito Alto</span>',
+};
+
+async function carregarTerritorios() {
+  const d = await fetchJSON("/api/assistencia-social/vigilancia-social/territorios");
+  const tbody = document.getElementById("tbodyTerritorios");
+  const items = d.territorios || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum território mapeado ainda.</td></tr>'; return; }
+  tbody.innerHTML = items.map(t => `<tr>
+    <td>${t.bairro}</td>
+    <td>${t.populacao_estimada ?? "—"}</td>
+    <td>${t.familias_cadunico}</td>
+    <td>${t.familias_extrema_pobreza}</td>
+    <td>${t.cobertura_cras ? "CRAS " : ""}${t.cobertura_creas ? "CREAS" : ""}${!t.cobertura_cras && !t.cobertura_creas ? "—" : ""}</td>
+    <td>${VULN_BADGE[t.indice_vulnerabilidade] || t.indice_vulnerabilidade}</td>
+  </tr>`).join("");
+}
+
+function abrirModalTerritorio() { document.getElementById("modalTerritorio").classList.add("open"); }
+async function salvarTerritorio() {
+  const bairro = document.getElementById("tBairro").value.trim();
+  if (!bairro) { alert("Informe o bairro."); return; }
+  const d = await fetchJSON("/api/assistencia-social/vigilancia-social/territorios", {
+    method: "POST",
+    body: JSON.stringify({
+      bairro,
+      populacao_estimada: parseInt(document.getElementById("tPopulacao").value) || null,
+      familias_cadunico: parseInt(document.getElementById("tCadunico").value) || 0,
+      familias_extrema_pobreza: parseInt(document.getElementById("tExtremaPobreza").value) || 0,
+      cobertura_cras: document.getElementById("tCobreCras").checked,
+      cobertura_creas: document.getElementById("tCobreCreas").checked,
+      indice_vulnerabilidade: document.getElementById("tIndice").value,
+    }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalTerritorio");
+  carregarTerritorios(); carregarKpis();
+}
+
+const BUSCA_STATUS_BADGE = {
+  pendente: '<span class="badge badge-info">Pendente</span>',
+  em_busca: '<span class="badge badge-warn">Em Busca</span>',
+  localizada: '<span class="badge badge-ok">Localizada</span>',
+  nao_localizada: '<span class="badge badge-danger">Não Localizada</span>',
+};
+
+async function carregarBusca() {
+  const status = document.getElementById("fBuscaStatus").value;
+  const params = status ? "?status=" + status : "";
+  const d = await fetchJSON("/api/assistencia-social/busca-ativa" + params);
+  const tbody = document.getElementById("tbodyBusca");
+  const items = d.buscas || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhuma busca ativa registrada.</td></tr>'; return; }
+  tbody.innerHTML = items.map(b => `<tr>
+    <td>${b.nome_referencia}</td>
+    <td><span class="badge badge-info">${b.motivo_display}</span></td>
+    <td>${BUSCA_STATUS_BADGE[b.status] || b.status}</td>
+    <td>${fmtData(b.data_inicio)}</td>
+    <td>
+      ${b.status === "pendente" ? `<button class="btn btn-ghost btn-sm" onclick="atualizarBusca(${b.id}, 'em_busca')">Iniciar Busca</button>` : ""}
+      ${b.status === "em_busca" ? `<button class="btn btn-ok btn-sm" onclick="atualizarBusca(${b.id}, 'localizada')">Localizada</button> <button class="btn btn-ghost btn-sm" onclick="atualizarBusca(${b.id}, 'nao_localizada')">Não Localizada</button>` : ""}
+    </td>
+  </tr>`).join("");
+}
+
+function abrirModalBusca() { document.getElementById("modalBusca").classList.add("open"); }
+async function salvarBusca() {
+  const nome = document.getElementById("bNome").value.trim();
+  if (!nome) { alert("Informe o nome de referência."); return; }
+  const d = await fetchJSON("/api/assistencia-social/busca-ativa", {
+    method: "POST",
+    body: JSON.stringify({
+      nome_referencia: nome,
+      endereco_referencia: document.getElementById("bEndereco").value.trim(),
+      motivo: document.getElementById("bMotivo").value,
+      tecnico_responsavel: document.getElementById("bTecnico").value.trim(),
+    }),
+  });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal("modalBusca");
+  carregarBusca(); carregarKpis();
+}
+
+async function atualizarBusca(id, status) {
+  await fetchJSON(`/api/assistencia-social/busca-ativa/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+  carregarBusca(); carregarKpis();
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarCt();
+carregarTerritorios();
+carregarBusca();
+</script>
+</body>
+</html>

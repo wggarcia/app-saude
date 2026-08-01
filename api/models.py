@@ -7250,6 +7250,59 @@ class ItemPedidoDelivery(models.Model):
         return f"{self.descricao or (self.medicamento.nome if self.medicamento else '?')} x{self.quantidade}"
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fidelidade — Programa de Pontos da Farmácia
+# Regra padrão: 1 ponto a cada R$ 1,00 em compras; resgate mínimo de 100 pontos
+# (= R$ 5,00 de desconto). Ambos configuráveis por venda via campo `pontos`.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ClienteFidelidade(models.Model):
+    """Cliente cadastrado no programa de fidelidade da farmácia, por CPF."""
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="clientes_fidelidade")
+    cpf           = models.CharField(max_length=14)
+    nome          = models.CharField(max_length=150)
+    telefone      = models.CharField(max_length=20, blank=True, default="")
+    pontos_saldo  = models.IntegerField(default=0)
+    ativo         = models.BooleanField(default=True)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Cliente Fidelidade"
+        verbose_name_plural = "Clientes Fidelidade"
+        ordering            = ["nome"]
+        unique_together     = [["empresa", "cpf"]]
+        indexes             = [models.Index(fields=["empresa", "cpf"])]
+
+    def __str__(self):
+        return f"{self.nome} ({self.pontos_saldo} pts)"
+
+
+class TransacaoFidelidade(models.Model):
+    """Movimentação de pontos (acúmulo, resgate ou ajuste manual)."""
+    TIPO = [
+        ("acumulo",  "Acúmulo"),
+        ("resgate",  "Resgate"),
+        ("ajuste",   "Ajuste Manual"),
+    ]
+    empresa    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="transacoes_fidelidade")
+    cliente    = models.ForeignKey(ClienteFidelidade, on_delete=models.CASCADE, related_name="transacoes")
+    tipo       = models.CharField(max_length=10, choices=TIPO)
+    pontos     = models.IntegerField(help_text="Positivo para acúmulo, negativo para resgate/ajuste de débito")
+    valor_referencia = models.DecimalField(max_digits=12, decimal_places=2, default=0,
+                                            help_text="Valor da venda (acúmulo) ou do desconto concedido (resgate)")
+    descricao  = models.CharField(max_length=200, blank=True, default="")
+    criado_em  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Transação de Fidelidade"
+        verbose_name_plural = "Transações de Fidelidade"
+        ordering            = ["-criado_em"]
+        indexes             = [models.Index(fields=["empresa", "cliente"])]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} {self.pontos} pts — {self.cliente.nome}"
+
+
 class IntegracaoIfood(models.Model):
     """Configuração da integração com o iFood (Merchant API) por farmácia.
 
@@ -7591,6 +7644,53 @@ class DeclaracaoObito(models.Model):
 
     def __str__(self):
         return f"DO — {self.paciente.nome} ({self.data_obito.date()})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SIM — Sistema de Informação sobre Mortalidade (nível Governo/Secretaria)
+# Consolida óbitos da rede municipal de UnidadeSaude e controla a transmissão
+# ao SIM/DATASUS — mesmo padrão do SIPNI (IA #transmissão), mas para mortalidade.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class RegistroObitoMunicipal(models.Model):
+    """Óbito registrado pela rede municipal de saúde, para consolidação e envio ao SIM."""
+    TIPO_MORTE = [
+        ("natural",     "Morte Natural"),
+        ("nao_natural", "Morte Não Natural (causas externas)"),
+    ]
+    STATUS_TRANSMISSAO = [
+        ("pendente",    "Pendente"),
+        ("transmitido", "Transmitido ao SIM"),
+        ("erro",        "Erro na Transmissão"),
+    ]
+    empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="obitos_municipais")
+    unidade_saude            = models.ForeignKey("UnidadeSaude", on_delete=models.SET_NULL, null=True, blank=True,
+                                                  related_name="obitos_municipais")
+    falecido_nome            = models.CharField(max_length=150)
+    falecido_cpf             = models.CharField(max_length=14, blank=True, default="")
+    falecido_data_nascimento = models.DateField(null=True, blank=True)
+    data_obito               = models.DateTimeField()
+    tipo_morte               = models.CharField(max_length=15, choices=TIPO_MORTE, default="natural")
+    causa_basica_cid         = models.CharField(max_length=10)
+    causa_basica_descricao   = models.TextField(blank=True, default="")
+    medico_atestante         = models.CharField(max_length=150, blank=True, default="")
+    medico_crm               = models.CharField(max_length=20, blank=True, default="")
+    numero_do                = models.CharField(max_length=30, blank=True, default="", verbose_name="Número da DO")
+    status_transmissao       = models.CharField(max_length=15, choices=STATUS_TRANSMISSAO, default="pendente")
+    transmitido_em           = models.DateTimeField(null=True, blank=True)
+    criado_em                = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Registro de Óbito Municipal (SIM)"
+        verbose_name_plural = "Registros de Óbito Municipal (SIM)"
+        ordering            = ["-data_obito"]
+        indexes             = [
+            models.Index(fields=["empresa", "status_transmissao"]),
+            models.Index(fields=["empresa", "data_obito"]),
+        ]
+
+    def __str__(self):
+        return f"Óbito — {self.falecido_nome} ({self.data_obito.date()})"
 
 
 class EquipamentoMedico(models.Model):
@@ -9482,6 +9582,115 @@ class ProducaoCEO(models.Model):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# WhatsApp Automação — Agendamentos Hospitalares (Meta Cloud API)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class LogMensagemWhatsApp(models.Model):
+    """Log de lembretes/confirmações de agendamento enviados via WhatsApp."""
+    TIPO = [
+        ("consulta",   "Consulta"),
+        ("internacao", "Internação"),
+        ("cirurgia",   "Cirurgia"),
+    ]
+    ACAO = [
+        ("", "Aguardando resposta"),
+        ("confirmado", "Confirmado"),
+        ("cancelado", "Cancelado"),
+        ("ignorado", "Ignorado"),
+    ]
+    empresa   = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="logs_whatsapp_agendamento")
+    telefone  = models.CharField(max_length=20)
+    mensagem  = models.TextField()
+    tipo      = models.CharField(max_length=15, choices=TIPO, default="consulta")
+    enviado   = models.BooleanField(default=False)
+    simulado  = models.BooleanField(default=False)
+    acao      = models.CharField(max_length=15, choices=ACAO, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Log de Mensagem WhatsApp"
+        verbose_name_plural = "Logs de Mensagens WhatsApp"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "criado_em"]),
+            models.Index(fields=["empresa", "telefone"]),
+        ]
+
+    def __str__(self):
+        return f"WA {self.get_tipo_display()} — {self.telefone} ({'enviado' if self.enviado else 'falhou'})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Comissão de Ética Médica (CEM) — Resolução CFM nº 2.147/2016
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class MembroComissaoEtica(models.Model):
+    """Membro da Comissão de Ética Médica do hospital."""
+    CARGO = [
+        ("presidente", "Presidente"),
+        ("vice_presidente", "Vice-Presidente"),
+        ("secretario", "Secretário"),
+        ("membro", "Membro"),
+    ]
+    empresa       = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="membros_comissao_etica")
+    nome          = models.CharField(max_length=150)
+    crm           = models.CharField(max_length=20)
+    cargo         = models.CharField(max_length=20, choices=CARGO, default="membro")
+    mandato_inicio = models.DateField()
+    mandato_fim   = models.DateField()
+    ativo         = models.BooleanField(default=True)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Membro da Comissão de Ética Médica"
+        verbose_name_plural = "Membros da Comissão de Ética Médica"
+        ordering            = ["cargo", "nome"]
+        indexes             = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.nome} — {self.get_cargo_display()}"
+
+
+class CasoEticoMedico(models.Model):
+    """Denúncia, consulta ética ou sindicância avaliada pela Comissão de Ética Médica."""
+    TIPO = [
+        ("denuncia",       "Denúncia"),
+        ("consulta_etica", "Consulta Ética"),
+        ("sindicancia",    "Sindicância"),
+    ]
+    STATUS = [
+        ("aberto",           "Aberto"),
+        ("em_analise",       "Em Análise"),
+        ("parecer_emitido",  "Parecer Emitido"),
+        ("arquivado",        "Arquivado"),
+    ]
+    empresa            = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="casos_eticos_medicos")
+    protocolo          = models.CharField(max_length=30, unique=True, db_index=True)
+    tipo               = models.CharField(max_length=20, choices=TIPO)
+    descricao          = models.TextField()
+    medico_envolvido_nome = models.CharField(max_length=150, blank=True, default="")
+    medico_envolvido_crm  = models.CharField(max_length=20, blank=True, default="")
+    sigiloso           = models.BooleanField(default=True)
+    status             = models.CharField(max_length=20, choices=STATUS, default="aberto")
+    relator            = models.CharField(max_length=150, blank=True, default="")
+    parecer_texto      = models.TextField(blank=True, default="")
+    data_abertura      = models.DateTimeField(auto_now_add=True)
+    data_parecer       = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name        = "Caso Ético Médico"
+        verbose_name_plural = "Casos Éticos Médicos"
+        ordering            = ["-data_abertura"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo"]),
+        ]
+
+    def __str__(self):
+        return f"{self.protocolo} — {self.get_tipo_display()}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CCIH — Controle de Infecção Hospitalar (ANVISA RDC 36/2008)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -10782,6 +10991,34 @@ class RespostaNIP(models.Model):
 
     def __str__(self):
         return f"Resposta NIP {self.nip.numero_nip} — {self.data_resposta}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Campanha de Comunicação — Plano de Saúde
+# ══════════════════════════════════════════════════════════════════════════════
+
+class CampanhaComunicacaoPlano(models.Model):
+    """Campanha de comunicação em massa disparada aos beneficiários da operadora."""
+    PUBLICO = [
+        ("todos",       "Todos os Beneficiários"),
+        ("titulares",   "Apenas Titulares"),
+        ("dependentes", "Apenas Dependentes"),
+    ]
+    empresa       = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="campanhas_comunicacao")
+    nome          = models.CharField(max_length=150)
+    publico_alvo  = models.CharField(max_length=15, choices=PUBLICO, default="todos")
+    mensagem      = models.TextField()
+    total_enviado = models.PositiveIntegerField(default=0)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Campanha de Comunicação"
+        verbose_name_plural = "Campanhas de Comunicação"
+        ordering            = ["-criado_em"]
+        indexes             = [models.Index(fields=["empresa", "criado_em"])]
+
+    def __str__(self):
+        return f"{self.nome} — {self.total_enviado} enviados"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -12701,3 +12938,131 @@ class ProntuarioSocialPAIF(models.Model):
 
     def __str__(self):
         return f"PAIF {self.familia.responsavel_nome} — {self.data_abertura}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Conselho Tutelar — encaminhamentos e contrarreferência (ECA — Lei 8.069/1990)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class EncaminhamentoConselhoTutelar(models.Model):
+    """Encaminhamento de criança/adolescente ao Conselho Tutelar, com retorno."""
+    TIPO_VIOLACAO = [
+        ("negligencia",           "Negligência"),
+        ("violencia_fisica",      "Violência Física"),
+        ("violencia_psicologica", "Violência Psicológica"),
+        ("violencia_sexual",      "Violência Sexual"),
+        ("trabalho_infantil",     "Trabalho Infantil"),
+        ("evasao_escolar",        "Evasão Escolar"),
+        ("outro",                 "Outro"),
+    ]
+    STATUS = [
+        ("encaminhado",       "Encaminhado"),
+        ("em_acompanhamento", "Em Acompanhamento"),
+        ("concluido",         "Concluído"),
+    ]
+    empresa                = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="encaminhamentos_conselho_tutelar")
+    protocolo              = models.CharField(max_length=30, unique=True, db_index=True)
+    crianca_nome           = models.CharField(max_length=150)
+    crianca_data_nascimento = models.DateField(null=True, blank=True)
+    responsavel_nome       = models.CharField(max_length=150, blank=True, default="")
+    familia                = models.ForeignKey(FamiliaCRAS, on_delete=models.SET_NULL, null=True, blank=True,
+                                                related_name="encaminhamentos_conselho_tutelar")
+    tipo_violacao          = models.CharField(max_length=25, choices=TIPO_VIOLACAO)
+    descricao              = models.TextField()
+    conselheiro_responsavel = models.CharField(max_length=150, blank=True, default="")
+    status                 = models.CharField(max_length=20, choices=STATUS, default="encaminhado")
+    data_encaminhamento    = models.DateTimeField(auto_now_add=True)
+    data_retorno           = models.DateField(null=True, blank=True)
+    parecer_retorno        = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Encaminhamento ao Conselho Tutelar"
+        verbose_name_plural = "Encaminhamentos ao Conselho Tutelar"
+        ordering            = ["-data_encaminhamento"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo_violacao"]),
+        ]
+
+    def __str__(self):
+        return f"{self.protocolo} — {self.crianca_nome}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Vigilância Socioassistencial — mapeamento territorial de vulnerabilidade
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TerritorioVigilanciaSocial(models.Model):
+    """Indicadores de vulnerabilidade por território (bairro/microrregião) do SUAS."""
+    INDICE = [
+        ("baixo",      "Baixo"),
+        ("medio",      "Médio"),
+        ("alto",       "Alto"),
+        ("muito_alto", "Muito Alto"),
+    ]
+    empresa                    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="territorios_vigilancia_social")
+    bairro                     = models.CharField(max_length=150)
+    populacao_estimada         = models.PositiveIntegerField(null=True, blank=True)
+    familias_cadunico          = models.PositiveIntegerField(default=0)
+    familias_extrema_pobreza   = models.PositiveIntegerField(default=0)
+    cobertura_cras             = models.BooleanField(default=False, verbose_name="Possui CRAS de referência")
+    cobertura_creas            = models.BooleanField(default=False, verbose_name="Possui CREAS de referência")
+    indice_vulnerabilidade     = models.CharField(max_length=12, choices=INDICE, default="medio")
+    observacoes                = models.TextField(blank=True, default="")
+    criado_em                  = models.DateTimeField(auto_now_add=True)
+    atualizado_em              = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Território de Vigilância Socioassistencial"
+        verbose_name_plural = "Territórios de Vigilância Socioassistencial"
+        ordering            = ["bairro"]
+        unique_together     = [["empresa", "bairro"]]
+        indexes             = [models.Index(fields=["empresa", "indice_vulnerabilidade"])]
+
+    def __str__(self):
+        return f"{self.bairro} — {self.get_indice_vulnerabilidade_display()}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Busca Ativa — localização sistemática de famílias (SUAS)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class BuscaAtivaSocial(models.Model):
+    """Ação sistemática de busca ativa de famílias em situação de vulnerabilidade."""
+    MOTIVO = [
+        ("cadastro_desatualizado",         "CadÚnico Desatualizado"),
+        ("descumprimento_condicionalidade","Descumprimento de Condicionalidade"),
+        ("evasao_servico",                 "Evasão de Serviço"),
+        ("denuncia_conselho_tutelar",      "Denúncia / Conselho Tutelar"),
+        ("criterio_territorial",           "Critério Territorial"),
+        ("outro",                          "Outro"),
+    ]
+    STATUS = [
+        ("pendente",       "Pendente"),
+        ("em_busca",       "Em Busca"),
+        ("localizada",     "Localizada"),
+        ("nao_localizada", "Não Localizada"),
+    ]
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="buscas_ativas_sociais")
+    familia              = models.ForeignKey(FamiliaCRAS, on_delete=models.SET_NULL, null=True, blank=True,
+                                              related_name="buscas_ativas")
+    nome_referencia      = models.CharField(max_length=150, help_text="Nome de referência quando a família ainda não está cadastrada")
+    endereco_referencia  = models.CharField(max_length=255, blank=True, default="")
+    motivo               = models.CharField(max_length=35, choices=MOTIVO)
+    status               = models.CharField(max_length=15, choices=STATUS, default="pendente")
+    tecnico_responsavel  = models.CharField(max_length=150, blank=True, default="")
+    data_inicio          = models.DateTimeField(auto_now_add=True)
+    data_localizacao     = models.DateField(null=True, blank=True)
+    resultado            = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Busca Ativa"
+        verbose_name_plural = "Buscas Ativas"
+        ordering            = ["-data_inicio"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "motivo"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome_referencia} — {self.get_motivo_display()}"

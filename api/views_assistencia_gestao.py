@@ -66,6 +66,16 @@ def assistencia_social_gestao_page(request):
                   contexto_navegacao_setorial(request, "assistencia_social"))
 
 
+@ensure_csrf_cookie
+@requer_setor("assistencia_social")
+@requer_feature_pacote("assistencia.gestao_suas", "Relatório Mensal SUAS")
+@requer_operacao_page
+@requer_permissao_modulo("assistencia.gestao_suas")
+def assistencia_relatorio_mensal_page(request):
+    return render(request, "assistencia_relatorio_mensal.html",
+                  contexto_navegacao_setorial(request, "assistencia_social"))
+
+
 # ─── DASHBOARD SUAS ──────────────────────────────────────────────────────────
 
 @csrf_exempt

@@ -10,13 +10,26 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .utils import validar_cpf_cadastro
+from .access_control import requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo
 
 logger = logging.getLogger(__name__)
+
+
+# ── Page view ─────────────────────────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("plano_saude")
+@requer_feature_pacote("plano.rpc", "TUSS / Rol ANS / NIP")
+@requer_operacao_page
+@requer_permissao_modulo("plano.compliance_ans")
+def plano_tuss_page(request):
+    return render(request, "plano_tuss.html")
 
 # ── Seed TUSS — Rol ANS RN 465/2021 (atualização 2023) ─────────────────────────
 # Fonte: ANS — Rol de Procedimentos e Eventos em Saúde (RN 465/2021)
