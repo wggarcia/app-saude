@@ -35,6 +35,7 @@ IMPORTANTE — onde os dados aparecem:
 import random
 import time
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -246,14 +247,14 @@ class Command(BaseCommand):
             _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
             clear_panorama_cache()
 
-            # A projeção "para onde vai" (ProjecaoDispersao) não é escrita por
-            # este comando, mas fica gravada até ser recalculada — se alguém
-            # rodou projetar_dispersao_surtos durante a demo (pra popular a
-            # tela de dispersão), as setas ficam no mapa mesmo depois do mapa
-            # de casos zerar. Limpa aqui também, só as doenças desta simulação.
-            doencas_da_simulacao = {DOENCA_PRINCIPAL, *[d for pool in POOL_POR_REGIAO.values() for d in pool]}
-            n_proj = ProjecaoDispersao.objects.filter(doenca__in=doencas_da_simulacao).count()
-            ProjecaoDispersao.objects.filter(doenca__in=doencas_da_simulacao).delete()
+            # A projeção "para onde vai" (ProjecaoDispersao) é recalculada do
+            # zero a cada rodada (a simulação a dispara no pico), então limpar
+            # tudo é o reset correto entre apresentações. Filtrar pelas doenças
+            # da simulação não bastava: a camada do mapa mostra a projeção da
+            # doença DOMINANTE do momento, que volta a ser a do dado real
+            # quando os casos zeram — deixando arcos órfãos na tela.
+            n_proj = ProjecaoDispersao.objects.count()
+            ProjecaoDispersao.objects.all().delete()
 
             self.stdout.write(self.style.SUCCESS(
                 f"{n} registros demo removidos. {n_proj} projeções de dispersão removidas."
@@ -313,6 +314,25 @@ class Command(BaseCommand):
         self.stdout.write(self.style.ERROR(
             f"\n⚠  FASE PICO — {total_injetados} casos ativos em todo o Brasil"
         ))
+
+        # Projeção "para onde vai" (IA #9): ProjecaoDispersao é uma tabela
+        # separada, alimentada só por projetar_dispersao_surtos — sem isso a
+        # camada de dispersão do mapa fica vazia durante a apresentação. Rodar
+        # aqui (no pico, com casos suficientes pra passar o min-casos do modelo)
+        # deixa a demo num comando só, em vez de exigir um segundo terminal.
+        self.stdout.write("  Calculando projeção de dispersão (IA #9)…")
+        try:
+            call_command("projetar_dispersao_surtos", verbosity=0)
+            n_proj = ProjecaoDispersao.objects.count()
+            clear_panorama_cache()
+            self.stdout.write(self.style.SUCCESS(
+                f"  ✓ {n_proj} projeções gravadas — camada \"Para onde vai\" pronta no mapa."
+            ))
+        except Exception as exc:  # projeção é extra: não pode derrubar a demo
+            self.stdout.write(self.style.WARNING(
+                f"  Projeção de dispersão falhou ({exc}); simulação segue sem a camada."
+            ))
+
         tick = 5
         for _ in range(duracao_pico // tick):
             time.sleep(tick)
@@ -337,6 +357,11 @@ class Command(BaseCommand):
         if sobrou:
             _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
             clear_panorama_cache()
+
+        # Zera também a projeção gerada no pico — senão os arcos "para onde vai"
+        # ficam no mapa depois dos casos zerarem (a camada lê da doença dominante
+        # do momento, que volta a ser a do dado real).
+        ProjecaoDispersao.objects.all().delete()
 
         self.stdout.write(self.style.SUCCESS(
             f"\n{'='*60}\n"
