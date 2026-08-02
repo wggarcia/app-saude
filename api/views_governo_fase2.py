@@ -1247,7 +1247,9 @@ def api_governo_plataforma_chaves(request):
             "total": keys.count(),
             "ativas": ativas,
             "chamadas_hoje": chamadas_hoje,
-            "taxa_sucesso": 100,
+            # Sem contador de erros em UsoApiEmpresa (só total de chamadas), não há
+            # como calcular taxa de sucesso real — não inventamos 100%. null = n/d.
+            "taxa_sucesso": None,
         })
     except Exception as ex:
         return JsonResponse({"disponivel": False, "erro": str(ex)[:200]}, status=500)

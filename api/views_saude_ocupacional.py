@@ -113,21 +113,31 @@ def api_wellness_resumo(request):
         empresa=empresa, status=PedidoApoioCorporativo.STATUS_ENCAMINHADO
     ).count()
 
-    causas = (
-        AfastamentoSST.objects.filter(empresa=empresa, data_inicio__gte=ult_90)
-        .values("motivo")
-        .annotate(casos=Count("id"))
-        .order_by("-casos")[:6]
-    )
-    afastamentos_causas = []
-    for c in causas:
-        motivo = c.get("motivo") or "outro"
-        afastamentos_causas.append({
+    # Dias perdidos REAIS: duração de cada afastamento pelas datas do próprio
+    # registro (retorno real quando encerrado; senão a previsão; senão, para um
+    # afastamento ativo sem previsão, conta até hoje). Antes isto era casos*2 —
+    # um multiplicador inventado que aparecia na tela como métrica real.
+    afastamentos_90 = AfastamentoSST.objects.filter(
+        empresa=empresa, data_inicio__gte=ult_90
+    ).only("motivo", "data_inicio", "data_prevista_retorno", "data_retorno_real")
+    _agg_causas = {}  # motivo -> {"casos": n, "dias_perdidos": n}
+    for af in afastamentos_90:
+        fim = af.data_retorno_real or af.data_prevista_retorno or hoje
+        dias = max(0, (fim - af.data_inicio).days)
+        slot = _agg_causas.setdefault(af.motivo or "outro", {"casos": 0, "dias_perdidos": 0})
+        slot["casos"] += 1
+        slot["dias_perdidos"] += dias
+    afastamentos_causas = [
+        {
             "causa": dict(AfastamentoSST.MOTIVO).get(motivo, motivo),
             "cid": "",
-            "dias_perdidos": c["casos"] * 2,  # aproximação operacional para painel
-            "casos": c["casos"],
-        })
+            "dias_perdidos": dados["dias_perdidos"],
+            "casos": dados["casos"],
+        }
+        for motivo, dados in sorted(
+            _agg_causas.items(), key=lambda kv: kv[1]["casos"], reverse=True
+        )[:6]
+    ]
 
     programas_qs = ProgramaCorporativo.objects.filter(
         empresa=empresa,

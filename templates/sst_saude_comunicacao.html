@@ -1023,13 +1023,23 @@ function renderProgramasSaude(programas) {
   const wrap = document.getElementById('programas-saude');
   if (!programas.length) { wrap.innerHTML = '<div class="empty">Nenhum programa de saúde registrado.</div>'; return; }
   wrap.innerHTML = programas.map(p => {
+    // Adesão/participantes só existem quando há model de inscrição (metricas_fonte).
+    // Sem isso o backend manda 0 + fonte 'indisponivel_*': mostramos "n/d" em vez
+    // de "0% adesão" com badge vermelho, que leria como métrica real péssima.
+    const indisponivel = (p.metricas_fonte || '').startsWith('indisponivel');
     const adesao = p.adesao ?? 0;
+    const sub = indisponivel
+      ? 'adesão/participantes não disponíveis (sem módulo de inscrição)'
+      : `${p.participantes ?? 0} participantes · ${adesao}% de adesão`;
+    const badge = indisponivel
+      ? '<span class="badge b-muted">n/d</span>'
+      : `<span class="badge ${adesao >= 70 ? 'b-ok' : adesao >= 40 ? 'b-warn' : 'b-danger'}">${adesao}%</span>`;
     return `<div class="card-item">
       <div class="card-item-body">
         <div class="card-item-title">${escHtml(p.nome)}</div>
-        <div class="card-item-sub">${p.participantes ?? 0} participantes · ${adesao}% de adesão</div>
+        <div class="card-item-sub">${sub}</div>
       </div>
-      <span class="badge ${adesao >= 70 ? 'b-ok' : adesao >= 40 ? 'b-warn' : 'b-danger'}">${adesao}%</span>
+      ${badge}
     </div>`;
   }).join('');
 }

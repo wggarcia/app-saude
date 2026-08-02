@@ -122,7 +122,7 @@ async function carregar(){
   document.getElementById('kAtend').textContent=k.atendimentos_mes??0;
   document.getElementById('kConsult').textContent=k.consultas_realizadas??0;
   document.getElementById('kBpa').textContent=k.producao_bpa??0;
-  document.getElementById('kAcs').textContent=(k.cobertura_acs??0)+'%';
+  document.getElementById('kAcs').textContent=(k.cobertura_acs==null?'n/d':k.cobertura_acs+'%');
 
   const pm=await get('/api/governo/bi/producao-mensal');dados.meses=pm.meses||[];renderSpark(dados.meses);
 

@@ -5205,7 +5205,14 @@ async function loadOdonto() {
     document.getElementById('odontoVidas').textContent = r.vidas || 0;
     document.getElementById('odontoRede').textContent = r.dentistas || 0;
     document.getElementById('odontoGuias').textContent = r.guias_pendentes || 0;
-    document.getElementById('odontoMLR').textContent = (r.mlr || 0).toFixed(1) + '%';
+    // A receita odonto usa mensalidade estimada (não há model de contrato odonto),
+    // então o MLR é uma estimativa. O backend sinaliza isso em mlr_fonte — mostramos
+    // "estimado" na tela em vez de um número seco fingindo ser calculado do real.
+    const mlrTxt = (r.mlr || 0).toFixed(1) + '%';
+    document.getElementById('odontoMLR').textContent = (r.mlr_fonte === 'estimado') ? (mlrTxt + ' (est.)') : mlrTxt;
+    document.getElementById('odontoMLR').title = (r.mlr_fonte === 'estimado')
+      ? 'Estimativa: receita odonto calculada por mensalidade média estimada (sem model de contrato odontológico).'
+      : '';
     renderOdontoTabela(r.dados || []);
   } catch(e) {
     document.getElementById('odontoVidas').textContent = '—';

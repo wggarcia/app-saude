@@ -1692,7 +1692,7 @@ async function loadChaves(){
   document.getElementById('chavesTotal').textContent=d.total??'0';
   document.getElementById('chavesAtivas').textContent=d.ativas??'0';
   document.getElementById('chavesChamadas').textContent=(d.chamadas_hoje??0).toLocaleString('pt-BR');
-  document.getElementById('chavesTaxa').textContent=(d.taxa_sucesso??100)+'%';
+  document.getElementById('chavesTaxa').textContent=(d.taxa_sucesso==null?'n/d':d.taxa_sucesso+'%');
   const tbody=document.getElementById('chavesBody');
   if(!d.chaves||d.chaves.length===0){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhuma chave criada ainda</td></tr>';

@@ -296,7 +296,7 @@ def bi_kpis(request):
     # visita de ACS vinculada a cobertura de família cadastrada) — não foram
     # criados aqui por não caber a esta correção decidir sozinho sobre novo
     # model/migration. Mantido em 0.0 até que o model correto seja definido.
-    cobertura_acs = 0.0
+    cobertura_acs = None  # None = indisponível; a tela mostra "n/d", não "0%"
     producao_bpa = 0
 
     if AtendimentoUBS is not None:
@@ -317,6 +317,7 @@ def bi_kpis(request):
         "atendimentos_mes": atendimentos_mes,
         "consultas_realizadas": consultas_realizadas,
         "cobertura_acs": cobertura_acs,
+        "cobertura_acs_fonte": "indisponivel_sem_model_visita_acs",
         "producao_bpa": producao_bpa,
     })
 
