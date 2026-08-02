@@ -133,18 +133,19 @@ def api_wellness_resumo(request):
         empresa=empresa,
         tipo__in=[ProgramaCorporativo.TIPO_FADIGA, ProgramaCorporativo.TIPO_PSICOSSOCIAL, ProgramaCorporativo.TIPO_ERGONOMIA],
     ).order_by("-atualizado_em")[:8]
+    # Adesão/participantes reais exigiriam um model de inscrição ligado a
+    # ProgramaCorporativo — que não existe (InscricaoPrograma liga a ProgramaSaude,
+    # outro fluxo). Em vez de fabricar adesão por status (era 82/49/31 fixos, sem
+    # relação com dado real), reporta honestamente indisponível — mesmo padrão de
+    # NPS/cobertura_acs no restante do sistema (valor 0 + _fonte explícita).
     programas_saude = []
     for p in programas_qs:
-        if p.status == ProgramaCorporativo.STATUS_ATIVO:
-            adesao = 82
-        elif p.status == ProgramaCorporativo.STATUS_PAUSADO:
-            adesao = 49
-        else:
-            adesao = 31
         programas_saude.append({
             "nome": p.titulo,
+            "status": p.status,
             "participantes": 0,
-            "adesao": adesao,
+            "adesao": 0,
+            "metricas_fonte": "indisponivel_sem_model_inscricao",
         })
 
     triagens_recentes = []
