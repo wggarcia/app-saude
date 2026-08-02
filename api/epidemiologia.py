@@ -1441,7 +1441,13 @@ def build_panorama_payload():
 
 def panorama_epidemiologico(request):
     response = JsonResponse(build_panorama_payload())
-    response["Cache-Control"] = "public, s-maxage=25, max-age=0, stale-while-revalidate=25"
+    # s-maxage era 25s — bom pra operação normal (protege o servidor de
+    # requests repetidos), mas faz o Cloudflare servir a MESMA resposta cacheada
+    # na borda por até 25-50s (com stale-while-revalidate) independente de
+    # qualquer mudança no backend. Descoberto ao vivo: com o TTL do backend em
+    # 8s (ver _CACHE_TTL_SECONDS), o Cloudflare continuava sendo o gargalo real.
+    # Reduzido pra manter alguma proteção sem esconder mudanças por tanto tempo.
+    response["Cache-Control"] = "public, s-maxage=5, max-age=0, stale-while-revalidate=5"
     return response
 
 
