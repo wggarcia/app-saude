@@ -163,10 +163,15 @@ ANCORA_PENALIDADE = 0.15
 
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None, "version": None}
 _PANORAMA_CACHE_PAYLOAD_KEY = "epidemiologia:panorama:payload"
-# TTL de 5 min: as queries de mapa custam 4-9 s sem cache. O cache é
-# invalidado imediatamente por clear_panorama_cache() quando chega um novo
-# registro, então dados nunca ficam velhos além do necessário.
-_CACHE_TTL_SECONDS = 300
+# TTL curto: em teoria clear_panorama_cache() invalida na hora via versão no
+# Redis, mas isso depende do processo web enxergar o bump de versão — o que
+# na prática (RIW 2026) não aconteceu (payload ficou travado ~5 min mesmo com
+# vários clear_panorama_cache() disparados). Em vez de depender só do aviso,
+# o TTL curto garante que o mapa nunca fica desatualizado por mais que alguns
+# segundos, mesmo se o aviso via Redis falhar silenciosamente. O front já
+# atualiza sozinho a cada 30s (dashboard_governo.html), então isso cobre o
+# pior caso sem sobrecarregar o banco (a query custa 4-9s sem cache).
+_CACHE_TTL_SECONDS = 8
 _PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False, "next_retry": 0.0, "use_owner": True}
 _EMPRESA_MISS_RETRY_S = 30  # retry interval when empresa not found (cold-start guard)
 
