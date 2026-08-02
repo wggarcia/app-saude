@@ -136,6 +136,14 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
     }
   }
 
+  function withTab(path) {
+    const tabKey = sessionStorage.getItem("tab_session_key");
+    if (!tabKey) return path;
+    const url = new URL(path, window.location.origin);
+    url.searchParams.set("tab", tabKey);
+    return url.pathname + url.search;
+  }
+
   function maybeReloadWithScopedSession(payload) {
     if (!payload) return;
     const currentUrl = new URL(window.location.href);
@@ -163,7 +171,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
     link.addEventListener("click", async (event) => {
       event.preventDefault();
       await syncScopedAuth();
-      window.location.href = link.href;
+      window.location.href = withTab(link.href);
     });
   });
 

@@ -148,7 +148,10 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 </div>
 
 <script>
-function auth() { return sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || localStorage.getItem("auth_token") || localStorage.getItem("token") || ""; }
+// Nunca cair pro localStorage: é global entre abas e outra aba pode ter sobrescrito
+// com o token de outra conta (mesma causa raiz do commit 7c6b228). sessionStorage já
+// é gravado no login e sobrevive à navegação dentro da mesma aba.
+function auth() { return sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || ""; }
 function headers() { const h = { "Content-Type": "application/json" }; const t = auth(); if (t) h["Authorization"] = "Bearer " + t; return h; }
 
 function showErro(msg, upgrade) {
