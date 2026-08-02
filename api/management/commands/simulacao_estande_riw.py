@@ -7,7 +7,7 @@ Uso:
     # Limpar registros sem rodar (cleanup pós-apresentação):
     python manage.py simulacao_estande_riw --limpar
 
-    # Criar empresa demo sem rodar (setup inicial):
+    # Só confirmar que a empresa população existe, sem rodar (checagem inicial):
     python manage.py simulacao_estande_riw --setup
 
 Fluxo padrão (~5 min):
@@ -22,8 +22,14 @@ Amazônia, gripe/COVID no Sul mais frio, etc.). Os sintomas gerados batem
 com o perfil real de cada doença, então o mapa e o dashboard classificam
 e mostram o nome da doença certa — não só um "grupo" genérico.
 
-Endpoint que alimenta o mapa da apresentação:
-  /api/simulacao-nacional/riw2026-soluscrt-demo/panorama
+IMPORTANTE — onde os dados aparecem:
+  O mapa de qualquer conta de Governo logada (/governo/, "Sala de Situação")
+  é alimentado por /api/epidemiologia, que sempre lê da MESMA empresa
+  "população" global (PUBLIC_APP_EMAIL em api/epidemiologia.py,
+  populacao@solocrt.com) — não da conta com que você faz login. Por isso
+  este comando escreve direto nessa empresa: rodando em qualquer ambiente
+  (VPS ou Render) que tenha essa empresa cadastrada, qualquer conta de
+  Governo logada nesse mesmo ambiente vai ver o mapa encher e esvaziar.
 """
 
 import random
@@ -33,8 +39,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from api.classificador_doencas import DOENCAS_BRASIL
-from api.epidemiologia import DEMO_APP_EMAIL, DEMO_ACCESS_TOKEN, clear_panorama_cache
-from api.models import Empresa, RegistroSintoma
+from api.epidemiologia import _public_population_empresa, _rs_base_qs, clear_panorama_cache
+from api.models import RegistroSintoma
 
 SOURCE_MARKER = "riw2026-ao-vivo"
 DEVICE_PREFIX = "riw26-"
@@ -171,20 +177,20 @@ def _injetar_lote(empresa, regioes, n_por_regiao, device_counter):
             did = f"{DEVICE_PREFIX}{device_counter[0]:06d}"
             device_counter[0] += 1
             objs.append(_criar_registro(empresa, estado, cidade, bairro, lat, lon, perfil_regiao, did))
-    RegistroSintoma.objects.bulk_create(objs, ignore_conflicts=True)
+    _rs_base_qs().bulk_create(objs, ignore_conflicts=True)
     clear_panorama_cache()
     return len(objs)
 
 
 def _remover_lote(empresa, n):
     ids = list(
-        RegistroSintoma.objects
+        _rs_base_qs()
         .filter(empresa=empresa, fonte_referencia=SOURCE_MARKER)
         .order_by("data_registro")
         .values_list("id", flat=True)[:n]
     )
     if ids:
-        RegistroSintoma.objects.filter(id__in=ids).delete()
+        _rs_base_qs().filter(id__in=ids).delete()
         clear_panorama_cache()
     return len(ids)
 
@@ -196,7 +202,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--setup",
             action="store_true",
-            help="Apenas cria a empresa demo e sai (rode uma vez antes da apresentação).",
+            help="Apenas confirma que a empresa população existe e sai (checagem antes da apresentação).",
         )
         parser.add_argument(
             "--limpar",
@@ -217,50 +223,36 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        empresa = self._obter_ou_criar_empresa()
+        empresa = _public_population_empresa()
         if empresa is None:
-            self.stderr.write(self.style.ERROR("Falha ao obter empresa demo. Abortando."))
+            self.stderr.write(self.style.ERROR(
+                "Não encontrei a empresa população (PUBLIC_APP_EMAIL, populacao@solocrt.com) "
+                "neste ambiente. Sem ela o mapa do Governo não tem o que mostrar — confirme "
+                "que está rodando no mesmo ambiente (VPS ou Render) que serve o domínio que "
+                "você vai projetar na feira."
+            ))
             return
 
         if options["setup"]:
             self.stdout.write(self.style.SUCCESS(
-                f"\nEmpresa demo pronta: {DEMO_APP_EMAIL}\n"
-                f"Token de acesso: {DEMO_ACCESS_TOKEN}\n"
-                f"Endpoint: /api/simulacao-nacional/{DEMO_ACCESS_TOKEN}/panorama\n"
+                f"\nEmpresa população encontrada: {empresa.email} (id={empresa.pk})\n"
+                f"Pronto — qualquer conta de Governo logada neste mesmo ambiente já vai "
+                f"ver o mapa mudar quando a simulação rodar.\n"
             ))
             return
 
         if options["limpar"]:
-            n = RegistroSintoma.objects.filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).count()
-            RegistroSintoma.objects.filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
+            n = _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).count()
+            _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
             clear_panorama_cache()
             self.stdout.write(self.style.SUCCESS(f"{n} registros demo removidos."))
             return
 
         self._rodar_simulacao(empresa, options["duracao"], options["pico"])
 
-    def _obter_ou_criar_empresa(self):
-        try:
-            empresa = Empresa.objects.filter(email=DEMO_APP_EMAIL).first()
-            if empresa:
-                return empresa
-            empresa = Empresa.objects.create(
-                email=DEMO_APP_EMAIL,
-                senha="",
-                nome="Demo Estande RIW 2026",
-                tipo_conta=Empresa.TIPO_GOVERNO,
-                pacote_codigo="governo_municipio_pequeno",
-                ativo=True,
-            )
-            self.stdout.write(self.style.SUCCESS(f"Empresa demo criada: {empresa.pk}"))
-            return empresa
-        except Exception as e:
-            self.stderr.write(f"Erro ao criar empresa demo: {e}")
-            return None
-
     def _rodar_simulacao(self, empresa, duracao_total, pico_por_regiao):
         # Limpar registros antigos antes de começar
-        RegistroSintoma.objects.filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
+        _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
         clear_panorama_cache()
 
         duracao_surto   = int(duracao_total * 0.40)  # 40% do tempo subindo
@@ -287,7 +279,8 @@ class Command(BaseCommand):
             f"  Endemia principal: {DOENCA_PRINCIPAL} (~{int(PROB_DOENCA_PRINCIPAL*100)}% dos casos)\n"
             f"  Doenças em jogo: {', '.join(doencas_da_rodada)}\n"
             f"  Duração: {duracao_total}s | Pico: {pico_por_regiao} reg/região\n"
-            f"  Endpoint: /api/simulacao-nacional/{DEMO_ACCESS_TOKEN}/panorama\n"
+            f"  Empresa: {empresa.email} (aparece no mapa de qualquer conta de Governo\n"
+            f"  logada neste mesmo ambiente)\n"
             f"{'='*60}\n"
         ))
 
@@ -328,9 +321,9 @@ class Command(BaseCommand):
             time.sleep(intervalo_queda)
 
         # Garante que não sobrou nada
-        sobrou = RegistroSintoma.objects.filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).count()
+        sobrou = _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).count()
         if sobrou:
-            RegistroSintoma.objects.filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
+            _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
             clear_panorama_cache()
 
         self.stdout.write(self.style.SUCCESS(
