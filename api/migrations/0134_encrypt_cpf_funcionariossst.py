@@ -21,6 +21,22 @@ def _derive_key():
     return hashlib.sha512(raw.encode()).digest()
 
 
+def _expand_cpf_column(apps, schema_editor):
+    """Expande a coluna cpf para TEXT — necessário só no PostgreSQL, que impõe o
+    limite varchar(14). SQLite não impõe max_length (afinidade TEXT armazena o
+    ciphertext de ~36 chars sem alteração de tipo), então é no-op fora do Postgres.
+    Substitui o RunSQL antigo, cujo `ALTER COLUMN ... TYPE` é sintaxe exclusiva
+    Postgres e quebrava a criação de banco SQLite (dev/test)."""
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute("ALTER TABLE api_funcionariosst ALTER COLUMN cpf TYPE TEXT")
+
+
+def _shrink_cpf_column(apps, schema_editor):
+    """Reverse de _expand_cpf_column — também Postgres-only."""
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute("ALTER TABLE api_funcionariosst ALTER COLUMN cpf TYPE varchar(14)")
+
+
 def encrypt_existing_cpfs(apps, schema_editor):
     from cryptography.hazmat.primitives.ciphers.aead import AESSIV
 
@@ -71,11 +87,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # 1. Schema: expande coluna para TEXT via SQL direto (AlterField falha quando
-        #    o modelo não está registrado no estado de migrações do Django).
-        migrations.RunSQL(
-            sql="ALTER TABLE api_funcionariosst ALTER COLUMN cpf TYPE TEXT",
-            reverse_sql="ALTER TABLE api_funcionariosst ALTER COLUMN cpf TYPE varchar(14)",
+        # 1. Schema: expande coluna para TEXT (Postgres-only; no-op em SQLite).
+        #    Usa RunPython vendorizado em vez de RunSQL para não quebrar SQLite,
+        #    cujo dialeto não tem `ALTER COLUMN ... TYPE`.
+        migrations.RunPython(
+            _expand_cpf_column,
+            reverse_code=_shrink_cpf_column,
         ),
         # 2. Dados: criptografa todos os CPFs existentes
         migrations.RunPython(

@@ -37,6 +37,25 @@ END $$;
 """
 
 
+def _add_fk_column_op(table, column):
+    """RunPython vendorizado que adiciona a coluna FK.
+    Postgres: DO-block idempotente (tolera coluna já existente após restore).
+    SQLite (dev/test): ADD COLUMN simples — o SQLite não adiciona FK via ALTER
+    e não precisa disso para os testes; num banco novo a coluna nunca existe.
+    Mesmo motivo/padrão de 0155_identidadepaciente.py."""
+    pg_sql = _add_fk_column_sql(table, column)
+
+    def _forwards(apps, schema_editor):
+        if schema_editor.connection.vendor == "postgresql":
+            schema_editor.execute(pg_sql)
+        else:
+            schema_editor.execute(
+                f'ALTER TABLE "{table}" ADD COLUMN "{column}" bigint NULL'
+            )
+
+    return migrations.RunPython(_forwards, migrations.RunPython.noop)
+
+
 def _campo_identidade(related_name):
     return models.ForeignKey(
         blank=True, null=True,
@@ -67,10 +86,7 @@ class Migration(migrations.Migration):
         # --- CicloQuimioterapia.identidade ---
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(
-                    sql=_add_fk_column_sql('api_cicloquimioterapia', 'identidade_id'),
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
+                _add_fk_column_op('api_cicloquimioterapia', 'identidade_id'),
             ],
             state_operations=[
                 migrations.AddField(
@@ -84,10 +100,7 @@ class Migration(migrations.Migration):
         # --- APACOncologia.identidade ---
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(
-                    sql=_add_fk_column_sql('api_apaconcologia', 'identidade_id'),
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
+                _add_fk_column_op('api_apaconcologia', 'identidade_id'),
             ],
             state_operations=[
                 migrations.AddField(
@@ -101,10 +114,7 @@ class Migration(migrations.Migration):
         # --- InfeccaoHospitalar.identidade ---
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(
-                    sql=_add_fk_column_sql('api_infeccaohospitalar', 'identidade_id'),
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
+                _add_fk_column_op('api_infeccaohospitalar', 'identidade_id'),
             ],
             state_operations=[
                 migrations.AddField(
@@ -118,10 +128,7 @@ class Migration(migrations.Migration):
         # --- ProtocoloIsolamento.identidade ---
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(
-                    sql=_add_fk_column_sql('api_protocoloisolamento', 'identidade_id'),
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
+                _add_fk_column_op('api_protocoloisolamento', 'identidade_id'),
             ],
             state_operations=[
                 migrations.AddField(

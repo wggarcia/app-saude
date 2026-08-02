@@ -24,6 +24,44 @@ CREATE INDEX IF NOT EXISTS "idx_identpac_empresa_nome"
 
 _DROP_IDENTIDADE = 'DROP TABLE IF EXISTS "api_identidadepaciente" CASCADE;'
 
+# Variante SQLite (dev/test): a versão Postgres acima usa bigserial/timestamptz/
+# DEFERRABLE que o SQLite não entende. Aqui o equivalente portável.
+_CREATE_IDENTIDADE_SQLITE = """
+CREATE TABLE IF NOT EXISTS "api_identidadepaciente" (
+    "id"               integer      NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "nome"             varchar(200) NOT NULL,
+    "cpf"              varchar(11)  NOT NULL DEFAULT '',
+    "cns"              varchar(18)  NOT NULL DEFAULT '',
+    "data_nascimento"  date         NULL,
+    "criado_em"        datetime     NOT NULL,
+    "atualizado_em"    datetime     NOT NULL,
+    "empresa_id"       bigint       NOT NULL REFERENCES "api_empresa" ("id")
+);
+CREATE INDEX IF NOT EXISTS "idx_identpac_empresa_cpf"
+    ON "api_identidadepaciente" ("empresa_id", "cpf");
+CREATE INDEX IF NOT EXISTS "idx_identpac_empresa_nome"
+    ON "api_identidadepaciente" ("empresa_id", "nome");
+"""
+
+
+def _create_identidade(apps, schema_editor):
+    """Cria a tabela IdentidadePaciente. Postgres usa o DDL idempotente original
+    (tolera restore parcial de backup); SQLite (dev/test) usa a variante portável."""
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute(_CREATE_IDENTIDADE)
+    else:
+        with schema_editor.connection.cursor() as cur:
+            cur.executescript(_CREATE_IDENTIDADE_SQLITE)
+
+
+def _drop_identidade(apps, schema_editor):
+    """Reverse: Postgres com CASCADE; SQLite com DROP simples."""
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute(_DROP_IDENTIDADE)
+    else:
+        with schema_editor.connection.cursor() as cur:
+            cur.executescript('DROP TABLE IF EXISTS "api_identidadepaciente";')
+
 
 def _add_fk_column_sql(table, column):
     """SQL idempotente: adiciona coluna FK e constraint somente se ausentes."""
@@ -57,6 +95,24 @@ END $$;
 """
 
 
+def _add_fk_column_op(table, column):
+    """RunPython vendorizado que adiciona a coluna FK.
+    Postgres: DO-block idempotente (tolera coluna já existente após restore).
+    SQLite (dev/test): ADD COLUMN simples — o SQLite não adiciona FK via ALTER
+    e não precisa disso para os testes; num banco novo a coluna nunca existe."""
+    pg_sql = _add_fk_column_sql(table, column)
+
+    def _forwards(apps, schema_editor):
+        if schema_editor.connection.vendor == "postgresql":
+            schema_editor.execute(pg_sql)
+        else:
+            schema_editor.execute(
+                f'ALTER TABLE "{table}" ADD COLUMN "{column}" bigint NULL'
+            )
+
+    return migrations.RunPython(_forwards, migrations.RunPython.noop)
+
+
 class Migration(migrations.Migration):
     """MPI leve do segmento Hospital (Fase 0 + Fase 1 da convergência de
     identidade de paciente) — cria o hub IdentidadePaciente e liga
@@ -78,9 +134,9 @@ class Migration(migrations.Migration):
         # --- IdentidadePaciente ---
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(
-                    sql=_CREATE_IDENTIDADE,
-                    reverse_sql=_DROP_IDENTIDADE,
+                migrations.RunPython(
+                    _create_identidade,
+                    reverse_code=_drop_identidade,
                 ),
             ],
             state_operations=[
@@ -119,10 +175,7 @@ class Migration(migrations.Migration):
         # --- PacienteInternado.identidade ---
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(
-                    sql=_add_fk_column_sql('api_pacienteinternado', 'identidade_id'),
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
+                _add_fk_column_op('api_pacienteinternado', 'identidade_id'),
             ],
             state_operations=[
                 migrations.AddField(
@@ -141,10 +194,7 @@ class Migration(migrations.Migration):
         # --- ProntuarioHospitalar.identidade ---
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(
-                    sql=_add_fk_column_sql('api_prontuariohospitalar', 'identidade_id'),
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
+                _add_fk_column_op('api_prontuariohospitalar', 'identidade_id'),
             ],
             state_operations=[
                 migrations.AddField(
