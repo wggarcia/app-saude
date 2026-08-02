@@ -40,7 +40,7 @@ from django.utils import timezone
 
 from api.classificador_doencas import DOENCAS_BRASIL
 from api.epidemiologia import _public_population_empresa, _rs_base_qs, clear_panorama_cache
-from api.models import RegistroSintoma
+from api.models import ProjecaoDispersao, RegistroSintoma
 
 SOURCE_MARKER = "riw2026-ao-vivo"
 DEVICE_PREFIX = "riw26-"
@@ -245,7 +245,19 @@ class Command(BaseCommand):
             n = _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).count()
             _rs_base_qs().filter(empresa=empresa, fonte_referencia=SOURCE_MARKER).delete()
             clear_panorama_cache()
-            self.stdout.write(self.style.SUCCESS(f"{n} registros demo removidos."))
+
+            # A projeção "para onde vai" (ProjecaoDispersao) não é escrita por
+            # este comando, mas fica gravada até ser recalculada — se alguém
+            # rodou projetar_dispersao_surtos durante a demo (pra popular a
+            # tela de dispersão), as setas ficam no mapa mesmo depois do mapa
+            # de casos zerar. Limpa aqui também, só as doenças desta simulação.
+            doencas_da_simulacao = {DOENCA_PRINCIPAL, *[d for pool in POOL_POR_REGIAO.values() for d in pool]}
+            n_proj = ProjecaoDispersao.objects.filter(doenca__in=doencas_da_simulacao).count()
+            ProjecaoDispersao.objects.filter(doenca__in=doencas_da_simulacao).delete()
+
+            self.stdout.write(self.style.SUCCESS(
+                f"{n} registros demo removidos. {n_proj} projeções de dispersão removidas."
+            ))
             return
 
         self._rodar_simulacao(empresa, options["duracao"], options["pico"])
