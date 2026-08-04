@@ -1261,6 +1261,10 @@ def site_principal(request):
     return response
 
 
+def riw2026_leads(request):
+    return render(request, "riw2026_leads.html")
+
+
 def apresentacao_comercial(request):
     language = _resolve_site_language(request)
     deck = _commercial_presentation_copy(language, PRESENTATION_TRANSLATIONS[language])

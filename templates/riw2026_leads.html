@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SoloCRT · RIW 2026 · Contato</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #060e18;
+  --surface:   #0d1a27;
+  --border:    #1a2e42;
+  --frost:     #e8f4f0;
+  --muted:     #5a8099;
+  --teal:      #00c9a7;
+  --teal-dim:  #00a589;
+  --teal-glow: rgba(0,201,167,.12);
+  --signal:    #00c9a7;
+  --error:     #f87171;
+  --radius:    14px;
+  --font:      -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html, body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--frost);
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── LAYOUT ── */
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 48px;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+  user-select: none;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: default;
+  margin-bottom: 6px;
+}
+
+.logo-mark {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, var(--teal) 0%, #007f6a 100%);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 20px; color: #000; letter-spacing: -.02em;
+  flex-shrink: 0;
+}
+
+.logo-word {
+  font-size: 26px; font-weight: 800; letter-spacing: -.03em; color: var(--frost);
+}
+
+.logo-word em { color: var(--teal); font-style: normal; }
+
+.tagline {
+  font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tagline span { color: var(--teal); }
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 40px 40px;
+  width: 100%; max-width: 720px;
+}
+
+.card-title {
+  font-size: 22px; font-weight: 800; color: var(--frost);
+  margin-bottom: 4px; letter-spacing: -.02em;
+}
+
+.card-sub {
+  font-size: 14px; color: var(--muted); margin-bottom: 28px;
+}
+
+/* ── FORM GRID ── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.col-full { grid-column: 1 / -1; }
+
+/* ── FIELD ── */
+.field { display: flex; flex-direction: column; gap: 7px; }
+
+label {
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted);
+}
+
+input, select, textarea {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--frost);
+  font-family: var(--font);
+  font-size: 16px;
+  padding: 14px 16px;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-glow);
+}
+
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .7; }
+
+textarea { resize: none; }
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a8099' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+select option { background: #0d1a27; }
+
+/* ── SEGMENT CHIPS ── */
+.chips-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 7px;
+}
+
+.chips {
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+
+.chip-input { display: none; }
+
+.chip-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid var(--border);
+  border-radius: 99px;
+  padding: 9px 16px;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+
+.chip-label:hover { border-color: var(--teal-dim); color: var(--teal); }
+
+.chip-input:checked + .chip-label {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--teal-glow);
+}
+
+.chip-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+
+/* ── SUBMIT ── */
+.btn-submit {
+  width: 100%; margin-top: 8px;
+  background: var(--teal);
+  color: #001a14;
+  border: none;
+  border-radius: var(--radius);
+  padding: 17px 24px;
+  font-family: var(--font);
+  font-size: 16px; font-weight: 800;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: background .15s, transform .08s;
+  -webkit-appearance: none;
+}
+
+.btn-submit:hover { background: #00dfbb; }
+.btn-submit:active { transform: scale(.985); }
+
+.btn-submit:disabled {
+  opacity: .5; cursor: not-allowed; transform: none;
+}
+
+/* ── REQUIRED HINT ── */
+.hint {
+  font-size: 12px; color: var(--muted); margin-top: 12px; text-align: center;
+}
+
+/* ── SUCCESS ── */
+.success {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 60px 40px;
+  gap: 18px;
+}
+
+.success.show { display: flex; }
+
+.success-ring {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--teal-glow);
+  border: 2px solid var(--teal);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  animation: pop .4s cubic-bezier(.22,1.6,.6,1);
+}
+
+@keyframes pop {
+  0%   { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.success h2 { font-size: 26px; font-weight: 800; color: var(--frost); }
+.success p  { font-size: 15px; color: var(--muted); max-width: 340px; line-height: 1.6; }
+
+.success-counter {
+  font-size: 13px; color: var(--teal); font-weight: 700;
+}
+
+/* ── VER LEADS BUTTON ── */
+#adminBtn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 24px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+}
+#adminBtn:active { background: var(--teal-glow); border-color: var(--teal); color: var(--teal); }
+@media (hover: hover) {
+  #adminBtn:hover { border-color: var(--teal); color: var(--teal); }
+}
+
+/* ── ADMIN TRIGGER (invisible corner tap) ── */
+.admin-trigger {
+  position: fixed; bottom: 0; right: 0;
+  width: 72px; height: 72px;
+  cursor: default;
+  z-index: 100;
+}
+
+/* ── ADMIN PANEL ── */
+.admin-overlay {
+  display: none;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+  background: rgba(0,0,0,.85);
+  z-index: 200;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px;
+}
+
+.admin-overlay.show { display: block; }
+
+.admin-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.admin-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+
+.admin-title {
+  font-size: 18px; font-weight: 800; color: var(--frost);
+}
+
+.admin-count {
+  font-size: 13px; color: var(--teal); font-weight: 700;
+}
+
+.admin-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn-sm {
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-family: var(--font);
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none;
+  transition: background .12s;
+}
+
+.btn-export { background: var(--teal); color: #001a14; }
+.btn-export:hover { background: #00dfbb; }
+
+.btn-close  { background: var(--border); color: var(--muted); }
+.btn-close:hover { background: #253545; color: var(--frost); }
+
+.btn-clear  { background: #2a0e0e; color: var(--error); border: 1px solid #4a1818; }
+.btn-clear:hover { background: #3a1212; }
+
+.leads-table { width: 100%; overflow-x: auto; }
+
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left; padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(26,46,66,.5);
+  color: var(--frost); vertical-align: top;
+  line-height: 1.4;
+}
+
+tr:last-child td { border-bottom: none; }
+
+.no-leads {
+  text-align: center; padding: 40px; color: var(--muted); font-size: 14px;
+}
+
+.seg-pill {
+  display: inline-block;
+  background: var(--teal-glow);
+  border: 1px solid rgba(0,201,167,.25);
+  border-radius: 99px;
+  padding: 2px 8px;
+  font-size: 11px; font-weight: 700;
+  color: var(--teal);
+  margin: 1px 2px 1px 0;
+}
+
+/* ── VALIDATION ── */
+input.invalid, select.invalid, textarea.invalid {
+  border-color: var(--error);
+}
+
+.err-msg {
+  font-size: 11px; color: var(--error); font-weight: 600;
+  display: none;
+}
+
+.err-msg.show { display: block; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .card { padding: 24px 20px 28px; border-radius: 16px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .card-title { font-size: 19px; }
+}
+
+@media (min-width: 1024px) {
+  .shell { padding: 40px 24px 60px; }
+  .card { padding: 44px 52px 48px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="header">
+    <div class="logo" id="adminTriggerLogo">
+      <div class="logo-mark">S</div>
+      <div class="logo-word">Solo<em>CRT</em></div>
+    </div>
+    <div class="tagline">Rio Innovation Week 2026 · <span>Pier Mauá · Ago 2026</span></div>
+  </header>
+
+  <div class="card" id="formCard">
+    <div class="card-title">Quer ver o sistema ao vivo?</div>
+    <div class="card-sub">Deixa seu contato — entramos em touch após a feira com acesso e proposta personalizada.</div>
+
+    <form id="leadForm" novalidate>
+      <div class="grid-2">
+
+        <div class="field">
+          <label for="nome">Nome completo *</label>
+          <input type="text" id="nome" name="nome" placeholder="Seu nome" autocomplete="off">
+          <span class="err-msg" id="err-nome">Campo obrigatório.</span>
+        </div>
+
+        <div class="field">
+          <label for="empresa">Empresa / Organização *</label>
+          <input type="text" id="empresa" name="empresa" placeholder="Nome da empresa" autocomplete="off">
+          <span class="err-msg" id="err-empresa">Campo obrigatório.</span>
+        </div>
+
+        <div class="field">
+          <label for="cargo">Cargo / Função</label>
+          <input type="text" id="cargo" name="cargo" placeholder="Ex: Diretor Técnico" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="whatsapp">WhatsApp *</label>
+          <input type="tel" id="whatsapp" name="whatsapp" placeholder="(21) 9 9999-9999" autocomplete="off" inputmode="tel">
+          <span class="err-msg" id="err-whatsapp">Campo obrigatório.</span>
+        </div>
+
+        <div class="field col-full">
+          <label for="email">E-mail</label>
+          <input type="email" id="email" name="email" placeholder="seu@email.com.br" autocomplete="off" inputmode="email">
+          <span class="err-msg" id="err-email">E-mail inválido.</span>
+        </div>
+
+        <div class="col-full">
+          <div class="chips-label">Segmento de interesse (pode marcar mais de um)</div>
+          <div class="chips">
+            <input class="chip-input" type="checkbox" id="seg-sst"    name="segmento" value="SST / Empresa">
+            <label class="chip-label" for="seg-sst"><span class="chip-dot"></span>SST / Empresa</label>
+
+            <input class="chip-input" type="checkbox" id="seg-hosp"   name="segmento" value="Hospital">
+            <label class="chip-label" for="seg-hosp"><span class="chip-dot"></span>Hospital</label>
+
+            <input class="chip-input" type="checkbox" id="seg-farm"   name="segmento" value="Farmácia">
+            <label class="chip-label" for="seg-farm"><span class="chip-dot"></span>Farmácia</label>
+
+            <input class="chip-input" type="checkbox" id="seg-plano"  name="segmento" value="Plano de Saúde">
+            <label class="chip-label" for="seg-plano"><span class="chip-dot"></span>Plano de Saúde</label>
+
+            <input class="chip-input" type="checkbox" id="seg-gov"    name="segmento" value="Governo">
+            <label class="chip-label" for="seg-gov"><span class="chip-dot"></span>Governo</label>
+
+          </div>
+        </div>
+
+        <div class="field col-full">
+          <label for="obs">Observação (opcional)</label>
+          <textarea id="obs" name="obs" rows="3" placeholder="O que chamou mais atenção, dúvida específica..."></textarea>
+        </div>
+
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">Salvar contato →</button>
+      <p class="hint">* Campos obrigatórios · Dados salvos localmente neste dispositivo</p>
+      <div style="text-align:center;margin-top:20px">
+        <button type="button" id="adminBtn" onclick="openAdmin()">
+          Ver leads captados
+        </button>
+      </div>
+    </form>
+
+    <div class="success" id="successScreen">
+      <div class="success-ring">✓</div>
+      <h2>Contato salvo!</h2>
+      <p>Entraremos em contato após a RIW com acesso ao sistema e proposta personalizada.</p>
+      <div class="success-counter" id="successCounter">Próximo formulário em 5s…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Admin trigger: tap logo 7x -->
+<div class="admin-trigger" id="adminCorner"></div>
+
+<!-- Admin panel -->
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <div>
+        <div class="admin-title">Leads capturados — RIW 2026</div>
+        <div class="admin-count" id="adminCount"></div>
+      </div>
+      <div class="admin-actions">
+        <button class="btn-sm btn-export" onclick="exportCSV()">⬇ Exportar CSV</button>
+        <button class="btn-sm btn-clear" onclick="clearLeads()">Apagar tudo</button>
+        <button class="btn-sm btn-close" onclick="closeAdmin()">Fechar ✕</button>
+      </div>
+    </div>
+    <div class="leads-table">
+      <table id="leadsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Data / Hora</th>
+            <th>Nome</th>
+            <th>Empresa</th>
+            <th>Cargo</th>
+            <th>WhatsApp</th>
+            <th>E-mail</th>
+            <th>Segmentos</th>
+            <th>Obs</th>
+          </tr>
+        </thead>
+        <tbody id="leadsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STORAGE ──
+const STORE_KEY = 'solocrt_riw2026_leads';
+
+function getLeads() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveLead(lead) {
+  const leads = getLeads();
+  leads.push(lead);
+  localStorage.setItem(STORE_KEY, JSON.stringify(leads));
+}
+
+// ── VALIDATION ──
+function validate() {
+  let ok = true;
+
+  const fields = ['nome', 'empresa', 'whatsapp'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    const err = document.getElementById('err-' + id);
+    const empty = !el.value.trim();
+    el.classList.toggle('invalid', empty);
+    err.classList.toggle('show', empty);
+    if (empty) ok = false;
+  });
+
+  const email = document.getElementById('email');
+  const errEmail = document.getElementById('err-email');
+  if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+    email.classList.add('invalid');
+    errEmail.classList.add('show');
+    ok = false;
+  } else {
+    email.classList.remove('invalid');
+    errEmail.classList.remove('show');
+  }
+
+  return ok;
+}
+
+// ── FORM SUBMIT ──
+document.getElementById('leadForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  if (!validate()) return;
+
+  const segments = [...document.querySelectorAll('input[name="segmento"]:checked')]
+    .map(el => el.value);
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ts = `${pad(now.getDate())}/${pad(now.getMonth()+1)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  const lead = {
+    ts,
+    nome:     document.getElementById('nome').value.trim(),
+    empresa:  document.getElementById('empresa').value.trim(),
+    cargo:    document.getElementById('cargo').value.trim(),
+    whatsapp: document.getElementById('whatsapp').value.trim(),
+    email:    document.getElementById('email').value.trim(),
+    segmentos: segments.join(', '),
+    obs:      document.getElementById('obs').value.trim()
+  };
+
+  saveLead(lead);
+  showSuccess();
+});
+
+// remove invalid state on input
+document.querySelectorAll('input, select, textarea').forEach(el => {
+  el.addEventListener('input', () => {
+    el.classList.remove('invalid');
+    const err = document.getElementById('err-' + el.id);
+    if (err) err.classList.remove('show');
+  });
+});
+
+// ── SUCCESS & RESET ──
+let countdownInterval;
+
+function showSuccess() {
+  document.getElementById('leadForm').style.display = 'none';
+  const s = document.getElementById('successScreen');
+  s.classList.add('show');
+
+  let t = 6;
+  const counter = document.getElementById('successCounter');
+
+  countdownInterval = setInterval(() => {
+    t--;
+    counter.textContent = t > 0 ? `Próximo formulário em ${t}s…` : '';
+    if (t <= 0) { clearInterval(countdownInterval); resetForm(); }
+  }, 1000);
+}
+
+function resetForm() {
+  document.getElementById('leadForm').reset();
+  document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+  document.querySelectorAll('.err-msg').forEach(el => el.classList.remove('show'));
+  document.getElementById('successScreen').classList.remove('show');
+  document.getElementById('leadForm').style.display = '';
+}
+
+// ── ADMIN ACCESS: tap logo 7x ──
+let tapCount = 0, tapTimer;
+
+document.getElementById('adminTriggerLogo').addEventListener('click', () => {
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
+  if (tapCount >= 7) { tapCount = 0; openAdmin(); }
+});
+
+// also tap invisible corner 7x
+let cornerTaps = 0, cornerTimer;
+document.getElementById('adminCorner').addEventListener('click', () => {
+  cornerTaps++;
+  clearTimeout(cornerTimer);
+  cornerTimer = setTimeout(() => { cornerTaps = 0; }, 2500);
+  if (cornerTaps >= 7) { cornerTaps = 0; openAdmin(); }
+});
+
+function openAdmin() {
+  renderLeadsTable();
+  document.getElementById('adminOverlay').classList.add('show');
+}
+
+function closeAdmin() {
+  document.getElementById('adminOverlay').classList.remove('show');
+}
+
+function renderLeadsTable() {
+  const leads = getLeads();
+  const body = document.getElementById('leadsBody');
+  const count = document.getElementById('adminCount');
+
+  count.textContent = leads.length === 0
+    ? 'Nenhum lead ainda'
+    : `${leads.length} lead${leads.length > 1 ? 's' : ''} capturado${leads.length > 1 ? 's' : ''}`;
+
+  if (leads.length === 0) {
+    body.innerHTML = '<tr><td colspan="9" class="no-leads">Nenhum lead capturado ainda.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = leads.map((l, i) => `
+    <tr>
+      <td style="color:var(--muted);font-variant-numeric:tabular-nums">${i + 1}</td>
+      <td style="white-space:nowrap;color:var(--muted)">${l.ts}</td>
+      <td><strong>${esc(l.nome)}</strong></td>
+      <td>${esc(l.empresa)}</td>
+      <td style="color:var(--muted)">${esc(l.cargo)}</td>
+      <td style="white-space:nowrap">${esc(l.whatsapp)}</td>
+      <td style="white-space:nowrap">${esc(l.email)}</td>
+      <td>${l.segmentos ? l.segmentos.split(', ').map(s => `<span class="seg-pill">${esc(s)}</span>`).join('') : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="color:var(--muted);max-width:160px">${esc(l.obs) || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── EXPORT CSV ──
+function exportCSV() {
+  const leads = getLeads();
+  if (!leads.length) { alert('Nenhum lead para exportar.'); return; }
+
+  const headers = ['#','Data/Hora','Nome','Empresa','Cargo','WhatsApp','E-mail','Segmentos','Observação'];
+  const rows = leads.map((l, i) => [
+    i + 1, l.ts, l.nome, l.empresa, l.cargo, l.whatsapp, l.email, l.segmentos, l.obs
+  ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','));
+
+  const csv = [headers.join(','), ...rows].join('\r\n');
+  const bom = '﻿'; // BOM for Excel UTF-8
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const now = new Date();
+  a.download = `solocrt_leads_riw2026_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── CLEAR LEADS ──
+function clearLeads() {
+  if (!confirm('Apagar TODOS os leads? Esta ação não pode ser desfeita.')) return;
+  localStorage.removeItem(STORE_KEY);
+  renderLeadsTable();
+}
+
+// close admin on ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAdmin();
+});
+</script>
+</body>
+</html>
