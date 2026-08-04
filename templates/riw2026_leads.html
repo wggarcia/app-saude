@@ -720,6 +720,12 @@ function clearLeads() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeAdmin();
 });
+
+// Service Worker — cache offline
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/riw2026/sw.js', { scope: '/riw2026/' })
+    .catch(() => {});
+}
 </script>
 </body>
 </html>

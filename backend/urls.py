@@ -24,7 +24,7 @@ from api.views import (
     tela_cadastro, tela_login_empresa, tela_login_governo,
     registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_vigilancia_resumo, app_alertas_publicos, registrar_push_publico,
     apagar_meus_dados_lgpd,
-    site_principal, apresentacao_comercial, documento_publico, riw2026_leads
+    site_principal, apresentacao_comercial, documento_publico, riw2026_leads, riw2026_sw
 )
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial, api_login_modulo, verificar_codigo_email, reenviar_codigo_email
@@ -1345,6 +1345,7 @@ urlpatterns = [
     path('', site_principal),
     path('apresentacao/', apresentacao_comercial),
     path('riw2026/', riw2026_leads),
+    path('riw2026/sw.js', riw2026_sw),
     path('privacidade/', documento_publico, {"slug": "privacidade"}),
     path('termos/', documento_publico, {"slug": "termos"}),
     path('seguranca-lgpd/', documento_publico, {"slug": "seguranca-lgpd"}),

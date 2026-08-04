@@ -1265,6 +1265,32 @@ def riw2026_leads(request):
     return render(request, "riw2026_leads.html")
 
 
+def riw2026_sw(request):
+    from django.http import HttpResponse
+    sw = """
+const CACHE = 'riw2026-v1';
+const URL = '/riw2026/';
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.add(URL)));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(clients.claim());
+});
+self.addEventListener('fetch', e => {
+  if (e.request.url.includes('/riw2026/')) {
+    e.respondWith(
+      caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+        caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+        return res;
+      }))
+    );
+  }
+});
+"""
+    return HttpResponse(sw, content_type="application/javascript")
+
+
 def apresentacao_comercial(request):
     language = _resolve_site_language(request)
     deck = _commercial_presentation_copy(language, PRESENTATION_TRANSLATIONS[language])
