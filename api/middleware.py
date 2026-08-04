@@ -183,6 +183,8 @@ class EmpresaMiddleware:
             "/logout-operacao/",
             "/cadastro/",
             "/apresentacao/",
+            "/riw2026/",
+            "/riw2026/sw.js",
             "/privacidade/",
             "/privacidade",        # sem barra — APPEND_SLASH do Django redireciona para /privacidade/
             "/termos/",
@@ -580,6 +582,8 @@ class SegmentoAccessMiddleware:
 _PAGINAS_PUBLICAS_SEM_INTERCEPTOR = {
     "/privacidade/",
     "/termos/",
+    "/riw2026/",
+    "/riw2026/sw.js",
     "/seguranca-lgpd/",
     "/metodologia/",
     "/suporte/",
