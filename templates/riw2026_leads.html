@@ -30,7 +30,6 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── LAYOUT ── */
 .shell {
   min-height: 100vh;
   display: flex;
@@ -40,18 +39,11 @@ html, body {
 }
 
 /* ── HEADER ── */
-.header {
-  text-align: center;
-  margin-bottom: 32px;
-  user-select: none;
-}
+.header { text-align: center; margin-bottom: 32px; user-select: none; }
 
 .logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: default;
-  margin-bottom: 6px;
+  display: inline-flex; align-items: center; gap: 10px;
+  cursor: default; margin-bottom: 6px;
 }
 
 .logo-mark {
@@ -59,21 +51,16 @@ html, body {
   background: linear-gradient(135deg, var(--teal) 0%, #007f6a 100%);
   border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 20px; color: #000; letter-spacing: -.02em;
-  flex-shrink: 0;
+  font-weight: 900; font-size: 20px; color: #000;
 }
 
-.logo-word {
-  font-size: 26px; font-weight: 800; letter-spacing: -.03em; color: var(--frost);
-}
-
+.logo-word { font-size: 26px; font-weight: 800; letter-spacing: -.03em; color: var(--frost); }
 .logo-word em { color: var(--teal); font-style: normal; }
 
 .tagline {
-  font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
-  color: var(--muted);
+  font-size: 12px; font-weight: 700; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--muted);
 }
-
 .tagline span { color: var(--teal); }
 
 /* ── CARD ── */
@@ -85,30 +72,48 @@ html, body {
   width: 100%; max-width: 720px;
 }
 
-.card-title {
-  font-size: 22px; font-weight: 800; color: var(--frost);
-  margin-bottom: 4px; letter-spacing: -.02em;
-}
+.card-title { font-size: 22px; font-weight: 800; color: var(--frost); margin-bottom: 4px; }
+.card-sub   { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
 
-.card-sub {
-  font-size: 14px; color: var(--muted); margin-bottom: 28px;
+/* ── SCAN BUTTON ── */
+.btn-scan {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%;
+  background: var(--teal-glow);
+  border: 1.5px dashed var(--teal);
+  border-radius: var(--radius);
+  color: var(--teal);
+  font-family: var(--font);
+  font-size: 15px; font-weight: 700;
+  padding: 15px 20px;
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: background .15s;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+}
+.btn-scan:active { background: rgba(0,201,167,.2); }
+.btn-scan svg { flex-shrink: 0; }
+
+.divider {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+  color: var(--muted); font-size: 11px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
 }
 
 /* ── FORM GRID ── */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .col-full { grid-column: 1 / -1; }
 
-/* ── FIELD ── */
 .field { display: flex; flex-direction: column; gap: 7px; }
 
 label {
-  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--muted);
+  font-size: 11px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
 }
 
 input, select, textarea {
@@ -123,7 +128,6 @@ input, select, textarea {
   transition: border-color .15s;
   width: 100%;
   -webkit-appearance: none;
-  appearance: none;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -132,256 +136,226 @@ input:focus, select:focus, textarea:focus {
 }
 
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: .7; }
+input.autofilled { border-color: var(--teal); background: rgba(0,201,167,.05); }
 
 textarea { resize: none; }
 
-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a8099' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 40px;
-  cursor: pointer;
-}
-
-select option { background: #0d1a27; }
-
 /* ── SEGMENT CHIPS ── */
 .chips-label {
-  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 7px;
 }
-
-.chips {
-  display: flex; flex-wrap: wrap; gap: 10px;
-}
-
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .chip-input { display: none; }
-
 .chip-label {
   display: inline-flex; align-items: center; gap: 6px;
-  border: 1.5px solid var(--border);
-  border-radius: 99px;
-  padding: 9px 16px;
-  font-size: 13px; font-weight: 600; color: var(--muted);
-  cursor: pointer;
-  transition: all .15s;
-  user-select: none;
+  border: 1.5px solid var(--border); border-radius: 99px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600; color: var(--muted);
+  cursor: pointer; transition: all .15s; user-select: none;
 }
-
 .chip-label:hover { border-color: var(--teal-dim); color: var(--teal); }
-
 .chip-input:checked + .chip-label {
-  border-color: var(--teal);
-  color: var(--teal);
-  background: var(--teal-glow);
+  border-color: var(--teal); color: var(--teal); background: var(--teal-glow);
 }
-
-.chip-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: currentColor; flex-shrink: 0;
-}
+.chip-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
 /* ── SUBMIT ── */
 .btn-submit {
   width: 100%; margin-top: 8px;
-  background: var(--teal);
-  color: #001a14;
-  border: none;
-  border-radius: var(--radius);
+  background: var(--teal); color: #001a14;
+  border: none; border-radius: var(--radius);
   padding: 17px 24px;
-  font-family: var(--font);
-  font-size: 16px; font-weight: 800;
-  letter-spacing: .01em;
-  cursor: pointer;
-  transition: background .15s, transform .08s;
+  font-family: var(--font); font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: background .15s, transform .08s;
   -webkit-appearance: none;
 }
-
 .btn-submit:hover { background: #00dfbb; }
 .btn-submit:active { transform: scale(.985); }
 
-.btn-submit:disabled {
-  opacity: .5; cursor: not-allowed; transform: none;
-}
-
-/* ── REQUIRED HINT ── */
-.hint {
-  font-size: 12px; color: var(--muted); margin-top: 12px; text-align: center;
-}
-
-/* ── SUCCESS ── */
-.success {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 60px 40px;
-  gap: 18px;
-}
-
-.success.show { display: flex; }
-
-.success-ring {
-  width: 80px; height: 80px; border-radius: 50%;
-  background: var(--teal-glow);
-  border: 2px solid var(--teal);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 36px;
-  animation: pop .4s cubic-bezier(.22,1.6,.6,1);
-}
-
-@keyframes pop {
-  0%   { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.success h2 { font-size: 26px; font-weight: 800; color: var(--frost); }
-.success p  { font-size: 15px; color: var(--muted); max-width: 340px; line-height: 1.6; }
-
-.success-counter {
-  font-size: 13px; color: var(--teal); font-weight: 700;
-}
+.hint { font-size: 12px; color: var(--muted); margin-top: 12px; text-align: center; }
 
 /* ── VER LEADS BUTTON ── */
 #adminBtn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  color: var(--muted);
-  font-family: var(--font);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 11px 24px;
-  cursor: pointer;
-  -webkit-appearance: none;
-  touch-action: manipulation;
+  background: none; border: 1px solid var(--border); border-radius: 99px;
+  color: var(--muted); font-family: var(--font);
+  font-size: 14px; font-weight: 600; padding: 11px 24px;
+  cursor: pointer; -webkit-appearance: none; touch-action: manipulation;
 }
 #adminBtn:active { background: var(--teal-glow); border-color: var(--teal); color: var(--teal); }
-@media (hover: hover) {
-  #adminBtn:hover { border-color: var(--teal); color: var(--teal); }
+@media (hover: hover) { #adminBtn:hover { border-color: var(--teal); color: var(--teal); } }
+
+/* ── SUCCESS ── */
+.success {
+  display: none; flex-direction: column; align-items: center;
+  text-align: center; padding: 60px 40px; gap: 18px;
+}
+.success.show { display: flex; }
+.success-ring {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--teal-glow); border: 2px solid var(--teal);
+  display: flex; align-items: center; justify-content: center; font-size: 36px;
+  animation: pop .4s cubic-bezier(.22,1.6,.6,1);
+}
+@keyframes pop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.success h2  { font-size: 26px; font-weight: 800; color: var(--frost); }
+.success p   { font-size: 15px; color: var(--muted); max-width: 340px; line-height: 1.6; }
+.success-counter { font-size: 13px; color: var(--teal); font-weight: 700; }
+
+/* ── VALIDATION ── */
+input.invalid, select.invalid, textarea.invalid { border-color: var(--error); }
+.err-msg { font-size: 11px; color: var(--error); font-weight: 600; display: none; }
+.err-msg.show { display: block; }
+
+/* ── CAMERA OVERLAY ── */
+.cam-overlay {
+  display: none;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+  background: #000;
+  z-index: 300;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.cam-overlay.show { display: flex; }
+
+.cam-header {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 20px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(0,0,0,.8), transparent);
+  z-index: 2;
 }
 
-/* ── ADMIN TRIGGER (invisible corner tap) ── */
-.admin-trigger {
-  position: fixed; bottom: 0; right: 0;
-  width: 72px; height: 72px;
-  cursor: default;
-  z-index: 100;
+.cam-title { color: #fff; font-size: 16px; font-weight: 700; }
+
+.btn-cam-close {
+  background: rgba(255,255,255,.15); border: none; border-radius: 99px;
+  color: #fff; font-family: var(--font); font-size: 14px; font-weight: 700;
+  padding: 8px 18px; cursor: pointer;
 }
 
-/* ── ADMIN PANEL ── */
+#scanVideo {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
+/* scanning frame */
+.scan-frame {
+  position: absolute; z-index: 2;
+  width: 240px; height: 240px;
+  pointer-events: none;
+}
+
+.scan-corner {
+  position: absolute; width: 28px; height: 28px;
+  border-color: var(--teal); border-style: solid;
+}
+.scan-corner.tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.scan-corner.tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.scan-corner.bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.scan-corner.br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+.scan-line {
+  position: absolute; left: 8px; right: 8px; height: 2px;
+  background: linear-gradient(to right, transparent, var(--teal), transparent);
+  animation: scanline 2s ease-in-out infinite;
+  top: 0;
+}
+@keyframes scanline {
+  0%   { top: 8px; opacity: 1; }
+  50%  { opacity: 1; }
+  100% { top: calc(100% - 8px); opacity: .3; }
+}
+
+.cam-status {
+  position: absolute; bottom: 60px; left: 0; right: 0;
+  text-align: center; z-index: 2;
+  color: rgba(255,255,255,.85);
+  font-size: 15px; font-weight: 600;
+}
+
+.cam-detected {
+  position: absolute; z-index: 3;
+  background: rgba(0,201,167,.92);
+  border-radius: 16px;
+  padding: 24px 32px;
+  text-align: center;
+  display: none;
+}
+.cam-detected.show { display: block; animation: pop .3s cubic-bezier(.22,1.6,.6,1); }
+.cam-detected h3 { color: #001a14; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.cam-detected p  { color: #002419; font-size: 14px; }
+
+/* ── ADMIN OVERLAY ── */
 .admin-overlay {
   display: none;
   position: fixed; top: 0; right: 0; bottom: 0; left: 0;
   background: rgba(0,0,0,.85);
-  z-index: 200;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 24px;
+  z-index: 200; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; padding: 24px;
 }
-
 .admin-overlay.show { display: block; }
 
 .admin-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 32px;
-  max-width: 960px;
-  margin: 0 auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px; max-width: 960px; margin: 0 auto;
 }
 
 .admin-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
 }
-
-.admin-title {
-  font-size: 18px; font-weight: 800; color: var(--frost);
-}
-
-.admin-count {
-  font-size: 13px; color: var(--teal); font-weight: 700;
-}
-
+.admin-title { font-size: 18px; font-weight: 800; color: var(--frost); }
+.admin-count { font-size: 13px; color: var(--teal); font-weight: 700; }
 .admin-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .btn-sm {
-  padding: 9px 18px;
-  border-radius: 10px;
-  font-family: var(--font);
-  font-size: 13px; font-weight: 700;
-  cursor: pointer; border: none;
-  transition: background .12s;
+  padding: 9px 18px; border-radius: 10px; font-family: var(--font);
+  font-size: 13px; font-weight: 700; cursor: pointer; border: none;
 }
-
 .btn-export { background: var(--teal); color: #001a14; }
 .btn-export:hover { background: #00dfbb; }
-
 .btn-close  { background: var(--border); color: var(--muted); }
 .btn-close:hover { background: #253545; color: var(--frost); }
-
 .btn-clear  { background: #2a0e0e; color: var(--error); border: 1px solid #4a1818; }
-.btn-clear:hover { background: #3a1212; }
 
 .leads-table { width: 100%; overflow-x: auto; }
 
-table {
-  width: 100%; border-collapse: collapse;
-  font-size: 13px;
-}
-
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {
-  text-align: left; padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
   font-size: 10px; font-weight: 700; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--muted);
-  white-space: nowrap;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap;
 }
-
-td {
-  padding: 12px 12px;
-  border-bottom: 1px solid rgba(26,46,66,.5);
-  color: var(--frost); vertical-align: top;
-  line-height: 1.4;
-}
-
+td { padding: 12px; border-bottom: 1px solid rgba(26,46,66,.5); color: var(--frost); vertical-align: top; line-height: 1.4; }
 tr:last-child td { border-bottom: none; }
-
-.no-leads {
-  text-align: center; padding: 40px; color: var(--muted); font-size: 14px;
-}
-
+.no-leads { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
 .seg-pill {
-  display: inline-block;
-  background: var(--teal-glow);
-  border: 1px solid rgba(0,201,167,.25);
-  border-radius: 99px;
-  padding: 2px 8px;
-  font-size: 11px; font-weight: 700;
-  color: var(--teal);
+  display: inline-block; background: var(--teal-glow);
+  border: 1px solid rgba(0,201,167,.25); border-radius: 99px;
+  padding: 2px 8px; font-size: 11px; font-weight: 700; color: var(--teal);
   margin: 1px 2px 1px 0;
 }
-
-/* ── VALIDATION ── */
-input.invalid, select.invalid, textarea.invalid {
-  border-color: var(--error);
+.qr-badge {
+  display: inline-block; background: rgba(0,201,167,.08);
+  border: 1px solid rgba(0,201,167,.2); border-radius: 4px;
+  padding: 1px 6px; font-size: 10px; font-weight: 700;
+  color: var(--teal); margin-left: 4px; vertical-align: middle;
 }
 
-.err-msg {
-  font-size: 11px; color: var(--error); font-weight: 600;
-  display: none;
+/* ── ADMIN TRIGGER ── */
+.admin-trigger {
+  position: fixed; bottom: 0; right: 0;
+  width: 72px; height: 72px; cursor: default; z-index: 100;
 }
-
-.err-msg.show { display: block; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 600px) {
   .card { padding: 24px 20px 28px; border-radius: 16px; }
   .grid-2 { grid-template-columns: 1fr; }
   .card-title { font-size: 19px; }
+  .scan-frame { width: 200px; height: 200px; }
 }
-
 @media (min-width: 1024px) {
   .shell { padding: 40px 24px 60px; }
   .card { padding: 44px 52px 48px; }
@@ -391,7 +365,6 @@ input.invalid, select.invalid, textarea.invalid {
 <body>
 
 <div class="shell">
-
   <header class="header">
     <div class="logo" id="adminTriggerLogo">
       <div class="logo-mark">S</div>
@@ -402,7 +375,19 @@ input.invalid, select.invalid, textarea.invalid {
 
   <div class="card" id="formCard">
     <div class="card-title">Quer ver o sistema ao vivo?</div>
-    <div class="card-sub">Deixa seu contato — entramos em touch após a feira com acesso e proposta personalizada.</div>
+    <div class="card-sub">Deixa seu contato — entramos em contato após a feira com acesso e proposta personalizada.</div>
+
+    <!-- SCAN BUTTON -->
+    <button type="button" class="btn-scan" id="btnScan" onclick="openCamera()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+        <rect x="7" y="7" width="10" height="10" rx="1"/>
+      </svg>
+      Escanear Crachá do Visitante
+    </button>
+
+    <div class="divider">ou preencha manualmente</div>
 
     <form id="leadForm" novalidate>
       <div class="grid-2">
@@ -439,21 +424,20 @@ input.invalid, select.invalid, textarea.invalid {
         <div class="col-full">
           <div class="chips-label">Segmento de interesse (pode marcar mais de um)</div>
           <div class="chips">
-            <input class="chip-input" type="checkbox" id="seg-sst"    name="segmento" value="SST / Empresa">
+            <input class="chip-input" type="checkbox" id="seg-sst"   name="segmento" value="SST / Empresa">
             <label class="chip-label" for="seg-sst"><span class="chip-dot"></span>SST / Empresa</label>
 
-            <input class="chip-input" type="checkbox" id="seg-hosp"   name="segmento" value="Hospital">
+            <input class="chip-input" type="checkbox" id="seg-hosp"  name="segmento" value="Hospital">
             <label class="chip-label" for="seg-hosp"><span class="chip-dot"></span>Hospital</label>
 
-            <input class="chip-input" type="checkbox" id="seg-farm"   name="segmento" value="Farmácia">
+            <input class="chip-input" type="checkbox" id="seg-farm"  name="segmento" value="Farmácia">
             <label class="chip-label" for="seg-farm"><span class="chip-dot"></span>Farmácia</label>
 
-            <input class="chip-input" type="checkbox" id="seg-plano"  name="segmento" value="Plano de Saúde">
+            <input class="chip-input" type="checkbox" id="seg-plano" name="segmento" value="Plano de Saúde">
             <label class="chip-label" for="seg-plano"><span class="chip-dot"></span>Plano de Saúde</label>
 
-            <input class="chip-input" type="checkbox" id="seg-gov"    name="segmento" value="Governo">
+            <input class="chip-input" type="checkbox" id="seg-gov"   name="segmento" value="Governo">
             <label class="chip-label" for="seg-gov"><span class="chip-dot"></span>Governo</label>
-
           </div>
         </div>
 
@@ -464,12 +448,11 @@ input.invalid, select.invalid, textarea.invalid {
 
       </div>
 
-      <button type="submit" class="btn-submit" id="submitBtn">Salvar contato →</button>
+      <button type="submit" class="btn-submit">Salvar contato →</button>
       <p class="hint">* Campos obrigatórios · Dados salvos localmente neste dispositivo</p>
+
       <div style="text-align:center;margin-top:20px">
-        <button type="button" id="adminBtn" onclick="openAdmin()">
-          Ver leads captados
-        </button>
+        <button type="button" id="adminBtn" onclick="openAdmin()">Ver leads captados</button>
       </div>
     </form>
 
@@ -477,16 +460,37 @@ input.invalid, select.invalid, textarea.invalid {
       <div class="success-ring">✓</div>
       <h2>Contato salvo!</h2>
       <p>Entraremos em contato após a RIW com acesso ao sistema e proposta personalizada.</p>
-      <div class="success-counter" id="successCounter">Próximo formulário em 5s…</div>
+      <div class="success-counter" id="successCounter">Próximo formulário em 6s…</div>
     </div>
   </div>
-
 </div>
 
-<!-- Admin trigger: tap logo 7x -->
-<div class="admin-trigger" id="adminCorner"></div>
+<!-- CAMERA OVERLAY -->
+<div class="cam-overlay" id="camOverlay">
+  <div class="cam-header">
+    <div class="cam-title">📷 Aponte para o QR do crachá</div>
+    <button class="btn-cam-close" onclick="closeCamera()">Fechar ✕</button>
+  </div>
 
-<!-- Admin panel -->
+  <video id="scanVideo" autoplay playsinline muted></video>
+
+  <div class="scan-frame">
+    <div class="scan-corner tl"></div>
+    <div class="scan-corner tr"></div>
+    <div class="scan-corner bl"></div>
+    <div class="scan-corner br"></div>
+    <div class="scan-line"></div>
+  </div>
+
+  <div class="cam-status" id="camStatus">Centralize o QR code no quadro</div>
+
+  <div class="cam-detected" id="camDetected">
+    <h3>✓ Lido!</h3>
+    <p id="camDetectedName">Preenchendo o formulário…</p>
+  </div>
+</div>
+
+<!-- ADMIN OVERLAY -->
 <div class="admin-overlay" id="adminOverlay">
   <div class="admin-panel">
     <div class="admin-header">
@@ -496,23 +500,16 @@ input.invalid, select.invalid, textarea.invalid {
       </div>
       <div class="admin-actions">
         <button class="btn-sm btn-export" onclick="exportCSV()">⬇ Exportar CSV</button>
-        <button class="btn-sm btn-clear" onclick="clearLeads()">Apagar tudo</button>
-        <button class="btn-sm btn-close" onclick="closeAdmin()">Fechar ✕</button>
+        <button class="btn-sm btn-clear"  onclick="clearLeads()">Apagar tudo</button>
+        <button class="btn-sm btn-close"  onclick="closeAdmin()">Fechar ✕</button>
       </div>
     </div>
     <div class="leads-table">
       <table id="leadsTable">
         <thead>
           <tr>
-            <th>#</th>
-            <th>Data / Hora</th>
-            <th>Nome</th>
-            <th>Empresa</th>
-            <th>Cargo</th>
-            <th>WhatsApp</th>
-            <th>E-mail</th>
-            <th>Segmentos</th>
-            <th>Obs</th>
+            <th>#</th><th>Data/Hora</th><th>Nome</th><th>Empresa</th>
+            <th>Cargo</th><th>WhatsApp</th><th>E-mail</th><th>Segmentos</th><th>Obs</th>
           </tr>
         </thead>
         <tbody id="leadsBody"></tbody>
@@ -521,46 +518,27 @@ input.invalid, select.invalid, textarea.invalid {
   </div>
 </div>
 
+<div class="admin-trigger" id="adminCorner"></div>
+
 <script>
 // ── STORAGE ──
 const STORE_KEY = 'solocrt_riw2026_leads';
-
-function getLeads() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function saveLead(lead) {
-  const leads = getLeads();
-  leads.push(lead);
-  localStorage.setItem(STORE_KEY, JSON.stringify(leads));
-}
+function getLeads() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; } }
+function saveLead(lead) { const l = getLeads(); l.push(lead); localStorage.setItem(STORE_KEY, JSON.stringify(l)); }
 
 // ── VALIDATION ──
 function validate() {
   let ok = true;
-
-  const fields = ['nome', 'empresa', 'whatsapp'];
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    const err = document.getElementById('err-' + id);
+  ['nome','empresa','whatsapp'].forEach(id => {
+    const el = document.getElementById(id), err = document.getElementById('err-'+id);
     const empty = !el.value.trim();
-    el.classList.toggle('invalid', empty);
-    err.classList.toggle('show', empty);
+    el.classList.toggle('invalid', empty); err.classList.toggle('show', empty);
     if (empty) ok = false;
   });
-
-  const email = document.getElementById('email');
-  const errEmail = document.getElementById('err-email');
+  const email = document.getElementById('email'), errEmail = document.getElementById('err-email');
   if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
-    email.classList.add('invalid');
-    errEmail.classList.add('show');
-    ok = false;
-  } else {
-    email.classList.remove('invalid');
-    errEmail.classList.remove('show');
-  }
-
+    email.classList.add('invalid'); errEmail.classList.add('show'); ok = false;
+  } else { email.classList.remove('invalid'); errEmail.classList.remove('show'); }
   return ok;
 }
 
@@ -568,52 +546,40 @@ function validate() {
 document.getElementById('leadForm').addEventListener('submit', function(e) {
   e.preventDefault();
   if (!validate()) return;
-
-  const segments = [...document.querySelectorAll('input[name="segmento"]:checked')]
-    .map(el => el.value);
-
+  const segments = [...document.querySelectorAll('input[name="segmento"]:checked')].map(el => el.value);
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
-  const ts = `${pad(now.getDate())}/${pad(now.getMonth()+1)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-  const lead = {
-    ts,
-    nome:     document.getElementById('nome').value.trim(),
-    empresa:  document.getElementById('empresa').value.trim(),
-    cargo:    document.getElementById('cargo').value.trim(),
-    whatsapp: document.getElementById('whatsapp').value.trim(),
-    email:    document.getElementById('email').value.trim(),
+  saveLead({
+    ts:        `${pad(now.getDate())}/${pad(now.getMonth()+1)} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    fonte:     document.getElementById('nome').dataset.fonte || 'manual',
+    nome:      document.getElementById('nome').value.trim(),
+    empresa:   document.getElementById('empresa').value.trim(),
+    cargo:     document.getElementById('cargo').value.trim(),
+    whatsapp:  document.getElementById('whatsapp').value.trim(),
+    email:     document.getElementById('email').value.trim(),
     segmentos: segments.join(', '),
-    obs:      document.getElementById('obs').value.trim()
-  };
-
-  saveLead(lead);
+    obs:       document.getElementById('obs').value.trim()
+  });
   showSuccess();
 });
 
-// remove invalid state on input
 document.querySelectorAll('input, select, textarea').forEach(el => {
   el.addEventListener('input', () => {
     el.classList.remove('invalid');
-    const err = document.getElementById('err-' + el.id);
+    const err = document.getElementById('err-'+el.id);
     if (err) err.classList.remove('show');
   });
 });
 
-// ── SUCCESS & RESET ──
+// ── SUCCESS ──
 let countdownInterval;
-
 function showSuccess() {
   document.getElementById('leadForm').style.display = 'none';
-  const s = document.getElementById('successScreen');
-  s.classList.add('show');
-
+  document.getElementById('successScreen').classList.add('show');
   let t = 6;
-  const counter = document.getElementById('successCounter');
-
   countdownInterval = setInterval(() => {
     t--;
-    counter.textContent = t > 0 ? `Próximo formulário em ${t}s…` : '';
+    document.getElementById('successCounter').textContent = t > 0 ? `Próximo formulário em ${t}s…` : '';
     if (t <= 0) { clearInterval(countdownInterval); resetForm(); }
   }, 1000);
 }
@@ -622,109 +588,268 @@ function resetForm() {
   document.getElementById('leadForm').reset();
   document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
   document.querySelectorAll('.err-msg').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.autofilled').forEach(el => el.classList.remove('autofilled'));
+  document.querySelectorAll('input[id^="nome"]').forEach(el => delete el.dataset.fonte);
   document.getElementById('successScreen').classList.remove('show');
   document.getElementById('leadForm').style.display = '';
 }
 
-// ── ADMIN ACCESS: tap logo 7x ──
-let tapCount = 0, tapTimer;
+// ──────────────────────────────────────────────────────
+// CAMERA / QR SCANNER
+// ──────────────────────────────────────────────────────
+let camStream = null, scanInterval = null, scannerActive = false;
+
+async function openCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Câmera não disponível neste navegador. Use o Chrome.'); return;
+  }
+
+  document.getElementById('camOverlay').classList.add('show');
+  document.getElementById('camDetected').classList.remove('show');
+  document.getElementById('camStatus').textContent = 'Iniciando câmera…';
+
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('scanVideo');
+    video.srcObject = camStream;
+    await video.play();
+    document.getElementById('camStatus').textContent = 'Centralize o QR code no quadro';
+    scannerActive = true;
+    startQRScan(video);
+  } catch (err) {
+    document.getElementById('camStatus').textContent = 'Permita o acesso à câmera e tente novamente.';
+  }
+}
+
+function closeCamera() {
+  scannerActive = false;
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  const video = document.getElementById('scanVideo');
+  video.srcObject = null;
+  document.getElementById('camOverlay').classList.remove('show');
+}
+
+function startQRScan(video) {
+  // Use BarcodeDetector API (Chrome 83+ on Android — nativo, sem biblioteca)
+  if ('BarcodeDetector' in window) {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const tick = async () => {
+      if (!scannerActive) return;
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          handleQRResult(barcodes[0].rawValue);
+          return;
+        }
+      } catch {}
+      if (scannerActive) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+
+  } else {
+    // Fallback: canvas sampling + jsQR inline
+    document.getElementById('camStatus').textContent = 'Modo compatível · Centralize o QR code';
+    loadJsQR().then(jsQR => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      scanInterval = setInterval(() => {
+        if (!scannerActive) { clearInterval(scanInterval); return; }
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (code) handleQRResult(code.data);
+      }, 200);
+    });
+  }
+}
+
+// jsQR inline loader (minified, from CDN fallback via data if offline)
+function loadJsQR() {
+  return new Promise((resolve, reject) => {
+    if (window.jsQR) { resolve(window.jsQR); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    s.onload = () => resolve(window.jsQR);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// ── PARSE QR DATA ──
+function handleQRResult(raw) {
+  scannerActive = false;
+  const parsed = parseQRData(raw);
+
+  // Show detected badge
+  const det = document.getElementById('camDetected');
+  document.getElementById('camDetectedName').textContent =
+    parsed.nome ? `${parsed.nome}${parsed.empresa ? ' · ' + parsed.empresa : ''}` : 'Dados encontrados!';
+  det.classList.add('show');
+
+  // Vibrate if available
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+  setTimeout(() => {
+    closeCamera();
+    fillForm(parsed);
+  }, 1200);
+}
+
+function parseQRData(raw) {
+  const result = { nome: '', empresa: '', cargo: '', email: '', whatsapp: '', fonte: 'qr' };
+
+  // ── vCard ──
+  if (/BEGIN:VCARD/i.test(raw)) {
+    const lines = raw.split(/\r\n|\r|\n/);
+    for (const line of lines) {
+      const [key, ...rest] = line.split(':');
+      const val = rest.join(':').trim();
+      const k = key.toUpperCase().replace(/;[^=]+=.*$/, '').trim();
+      if (k === 'FN')    result.nome    = val;
+      if (k === 'ORG')   result.empresa = val.replace(/;/g, ' · ').trim();
+      if (k === 'TITLE') result.cargo   = val;
+      if (k === 'EMAIL' || k.startsWith('EMAIL')) result.email = val;
+      if (k === 'TEL'   || k.startsWith('TEL'))   result.whatsapp = val.replace(/[^\d+]/g,'');
+      // N: SOBRENOME;NOME → fallback se FN vazio
+      if (k === 'N' && !result.nome) {
+        const parts = val.split(';').filter(Boolean);
+        result.nome = parts.length >= 2 ? `${parts[1]} ${parts[0]}`.trim() : parts[0];
+      }
+    }
+    return result;
+  }
+
+  // ── JSON ──
+  try {
+    const j = JSON.parse(raw);
+    result.nome     = j.nome || j.name || j.full_name || '';
+    result.empresa  = j.empresa || j.company || j.org || j.organization || '';
+    result.cargo    = j.cargo || j.title || j.role || j.position || '';
+    result.email    = j.email || j.e_mail || '';
+    result.whatsapp = j.whatsapp || j.phone || j.tel || j.mobile || '';
+    return result;
+  } catch {}
+
+  // ── URL com query params ── ex: ?name=João&company=XPTO&email=...
+  try {
+    const url = new URL(raw.startsWith('http') ? raw : 'https://x.com/?' + raw);
+    const p = url.searchParams;
+    result.nome     = p.get('name') || p.get('nome') || p.get('fn') || '';
+    result.empresa  = p.get('company') || p.get('empresa') || p.get('org') || '';
+    result.cargo    = p.get('title') || p.get('cargo') || '';
+    result.email    = p.get('email') || '';
+    result.whatsapp = p.get('phone') || p.get('tel') || p.get('whatsapp') || '';
+    if (result.nome || result.email) return result;
+  } catch {}
+
+  // ── Texto simples ── tenta extrair email e telefone
+  const emailMatch = raw.match(/[\w.+-]+@[\w-]+\.[\w.]+/);
+  const phoneMatch  = raw.match(/(\+?\d[\d\s\-().]{7,}\d)/);
+  if (emailMatch) result.email = emailMatch[0];
+  if (phoneMatch) result.whatsapp = phoneMatch[1].replace(/[^\d+]/g,'');
+  // Primeira linha como nome (se não for URL)
+  if (!raw.startsWith('http')) {
+    result.nome = raw.split(/\n/)[0].trim().slice(0, 80);
+  }
+  return result;
+}
+
+function fillForm(data) {
+  const fill = (id, val) => {
+    if (!val) return;
+    const el = document.getElementById(id);
+    el.value = val;
+    el.classList.add('autofilled');
+  };
+  fill('nome',     data.nome);
+  fill('empresa',  data.empresa);
+  fill('cargo',    data.cargo);
+  fill('email',    data.email);
+  fill('whatsapp', data.whatsapp);
+
+  // Mark as QR-sourced
+  if (data.nome) document.getElementById('nome').dataset.fonte = 'qr';
+
+  // Scroll to form
+  document.getElementById('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── ADMIN ACCESS ──
+let tapCount = 0, tapTimer, cornerTaps = 0, cornerTimer;
 
 document.getElementById('adminTriggerLogo').addEventListener('click', () => {
-  tapCount++;
-  clearTimeout(tapTimer);
+  tapCount++; clearTimeout(tapTimer);
   tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
   if (tapCount >= 7) { tapCount = 0; openAdmin(); }
 });
 
-// also tap invisible corner 7x
-let cornerTaps = 0, cornerTimer;
 document.getElementById('adminCorner').addEventListener('click', () => {
-  cornerTaps++;
-  clearTimeout(cornerTimer);
+  cornerTaps++; clearTimeout(cornerTimer);
   cornerTimer = setTimeout(() => { cornerTaps = 0; }, 2500);
   if (cornerTaps >= 7) { cornerTaps = 0; openAdmin(); }
 });
 
-function openAdmin() {
-  renderLeadsTable();
-  document.getElementById('adminOverlay').classList.add('show');
-}
-
-function closeAdmin() {
-  document.getElementById('adminOverlay').classList.remove('show');
-}
+function openAdmin() { renderLeadsTable(); document.getElementById('adminOverlay').classList.add('show'); }
+function closeAdmin() { document.getElementById('adminOverlay').classList.remove('show'); }
 
 function renderLeadsTable() {
   const leads = getLeads();
-  const body = document.getElementById('leadsBody');
   const count = document.getElementById('adminCount');
+  count.textContent = leads.length === 0 ? 'Nenhum lead ainda' :
+    `${leads.length} lead${leads.length > 1 ? 's' : ''} capturado${leads.length > 1 ? 's' : ''}`;
 
-  count.textContent = leads.length === 0
-    ? 'Nenhum lead ainda'
-    : `${leads.length} lead${leads.length > 1 ? 's' : ''} capturado${leads.length > 1 ? 's' : ''}`;
-
-  if (leads.length === 0) {
-    body.innerHTML = '<tr><td colspan="9" class="no-leads">Nenhum lead capturado ainda.</td></tr>';
-    return;
+  const body = document.getElementById('leadsBody');
+  if (!leads.length) {
+    body.innerHTML = '<tr><td colspan="9" class="no-leads">Nenhum lead capturado ainda.</td></tr>'; return;
   }
 
   body.innerHTML = leads.map((l, i) => `
     <tr>
-      <td style="color:var(--muted);font-variant-numeric:tabular-nums">${i + 1}</td>
-      <td style="white-space:nowrap;color:var(--muted)">${l.ts}</td>
+      <td style="color:var(--muted);font-variant-numeric:tabular-nums">${i+1}</td>
+      <td style="white-space:nowrap;color:var(--muted)">${l.ts}${l.fonte==='qr' ? '<span class="qr-badge">QR</span>':''}</td>
       <td><strong>${esc(l.nome)}</strong></td>
       <td>${esc(l.empresa)}</td>
       <td style="color:var(--muted)">${esc(l.cargo)}</td>
       <td style="white-space:nowrap">${esc(l.whatsapp)}</td>
       <td style="white-space:nowrap">${esc(l.email)}</td>
-      <td>${l.segmentos ? l.segmentos.split(', ').map(s => `<span class="seg-pill">${esc(s)}</span>`).join('') : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="color:var(--muted);max-width:160px">${esc(l.obs) || '—'}</td>
-    </tr>
-  `).join('');
+      <td>${l.segmentos ? l.segmentos.split(', ').map(s=>`<span class="seg-pill">${esc(s)}</span>`).join('') : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="color:var(--muted);max-width:160px">${esc(l.obs)||'—'}</td>
+    </tr>`).join('');
 }
 
-function esc(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// ── EXPORT CSV ──
 function exportCSV() {
   const leads = getLeads();
   if (!leads.length) { alert('Nenhum lead para exportar.'); return; }
-
-  const headers = ['#','Data/Hora','Nome','Empresa','Cargo','WhatsApp','E-mail','Segmentos','Observação'];
-  const rows = leads.map((l, i) => [
-    i + 1, l.ts, l.nome, l.empresa, l.cargo, l.whatsapp, l.email, l.segmentos, l.obs
-  ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','));
-
-  const csv = [headers.join(','), ...rows].join('\r\n');
-  const bom = '﻿'; // BOM for Excel UTF-8
-  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const now = new Date();
-  a.download = `solocrt_leads_riw2026_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const headers = ['#','Data/Hora','Fonte','Nome','Empresa','Cargo','WhatsApp','E-mail','Segmentos','Observação'];
+  const rows = leads.map((l,i) =>
+    [i+1, l.ts, l.fonte||'manual', l.nome, l.empresa, l.cargo, l.whatsapp, l.email, l.segmentos, l.obs]
+    .map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv = '﻿' + [headers.join(','), ...rows].join('\r\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'})),
+    download: `solocrt_leads_riw2026_${new Date().toISOString().slice(0,10)}.csv`
+  });
+  a.click(); URL.revokeObjectURL(a.href);
 }
 
-// ── CLEAR LEADS ──
 function clearLeads() {
   if (!confirm('Apagar TODOS os leads? Esta ação não pode ser desfeita.')) return;
-  localStorage.removeItem(STORE_KEY);
-  renderLeadsTable();
+  localStorage.removeItem(STORE_KEY); renderLeadsTable();
 }
 
-// close admin on ESC
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeAdmin();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeAdmin(); closeCamera(); } });
 
-// Service Worker — cache offline
+// ── SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/riw2026/sw.js', { scope: '/riw2026/' })
-    .catch(() => {});
+  navigator.serviceWorker.register('/riw2026/sw.js', { scope: '/riw2026/' }).catch(() => {});
 }
 </script>
 </body>
