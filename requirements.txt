@@ -15,7 +15,7 @@ cryptography==48.0.1
 lxml==6.1.0
 requests==2.34.2
 numpy==1.26.4
-joblib==1.4.2
+joblib==1.5.3
 scikit-learn==1.4.2
 opencv-python-headless==4.9.0.80
 # deepface e tensorflow-cpu reativados no Hostinger (8GB RAM disponivel).
