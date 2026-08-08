@@ -11,6 +11,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── Agente de bugs: Ruff + Bandit ─────────────────────────────────────────
+  lint-security:
+    name: Bugs & Segurança (Ruff + Bandit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar ferramentas
+        run: pip install ruff bandit
+
+      - name: Ruff — detectar bugs reais
+        continue-on-error: true
+        run: |
+          ruff check . \
+            --select F,E9,B,W \
+            --ignore B008,B904 \
+            --output-format github \
+            --exclude migrations,venv,.venv
+
+      - name: Bandit — segurança
+        continue-on-error: true
+        run: |
+          bandit -r api/ \
+            -ll \
+            --format txt
+
+  # ── Testes & migrations ───────────────────────────────────────────────────
   test:
     name: Testes & Lint
     runs-on: ubuntu-latest
