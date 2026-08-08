@@ -3,8 +3,17 @@
 # Uso: cd /opt/soluscrt && bash hostinger_deploy.sh
 set -euo pipefail
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Usa o Python do virtualenv por padrão (o serviço systemd roda em
+# /opt/soluscrt/venv). Sem isso, o pip cai no Python do sistema, que no
+# Ubuntu 24.04 é "externally-managed" (PEP 668) e aborta o deploy.
+if [ -z "${PYTHON_BIN:-}" ]; then
+    if [ -x "$APP_DIR/venv/bin/python3" ]; then
+        PYTHON_BIN="$APP_DIR/venv/bin/python3"
+    else
+        PYTHON_BIN="${PYTHON_BIN:-python3}"
+    fi
+fi
 ENV_FILE="$APP_DIR/../.env"
 
 # Carrega .env se existir fora do diretório de código

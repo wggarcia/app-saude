@@ -293,18 +293,36 @@ def api_hosp_wa_historico(request):
 def api_hosp_wa_webhook(request):
     # GET: verificação do webhook pela Meta
     if request.method == "GET":
-        import os
-        verify_token_esperado = os.environ.get("SOLUS_WA_VERIFY_TOKEN", "soluscrt-webhook")
+        import os, hmac as _hmac
+        verify_token_esperado = os.environ.get("SOLUS_WA_VERIFY_TOKEN", "")
         mode = request.GET.get("hub.mode")
-        token = request.GET.get("hub.verify_token")
+        token = request.GET.get("hub.verify_token", "")
         challenge = request.GET.get("hub.challenge")
-        if mode == "subscribe" and token == verify_token_esperado:
+        # Falha fechada: se o token não estiver configurado, rejeita sempre.
+        if (
+            mode == "subscribe"
+            and verify_token_esperado
+            and _hmac.compare_digest(token, verify_token_esperado)
+        ):
             from django.http import HttpResponse
             return HttpResponse(challenge, content_type="text/plain")
         return JsonResponse({"erro": "Verificação falhou"}, status=403)
 
     # POST: notificações de entrega/leitura/resposta da Meta
     if request.method == "POST":
+        import hashlib, hmac as _hmac, os
+        # Valida a assinatura X-Hub-Signature-256 que a Meta envia em todo POST.
+        # Sem isso, qualquer pessoa poderia forjar eventos de webhook.
+        app_secret = os.environ.get("SOLUS_WA_APP_SECRET", "")
+        if app_secret:
+            sig_header = request.headers.get("X-Hub-Signature-256", "")
+            body = request.body
+            expected = "sha256=" + _hmac.new(
+                app_secret.encode(), body, hashlib.sha256
+            ).hexdigest()
+            if not sig_header or not _hmac.compare_digest(sig_header, expected):
+                logger.warning("WhatsApp webhook: assinatura inválida ou ausente")
+                return JsonResponse({"erro": "assinatura inválida"}, status=401)
         try:
             payload = json.loads(request.body)
             logger.info("WhatsApp webhook recebido: %s", json.dumps(payload)[:500])
