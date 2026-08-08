@@ -1147,6 +1147,7 @@
       sessionStorage.removeItem("auth_token");
       sessionStorage.removeItem("empresa_id");
       sessionStorage.removeItem("tipo_conta");
+      sessionStorage.removeItem("tab_session_key"); // evita re-login na mesma aba com chave expirada
       localStorage.removeItem("token");
       localStorage.removeItem("empresa_id");
       localStorage.removeItem("tipo_conta");
