@@ -10,7 +10,7 @@ PyJWT==2.13.0
 firebase-admin==6.7.0
 django-redis==5.4.0
 reportlab==4.4.9
-sentry-sdk[django]==2.20.0
+sentry-sdk[django]==2.66.1
 cryptography==48.0.1
 lxml==6.1.0
 requests==2.33.0
