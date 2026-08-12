@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import PlanoAcaoSST, RiscoOcupacional
-from .access_control import api_requer_feature
+from .access_control import api_requer_feature, api_requer_permissao_modulo
 from .views_dashboard import _empresa_autenticada
 
 
@@ -71,6 +71,7 @@ def _plano_to_dict(plano):
 
 @csrf_exempt
 @api_requer_feature("sst.pgr_ppra")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_riscos_ocupacionais(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -124,6 +125,7 @@ def api_riscos_ocupacionais(request):
 
 @csrf_exempt
 @api_requer_feature("sst.pgr_ppra")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_risco_detalhe(request, risco_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -207,6 +209,7 @@ def api_riscos_kpis(request):
 
 @csrf_exempt
 @api_requer_feature("sst.pgr_ppra")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_planos_acao_sst(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -259,6 +262,7 @@ def api_planos_acao_sst(request):
 
 @csrf_exempt
 @api_requer_feature("sst.pgr_ppra")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_plano_acao_sst_detalhe(request, plano_id):
     empresa = _empresa_autenticada(request)
     if not empresa:

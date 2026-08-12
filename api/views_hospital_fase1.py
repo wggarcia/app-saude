@@ -338,42 +338,58 @@ def api_sumario_alta(request, pac_id):
         condicao_alta=data.get("condicao_alta", "melhorado"),
     )
 
-    if request.method == "PUT":
-        try:
-            alta = pac.sumario_alta
-            for k, v in fields.items():
-                setattr(alta, k, v)
-            alta.save()
-        except SumarioAlta.DoesNotExist:
-            alta = SumarioAlta.objects.create(paciente=pac, **fields)
-    else:
-        alta, _ = SumarioAlta.objects.update_or_create(paciente=pac, defaults=fields)
+    dar_alta = bool(data.get("dar_alta", False))
+    from .models import InternacaoHospital
 
-    # Dar alta no paciente se tipo_alta não for transferência em andamento
-    if data.get("dar_alta", False):
-        pac.status = "obito" if fields["tipo_alta"] == "obito" else ("transferido" if fields["tipo_alta"] == "transferencia" else "alta")
-        pac.save(update_fields=["status", "atualizado_em"])
-        if pac.leito:
-            pac.leito.status = "livre"
-            pac.leito.paciente_nome = None
-            pac.leito.data_internacao = None
-            pac.leito.save(update_fields=["status", "paciente_nome", "data_internacao", "atualizado_em"])
-
-        # Bug 1 — Sincroniza de volta para InternacaoHospital (model legado).
-        # Sem este update o paciente ficava para sempre como "ativa" no model
-        # legado, tornando prescrições e RNDS inconsistentes.
-        from .models import InternacaoHospital
-        _status_legado = {
-            "obito": "obito",
-            "transferido": "transferido",
-        }.get(pac.status, "alta")
-        InternacaoHospital.objects.filter(
-            paciente_interno_sync=pac,
-            status="ativa",
-        ).update(
-            status=_status_legado,
-            data_saida=data_alta,
+    # A gravação do sumário e (quando aplicável) a baixa do paciente, a
+    # liberação do leito e o sync do model legado formam um único ato: ou tudo
+    # acontece, ou nada. Sem a transação, uma falha no meio podia liberar o
+    # leito com o paciente ainda internado — ou deixar dois pacientes no mesmo
+    # leito sob concorrência. O select_for_update no paciente e no leito
+    # serializa altas concorrentes do mesmo leito.
+    with transaction.atomic():
+        pac_locked = (
+            PacienteInternado.objects
+            .select_for_update()
+            .get(pk=pac.pk, empresa=empresa)
         )
+
+        if request.method == "PUT":
+            try:
+                alta = pac_locked.sumario_alta
+                for k, v in fields.items():
+                    setattr(alta, k, v)
+                alta.save()
+            except SumarioAlta.DoesNotExist:
+                alta = SumarioAlta.objects.create(paciente=pac_locked, **fields)
+        else:
+            alta, _ = SumarioAlta.objects.update_or_create(paciente=pac_locked, defaults=fields)
+
+        # Dar alta no paciente se tipo_alta não for transferência em andamento
+        if dar_alta:
+            pac_locked.status = "obito" if fields["tipo_alta"] == "obito" else ("transferido" if fields["tipo_alta"] == "transferencia" else "alta")
+            pac_locked.save(update_fields=["status", "atualizado_em"])
+            if pac_locked.leito_id:
+                leito = LeitoHospitalar.objects.select_for_update().get(pk=pac_locked.leito_id)
+                leito.status = "livre"
+                leito.paciente_nome = None
+                leito.data_internacao = None
+                leito.save(update_fields=["status", "paciente_nome", "data_internacao", "atualizado_em"])
+
+            # Bug 1 — Sincroniza de volta para InternacaoHospital (model legado).
+            # Sem este update o paciente ficava para sempre como "ativa" no model
+            # legado, tornando prescrições e RNDS inconsistentes.
+            _status_legado = {
+                "obito": "obito",
+                "transferido": "transferido",
+            }.get(pac_locked.status, "alta")
+            InternacaoHospital.objects.filter(
+                paciente_interno_sync=pac_locked,
+                status="ativa",
+            ).update(
+                status=_status_legado,
+                data_saida=data_alta,
+            )
 
     return JsonResponse({"ok": True, "sumario": _alta_to_dict(alta)}, status=201)
 

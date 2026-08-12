@@ -699,3 +699,58 @@ def validar_arquivo_upload(arquivo, extensoes_extra=None):
         return f"Content-Type '{content_type}' nao confere com a extensao '{ext}'."
 
     return None
+
+
+def validar_url_webhook_ssrf(url):
+    """
+    Valida uma URL de webhook contra SSRF. Retorna (True, ip_resolvido) se
+    segura, ou (False, mensagem_de_erro) se deve ser bloqueada.
+
+    Precisa ser chamada IMEDIATAMENTE antes de cada requisição de saída
+    (não só na criação da subscrição): validar apenas no cadastro é vulnerável
+    a DNS rebinding — o host público resolvido no cadastro pode passar a
+    resolver para 169.254.169.254/loopback/rede interna no momento do disparo.
+
+    Bloqueia: schemes != http/https, hosts sem DNS, e qualquer IP resolvido
+    que seja privado, loopback, link-local (metadata da cloud), reservado,
+    multicast ou não-global.
+    """
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(url or "")
+    except (ValueError, AttributeError):
+        return False, "URL inválida."
+
+    if parsed.scheme not in ("http", "https"):
+        return False, "Apenas URLs http/https são permitidas."
+
+    host = parsed.hostname or ""
+    if not host:
+        return False, "URL sem host válido."
+
+    # Resolve TODOS os endereços do host (IPv4 e IPv6) e rejeita se QUALQUER um
+    # cair em faixa interna — evita que um host com múltiplos A/AAAA burle o
+    # bloqueio expondo um registro público e outro interno.
+    try:
+        infos = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80), proto=socket.IPPROTO_TCP)
+    except OSError as err:
+        return False, f"Falha ao resolver o host: {err}"
+
+    resolvidos = {info[4][0] for info in infos}
+    if not resolvidos:
+        return False, "Host não resolveu para nenhum endereço."
+
+    for ip_str in resolvidos:
+        try:
+            ip_obj = ipaddress.ip_address(ip_str)
+        except ValueError:
+            return False, "Endereço resolvido inválido."
+        if (ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local
+                or ip_obj.is_reserved or ip_obj.is_multicast or ip_obj.is_unspecified
+                or not ip_obj.is_global):
+            return False, "URL aponta para endereço IP privado, interno ou reservado — não permitido."
+
+    return True, sorted(resolvidos)[0]

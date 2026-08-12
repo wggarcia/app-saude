@@ -1267,20 +1267,12 @@ def api_governo_plataforma_webhooks(request):
             pattern = (dados.get("tipo_evento_pattern") or "*").strip()
             if not url:
                 return JsonResponse({"erro": "url_destino é obrigatório"}, status=400)
-            # SSRF prevention: block private/internal IP ranges
-            import ipaddress, socket
-            try:
-                from urllib.parse import urlparse
-                parsed = urlparse(url)
-                host = parsed.hostname or ""
-                if not host:
-                    raise ValueError("URL sem host válido")
-                resolved_ip = socket.gethostbyname(host)
-                ip_obj = ipaddress.ip_address(resolved_ip)
-                if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
-                    return JsonResponse({"erro": "url_destino aponta para endereço IP privado ou reservado — não permitido"}, status=400)
-            except (ValueError, OSError) as ssrf_err:
-                return JsonResponse({"erro": f"url_destino inválido: {ssrf_err}"}, status=400)
+            # SSRF prevention: bloqueia faixas internas/reservadas (helper
+            # compartilhado, revalidado também no disparo/teste do webhook).
+            from .utils import validar_url_webhook_ssrf
+            ok_ssrf, motivo_ssrf = validar_url_webhook_ssrf(url)
+            if not ok_ssrf:
+                return JsonResponse({"erro": f"url_destino inválido: {motivo_ssrf}"}, status=400)
             import secrets
             sub = SubscricaoEvento.objects.create(
                 empresa=empresa,
@@ -1350,6 +1342,13 @@ def api_governo_plataforma_webhook_testar(request, webhook_id):
     if not sub:
         return JsonResponse({"erro": "Webhook não encontrado"}, status=404)
 
+    # Revalida no momento do disparo — defesa contra DNS rebinding (o host pode
+    # ter passado a resolver para um IP interno depois do cadastro).
+    from .utils import validar_url_webhook_ssrf
+    ok_ssrf, motivo_ssrf = validar_url_webhook_ssrf(sub.url_destino)
+    if not ok_ssrf:
+        return JsonResponse({"sucesso": False, "mensagem": f"Destino bloqueado: {motivo_ssrf}"}, status=400)
+
     import requests as _requests
     payload = {
         "evento": "teste.webhook",
@@ -1358,7 +1357,7 @@ def api_governo_plataforma_webhook_testar(request, webhook_id):
         "disparado_em": timezone.now().isoformat(),
     }
     try:
-        resp = _requests.post(sub.url_destino, json=payload, timeout=8)
+        resp = _requests.post(sub.url_destino, json=payload, timeout=8, allow_redirects=False)
         sucesso = 200 <= resp.status_code < 300
         return JsonResponse({
             "sucesso": sucesso,

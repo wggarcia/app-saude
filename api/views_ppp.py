@@ -245,6 +245,7 @@ def _gerar_conclusao(agentes_nocivos):
 # ──────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_preview(request, funcionario_id):
     """
     Retorna os postos de trabalho e agentes nocivos do funcionário
@@ -325,8 +326,9 @@ def api_ppp_preview(request, funcionario_id):
             ),
             "sem_postos_vinculados": len(postos_preview) == 0,
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro no preview de PPP do funcionário %s", funcionario_id)
+        return JsonResponse({"erro": "Erro ao gerar o preview do PPP."}, status=500)
 
 
 
@@ -335,6 +337,7 @@ def api_ppp_preview(request, funcionario_id):
 # ──────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_lista(request):
     empresa = _empresa(request)
     if not empresa:
@@ -359,8 +362,9 @@ def api_ppp_lista(request):
             "total": qs.count(),
             "ppps": [_ppp_dict(p) for p in qs.order_by("-data_geracao")[:200]],
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro ao listar PPPs")
+        return JsonResponse({"erro": "Erro ao listar os PPPs."}, status=500)
 
 
 @csrf_exempt
@@ -432,18 +436,23 @@ def api_ppp_criar(request):
             status="rascunho",
         )
         return JsonResponse({"sucesso": True, "ppp": _ppp_dict(ppp)}, status=201)
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro ao criar PPP")
+        return JsonResponse({"erro": "Erro ao criar o PPP."}, status=500)
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_detalhe(request, ppp_id):
     empresa = _empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=403)
+    from .models import PPPFuncionario
     try:
-        from .models import PPPFuncionario
         ppp = PPPFuncionario.objects.get(id=ppp_id, empresa=empresa)
+    except PPPFuncionario.DoesNotExist:
+        return JsonResponse({"erro": "PPP não encontrado"}, status=404)
+    try:
         if request.method == "PATCH":
             from .access_control import principal_pode_operacao_setorial
             if not principal_pode_operacao_setorial(request):
@@ -455,8 +464,9 @@ def api_ppp_detalhe(request, ppp_id):
                     setattr(ppp, campo, data[campo])
             ppp.save()
         return JsonResponse(_ppp_dict(ppp))
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=404)
+    except Exception:
+        logger.exception("Erro no detalhe/edição de PPP %s", ppp_id)
+        return JsonResponse({"erro": "Erro ao processar o PPP."}, status=500)
 
 
 @csrf_exempt
@@ -477,8 +487,11 @@ def api_ppp_finalizar(request, ppp_id):
         ppp.data_finalizacao = date.today()
         ppp.save()
         return JsonResponse({"sucesso": True, "status": "finalizado"})
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=404)
+    except PPPFuncionario.DoesNotExist:
+        return JsonResponse({"erro": "PPP não encontrado"}, status=404)
+    except Exception:
+        logger.exception("Erro ao finalizar PPP %s", ppp_id)
+        return JsonResponse({"erro": "Erro ao finalizar o PPP."}, status=500)
 
 
 @csrf_exempt
@@ -605,11 +618,13 @@ def api_ppp_transmitir_esocial(request, ppp_id):
             "resultados": resultados,
         })
 
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro ao transmitir PPP %s ao eSocial", ppp_id)
+        return JsonResponse({"erro": "Erro ao transmitir o PPP ao eSocial."}, status=500)
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_status_esocial(request, ppp_id):
     """Retorna o status de transmissão eSocial (S-2240) dos postos do funcionário."""
     empresa = _empresa(request)
@@ -657,11 +672,13 @@ def api_ppp_status_esocial(request, ppp_id):
         })
     except PPPFuncionario.DoesNotExist:
         return JsonResponse({"erro": "PPP não encontrado"}, status=404)
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro no status eSocial do PPP %s", ppp_id)
+        return JsonResponse({"erro": "Erro ao consultar status eSocial."}, status=500)
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_pdf(request, ppp_id):
     """Gera PDF do PPP conforme layout da IN INSS 128/2022."""
     empresa = _empresa(request)
@@ -819,11 +836,13 @@ def api_ppp_pdf(request, ppp_id):
         return JsonResponse({"erro": "ReportLab não instalado"}, status=500)
     except PPPFuncionario.DoesNotExist:
         return JsonResponse({"erro": "PPP não encontrado"}, status=404)
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro ao gerar PDF do PPP %s", ppp_id)
+        return JsonResponse({"erro": "Erro ao gerar o PDF do PPP."}, status=500)
 
 
 @csrf_exempt
+@api_requer_permissao_modulo("sst.clinico")
 def api_ppp_kpis(request):
     """Painel de cobertura PPP da empresa."""
     empresa = _empresa(request)
@@ -845,8 +864,9 @@ def api_ppp_kpis(request):
             "cobertura_pct": cobertura,
             "alerta": cobertura < 80,
         })
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro ao calcular KPIs de PPP")
+        return JsonResponse({"erro": "Erro ao calcular indicadores de PPP."}, status=500)
 
 
 # ── Página HTML ───────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ Hospital — Declaração de Óbito (DO)
 """
 import json
 
+from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -96,39 +97,67 @@ def api_declaracoes_obito(request, pac_id):
     except ValueError:
         return JsonResponse({"erro": "data_obito inválida (use ISO 8601)"}, status=400)
 
-    declaracao = DeclaracaoObito.objects.create(
-        paciente=pac,
-        numero_do=(data.get("numero_do") or "").strip(),
-        data_obito=data_obito,
-        local_obito=(data.get("local_obito") or "").strip(),
-        tipo_morte=data.get("tipo_morte", "natural"),
-        causa_imediata_cid=(data.get("causa_imediata_cid") or "").strip(),
-        causa_imediata_descricao=(data.get("causa_imediata_descricao") or "").strip(),
-        causa_intermediaria_cid=(data.get("causa_intermediaria_cid") or "").strip(),
-        causa_intermediaria_descricao=(data.get("causa_intermediaria_descricao") or "").strip(),
-        causa_basica_cid=(data.get("causa_basica_cid") or "").strip(),
-        causa_basica_descricao=(data.get("causa_basica_descricao") or "").strip(),
-        causas_contribuintes=(data.get("causas_contribuintes") or "").strip(),
-        necropsia_realizada=bool(data.get("necropsia_realizada", False)),
-        removido_svo_iml=bool(data.get("removido_svo_iml", False)),
-        medico_atestante=(data.get("medico_atestante") or "").strip(),
-        medico_crm=(data.get("medico_crm") or "").strip(),
-        observacoes=(data.get("observacoes") or "").strip(),
-    )
-
-    pac.status = "obito"
-    pac.save(update_fields=["status"])
-
-    # Bug 1 — Sincroniza de volta para InternacaoHospital (model legado).
-    # Sem este update o paciente ficava para sempre como "ativa" no legado,
-    # causando inconsistência nos relatórios e no RNDS.
     from .models import InternacaoHospital
-    InternacaoHospital.objects.filter(
-        paciente_interno_sync=pac,
-        status="ativa",
-    ).update(
-        status="obito",
-        data_saida=data_obito,
-    )
+
+    # Toda a emissão da DO precisa ser atômica: a criação da declaração, a
+    # marcação de óbito no paciente e o sync do model legado são um único fato
+    # clínico-legal. Sem transação, uma falha no meio deixava o paciente como
+    # "ativa" no legado com uma DO já emitida — inconsistência grave no SIM/RNDS.
+    # O select_for_update serializa requisições concorrentes: a segunda espera a
+    # primeira e vê o status já em "obito", impedindo DO duplicada.
+    with transaction.atomic():
+        pac_locked = (
+            PacienteInternado.objects
+            .select_for_update()
+            .get(pk=pac.pk, empresa=empresa)
+        )
+        if pac_locked.status == "obito" and pac_locked.declaracoes_obito.exists():
+            return JsonResponse(
+                {"erro": "Já existe Declaração de Óbito emitida para este paciente."},
+                status=409,
+            )
+
+        declaracao = DeclaracaoObito.objects.create(
+            paciente=pac_locked,
+            numero_do=(data.get("numero_do") or "").strip(),
+            data_obito=data_obito,
+            local_obito=(data.get("local_obito") or "").strip(),
+            tipo_morte=data.get("tipo_morte", "natural"),
+            causa_imediata_cid=(data.get("causa_imediata_cid") or "").strip(),
+            causa_imediata_descricao=(data.get("causa_imediata_descricao") or "").strip(),
+            causa_intermediaria_cid=(data.get("causa_intermediaria_cid") or "").strip(),
+            causa_intermediaria_descricao=(data.get("causa_intermediaria_descricao") or "").strip(),
+            causa_basica_cid=(data.get("causa_basica_cid") or "").strip(),
+            causa_basica_descricao=(data.get("causa_basica_descricao") or "").strip(),
+            causas_contribuintes=(data.get("causas_contribuintes") or "").strip(),
+            necropsia_realizada=bool(data.get("necropsia_realizada", False)),
+            removido_svo_iml=bool(data.get("removido_svo_iml", False)),
+            medico_atestante=(data.get("medico_atestante") or "").strip(),
+            medico_crm=(data.get("medico_crm") or "").strip(),
+            observacoes=(data.get("observacoes") or "").strip(),
+        )
+
+        pac_locked.status = "obito"
+        pac_locked.save(update_fields=["status"])
+
+        # Libera o leito ocupado — sem isso o leito fica preso a um paciente
+        # já falecido e some da contagem de leitos livres.
+        if pac_locked.leito_id:
+            leito = pac_locked.leito
+            leito.status = "livre"
+            leito.paciente_nome = None
+            leito.data_internacao = None
+            leito.save(update_fields=["status", "paciente_nome", "data_internacao", "atualizado_em"])
+
+        # Bug 1 — Sincroniza de volta para InternacaoHospital (model legado).
+        # Sem este update o paciente ficava para sempre como "ativa" no legado,
+        # causando inconsistência nos relatórios e no RNDS.
+        InternacaoHospital.objects.filter(
+            paciente_interno_sync=pac_locked,
+            status="ativa",
+        ).update(
+            status="obito",
+            data_saida=data_obito,
+        )
 
     return JsonResponse({"ok": True, "declaracao": _do_to_dict(declaracao)}, status=201)

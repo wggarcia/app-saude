@@ -21,7 +21,7 @@ from .services.identidade_paciente import resolver_identidade
 from .utils import validar_cpf_cadastro
 from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
-    requer_operacao_page, requer_permissao_modulo,
+    requer_operacao_page, requer_permissao_modulo, principal_pode_operacao_setorial,
 )
 
 logger = logging.getLogger(__name__)
@@ -109,6 +109,8 @@ def api_ccih_infeccoes(request):
             ],
         })
 
+    if not principal_pode_operacao_setorial(request):
+        return JsonResponse({"erro": "Sem permissão para registrar infecção (CCIH)"}, status=403)
     try:
         data = json.loads(request.body)
     except (ValueError, TypeError):
@@ -238,6 +240,8 @@ def api_ccih_isolamentos(request):
             ],
         })
 
+    if not principal_pode_operacao_setorial(request):
+        return JsonResponse({"erro": "Sem permissão para criar protocolo de isolamento (CCIH)"}, status=403)
     try:
         data = json.loads(request.body)
     except (ValueError, TypeError):
@@ -273,6 +277,9 @@ def api_ccih_isolamento_encerrar(request, iso_id):
     empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    if not principal_pode_operacao_setorial(request):
+        return JsonResponse({"erro": "Sem permissão para encerrar isolamento (CCIH)"}, status=403)
 
     _, ProtocoloIsolamento, _ = _get_ccih_models()
     try:
@@ -318,6 +325,9 @@ def api_ccih_indicadores(request):
                 for ind in qs[:24]
             ],
         })
+
+    if not principal_pode_operacao_setorial(request):
+        return JsonResponse({"erro": "Sem permissão para registrar indicadores (CCIH)"}, status=403)
 
     data = json.loads(request.body)
     competencia = data.get("competencia", date.today().strftime("%Y%m"))

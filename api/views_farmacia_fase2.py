@@ -376,50 +376,102 @@ def api_rede_farmacia_transferencia_acao(request, transf_id):
         "aprovada":  ["enviar", "cancelar"],
         "enviada":   ["receber", "cancelar"],
     }
-    permitidas = transicoes_validas.get(t.status, [])
-    if acao not in permitidas:
-        return JsonResponse({"erro": f"Ação '{acao}' não permitida no status '{t.status}'"}, status=400)
 
     novo_status_map = {
         "aprovar": "aprovada", "rejeitar": "rejeitada",
         "enviar": "enviada", "receber": "recebida", "cancelar": "cancelada",
     }
-    t.status = novo_status_map[acao]
 
-    if acao == "aprovar":
-        from decimal import Decimal, InvalidOperation
-        qtd_apr = data.get("quantidade_aprovada")
-        if qtd_apr is not None:
-            try:
-                t.quantidade_aprovada = Decimal(str(qtd_apr))
-            except (InvalidOperation, TypeError):
-                pass
-        else:
-            t.quantidade_aprovada = t.quantidade_solicitada
-        t.aprovado_por = data.get("aprovado_por", "")
+    from decimal import Decimal, InvalidOperation
 
-    if acao == "receber":
-        qtd_recebida = t.quantidade_aprovada or t.quantidade_solicitada
+    # Toda a mudança de status + movimentação de estoque roda sob lock da própria
+    # transferência. Sem travar `t` e revalidar o status DENTRO da transação, dois
+    # "receber" concorrentes na mesma transferência passavam ambos pela checagem
+    # (status ainda "enviada") e creditavam/debitavam o estoque em dobro.
+    try:
         with transaction.atomic():
-            # Dar entrada no estoque do solicitante
-            med_sol = MedicamentoFarmacia.objects.select_for_update().filter(
-                empresa=t.empresa_solicitante, nome=t.medicamento.nome
-            ).first()
-            if med_sol:
-                med_sol.quantidade_atual += qtd_recebida
-                med_sol.save(update_fields=["quantidade_atual", "atualizado_em"])
+            t = (
+                TransferenciaFarmaciaMed.objects
+                .select_for_update()
+                .select_related("medicamento", "empresa_solicitante", "empresa_fornecedora")
+                .get(pk=transf_id)
+            )
 
-            # Baixar estoque do fornecedor
-            med_forn = MedicamentoFarmacia.objects.select_for_update().filter(
-                empresa=t.empresa_fornecedora, pk=t.medicamento_id
-            ).first()
-            if med_forn and med_forn.quantidade_atual >= qtd_recebida:
+            permitidas = transicoes_validas.get(t.status, [])
+            if acao not in permitidas:
+                return JsonResponse(
+                    {"erro": f"Ação '{acao}' não permitida no status '{t.status}'"},
+                    status=409,
+                )
+
+            if acao == "aprovar":
+                qtd_apr = data.get("quantidade_aprovada")
+                if qtd_apr is not None:
+                    try:
+                        t.quantidade_aprovada = Decimal(str(qtd_apr))
+                    except (InvalidOperation, TypeError):
+                        pass
+                else:
+                    t.quantidade_aprovada = t.quantidade_solicitada
+                t.aprovado_por = data.get("aprovado_por", "")
+
+            if acao == "receber":
+                qtd_recebida = t.quantidade_aprovada or t.quantidade_solicitada
+
+                # Baixa do fornecedor PRIMEIRO — só credita o solicitante se o
+                # fornecedor de fato tinha saldo. Antes, estoque insuficiente
+                # creditava o solicitante do nada e ainda marcava como recebida.
+                med_forn = MedicamentoFarmacia.objects.select_for_update().filter(
+                    empresa=t.empresa_fornecedora, pk=t.medicamento_id
+                ).first()
+                if not med_forn:
+                    return JsonResponse(
+                        {"erro": "Medicamento não encontrado no estoque da fornecedora."},
+                        status=400,
+                    )
+                if med_forn.quantidade_atual < qtd_recebida:
+                    return JsonResponse(
+                        {"erro": f"Estoque insuficiente na fornecedora (disponível: {med_forn.quantidade_atual})."},
+                        status=409,
+                    )
                 med_forn.quantidade_atual -= qtd_recebida
                 med_forn.save(update_fields=["quantidade_atual", "atualizado_em"])
 
+                # Entrada no estoque do solicitante. Se ele ainda não tem esse
+                # medicamento cadastrado, cria a partir dos dados do de origem —
+                # do contrário a baixa da fornecedora não teria contrapartida e
+                # o estoque total da rede diminuiria (medicamento "sumindo").
+                med_sol = MedicamentoFarmacia.objects.select_for_update().filter(
+                    empresa=t.empresa_solicitante, nome=t.medicamento.nome
+                ).first()
+                if med_sol:
+                    med_sol.quantidade_atual += qtd_recebida
+                    med_sol.save(update_fields=["quantidade_atual", "atualizado_em"])
+                else:
+                    origem = t.medicamento
+                    MedicamentoFarmacia.objects.create(
+                        empresa=t.empresa_solicitante,
+                        nome=origem.nome,
+                        principio_ativo=origem.principio_ativo,
+                        forma_farmaceutica=origem.forma_farmaceutica,
+                        concentracao=origem.concentracao,
+                        registro_anvisa=origem.registro_anvisa,
+                        codigo_barras=origem.codigo_barras,
+                        fabricante=origem.fabricante,
+                        classe_terapeutica=origem.classe_terapeutica,
+                        quantidade_atual=qtd_recebida,
+                        controlado=origem.controlado,
+                        lista_portaria_344=origem.lista_portaria_344,
+                        requer_notificacao_anvisa=origem.requer_notificacao_anvisa,
+                        refrigerado=origem.refrigerado,
+                        preco_custo=origem.preco_custo,
+                        preco_venda=origem.preco_venda,
+                    )
+
+            t.status = novo_status_map[acao]
             t.save()
-    else:
-        t.save()
+    except TransferenciaFarmaciaMed.DoesNotExist:
+        return JsonResponse({"erro": "Transferência não encontrada"}, status=404)
 
     return JsonResponse({"ok": True, "transferencia": _transf_to_dict(t)})
 

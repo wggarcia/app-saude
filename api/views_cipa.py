@@ -19,6 +19,7 @@ Endpoints:
 """
 import io
 import json
+import logging
 from datetime import date, datetime
 
 from django.http import HttpResponse, JsonResponse
@@ -34,6 +35,8 @@ from reportlab.platypus import (
 )
 
 from .access_control import api_requer_feature, requer_permissao_modulo, requer_feature_pacote, principal_pode_operacao_setorial
+
+logger = logging.getLogger(__name__)
 
 # ── Palette ──────────────────────────────────────────────────────────────────
 TEAL  = colors.HexColor("#00c9a7")
@@ -164,8 +167,9 @@ def api_cipa_comissoes(request):
                 "total": qs.count(),
                 "comissoes": [_comissao_dict(c) for c in qs[:50]],
             })
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     if request.method == "POST":
         if not principal_pode_operacao_setorial(request):
@@ -185,8 +189,9 @@ def api_cipa_comissoes(request):
                 designacao_nr5=data.get("designacao_nr5", False),
             )
             return JsonResponse({"ok": True, "data": _comissao_dict(c)}, status=201)
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
 
@@ -219,8 +224,9 @@ def api_cipa_comissao_detalhe(request, comissao_id):
                     setattr(c, field, data[field])
             c.save()
             return JsonResponse({"ok": True, "data": _comissao_dict(c)})
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     if request.method == "DELETE":
         if not principal_pode_operacao_setorial(request):
@@ -228,8 +234,9 @@ def api_cipa_comissao_detalhe(request, comissao_id):
         try:
             c.delete()
             return JsonResponse({"ok": True, "msg": "Comissão removida"})
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
 
@@ -255,8 +262,9 @@ def api_cipa_membros(request, comissao_id):
                 "total": membros.count(),
                 "membros": [_membro_dict(m) for m in membros],
             })
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     if request.method == "POST":
         if not principal_pode_operacao_setorial(request):
@@ -278,8 +286,9 @@ def api_cipa_membros(request, comissao_id):
             return JsonResponse({"ok": True, "data": _membro_dict(m)}, status=201)
         except FuncionarioSST.DoesNotExist:
             return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
 
@@ -308,8 +317,9 @@ def api_cipa_reunioes(request, comissao_id):
                 "total": qs.count(),
                 "reunioes": [_reuniao_dict(r) for r in qs[:50]],
             })
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     if request.method == "POST":
         if not principal_pode_operacao_setorial(request):
@@ -329,8 +339,9 @@ def api_cipa_reunioes(request, comissao_id):
                 status=data.get("status", "agendada"),
             )
             return JsonResponse({"ok": True, "data": _reuniao_dict(r)}, status=201)
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro em endpoint CIPA")
+            return JsonResponse({"erro": "Erro interno ao processar a solicitação."}, status=500)
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
 
@@ -364,6 +375,8 @@ def api_cipa_reuniao_detalhe(request, reuniao_id):
         return JsonResponse(d)
 
     if request.method in ("PATCH", "PUT"):
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({"erro": "Sem permissão para editar reunião CIPA"}, status=403)
         try:
             data = _json(request)
             for field in ("tipo", "data_reuniao", "pauta", "ata", "local", "status"):
@@ -371,8 +384,9 @@ def api_cipa_reuniao_detalhe(request, reuniao_id):
                     setattr(r, field, data[field])
             r.save()
             return JsonResponse({"ok": True, "data": _reuniao_dict(r)})
-        except Exception as e:
-            return JsonResponse({"erro": str(e)}, status=500)
+        except Exception:
+            logger.exception("Erro ao editar reunião CIPA %s", reuniao_id)
+            return JsonResponse({"erro": "Erro ao salvar a reunião."}, status=500)
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
 
@@ -485,8 +499,9 @@ def api_cipa_ata_pdf(request, reuniao_id):
 
     except ReuniaoCIPA.DoesNotExist:
         return JsonResponse({"erro": "Reunião não encontrada"}, status=404)
-    except Exception as e:
-        return JsonResponse({"erro": str(e)}, status=500)
+    except Exception:
+        logger.exception("Erro ao gerar PDF da ata CIPA %s", reuniao_id)
+        return JsonResponse({"erro": "Erro ao gerar o PDF da ata."}, status=500)
 
 
 @api_requer_feature("sst.cipa")

@@ -3901,6 +3901,11 @@ def api_ps_odontologia(request):
         ok_cpf, erro_cpf = validar_cpf_cadastro(d.get("cpf", ""), empresa)
         if not ok_cpf:
             return JsonResponse({"erro": erro_cpf}, status=400)
+        from decimal import Decimal, InvalidOperation
+        try:
+            mensalidade = Decimal(str(d.get("valor_mensalidade", 0) or 0))
+        except (InvalidOperation, TypeError):
+            mensalidade = Decimal("0")
         b = BeneficiarioOdonto.objects.create(
             empresa=empresa,
             nome=d.get("nome", ""),
@@ -3909,6 +3914,7 @@ def api_ps_odontologia(request):
             email=d.get("email", ""),
             plano_odonto=d.get("plano_odonto", "Odonto Básico"),
             numero_carteirinha=d.get("numero_carteirinha", ""),
+            valor_mensalidade=mensalidade,
             data_inicio_vigencia=d.get("data_inicio_vigencia") or None,
             data_fim_vigencia=d.get("data_fim_vigencia") or None,
             dentista_responsavel=d.get("dentista_responsavel", ""),
@@ -3922,15 +3928,18 @@ def api_ps_odontologia(request):
     # MLR odonto (custo guias executadas / receita de mensalidades)
     custo_odonto = float(GuiaOdonto.objects.filter(empresa=empresa, status="executado")
                         .aggregate(s=Sum("valor_pago"))["s"] or 0)
-    # TODO: não existe, hoje, um model de contrato/mensalidade odontológica
-    # (BeneficiarioOdonto não tem FK para um contrato com valor_mensal, e
-    # ContratoGrupo é vinculado a PlanoSaude/beneficiários médicos, não a
-    # BeneficiarioOdonto). Sem essa base, a receita não pode ser calculada
-    # a partir de dados reais — mantém-se a estimativa de R$80/vida
-    # (_MENSALIDADE_ODONTO_ESTIMADA), sinalizada como estimativa no retorno.
-    # Para tornar isso real: criar um model tipo ContratoOdontoGrupo (ou
-    # campo valor_mensal em BeneficiarioOdonto) e reportar ao usuário.
-    receita_odonto = vidas * _MENSALIDADE_ODONTO_ESTIMADA
+    # Receita real: soma das mensalidades cadastradas nas vidas ativas
+    # (BeneficiarioOdonto.valor_mensalidade). Só quando NENHUMA vida tem
+    # mensalidade cadastrada é que caímos na estimativa de R$80/vida, deixando
+    # isso explícito para o usuário via "mlr_fonte".
+    ativos = BeneficiarioOdonto.objects.filter(empresa=empresa, status="ativo")
+    receita_real = float(ativos.aggregate(s=Sum("valor_mensalidade"))["s"] or 0)
+    if receita_real > 0:
+        receita_odonto = receita_real
+        mlr_fonte = "real"
+    else:
+        receita_odonto = vidas * _MENSALIDADE_ODONTO_ESTIMADA
+        mlr_fonte = "estimado"
     mlr_odonto = round(custo_odonto / max(receita_odonto, 1) * 100, 1)
 
     dados = []
@@ -3938,8 +3947,10 @@ def api_ps_odontologia(request):
         qs = BeneficiarioOdonto.objects.filter(empresa=empresa).order_by("-criado_em")[:50]
         dados = [
             {
+                "id": b.pk,
                 "nome": b.nome,
                 "plano": b.plano_odonto,
+                "mensalidade": float(b.valor_mensalidade),
                 "vigencia": b.data_fim_vigencia.isoformat() if b.data_fim_vigencia else None,
                 "ultimo_uso": b.data_ultimo_uso.strftime("%b/%y") if b.data_ultimo_uso else "—",
                 "status": b.status,
@@ -3969,7 +3980,8 @@ def api_ps_odontologia(request):
 
     return JsonResponse({
         "vidas": vidas,
-        "mlr_fonte": "estimado",  # receita odonto usa mensalidade estimada — ver TODO acima
+        "mlr_fonte": mlr_fonte,  # "real" quando há mensalidades cadastradas; senão "estimado"
+        "receita_mensal": round(receita_odonto, 2),
         "dentistas": PrestadorPlanoSaude.objects.filter(empresa=empresa, especialidades__icontains="odonto").count(),
         "guias_pendentes": guias_pend,
         "mlr": mlr_odonto,

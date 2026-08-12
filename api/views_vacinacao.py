@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import CampanhaVacinacao, FuncionarioSST, RegistroVacinacao
 from .views_dashboard import _empresa_autenticada
-from .access_control import api_requer_feature
+from .access_control import api_requer_feature, api_requer_permissao_modulo
 
 
 def _json_body(request):
@@ -65,6 +65,7 @@ def _registro_to_dict(registro):
 
 @csrf_exempt
 @api_requer_feature("sst.saude_ocupacional")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_campanhas_vacinacao(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -109,6 +110,7 @@ def api_campanhas_vacinacao(request):
 
 @csrf_exempt
 @api_requer_feature("sst.saude_ocupacional")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_campanha_detalhe(request, campanha_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -145,6 +147,7 @@ def api_campanha_detalhe(request, campanha_id):
 
 @csrf_exempt
 @api_requer_feature("sst.saude_ocupacional")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_registros_vacinacao(request, campanha_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -222,6 +225,7 @@ def api_registros_vacinacao(request, campanha_id):
 
 @csrf_exempt
 @api_requer_feature("sst.saude_ocupacional")
+@api_requer_permissao_modulo("sst.gestao_conformidade")
 def api_registro_vacinacao_detalhe(request, reg_id):
     empresa = _empresa_autenticada(request)
     if not empresa:

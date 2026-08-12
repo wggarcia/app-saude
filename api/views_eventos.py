@@ -12,12 +12,20 @@ import hashlib
 import hmac
 import json
 import re
+import urllib.request
 from datetime import date, datetime, timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db.models import Count, Q
 from .views_dashboard import _empresa_autenticada
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Impede que urlopen siga 3xx — um destino de webhook que passa na
+    validação SSRF não pode redirecionar para um endereço interno."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _evento_to_dict(e):
@@ -157,9 +165,25 @@ def _processar_evento(evento):
             if sub.secret_hmac:
                 sig = hmac.new(sub.secret_hmac.encode(), payload_bytes, hashlib.sha256).hexdigest()
                 headers["X-Signature-256"] = f"sha256={sig}"
+            # Revalida SSRF no disparo — defesa contra DNS rebinding. O
+            # NoRedirectHandler impede que o destino escape para um endereço
+            # interno via 3xx depois de passar na validação inicial.
+            from .utils import validar_url_webhook_ssrf
+            ok_ssrf, motivo_ssrf = validar_url_webhook_ssrf(sub.url_destino)
+            if not ok_ssrf:
+                evento.erro_ultimo = f"Destino bloqueado (SSRF): {motivo_ssrf}"[:500]
+                evento.tentativas += 1
+                if evento.tentativas >= evento.max_tentativas:
+                    evento.status = "dlq"
+                else:
+                    evento.status = "falha"
+                    evento.proxima_tentativa = timezone.now() + timedelta(minutes=2 ** evento.tentativas)
+                evento.save(update_fields=["status", "tentativas", "erro_ultimo", "proxima_tentativa"])
+                continue
             try:
+                opener = urllib.request.build_opener(_NoRedirect())
                 req = urllib.request.Request(sub.url_destino, data=payload_bytes, headers=headers, method="POST")
-                with urllib.request.urlopen(req, timeout=5):
+                with opener.open(req, timeout=5):
                     entregue = True
             except Exception as err:
                 evento.erro_ultimo = str(err)[:500]

@@ -6388,6 +6388,10 @@ class BeneficiarioOdonto(models.Model):
     email = models.EmailField(blank=True, default="")
     plano_odonto = models.CharField(max_length=100, blank=True, default="Odonto Básico")
     numero_carteirinha = models.CharField(max_length=50, blank=True, default="")
+    valor_mensalidade = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Mensalidade odontológica por vida (R$). Base real do cálculo de MLR/receita.",
+    )
     data_inicio_vigencia = models.DateField(null=True, blank=True)
     data_fim_vigencia = models.DateField(null=True, blank=True)
     data_ultimo_uso = models.DateField(null=True, blank=True)
