@@ -16,6 +16,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature,
     get_setor,
     requer_setor,
@@ -94,6 +95,7 @@ def hospital_cme_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_cme_instrumentais(request):
     """GET/POST /api/hospital/cme/instrumentais"""
     empresa = _hosp(request)
@@ -132,6 +134,7 @@ def api_cme_instrumentais(request):
 @csrf_exempt
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_cme_instrumental_detalhe(request, pk):
     """GET /api/hospital/cme/instrumentais/<pk> — detalhe + histórico de ciclos"""
     empresa = _hosp(request)
@@ -163,6 +166,7 @@ def api_cme_instrumental_detalhe(request, pk):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_cme_ciclos(request):
     """GET/POST /api/hospital/cme/ciclos"""
     empresa = _hosp(request)
@@ -221,6 +225,7 @@ def api_cme_ciclos(request):
 @csrf_exempt
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_cme_ciclo_detalhe(request, pk):
     """GET /api/hospital/cme/ciclos/<pk>"""
     empresa = _hosp(request)
@@ -241,6 +246,7 @@ def api_cme_ciclo_detalhe(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_cme_ciclo_uso(request, pk):
     """POST /api/hospital/cme/ciclos/<pk>/uso — registra paciente_uso no ciclo"""
     empresa = _hosp(request)
@@ -272,6 +278,7 @@ def api_cme_ciclo_uso(request, pk):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_cme_vencimentos(request):
     """GET /api/hospital/cme/vencimentos — vencidos ou a vencer em 7 dias"""
     empresa = _hosp(request)
@@ -313,6 +320,7 @@ def api_cme_vencimentos(request):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_cme_kpis(request):
     """GET /api/hospital/cme/kpis"""
     empresa = _hosp(request)

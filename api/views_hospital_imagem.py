@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature,
     api_requer_gerencia,
     get_setor,
@@ -88,6 +89,7 @@ def hospital_imagem_page(request):
 # ─── API: Lista exames RIS ────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.ris_pacs")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET"])
 def api_ris_exames(request):
     empresa = _empresa(request)
@@ -128,6 +130,7 @@ def api_ris_exames(request):
 # ─── API: Solicitar exame RIS ─────────────────────────────────────────────────
 
 @api_requer_feature("hospital.ris_pacs")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_ris_solicitar(request):
@@ -180,6 +183,7 @@ def api_ris_solicitar(request):
 
 
 @api_requer_feature("hospital.ris_pacs")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_ris(request):
@@ -191,6 +195,7 @@ def api_ris(request):
 # ─── API: Laudar exame ────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.ris_pacs")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_ris_laudar(request, exame_id):
@@ -225,6 +230,7 @@ def api_ris_laudar(request, exame_id):
 # ─── API: KPIs por modalidade ─────────────────────────────────────────────────
 
 @api_requer_feature("hospital.ris_pacs")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET"])
 def api_ris_kpis(request):
     empresa = _empresa(request)
@@ -262,6 +268,7 @@ MAX_DICOM_UPLOAD_BYTES = 60 * 1024 * 1024  # 60MB por arquivo — exames de imag
 
 
 @api_requer_feature("hospital.ris_pacs")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_ris_dicom(request, exame_id):
@@ -318,6 +325,7 @@ def api_ris_dicom(request, exame_id):
 # ─── API: Download/visualização do arquivo DICOM (autenticado) ───────────────
 
 @api_requer_feature("hospital.ris_pacs")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET"])
 def api_ris_dicom_arquivo(request, instancia_id):
     empresa = _empresa(request)

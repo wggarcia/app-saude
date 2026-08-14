@@ -20,6 +20,7 @@ from django.views.decorators.http import require_http_methods
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .utils import validar_cpf_cadastro
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -53,6 +54,7 @@ def hospital_obstetrico_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.obstetrico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_obstetrico_partogramas(request):
     """GET/POST /api/hospital/obstetrico/partogramas/"""
     empresa = _hosp(request)
@@ -122,6 +124,7 @@ def api_obstetrico_partogramas(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.obstetrico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_obstetrico_partograma_detalhe(request, pt_id):
     """GET/POST /api/hospital/obstetrico/partogramas/<id>/ — GET detalhe ou POST registra evolução."""
     empresa = _hosp(request)
@@ -204,6 +207,7 @@ def api_obstetrico_partograma_detalhe(request, pt_id):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.obstetrico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_obstetrico_partos(request):
     """GET/POST /api/hospital/obstetrico/partos/"""
     empresa = _hosp(request)
@@ -307,6 +311,7 @@ def api_obstetrico_partos(request):
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
 @api_requer_feature("hospital.obstetrico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_obstetrico_parto_detalhe(request, parto_id):
     """GET/PUT /api/hospital/obstetrico/partos/<id>/"""
     empresa = _hosp(request)
@@ -356,6 +361,7 @@ def api_obstetrico_parto_detalhe(request, parto_id):
 @csrf_exempt
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.obstetrico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_obstetrico_dnv(request, parto_id):
     """GET /api/hospital/obstetrico/partos/<id>/dnv/ — gera estrutura DNV eletrônica (SINASC)."""
     empresa = _hosp(request)
@@ -418,6 +424,7 @@ def api_obstetrico_dnv(request, parto_id):
 # ── KPIs perinatais ────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.obstetrico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_obstetrico_kpis(request):
     """GET /api/hospital/obstetrico/kpis/"""
     empresa = _hosp(request)

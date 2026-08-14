@@ -16,6 +16,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -72,6 +73,7 @@ def hospital_manutencao_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.equipamentos")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_manutencao_ordens(request):
     """GET/POST /api/hospital/manutencao/ordens"""
     empresa = _hosp(request)
@@ -136,6 +138,7 @@ def api_manutencao_ordens(request):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
 @api_requer_feature("hospital.equipamentos")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_manutencao_ordem_detalhe(request, pk):
     """GET/PATCH /api/hospital/manutencao/ordens/<pk>"""
     empresa = _hosp(request)
@@ -177,6 +180,7 @@ def api_manutencao_ordem_detalhe(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.equipamentos")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_manutencao_ordem_concluir(request, pk):
     """POST /api/hospital/manutencao/ordens/<pk>/concluir"""
     empresa = _hosp(request)
@@ -217,6 +221,7 @@ def api_manutencao_ordem_concluir(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.equipamentos")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_manutencao_ordem_cancelar(request, pk):
     """POST /api/hospital/manutencao/ordens/<pk>/cancelar"""
     empresa = _hosp(request)
@@ -250,6 +255,7 @@ def api_manutencao_ordem_cancelar(request, pk):
 @csrf_exempt
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.equipamentos")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_manutencao_kpis(request):
     """GET /api/hospital/manutencao/kpis"""
     empresa = _hosp(request)

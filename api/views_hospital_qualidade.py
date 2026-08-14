@@ -17,6 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -53,6 +54,7 @@ def hospital_qualidade_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.qualidade")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_qualidade_incidentes(request):
     """GET/POST /api/hospital/qualidade/incidentes"""
     empresa = _hosp(request)
@@ -129,6 +131,7 @@ def api_qualidade_incidentes(request):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
 @api_requer_feature("hospital.qualidade")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_qualidade_incidente_detalhe(request, pk):
     """GET/PATCH /api/hospital/qualidade/incidentes/<pk>"""
     empresa = _hosp(request)
@@ -180,6 +183,7 @@ def api_qualidade_incidente_detalhe(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.qualidade")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_qualidade_incidente_encerrar(request, pk):
     """POST /api/hospital/qualidade/incidentes/<pk>/encerrar"""
     empresa = _hosp(request)
@@ -213,6 +217,7 @@ def api_qualidade_incidente_encerrar(request, pk):
 @csrf_exempt
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.qualidade")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_qualidade_indicadores(request):
     """GET /api/hospital/qualidade/indicadores
     Indicadores ONA/JCI do mês atual calculados a partir de IncidenteSegurancaPaciente.
@@ -267,6 +272,7 @@ def api_qualidade_indicadores(request):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.qualidade")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_qualidade_kpis(request):
     """GET /api/hospital/qualidade/kpis"""
     empresa = _hosp(request)

@@ -85,11 +85,19 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
   </div>
 
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpi-val" id="kpiCatalogo">—</div><div class="kpi-lbl">Itens Ativos no Catálogo</div></div>
-    <div class="kpi warn"><div class="kpi-val" id="kpiPendentes">—</div><div class="kpi-lbl">Autorizações Pendentes</div></div>
+  <div class="kpi-row" style="grid-template-columns:repeat(7,1fr)">
+    <div class="kpi"><div class="kpi-val" id="kpiCatalogo">—</div><div class="kpi-lbl">Itens no Catálogo</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiPendentes">—</div><div class="kpi-lbl">Pendentes</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiAtrasadas">—</div><div class="kpi-lbl">Pendentes Atrasadas (SLA 5d)</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiVencidas">—</div><div class="kpi-lbl">Autorizações Vencidas</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiForaPadrao">—</div><div class="kpi-lbl">Fora do Padrão (triagem)</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiTaxaAprov">—</div><div class="kpi-lbl">Taxa de Aprovação</div></div>
     <div class="kpi"><div class="kpi-val" id="kpiImplantes">—</div><div class="kpi-lbl">Implantes (30d)</div></div>
+  </div>
+  <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi danger"><div class="kpi-val" id="kpiJuntas">—</div><div class="kpi-lbl">Juntas Médicas Abertas (RN 424)</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiFraude">—</div><div class="kpi-lbl">Médicos c/ Padrão Atípico (30d)</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiAnvisaVencido">—</div><div class="kpi-lbl">Registros ANVISA Vencidos</div></div>
   </div>
 
   <div class="tabs">
@@ -113,16 +121,21 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <div class="form-card-title">Nova Solicitação de Autorização OPME</div>
       <div class="form-row">
         <div class="form-group"><label>Paciente *</label><input id="oPaciente"></div>
-        <div class="form-group"><label>CID-10</label><input id="oCid"></div>
+        <div class="form-group"><label>CPF do Paciente</label><input id="oCpf" maxlength="14" placeholder="000.000.000-00"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Médico Solicitante *</label><input id="oMedico"></div>
         <div class="form-group"><label>CRM</label><input id="oCrm"></div>
       </div>
-      <div class="form-group"><label>Item do Catálogo (ID) e Quantidade *</label>
+      <div class="form-row">
+        <div class="form-group"><label>CID-10</label><input id="oCid"></div>
+        <div class="form-group"><label>Procedimento TUSS/SIGTAP</label><input id="oProcTuss" placeholder="ex: 30729068 — habilita a triagem por procedimento"></div>
+      </div>
+      <div class="form-group"><label>Material OPME · Quantidade · Preço solicitado (R$) *</label>
         <div style="display:flex;gap:8px">
           <select id="oOpmeId" style="flex:2"></select>
-          <input type="number" id="oQtd" value="1" style="flex:1">
+          <input type="number" id="oQtd" value="1" min="1" style="flex:1" title="Quantidade">
+          <input type="number" id="oPreco" step="0.01" placeholder="Preço R$" style="flex:1.4" title="Preço solicitado">
         </div>
       </div>
       <div class="form-group"><label>Justificativa Clínica</label><textarea id="oJustificativa" rows="3" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;width:100%"></textarea></div>
@@ -137,28 +150,43 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div class="card">
       <div class="card-header">
         <div class="card-title">📦 Catálogo de OPME</div>
-        <button class="btn btn-primary btn-sm" onclick="abrirNovoItem()">+ Novo Item</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="catBusca" placeholder="Buscar descrição/ANVISA…" onkeydown="if(event.key==='Enter')carregarCatalogo()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--text)">
+          <button class="btn btn-primary btn-sm" onclick="abrirNovoItem()">+ Novo Item</button>
+        </div>
       </div>
       <table>
-        <thead><tr><th>Descrição</th><th>Tipo</th><th>ANVISA</th><th>Fabricante</th><th>Preço Máximo</th></tr></thead>
-        <tbody id="catalogoBody"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+        <thead><tr><th>Descrição</th><th>Tipo</th><th>ANVISA</th><th>Cód. Operadora</th><th>Fabricante</th><th>Preço Máximo</th><th>Ações</th></tr></thead>
+        <tbody id="catalogoBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
       </table>
     </div>
     <div class="form-card" id="formItemCard" style="display:none">
-      <div class="form-card-title">Novo Item de Catálogo</div>
+      <div class="form-card-title" id="formItemTitulo">Novo Item de Catálogo</div>
+      <input type="hidden" id="iEditId" value="">
       <div class="form-row">
         <div class="form-group"><label>Descrição *</label><input id="iDescricao"></div>
         <div class="form-group"><label>Tipo</label>
-          <select id="iTipo"><option value="orteses">Órtese</option><option value="proteses">Prótese</option><option value="material">Material Especial</option></select>
+          <select id="iTipo"><option value="protese">Prótese</option><option value="ortese">Órtese</option><option value="material">Material Especial</option><option value="implante">Implante</option></select>
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Código ANVISA</label><input id="iAnvisa"></div>
+        <div class="form-group"><label>Código ANVISA</label><input id="iAnvisa" placeholder="10 a 13 dígitos"></div>
         <div class="form-group"><label>Código SIGTAP</label><input id="iSigtap"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Fabricante</label><input id="iFabricante"></div>
         <div class="form-group"><label>Preço Máximo (R$)</label><input type="number" step="0.01" id="iPreco"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Código da Operadora <span style="opacity:.6">(ex.: TNU Unimed)</span></label><input id="iCodOperadora"></div>
+        <div class="form-group"><label>Validade Registro ANVISA</label><input type="date" id="iValidadeAnvisa"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1"><label>Grupo de Equivalência Clínica <span style="opacity:.6">(itens com o mesmo valor viram marcas alternativas — RN 424/ANS)</span></label><input id="iGrupoEquivalencia" placeholder="ex: PROTESE-QUADRIL-NAO-CIMENTADA"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label style="font-size:12px;color:var(--text)"><input type="checkbox" id="iHomologado" checked> Homologado pela operadora/comissão</label></div>
+        <div class="form-group"><label style="font-size:12px;color:var(--text)"><input type="checkbox" id="iPreferencial"> Material preferencial (padrão de menor custo)</label></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" onclick="document.getElementById('formItemCard').style.display='none'">Cancelar</button>
@@ -182,11 +210,15 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <div class="form-card-title">Registrar Implante</div>
       <div class="form-row">
         <div class="form-group"><label>Paciente *</label><input id="mPaciente"></div>
-        <div class="form-group"><label>Item do Catálogo (ID) *</label><select id="mOpmeId"></select></div>
+        <div class="form-group"><label>CPF do Paciente</label><input id="mCpf" maxlength="14" placeholder="000.000.000-00"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Número de Série</label><input id="mSerie"></div>
-        <div class="form-group"><label>Lote do Fabricante</label><input id="mLote"></div>
+        <div class="form-group"><label>Material OPME *</label><select id="mOpmeId"></select></div>
+        <div class="form-group"><label>Autorização Vinculada</label><select id="mAutId"><option value="">— nenhuma —</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Número de Série * <span style="color:var(--warn)">(ANVISA)</span></label><input id="mSerie"></div>
+        <div class="form-group"><label>Lote do Fabricante * <span style="color:var(--warn)">(ANVISA)</span></label><input id="mLote"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Data do Implante *</label><input type="date" id="mData"></div>
@@ -204,6 +236,10 @@ tr:hover td{background:rgba(0,194,255,.03)}
 function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
 function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
 function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+// Escape anti-XSS: todo dado da API passa por aqui antes de ir para innerHTML.
+function esc(v){ if(v==null) return ''; return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+// Data local sem deslize de fuso: "YYYY-MM-DD" parseado como UTC atrasava 1 dia.
+function fmtData(s){ if(!s) return '—'; var p=String(s).split('-'); if(p.length===3) return p[2].slice(0,2)+'/'+p[1]+'/'+p[0]; return esc(s); }
 
 function setTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
@@ -214,16 +250,23 @@ function setTab(tab) {
 async function carregarKpis() {
   try {
     var r = await fetch('/api/hospital/opme/kpis', { credentials: 'include', headers: headers() });
-    if (!r.ok) return;
+    if (!r.ok) { document.getElementById('kpiCatalogo').textContent = '!'; return; }
     var d = await r.json();
     document.getElementById('kpiCatalogo').textContent = d.catalogo_itens_ativos;
     document.getElementById('kpiPendentes').textContent = d.autorizacoes_pendentes;
+    document.getElementById('kpiAtrasadas').textContent = d.pendentes_atrasadas_sla;
+    document.getElementById('kpiVencidas').textContent = d.autorizacoes_vencidas;
+    document.getElementById('kpiForaPadrao').textContent = d.autorizacoes_fora_padrao;
     document.getElementById('kpiTaxaAprov').textContent = d.taxa_aprovacao_pct + '%';
     document.getElementById('kpiImplantes').textContent = d.implantaveis_ultimos_30d;
-  } catch(e) {}
+    document.getElementById('kpiJuntas').textContent = d.juntas_medicas_abertas;
+    document.getElementById('kpiFraude').textContent = d.medicos_padrao_atipico_30d;
+    document.getElementById('kpiAnvisaVencido').textContent = d.catalogo_registros_anvisa_vencidos;
+  } catch(e) { document.getElementById('kpiCatalogo').textContent = '!'; }
 }
 
 var statusAutMap = {solicitada:'badge-warn', aprovada:'badge-ok', negada:'badge-danger', parcial:'badge-info', cancelada:'badge-gray'};
+var autCache = [];
 
 async function carregarAutorizacoes() {
   var tbody = document.getElementById('autorizacoesBody');
@@ -232,77 +275,251 @@ async function carregarAutorizacoes() {
     var r = await fetch('/api/hospital/opme/autorizacoes', { credentials: 'include', headers: headers() });
     if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
     var d = await r.json();
+    autCache = d.autorizacoes;
+    // popula select de autorização vinculada no form de implante (só aprovadas/parciais)
+    var selAut = document.getElementById('mAutId');
+    if (selAut) {
+      selAut.innerHTML = '<option value="">— nenhuma —</option>' + d.autorizacoes
+        .filter(function(a){ return a.status === 'aprovada' || a.status === 'parcial'; })
+        .map(function(a){ return '<option value="'+a.id+'">'+esc(a.numero_protocolo)+' — '+esc(a.paciente_nome)+'</option>'; }).join('');
+    }
     if (!d.autorizacoes.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma autorização registrada.</td></tr>'; return; }
     tbody.innerHTML = d.autorizacoes.map(function(a) {
-      var itensTxt = a.itens.map(function(it){ return it.opme_descricao + ' (x' + it.quantidade + ')'; }).join(', ');
-      var acoes = a.status === 'solicitada' ? (
-        '<button class="btn btn-ok btn-sm" onclick="acaoAutorizacao(' + a.id + ',\'aprovar\')">Aprovar</button> ' +
-        '<button class="btn btn-danger btn-sm" onclick="acaoAutorizacao(' + a.id + ',\'negar\')">Negar</button>'
-      ) : '—';
-      return '<tr><td><strong>' + a.numero_protocolo + '</strong></td><td>' + a.paciente_nome + '</td><td>' + a.medico_solicitante + '</td><td>' + (a.cid10||'—') + '</td><td class="itens-mini">' + itensTxt + '</td><td><span class="badge ' + (statusAutMap[a.status]||'badge-gray') + '">' + a.status_display + '</span></td><td>' + acoes + '</td></tr>';
+      var itensTxt = a.itens.map(function(it){
+        var qt = it.status === 'aprovado' && it.quantidade_aprovada != it.quantidade
+          ? (it.quantidade_aprovada + '/' + it.quantidade) : it.quantidade;
+        return esc(it.opme_descricao) + ' (x' + esc(qt) + ')';
+      }).join(', ');
+      var acoes;
+      if (a.status === 'solicitada') {
+        acoes = '<button class="btn btn-ok btn-sm" onclick="acaoAutorizacao(' + a.id + ',\'aprovar\')">Aprovar</button> ' +
+                '<button class="btn btn-danger btn-sm" onclick="acaoAutorizacao(' + a.id + ',\'negar\')">Negar</button> ' +
+                '<button class="btn btn-ghost btn-sm" onclick="verDetalhe(' + a.id + ')">Ver</button>';
+      } else if (a.status === 'aprovada' || a.status === 'parcial') {
+        acoes = '<button class="btn btn-ghost btn-sm" onclick="verDetalhe(' + a.id + ')">Ver</button> ' +
+                '<button class="btn btn-danger btn-sm" onclick="acaoAutorizacao(' + a.id + ',\'cancelar\')">Cancelar</button>';
+      } else {
+        acoes = '<button class="btn btn-ghost btn-sm" onclick="verDetalhe(' + a.id + ')">Ver</button>';
+      }
+      var flag = (a.alertas_triagem && a.alertas_triagem.length) ? ' <span class="badge badge-danger" title="'+esc(a.alertas_triagem.join(' | '))+'">⚠ fora do padrão</span>' : '';
+      var flagFraude = a.tem_alerta_fraude ? ' <span class="badge badge-warn" title="'+esc((a.alertas_fraude||[]).join(' | '))+'">🔎 padrão atípico</span>' : '';
+      return '<tr><td><strong>' + esc(a.numero_protocolo) + '</strong></td><td>' + esc(a.paciente_nome) + '</td><td>' + esc(a.medico_solicitante) + '</td><td>' + esc(a.cid10||'—') + '</td><td class="itens-mini">' + itensTxt + flag + flagFraude + '</td><td><span class="badge ' + (statusAutMap[a.status]||'badge-gray') + '">' + esc(a.status_display) + '</span></td><td>' + acoes + '</td></tr>';
     }).join('');
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
 }
 
-async function acaoAutorizacao(id, acao) {
+function verDetalhe(id) {
+  var a = autCache.filter(function(x){ return x.id === id; })[0];
+  if (!a) return;
+  var linhas = a.itens.map(function(it){ return '• ' + it.opme_descricao + ' — solicitado: ' + it.quantidade + (it.quantidade_aprovada ? (', aprovado: ' + it.quantidade_aprovada) : '') + ' [' + it.status + ']' + (it.fora_padrao ? '  ⚠️ FORA DO PADRÃO' : ''); }).join('\n');
+  var ia = a.ia_decisao ? ('\n\n🤖 IA de autorização: ' + a.ia_decisao.toUpperCase() +
+             ' (confiança ' + Math.round((a.ia_score||0)*100) + '%)\n' + (a.ia_justificativa||'')) : '';
+  var triagem = (a.alertas_triagem && a.alertas_triagem.length)
+    ? ('\n\n⚠️ ALERTAS DE TRIAGEM:\n• ' + a.alertas_triagem.join('\n• ')) : '\n\n✅ Triagem: sem alertas.';
+  var fraude = (a.alertas_fraude && a.alertas_fraude.length)
+    ? ('\n\n🔎 PADRÃO ATÍPICO (possível fraude/abuso):\n• ' + a.alertas_fraude.join('\n• ')) : '';
+  var txt = 'Protocolo: ' + a.numero_protocolo + '\nPaciente: ' + a.paciente_nome + (a.cpf_paciente ? ' (CPF ' + a.cpf_paciente + ')' : '') +
+            '\nMédico: ' + a.medico_solicitante + (a.crm_medico ? ' — CRM ' + a.crm_medico : '') +
+            '\nCID-10: ' + (a.cid10 || '—') + (a.procedimento_tuss ? ('\nProcedimento TUSS: ' + a.procedimento_tuss) : '') +
+            '\nStatus: ' + a.status_display + '\nValidade: ' + fmtData(a.validade_ate) +
+            triagem + fraude + ia +
+            '\n\nJustificativa clínica:\n' + (a.justificativa || '(não informada)') +
+            '\n\nItens:\n' + linhas +
+            (a.observacao_auditoria ? ('\n\nParecer da auditoria:\n' + a.observacao_auditoria) : '') +
+            (a.respondido_por ? ('\n\nRespondido por: ' + a.respondido_por) : '');
+  alert(txt);
+  if (a.alertas_triagem && a.alertas_triagem.length) {
+    if (confirm('Este pedido tem material fora do padrão homologado/preferencial.\n\nAbrir Junta Médica (RN 424/ANS) para resolver a divergência de marca/material?')) {
+      abrirJuntaMedica(a.id);
+    }
+  }
+}
+
+async function abrirJuntaMedica(autId) {
+  var motivo = prompt('Motivo da divergência técnica (obrigatório — RN 424/ANS):');
+  if (motivo === null) return;
+  if (!motivo.trim()) return toast('Motivo é obrigatório', false);
   try {
-    var r = await fetch('/api/hospital/opme/autorizacoes/' + id + '/acao', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({ acao: acao }) });
-    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro', false); }
-    toast('Autorização ' + (acao === 'aprovar' ? 'aprovada' : 'negada'), true);
+    var r = await fetch('/api/hospital/opme/autorizacoes/' + autId + '/juntas', {
+      method: 'POST', credentials: 'include', headers: headers(),
+      body: JSON.stringify({ motivo_divergencia: motivo.trim() })
+    });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao abrir Junta Médica', false);
+    toast('Junta Médica aberta (RN 424/ANS)', true);
+    carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function acaoAutorizacao(id, acao) {
+  var payload = { acao: acao };
+  if (acao === 'negar' || acao === 'cancelar') {
+    var motivo = prompt('Motivo da ' + (acao === 'negar' ? 'negativa' : 'cancelamento') + ' (obrigatório):');
+    if (motivo === null) return;
+    if (!motivo.trim()) return toast('Motivo é obrigatório', false);
+    payload.observacao = motivo.trim();
+  }
+  try {
+    var r = await fetch('/api/hospital/opme/autorizacoes/' + id + '/acao', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify(payload) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { return toast(d.erro || 'Erro', false); }
+    toast('Autorização atualizada: ' + (d.novo_status || acao), true);
     carregarAutorizacoes(); carregarKpis();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
-function abrirNovaAutorizacao() { document.getElementById('formAutorizacaoCard').style.display = 'block'; }
+function abrirNovaAutorizacao() {
+  var card = document.getElementById('formAutorizacaoCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function limparFormAutorizacao() {
+  ['oPaciente','oCpf','oMedico','oCrm','oCid','oProcTuss','oPreco','oJustificativa'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('oQtd').value = '1';
+}
 async function salvarAutorizacao() {
   var paciente = document.getElementById('oPaciente').value.trim();
   var medico = document.getElementById('oMedico').value.trim();
   var opmeId = document.getElementById('oOpmeId').value;
-  if (!paciente || !medico || !opmeId) return toast('Informe paciente, médico e item OPME', false);
+  if (!paciente || !medico || !opmeId) return toast('Informe paciente, médico e material OPME', false);
+  var preco = parseFloat(document.getElementById('oPreco').value);
   try {
     var r = await fetch('/api/hospital/opme/autorizacoes', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
-      paciente_nome: paciente, medico_solicitante: medico, crm_medico: document.getElementById('oCrm').value, cid10: document.getElementById('oCid').value,
-      justificativa: document.getElementById('oJustificativa').value, itens: [{ opme_id: parseInt(opmeId), quantidade: parseInt(document.getElementById('oQtd').value)||1 }],
+      paciente_nome: paciente, cpf_paciente: document.getElementById('oCpf').value.replace(/\D/g,''),
+      medico_solicitante: medico, crm_medico: document.getElementById('oCrm').value, cid10: document.getElementById('oCid').value,
+      procedimento_tuss: document.getElementById('oProcTuss').value.trim(),
+      justificativa: document.getElementById('oJustificativa').value,
+      itens: [{ opme_id: parseInt(opmeId), quantidade: parseInt(document.getElementById('oQtd').value)||1, preco_solicitado: isNaN(preco)?null:preco }],
     })});
-    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
-    toast('Autorização solicitada', true);
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { return toast(d.erro || 'Erro ao salvar', false); }
     document.getElementById('formAutorizacaoCard').style.display = 'none';
+    limparFormAutorizacao();
     carregarAutorizacoes(); carregarKpis();
+    // mostra o resultado da triagem + recomendação de IA
+    var ia = d.ia || {};
+    var iaTxt = ia.decisao ? ('\n\n🤖 Recomendação da IA: ' + ia.decisao.toUpperCase() +
+                 ' (confiança ' + Math.round((ia.score||0)*100) + '%)\n' + (ia.justificativa||'')) : '';
+    var marcasTxt = '';
+    var marcas = d.marcas_alternativas || {};
+    Object.keys(marcas).forEach(function(opmeId) {
+      var alts = marcas[opmeId] || [];
+      if (alts.length) {
+        marcasTxt += '\n\n💊 Marcas alternativas homologadas (RN 424/ANS):\n' +
+          alts.map(function(m){ return '• ' + m.descricao + (m.fabricante ? ' — ' + m.fabricante : '') +
+            (m.preco_maximo != null ? ' (até R$ ' + m.preco_maximo.toFixed(2) + ')' : ''); }).join('\n');
+      }
+    });
+    var fraudeTxt = (d.alertas_fraude && d.alertas_fraude.length)
+      ? ('\n\n🔎 PADRÃO ATÍPICO detectado:\n• ' + d.alertas_fraude.join('\n• ')) : '';
+    if (d.alertas_triagem && d.alertas_triagem.length) {
+      toast('Autorização criada com ' + d.alertas_triagem.length + ' alerta(s) de triagem', false);
+      alert('⚠️ TRIAGEM AUTOMÁTICA — material fora do padrão:\n\n• ' + d.alertas_triagem.join('\n• ') + marcasTxt + fraudeTxt + iaTxt);
+    } else {
+      toast('Autorização solicitada — sem alertas de triagem', true);
+      if (iaTxt || fraudeTxt) alert('Triagem OK.' + fraudeTxt + iaTxt);
+    }
   } catch(e) { toast('Erro de conexão', false); }
 }
 
 var catalogoCache = [];
-
 async function carregarCatalogo() {
   var tbody = document.getElementById('catalogoBody');
-  tbody.innerHTML = '<tr><td colspan="5" class="empty">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  var q = (document.getElementById('catBusca')||{}).value || '';
   try {
-    var r = await fetch('/api/hospital/opme/catalogo', { credentials: 'include', headers: headers() });
-    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var r = await fetch('/api/hospital/opme/catalogo?ativo=all&q=' + encodeURIComponent(q.trim()), { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
     var d = await r.json();
     catalogoCache = d.itens;
-    var opts = d.itens.map(function(i){ return '<option value="' + i.id + '">' + i.descricao + '</option>'; }).join('');
+    // selects só com itens ativos
+    var opts = d.itens.filter(function(i){return i.ativo;}).map(function(i){ return '<option value="' + i.id + '">' + esc(i.descricao) + '</option>'; }).join('');
     var selO = document.getElementById('oOpmeId'); if (selO) selO.innerHTML = opts;
     var selM = document.getElementById('mOpmeId'); if (selM) selM.innerHTML = opts;
-    if (!d.itens.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum item cadastrado.</td></tr>'; return; }
+    if (!d.itens.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum item cadastrado.</td></tr>'; return; }
     tbody.innerHTML = d.itens.map(function(i) {
-      return '<tr><td><strong>' + i.descricao + '</strong></td><td>' + i.tipo_display + '</td><td>' + (i.codigo_anvisa||'—') + '</td><td>' + (i.fabricante||'—') + '</td><td>' + (i.preco_maximo!=null?('R$ '+i.preco_maximo.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—') + '</td></tr>';
+      var preco = i.preco_maximo!=null?('R$ '+i.preco_maximo.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—';
+      var selos = '';
+      if (i.preferencial) selos += ' <span class="badge badge-ok">preferencial</span>';
+      if (!i.homologado) selos += ' <span class="badge badge-danger">não homologado</span>';
+      if (i.registro_anvisa_vencido) selos += ' <span class="badge badge-warn" title="Validade: '+fmtData(i.data_validade_registro_anvisa)+'">ANVISA vencido</span>';
+      var nome = i.ativo ? (esc(i.descricao)+selos) : ('<span style="opacity:.5">'+esc(i.descricao)+' (inativo)</span>');
+      var acoes = '<button class="btn btn-ghost btn-sm" onclick="editarItem('+i.id+')">Editar</button> ' +
+                  (i.ativo ? '<button class="btn btn-danger btn-sm" onclick="inativarItem('+i.id+')">Inativar</button>'
+                           : '<button class="btn btn-ok btn-sm" onclick="reativarItem('+i.id+')">Reativar</button>');
+      return '<tr><td><strong>' + nome + '</strong></td><td>' + esc(i.tipo_display) + '</td><td>' + esc(i.codigo_anvisa||'—') + '</td><td>' + esc(i.codigo_operadora||'—') + '</td><td>' + esc(i.fabricante||'—') + '</td><td>' + preco + '</td><td>' + acoes + '</td></tr>';
     }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro de conexão.</td></tr>'; }
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
 }
 
-function abrirNovoItem() { document.getElementById('formItemCard').style.display = 'block'; }
+function limparFormItem() {
+  document.getElementById('iEditId').value = '';
+  ['iDescricao','iAnvisa','iSigtap','iFabricante','iPreco','iCodOperadora','iValidadeAnvisa','iGrupoEquivalencia'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('iTipo').value = 'protese';
+  document.getElementById('iHomologado').checked = true;
+  document.getElementById('iPreferencial').checked = false;
+  document.getElementById('formItemTitulo').textContent = 'Novo Item de Catálogo';
+}
+function abrirNovoItem() {
+  limparFormItem();
+  var card = document.getElementById('formItemCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function editarItem(id) {
+  var i = catalogoCache.filter(function(x){return x.id===id;})[0];
+  if (!i) return;
+  document.getElementById('iEditId').value = i.id;
+  document.getElementById('iDescricao').value = i.descricao || '';
+  document.getElementById('iTipo').value = i.tipo || 'protese';
+  document.getElementById('iAnvisa').value = i.codigo_anvisa || '';
+  document.getElementById('iSigtap').value = i.codigo_sigtap || '';
+  document.getElementById('iFabricante').value = i.fabricante || '';
+  document.getElementById('iPreco').value = i.preco_maximo!=null ? i.preco_maximo : '';
+  document.getElementById('iCodOperadora').value = i.codigo_operadora || '';
+  document.getElementById('iGrupoEquivalencia').value = i.grupo_equivalencia || '';
+  document.getElementById('iValidadeAnvisa').value = i.data_validade_registro_anvisa || '';
+  document.getElementById('iHomologado').checked = i.homologado !== false;
+  document.getElementById('iPreferencial').checked = !!i.preferencial;
+  document.getElementById('formItemTitulo').textContent = 'Editar Item de Catálogo';
+  var card = document.getElementById('formItemCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+async function inativarItem(id) {
+  if (!confirm('Inativar este item do catálogo? Ele deixa de aparecer para novas solicitações.')) return;
+  try {
+    var r = await fetch('/api/hospital/opme/catalogo/' + id, { method:'DELETE', credentials:'include', headers: headers() });
+    if (!r.ok) { var d = await r.json(); return toast(d.erro||'Erro', false); }
+    toast('Item inativado', true); carregarCatalogo(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+async function reativarItem(id) {
+  try {
+    var r = await fetch('/api/hospital/opme/catalogo/' + id, { method:'PUT', credentials:'include', headers: headers(), body: JSON.stringify({ativo:true}) });
+    if (!r.ok) { var d = await r.json(); return toast(d.erro||'Erro', false); }
+    toast('Item reativado', true); carregarCatalogo(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
 async function salvarItem() {
   var descricao = document.getElementById('iDescricao').value.trim();
   if (!descricao) return toast('Informe a descrição', false);
+  var editId = document.getElementById('iEditId').value;
+  var payload = {
+    descricao: descricao, tipo: document.getElementById('iTipo').value, codigo_anvisa: document.getElementById('iAnvisa').value,
+    codigo_sigtap: document.getElementById('iSigtap').value, fabricante: document.getElementById('iFabricante').value, preco_maximo: parseFloat(document.getElementById('iPreco').value)||null,
+    homologado: document.getElementById('iHomologado').checked, preferencial: document.getElementById('iPreferencial').checked,
+    codigo_operadora: document.getElementById('iCodOperadora').value,
+    grupo_equivalencia: document.getElementById('iGrupoEquivalencia').value,
+    data_validade_registro_anvisa: document.getElementById('iValidadeAnvisa').value || null,
+  };
   try {
-    var r = await fetch('/api/hospital/opme/catalogo', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
-      descricao: descricao, tipo: document.getElementById('iTipo').value, codigo_anvisa: document.getElementById('iAnvisa').value,
-      codigo_sigtap: document.getElementById('iSigtap').value, fabricante: document.getElementById('iFabricante').value, preco_maximo: parseFloat(document.getElementById('iPreco').value)||null,
-    })});
+    var url = editId ? ('/api/hospital/opme/catalogo/' + editId) : '/api/hospital/opme/catalogo';
+    var r = await fetch(url, { method: editId ? 'PUT' : 'POST', credentials: 'include', headers: headers(), body: JSON.stringify(payload) });
     if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
-    toast('Item cadastrado', true);
+    toast(editId ? 'Item atualizado' : 'Item cadastrado', true);
     document.getElementById('formItemCard').style.display = 'none';
+    limparFormItem();
     carregarCatalogo(); carregarKpis();
   } catch(e) { toast('Erro de conexão', false); }
 }
@@ -316,30 +533,41 @@ async function carregarImplantaveis() {
     var d = await r.json();
     if (!d.implantaveis.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum implante registrado.</td></tr>'; return; }
     tbody.innerHTML = d.implantaveis.map(function(i) {
-      return '<tr><td><strong>' + i.paciente_nome + '</strong></td><td>' + i.opme_descricao + '</td><td>' + (i.numero_serie||'—') + '</td><td>' + (i.lote_fabricante||'—') + '</td><td>' + new Date(i.data_implante).toLocaleDateString('pt-BR') + '</td><td>' + (i.medico_implantador||'—') + '</td></tr>';
+      return '<tr><td><strong>' + esc(i.paciente_nome) + '</strong></td><td>' + esc(i.opme_descricao) + '</td><td>' + esc(i.numero_serie||'—') + '</td><td>' + esc(i.lote_fabricante||'—') + '</td><td>' + fmtData(i.data_implante) + '</td><td>' + esc(i.medico_implantador||'—') + '</td></tr>';
     }).join('');
   } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
 }
 
-function abrirNovoImplante() { document.getElementById('formImplanteCard').style.display = 'block'; }
+function abrirNovoImplante() {
+  var card = document.getElementById('formImplanteCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 async function salvarImplante() {
   var paciente = document.getElementById('mPaciente').value.trim();
   var opmeId = document.getElementById('mOpmeId').value;
   var data = document.getElementById('mData').value;
-  if (!paciente || !opmeId || !data) return toast('Informe paciente, item e data', false);
+  var serie = document.getElementById('mSerie').value.trim();
+  var lote = document.getElementById('mLote').value.trim();
+  if (!paciente || !opmeId || !data) return toast('Informe paciente, material e data', false);
+  if (!serie || !lote) return toast('Nº de série e lote são obrigatórios (rastreabilidade ANVISA)', false);
+  var autId = document.getElementById('mAutId').value;
   try {
     var r = await fetch('/api/hospital/opme/implantaveis', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
-      paciente_nome: paciente, opme_id: parseInt(opmeId), numero_serie: document.getElementById('mSerie').value, lote_fabricante: document.getElementById('mLote').value,
+      paciente_nome: paciente, cpf_paciente: document.getElementById('mCpf').value.replace(/\D/g,''),
+      opme_id: parseInt(opmeId), autorizacao_id: autId ? parseInt(autId) : null,
+      numero_serie: serie, lote_fabricante: lote,
       data_implante: data, medico_implantador: document.getElementById('mMedico').value,
     })});
     if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
     toast('Implante registrado', true);
     document.getElementById('formImplanteCard').style.display = 'none';
+    ['mPaciente','mCpf','mSerie','mLote','mData','mMedico'].forEach(function(id){ document.getElementById(id).value=''; });
     carregarImplantaveis(); carregarKpis();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
-function carregarTudo() { carregarKpis(); carregarAutorizacoes(); carregarCatalogo(); }
+function carregarTudo() { carregarKpis(); carregarAutorizacoes(); carregarCatalogo(); carregarImplantaveis(); }
 carregarTudo();
 </script>
 </body>

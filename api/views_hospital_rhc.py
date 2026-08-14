@@ -17,6 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -80,6 +81,7 @@ def hospital_rhc_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_rhc_registros(request):
     """
     GET  /api/hospital/rhc/registros — lista com filtros status_paciente / cid_topografia
@@ -130,9 +132,19 @@ def api_rhc_registros(request):
         return JsonResponse({"erro": f"Campos obrigatórios ausentes: {faltando}"}, status=400)
 
     try:
+        # Vincula à identidade única (MPI) — liga o RHC à quimio/radio/APAC do
+        # mesmo paciente, base da jornada oncológica unificada.
+        from .services.identidade_paciente import resolver_identidade
+        identidade = resolver_identidade(
+            empresa, nome=data["nome_paciente"],
+            cpf=data.get("cpf_paciente", ""), cns=data.get("cns_paciente", ""),
+        )
         registro = RegistroHospitalarCancer.objects.create(
             empresa=empresa,
             nome_paciente=data["nome_paciente"],
+            cpf_paciente=data.get("cpf_paciente", ""),
+            cns_paciente=data.get("cns_paciente", ""),
+            identidade=identidade,
             data_nascimento=data["data_nascimento"],
             sexo=data["sexo"],
             cid_topografia=data["cid_topografia"],
@@ -159,6 +171,7 @@ def api_rhc_registros(request):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_rhc_registro_detalhe(request, pk):
     """
     GET   /api/hospital/rhc/registros/<pk> — detalhe completo
@@ -204,6 +217,7 @@ def api_rhc_registro_detalhe(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_rhc_tratar(request, pk):
     """
     POST /api/hospital/rhc/registros/<pk>/tratar
@@ -255,6 +269,7 @@ def api_rhc_tratar(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_rhc_exportar(request):
     """
     POST /api/hospital/rhc/exportar
@@ -336,6 +351,7 @@ def api_rhc_exportar(request):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_rhc_kpis(request):
     """GET /api/hospital/rhc/kpis"""
     empresa = _hosp(request)

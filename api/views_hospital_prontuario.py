@@ -16,6 +16,7 @@ from django.views.decorators.http import require_http_methods
 from .utils import validar_cpf_cadastro
 from .services.identidade_paciente import resolver_identidade
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature,
     api_requer_gerencia,
     get_setor,
@@ -106,6 +107,7 @@ def hospital_prontuario_page(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.emr")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET"])
 def api_prontuario_hospitalar_lista(request):
     """GET ?q=nome_ou_cpf"""
@@ -123,6 +125,7 @@ def api_prontuario_hospitalar_lista(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.emr")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["POST"])
 def api_prontuario_hospitalar_novo(request):
     """POST → create ProntuarioHospitalar"""
@@ -171,6 +174,7 @@ def api_prontuario_hospitalar_novo(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.emr")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET", "POST"])
 def api_prontuario_hospitalar(request):
     if request.method == "POST":
@@ -182,6 +186,7 @@ def api_prontuario_hospitalar(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.emr")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET", "PUT"])
 def api_prontuario_hospitalar_detalhe(request, pront_id):
     empresa = _empresa(request)
@@ -230,6 +235,7 @@ def api_prontuario_hospitalar_detalhe(request, pront_id):
 
 @csrf_exempt
 @api_requer_feature("hospital.emr")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET", "POST"])
 def api_prontuario_evolucoes(request, pront_id):
     empresa = _empresa(request)
@@ -270,6 +276,7 @@ def api_prontuario_evolucoes(request, pront_id):
 
 @csrf_exempt
 @api_requer_feature("hospital.emr")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET", "POST"])
 def api_prontuario_prescricoes(request, pront_id):
     empresa = _empresa(request)

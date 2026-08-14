@@ -65,8 +65,24 @@ tr:hover td{background:rgba(0,194,255,.03)}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
 .toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.badge-clickable{cursor:pointer}
+.row-click{cursor:pointer}
+.overlay{position:fixed;inset:0;background:rgba(2,8,14,.75);display:none;align-items:flex-start;justify-content:center;z-index:900;padding:40px 16px;overflow:auto}
+.overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:720px;width:100%;padding:0;overflow:hidden}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.modal-head .t{font-size:16px;font-weight:800}
+.modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:16px}
+.modal-x{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+.dose-table td,.dose-table th{padding:7px 10px;font-size:12px}
+.dose-cap{color:var(--warn);font-weight:700}
+.alerta-box{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.35);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--danger)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;font-size:13px}
+.info-grid .k{color:var(--muted);font-size:11px}
+.drogas-mini{font-size:11px;color:var(--muted);max-width:280px}
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:700px){.form-row,.form-row3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+@media(max-width:700px){.form-row,.form-row3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}.info-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -83,8 +99,10 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
   </div>
 
-  <div class="kpi-row">
+  <div class="kpi-row" style="grid-template-columns:repeat(6,1fr)">
     <div class="kpi"><div class="kpi-val" id="kpiCiclosAtivos">—</div><div class="kpi-lbl">Ciclos Ativos</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiCiclosAtrasados">—</div><div class="kpi-lbl">Ciclos Atrasados</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiGuiasVenc">—</div><div class="kpi-lbl">Guias Vencendo/Vencidas</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiToxGraves">—</div><div class="kpi-lbl">Toxicidade Grau ≥3 (mês)</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiGlosas">—</div><div class="kpi-lbl">APACs Glosadas (mês)</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiValorAprovado">—</div><div class="kpi-lbl">Valor Aprovado APAC (mês)</div></div>
@@ -94,15 +112,39 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="tab-btn active" data-tab="protocolos" onclick="setTab('protocolos')">Protocolos PCDT/INCA</button>
     <button class="tab-btn" data-tab="ciclos" onclick="setTab('ciclos')">Ciclos de Quimioterapia</button>
     <button class="tab-btn" data-tab="apacs" onclick="setTab('apacs')">APAC / SUS</button>
+    <button class="tab-btn" data-tab="guias" onclick="setTab('guias')">Guias / Autorizações</button>
+    <button class="tab-btn" data-tab="jornada" onclick="setTab('jornada')">Jornada do Paciente</button>
   </div>
 
   <div class="tab-panel active" id="panel-protocolos">
     <div class="card">
-      <div class="card-header"><div class="card-title">📋 Catálogo de Protocolos</div></div>
+      <div class="card-header">
+        <div class="card-title">📋 Catálogo de Protocolos</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoProtocolo()">+ Protocolo próprio</button>
+      </div>
       <table>
-        <thead><tr><th>Código</th><th>Nome</th><th>CID Indicação</th><th>Via</th><th>Ciclos</th><th>Intervalo</th></tr></thead>
-        <tbody id="protocolosBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+        <thead><tr><th>Código</th><th>Nome</th><th>CID</th><th>Via</th><th>Ciclos</th><th>Intervalo</th><th>Drogas (dose de referência)</th></tr></thead>
+        <tbody id="protocolosBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
       </table>
+    </div>
+    <div class="form-card" id="formProtocoloCard" style="display:none">
+      <div class="form-card-title">Novo Protocolo Próprio</div>
+      <div class="form-row3">
+        <div class="form-group"><label>Código *</label><input id="pCodigo" placeholder="ex: FOLFOX-MOD"></div>
+        <div class="form-group"><label>Nome *</label><input id="pNome"></div>
+        <div class="form-group"><label>CID indicação</label><input id="pCid" placeholder="ex: C18"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Via</label><input id="pVia" placeholder="EV, VO, SC"></div>
+        <div class="form-group"><label>Ciclos totais</label><input type="number" id="pCiclos" min="1"></div>
+        <div class="form-group"><label>Intervalo (dias)</label><input type="number" id="pIntervalo" min="1"></div>
+      </div>
+      <div class="form-group"><label>Drogas (uma por linha: <em>Nome; dose; unidade; dia</em>) — ex: <code>Oxaliplatina; 85; mg/m²; 1</code></label>
+        <textarea id="pDrogas" rows="4" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;width:100%"></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formProtocoloCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarProtocolo()">Salvar protocolo</button>
+      </div>
     </div>
   </div>
 
@@ -121,23 +163,30 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <div class="form-card-title">Novo Ciclo de Quimioterapia</div>
       <div class="form-row">
         <div class="form-group"><label>Paciente *</label><input id="cPaciente"></div>
-        <div class="form-group"><label>Protocolo (ID) *</label>
-          <select id="cProtocolo"></select>
-        </div>
+        <div class="form-group"><label>CPF do Paciente</label><input id="cCpf" maxlength="14" placeholder="000.000.000-00"></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label>Protocolo *</label><select id="cProtocolo"></select></div>
         <div class="form-group"><label>CID-10 Principal *</label><input id="cCid"></div>
-        <div class="form-group"><label>Número do Ciclo</label><input type="number" id="cNumero" value="1"></div>
       </div>
       <div class="form-row3">
+        <div class="form-group"><label>Número do Ciclo</label><input type="number" id="cNumero" value="1" min="1"></div>
         <div class="form-group"><label>Data de Início *</label><input type="date" id="cInicio"></div>
-        <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="cPeso"></div>
-        <div class="form-group"><label>Altura (cm)</label><input type="number" id="cAltura"></div>
+        <div class="form-group"><label>Médico Oncologista</label><input id="cMedico"></div>
       </div>
-      <div class="form-group"><label>Médico Oncologista</label><input id="cMedico"></div>
+      <div class="form-row3">
+        <div class="form-group"><label>Peso (kg) *</label><input type="number" step="0.1" id="cPeso"></div>
+        <div class="form-group"><label>Altura (cm) *</label><input type="number" step="0.1" id="cAltura"></div>
+        <div class="form-group"><label>SC estimada (m²)</label><input id="cScPreview" readonly placeholder="—" style="opacity:.7"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Creatinina (mg/dL)</label><input type="number" step="0.01" id="cCreat"></div>
+        <div class="form-group"><label>Clearance (mL/min)</label><input type="number" step="0.1" id="cClear"></div>
+        <div class="form-group"><label>Bilirrubina (mg/dL)</label><input type="number" step="0.01" id="cBili"></div>
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" onclick="document.getElementById('formCicloCard').style.display='none'">Cancelar</button>
-        <button class="btn btn-primary" onclick="salvarCiclo()">Salvar</button>
+        <button class="btn btn-primary" onclick="salvarCiclo()">Revisar dose e salvar</button>
       </div>
     </div>
   </div>
@@ -157,64 +206,243 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <div class="form-card-title">Nova APAC</div>
       <div class="form-row">
         <div class="form-group"><label>Paciente *</label><input id="aPaciente"></div>
+        <div class="form-group"><label>CPF do Paciente</label><input id="aCpf" maxlength="14" placeholder="000.000.000-00"></div>
+      </div>
+      <div class="form-row3">
         <div class="form-group"><label>CID-10 Principal *</label><input id="aCid"></div>
+        <div class="form-group"><label>Procedimento SIGTAP</label><input id="aProcedimento" placeholder="0304..."></div>
+        <div class="form-group"><label>Competência (AAAAMM)</label><input id="aCompetencia" maxlength="6" placeholder="202608"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>Procedimento Principal</label><input id="aProcedimento"></div>
-        <div class="form-group"><label>Valor Solicitado (R$)</label><input type="number" step="0.01" id="aValor"></div>
+      <div class="form-group"><label>Ciclo de quimio vinculado (opcional)</label><select id="aCiclo"><option value="">— nenhum —</option></select></div>
+      <div class="form-row3">
+        <div class="form-group"><label>CNES Solicitante</label><input id="aCnesSol" maxlength="7"></div>
+        <div class="form-group"><label>CNES Executante</label><input id="aCnesExe" maxlength="7"></div>
+        <div class="form-group"><label>Caráter</label><select id="aCarater"><option value="1">Eletivo</option><option value="2">Urgência</option></select></div>
       </div>
+      <div class="form-group"><label>Valor Solicitado (R$)</label><input type="number" step="0.01" id="aValor"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" onclick="document.getElementById('formApacCard').style.display='none'">Cancelar</button>
         <button class="btn btn-primary" onclick="salvarApac()">Salvar</button>
       </div>
     </div>
   </div>
+
+  <div class="tab-panel" id="panel-guias">
+    <div id="guiasAlertaBox"></div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📄 Guias / Autorizações — com alerta de vencimento</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaGuia()">+ Nova Guia</button>
+      </div>
+      <table>
+        <thead><tr><th>Nº Guia</th><th>Paciente</th><th>Tipo</th><th>Válida até</th><th>Vence em</th><th>Ciclos</th><th>Status</th></tr></thead>
+        <tbody id="guiasBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formGuiaCard" style="display:none">
+      <div class="form-card-title">Nova Guia / Autorização</div>
+      <div class="form-row">
+        <div class="form-group"><label>Número da Guia *</label><input id="gNumero"></div>
+        <div class="form-group"><label>Paciente *</label><input id="gPaciente"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>CPF</label><input id="gCpf" maxlength="14"></div>
+        <div class="form-group"><label>Tipo</label><select id="gTipo"><option value="quimioterapia">Quimioterapia</option><option value="radioterapia">Radioterapia</option><option value="geral">Tratamento oncológico</option></select></div>
+        <div class="form-group"><label>Operadora</label><input id="gOperadora"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Data de Emissão *</label><input type="date" id="gEmissao"></div>
+        <div class="form-group"><label>Válida até *</label><input type="date" id="gValidade"></div>
+        <div class="form-group"><label>Ciclos autorizados (0=s/ limite)</label><input type="number" id="gCiclos" value="0" min="0"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formGuiaCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarGuia()">Salvar guia</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-jornada">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🧭 Jornada Oncológica Unificada</div>
+      </div>
+      <div style="padding:16px 20px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="margin-bottom:0"><label>CPF ou nome do paciente</label><input id="jBusca" placeholder="CPF ou nome" style="min-width:260px"></div>
+        <button class="btn btn-primary btn-sm" onclick="buscarJornada()">Ver jornada</button>
+        <div class="drogas-mini" style="max-width:none">Cruza quimioterapia, radioterapia, RHC e APAC pela identidade única do paciente (MPI).</div>
+      </div>
+      <div id="jResumo" style="padding:0 20px 16px"></div>
+      <div id="jTimeline" style="padding:0 20px 24px"><div class="empty">Informe o paciente e clique em "Ver jornada".</div></div>
+    </div>
+  </div>
 </main>
+
+<!-- Modal de detalhe do ciclo (dose calculada + toxicidade + status) -->
+<div class="overlay" id="modalCiclo">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="t" id="mcTitulo">Ciclo</div>
+      <button class="modal-x" onclick="fecharModal('modalCiclo')">×</button>
+    </div>
+    <div class="modal-body" id="mcBody"></div>
+  </div>
+</div>
+
+<!-- Modal de detalhe da APAC -->
+<div class="overlay" id="modalApac">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="t" id="maTitulo">APAC</div>
+      <button class="modal-x" onclick="fecharModal('modalApac')">×</button>
+    </div>
+    <div class="modal-body" id="maBody"></div>
+  </div>
+</div>
 
 <script>
 function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
 function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
 function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+function esc(v){ if(v==null) return ''; return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function fmtData(s){ if(!s) return '—'; var p=String(s).split('-'); if(p.length===3) return p[2].slice(0,2)+'/'+p[1]+'/'+p[0]; return esc(s); }
+function fmtR$(v){ return v!=null ? ('R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2})) : '—'; }
+function scDubois(peso, altura){ if(!(peso>0&&altura>0)) return null; return Math.round(0.20247*Math.pow(altura/100,0.725)*Math.pow(peso,0.425)*10000)/10000; }
+function fecharModal(id){ document.getElementById(id).classList.remove('show'); }
 
 function setTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
   document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
   if (tab === 'ciclos') carregarCiclos();
   if (tab === 'apacs') carregarApacs();
+  if (tab === 'guias') carregarGuias();
+}
+
+var statusGuiaMap = {vigente:'badge-ok', vencida:'badge-danger', esgotada:'badge-warn', cancelada:'badge-gray'};
+async function carregarGuias() {
+  var tbody = document.getElementById('guiasBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    // alerta agregado no topo
+    var ra = await fetch('/api/hospital/oncologia/guias/alertas?dias=30', { credentials:'include', headers: headers() });
+    if (ra.ok) {
+      var al = await ra.json();
+      var box = document.getElementById('guiasAlertaBox');
+      if (al.total_vencidas || al.total_vencendo) {
+        box.innerHTML = '<div class="alerta-box" style="margin-bottom:14px">⚠️ ' + al.total_vencidas + ' guia(s) VENCIDA(s) e ' + al.total_vencendo + ' vencendo em até 30 dias — risco de interrupção de tratamento.</div>';
+      } else { box.innerHTML = ''; }
+    }
+    var r = await fetch('/api/hospital/oncologia/guias', { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.guias.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma guia registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.guias.map(function(g){
+      var vence = g.dias_para_vencer < 0 ? ('<span style="color:var(--danger)">vencida há '+(-g.dias_para_vencer)+'d</span>')
+                : (g.dias_para_vencer <= 30 ? ('<span style="color:var(--warn)">'+g.dias_para_vencer+'d</span>') : (g.dias_para_vencer+'d'));
+      var ciclos = g.ciclos_autorizados ? (g.ciclos_utilizados+'/'+g.ciclos_autorizados) : (g.ciclos_utilizados+'/∞');
+      return '<tr><td><strong>'+esc(g.numero_guia)+'</strong></td><td>'+esc(g.paciente_nome)+'</td><td>'+esc(g.tipo_display)+'</td><td>'+fmtData(g.data_validade)+'</td><td>'+vence+'</td><td>'+esc(ciclos)+'</td><td><span class="badge '+(statusGuiaMap[g.status]||'badge-gray')+'">'+esc(g.status_display)+'</span></td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+function abrirNovaGuia() {
+  var card = document.getElementById('formGuiaCard');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+async function salvarGuia() {
+  var numero = document.getElementById('gNumero').value.trim();
+  var paciente = document.getElementById('gPaciente').value.trim();
+  var emissao = document.getElementById('gEmissao').value;
+  var validade = document.getElementById('gValidade').value;
+  if (!numero || !paciente || !emissao || !validade) return toast('Número, paciente, emissão e validade são obrigatórios', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/guias', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      numero_guia: numero, paciente_nome: paciente, cpf_paciente: document.getElementById('gCpf').value.replace(/\D/g,''),
+      tipo: document.getElementById('gTipo').value, operadora: document.getElementById('gOperadora').value,
+      data_emissao: emissao, data_validade: validade, ciclos_autorizados: parseInt(document.getElementById('gCiclos').value)||0,
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    toast('Guia registrada', true);
+    document.getElementById('formGuiaCard').style.display = 'none';
+    ['gNumero','gPaciente','gCpf','gOperadora','gEmissao','gValidade'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('gCiclos').value='0';
+    carregarGuias(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
 }
 
 async function carregarKpis() {
   try {
     var r = await fetch('/api/hospital/oncologia/kpis', { credentials: 'include', headers: headers() });
-    if (!r.ok) return;
+    if (!r.ok) { document.getElementById('kpiCiclosAtivos').textContent = '!'; return; }
     var d = await r.json();
     document.getElementById('kpiCiclosAtivos').textContent = d.ciclos_ativos;
+    document.getElementById('kpiCiclosAtrasados').textContent = d.ciclos_atrasados;
+    document.getElementById('kpiGuiasVenc').textContent = (d.guias_vencendo_30d||0) + '/' + (d.guias_vencidas||0);
     document.getElementById('kpiToxGraves').textContent = d.toxicidades_grau3_mais_mes;
     document.getElementById('kpiGlosas').textContent = d.apac_glosas_mes;
     document.getElementById('kpiValorAprovado').textContent = 'R$ ' + (d.valor_aprovado_mes||0).toLocaleString('pt-BR', {minimumFractionDigits:2});
-  } catch(e) {}
+  } catch(e) { document.getElementById('kpiCiclosAtivos').textContent = '!'; }
 }
 
-var protocolosCache = [];
-
+// ── Protocolos ──────────────────────────────────────────────────────────────
+function drogasResumo(drogas){
+  if(!drogas || !drogas.length) return '—';
+  return drogas.map(function(d){ return esc(d.droga)+' '+esc(d.dose)+esc(d.unidade||''); }).join(' · ');
+}
 async function carregarProtocolos() {
   var tbody = document.getElementById('protocolosBody');
-  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
   try {
     var r = await fetch('/api/hospital/oncologia/protocolos', { credentials: 'include', headers: headers() });
-    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
     var d = await r.json();
-    protocolosCache = d.protocolos;
     var sel = document.getElementById('cProtocolo');
-    if (sel) sel.innerHTML = d.protocolos.map(function(p){ return '<option value="' + p.id + '">' + p.codigo + ' — ' + p.nome + '</option>'; }).join('');
-    if (!d.protocolos.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum protocolo cadastrado.</td></tr>'; return; }
+    if (sel) sel.innerHTML = d.protocolos.map(function(p){ return '<option value="' + p.id + '">' + esc(p.codigo) + ' — ' + esc(p.nome) + '</option>'; }).join('');
+    if (!d.protocolos.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum protocolo cadastrado.</td></tr>'; return; }
     tbody.innerHTML = d.protocolos.map(function(p) {
-      return '<tr><td><strong>' + p.codigo + '</strong></td><td>' + p.nome + '</td><td>' + p.indicacao_cid + '</td><td>' + p.via + '</td><td>' + p.ciclos_total + '</td><td>' + p.intervalo_dias + 'd</td></tr>';
+      return '<tr><td><strong>' + esc(p.codigo) + '</strong></td><td>' + esc(p.nome) + '</td><td>' + esc(p.indicacao_cid) + '</td><td>' + esc(p.via) + '</td><td>' + esc(p.ciclos_total) + '</td><td>' + esc(p.intervalo_dias) + 'd</td><td class="drogas-mini">' + drogasResumo(p.drogas) + '</td></tr>';
     }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
 }
 
-var statusCicloMap = {agendado:'badge-info', em_curso:'badge-warn', concluido:'badge-ok', suspenso:'badge-danger'};
+// Protocolo próprio
+function abrirNovoProtocolo() {
+  var card = document.getElementById('formProtocoloCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+function parseDrogas(txt) {
+  // cada linha: "Nome; dose; unidade; dia"
+  return txt.split('\n').map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){
+    var p = l.split(';').map(function(x){ return x.trim(); });
+    var dose = parseFloat(p[1]);
+    return { droga: p[0]||'', dose: isNaN(dose)?p[1]:dose, unidade: p[2]||'', dia: p[3]||'' };
+  });
+}
+async function salvarProtocolo() {
+  var codigo = document.getElementById('pCodigo').value.trim();
+  var nome = document.getElementById('pNome').value.trim();
+  if (!codigo || !nome) return toast('Código e nome são obrigatórios', false);
+  var payload = {
+    codigo: codigo, nome: nome, indicacao_cid: document.getElementById('pCid').value.trim(),
+    via: document.getElementById('pVia').value.trim(),
+    ciclos_total: parseInt(document.getElementById('pCiclos').value)||null,
+    intervalo_dias: parseInt(document.getElementById('pIntervalo').value)||null,
+    drogas: parseDrogas(document.getElementById('pDrogas').value),
+  };
+  try {
+    var r = await fetch('/api/hospital/oncologia/protocolos', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify(payload) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    toast('Protocolo cadastrado', true);
+    document.getElementById('formProtocoloCard').style.display = 'none';
+    ['pCodigo','pNome','pCid','pVia','pCiclos','pIntervalo','pDrogas'].forEach(function(id){ document.getElementById(id).value=''; });
+    carregarProtocolos();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+// ── Ciclos ──────────────────────────────────────────────────────────────────
+var statusCicloMap = {agendado:'badge-info', em_curso:'badge-warn', concluido:'badge-ok', suspenso:'badge-danger', cancelado:'badge-gray'};
 
 async function carregarCiclos() {
   var tbody = document.getElementById('ciclosBody');
@@ -223,34 +451,171 @@ async function carregarCiclos() {
     var r = await fetch('/api/hospital/oncologia/ciclos', { credentials: 'include', headers: headers() });
     if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
     var d = await r.json();
+    window._ciclosCache = d.ciclos;
     if (!d.ciclos.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum ciclo registrado.</td></tr>'; return; }
     tbody.innerHTML = d.ciclos.map(function(c) {
-      return '<tr><td><strong>' + c.paciente_nome + '</strong></td><td>' + c.protocolo + '</td><td>' + c.cid10_principal + '</td><td>' + c.numero_ciclo + '</td><td>' + (c.sc_m2||'—') + '</td><td>' + new Date(c.data_inicio).toLocaleDateString('pt-BR') + '</td><td><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + c.status_display + '</span></td></tr>';
+      var cicloTxt = c.numero_ciclo + (c.ciclos_total ? ('/' + c.ciclos_total) : '');
+      var atraso = c.atrasado ? ' <span class="badge badge-danger">atrasado</span>' : '';
+      return '<tr class="row-click" onclick="abrirCiclo(' + c.id + ')"><td><strong>' + esc(c.paciente_nome) + '</strong></td><td>' + esc(c.protocolo) + '</td><td>' + esc(c.cid10_principal) + '</td><td>' + esc(cicloTxt) + '</td><td>' + esc(c.sc_m2||'—') + '</td><td>' + fmtData(c.data_inicio) + atraso + '</td><td><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + esc(c.status_display) + '</span></td></tr>';
     }).join('');
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
 }
 
-function abrirNovoCiclo() { document.getElementById('formCicloCard').style.display = 'block'; }
+// Preview de SC em tempo real no form
+function atualizarScPreview(){
+  var sc = scDubois(parseFloat(document.getElementById('cPeso').value), parseFloat(document.getElementById('cAltura').value));
+  document.getElementById('cScPreview').value = sc ? sc.toFixed(4) : '';
+}
+
+function abrirNovoCiclo() {
+  var card = document.getElementById('formCicloCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+function limparFormCiclo(){
+  ['cPaciente','cCpf','cCid','cInicio','cMedico','cPeso','cAltura','cScPreview','cCreat','cClear','cBili'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('cNumero').value = '1';
+}
 async function salvarCiclo() {
   var paciente = document.getElementById('cPaciente').value.trim();
   var cid = document.getElementById('cCid').value.trim();
   var inicio = document.getElementById('cInicio').value;
   var protocoloId = document.getElementById('cProtocolo').value;
+  var peso = parseFloat(document.getElementById('cPeso').value);
+  var altura = parseFloat(document.getElementById('cAltura').value);
   if (!paciente || !cid || !inicio || !protocoloId) return toast('Preencha paciente, CID, protocolo e data de início', false);
+  if (!(peso>0) || !(altura>0)) return toast('Peso e altura são obrigatórios para o cálculo de dose', false);
+  var sc = scDubois(peso, altura);
+  var protoNome = document.getElementById('cProtocolo').selectedOptions[0].textContent;
+  // Confirmação dupla: o oncologista revisa SC + paciente antes de gravar.
+  if (!confirm('Confirmar ciclo?\n\nPaciente: ' + paciente + '\nProtocolo: ' + protoNome + '\nSuperfície corporal: ' + (sc ? sc.toFixed(2) : '—') + ' m²\n\nAs doses serão calculadas a partir desta SC.')) return;
   try {
     var r = await fetch('/api/hospital/oncologia/ciclos', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
-      paciente_nome: paciente, protocolo_id: parseInt(protocoloId), cid10_principal: cid, numero_ciclo: parseInt(document.getElementById('cNumero').value)||1,
-      data_inicio: inicio, peso_kg: parseFloat(document.getElementById('cPeso').value)||null, altura_cm: parseFloat(document.getElementById('cAltura').value)||null,
+      paciente_nome: paciente, cpf_paciente: document.getElementById('cCpf').value.replace(/\D/g,''),
+      protocolo_id: parseInt(protocoloId), cid10_principal: cid, numero_ciclo: parseInt(document.getElementById('cNumero').value)||1,
+      data_inicio: inicio, peso_kg: peso, altura_cm: altura,
+      creatinina_mg_dl: parseFloat(document.getElementById('cCreat').value)||null,
+      clearance_creatinina: parseFloat(document.getElementById('cClear').value)||null,
+      bilirrubina_mg_dl: parseFloat(document.getElementById('cBili').value)||null,
       medico_oncologista: document.getElementById('cMedico').value,
     })});
-    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
-    toast('Ciclo registrado', true);
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Ciclo registrado — SC ' + (d.sc_m2||'') + ' m²', true);
     document.getElementById('formCicloCard').style.display = 'none';
+    limparFormCiclo();
     carregarCiclos(); carregarKpis();
+    // abre o detalhe já mostrando as doses calculadas e eventuais alertas
+    abrirCiclo(d.id);
   } catch(e) { toast('Erro de conexão', false); }
 }
 
-var statusApacMap = {submetida:'badge-info', aprovada:'badge-ok', glosada:'badge-danger', pendente:'badge-warn'};
+// ── Modal detalhe do ciclo ──────────────────────────────────────────────────
+var cicloAtual = null;
+var categoriasCtcae = [];
+
+async function abrirCiclo(id) {
+  var ov = document.getElementById('modalCiclo');
+  document.getElementById('mcBody').innerHTML = '<div class="empty">Carregando...</div>';
+  ov.classList.add('show');
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos/' + id, { credentials:'include', headers: headers() });
+    if (!r.ok) { document.getElementById('mcBody').innerHTML = '<div class="empty">Erro ao carregar.</div>'; return; }
+    var c = await r.json();
+    cicloAtual = c;
+    // carrega vocabulário CTCAE se ainda não temos
+    if (!categoriasCtcae.length) {
+      var rc = await fetch('/api/hospital/oncologia/ciclos/' + id + '/toxicidade', { credentials:'include', headers: headers() });
+      if (rc.ok) categoriasCtcae = (await rc.json()).categorias_ctcae || [];
+    }
+    renderCiclo(c);
+  } catch(e) { document.getElementById('mcBody').innerHTML = '<div class="empty">Erro de conexão.</div>'; }
+}
+
+function renderCiclo(c) {
+  document.getElementById('mcTitulo').textContent = 'Ciclo ' + c.numero_ciclo + (c.protocolo.ciclos_total ? ('/'+c.protocolo.ciclos_total) : '') + ' — ' + c.paciente_nome;
+  var doses = (c.doses_calculadas||[]).map(function(d){
+    var val = d.dose_calculada!=null ? (d.dose_calculada + ' ' + (d.unidade_calculada||'')) : '—';
+    if (d.cap_aplicado) val = '<span class="dose-cap">' + esc(val) + ' ⚠ cap</span>';
+    return '<tr><td>' + esc(d.droga) + '</td><td>' + esc(d.dose_referencia) + ' ' + esc(d.unidade||'') + '</td><td>' + val + '</td><td>' + esc(d.dia!=null?d.dia:'') + '</td></tr>';
+  }).join('');
+  var toxs = (c.toxicidades||[]).map(function(t){
+    var cls = t.grau>=3 ? 'badge-danger' : 'badge-warn';
+    return '<tr><td>' + fmtData(t.data_registro) + '</td><td>' + esc(t.categoria) + '</td><td><span class="badge ' + cls + '">Grau ' + t.grau + '</span></td><td>' + esc(t.conduta||'') + '</td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty" style="padding:14px">Nenhuma toxicidade registrada.</td></tr>';
+
+  // botões de transição conforme status
+  var acoes = '';
+  if (c.status === 'agendado') acoes = '<button class="btn btn-primary btn-sm" onclick="mudarStatusCiclo(\'em_curso\')">Iniciar ciclo</button> <button class="btn btn-danger btn-sm" onclick="mudarStatusCiclo(\'suspenso\')">Adiar</button>';
+  else if (c.status === 'em_curso') acoes = '<button class="btn btn-ok btn-sm" onclick="mudarStatusCiclo(\'concluido\')">Concluir ciclo</button> <button class="btn btn-danger btn-sm" onclick="mudarStatusCiclo(\'suspenso\')">Adiar</button>';
+  else if (c.status === 'suspenso') acoes = '<button class="btn btn-primary btn-sm" onclick="mudarStatusCiclo(\'em_curso\')">Retomar</button>';
+
+  document.getElementById('mcBody').innerHTML =
+    '<div class="info-grid">' +
+      '<div><div class="k">Protocolo</div>' + esc(c.protocolo.codigo) + ' — ' + esc(c.protocolo.nome) + '</div>' +
+      '<div><div class="k">Status</div><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + esc(c.status_display) + '</span></div>' +
+      '<div><div class="k">CID-10</div>' + esc(c.cid10_principal) + '</div>' +
+      '<div><div class="k">Superfície corporal</div><strong>' + esc(c.sc_m2||'—') + ' m²</strong> (' + esc(c.peso_kg||'—') + ' kg / ' + esc(c.altura_cm||'—') + ' cm)</div>' +
+      '<div><div class="k">Início</div>' + fmtData(c.data_inicio) + '</div>' +
+      '<div><div class="k">Próximo previsto</div>' + fmtData(c.data_prevista) + '</div>' +
+      '<div><div class="k">Creatinina / Clearance</div>' + esc(c.creatinina_mg_dl||'—') + ' mg/dL / ' + esc(c.clearance_creatinina||'—') + ' mL/min</div>' +
+      '<div><div class="k">Bilirrubina</div>' + esc(c.bilirrubina_mg_dl||'—') + ' mg/dL</div>' +
+    '</div>' +
+    '<div><div class="k" style="margin-bottom:6px">Doses calculadas (a partir da SC)</div>' +
+      '<table class="dose-table"><thead><tr><th>Droga</th><th>Dose de referência</th><th>Dose calculada</th><th>Dia</th></tr></thead><tbody>' + (doses||'<tr><td colspan="4" class="empty">Sem drogas no protocolo.</td></tr>') + '</tbody></table></div>' +
+    (acoes ? ('<div style="display:flex;gap:8px">' + acoes + '</div>') : '') +
+    '<div><div class="k" style="margin-bottom:6px">Toxicidades CTCAE</div>' +
+      '<table class="dose-table"><thead><tr><th>Data</th><th>Categoria</th><th>Grau</th><th>Conduta</th></tr></thead><tbody>' + toxs + '</tbody></table></div>' +
+    '<div style="border-top:1px solid var(--border);padding-top:14px">' +
+      '<div class="k" style="margin-bottom:6px">Registrar toxicidade</div>' +
+      '<div class="form-row3">' +
+        '<div class="form-group"><label>Categoria</label><select id="txCategoria">' + categoriasCtcae.map(function(c){return '<option>'+esc(c)+'</option>';}).join('') + '</select></div>' +
+        '<div class="form-group"><label>Grau (1-5)</label><select id="txGrau"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>' +
+        '<div class="form-group"><label>&nbsp;</label><label style="font-size:12px;color:var(--text)"><input type="checkbox" id="txSuspender"> Suspender ciclo</label></div>' +
+      '</div>' +
+      '<div class="form-group"><label>Conduta</label><input id="txConduta"></div>' +
+      '<button class="btn btn-primary btn-sm" onclick="registrarToxicidade()">Registrar toxicidade</button>' +
+    '</div>';
+}
+
+async function mudarStatusCiclo(novo) {
+  if (!cicloAtual) return;
+  var body = { status: novo };
+  if (novo === 'suspenso') {
+    var motivo = prompt('Motivo do adiamento — digite: clinico, administrativo ou logistico');
+    if (motivo === null) return;
+    motivo = motivo.trim().toLowerCase();
+    if (['clinico','administrativo','logistico'].indexOf(motivo) < 0) return toast('Motivo inválido', false);
+    body.motivo_adiamento = motivo;
+  }
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos/' + cicloAtual.id, { method:'PUT', credentials:'include', headers: headers(), body: JSON.stringify(body) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro', false);
+    toast('Status atualizado: ' + (d.status||novo), true);
+    abrirCiclo(cicloAtual.id); carregarCiclos(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function registrarToxicidade() {
+  if (!cicloAtual) return;
+  var cat = document.getElementById('txCategoria').value;
+  var grau = parseInt(document.getElementById('txGrau').value);
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos/' + cicloAtual.id + '/toxicidade', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      categoria: cat, grau: grau, conduta: document.getElementById('txConduta').value,
+      ciclo_suspenso: document.getElementById('txSuspender').checked,
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro', false);
+    if (d.alerta) toast(d.alerta, false); else toast('Toxicidade registrada', true);
+    abrirCiclo(cicloAtual.id); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+// ── APACs ───────────────────────────────────────────────────────────────────
+var statusApacMap = {elaborando:'badge-gray', submetida:'badge-info', aprovada:'badge-ok', glosada:'badge-danger', cancelada:'badge-gray'};
+var apacsCache = [];
 
 async function carregarApacs() {
   var tbody = document.getElementById('apacsBody');
@@ -259,30 +624,146 @@ async function carregarApacs() {
     var r = await fetch('/api/hospital/oncologia/apacs', { credentials: 'include', headers: headers() });
     if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
     var d = await r.json();
+    apacsCache = d.apacs;
     if (!d.apacs.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma APAC registrada.</td></tr>'; return; }
     tbody.innerHTML = d.apacs.map(function(a) {
-      return '<tr><td>' + (a.numero_apac||'—') + '</td><td><strong>' + a.paciente_nome + '</strong></td><td>' + a.cid10_principal + '</td><td>' + a.competencia + '</td><td>' + (a.valor_solicitado!=null?('R$ '+a.valor_solicitado.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—') + '</td><td>' + (a.valor_aprovado!=null?('R$ '+a.valor_aprovado.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—') + '</td><td><span class="badge ' + (statusApacMap[a.status]||'badge-gray') + '">' + a.status_display + '</span></td></tr>';
+      return '<tr class="row-click" onclick="abrirApac(' + a.id + ')"><td>' + esc(a.numero_apac||'—') + '</td><td><strong>' + esc(a.paciente_nome) + '</strong></td><td>' + esc(a.cid10_principal) + '</td><td>' + esc(a.competencia) + '</td><td>' + fmtR$(a.valor_solicitado) + '</td><td>' + fmtR$(a.valor_aprovado) + '</td><td><span class="badge ' + (statusApacMap[a.status]||'badge-gray') + '">' + esc(a.status_display) + '</span></td></tr>';
     }).join('');
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
 }
 
-function abrirNovaApac() { document.getElementById('formApacCard').style.display = 'block'; }
+var apacAtual = null;
+async function abrirApac(id) {
+  var ov = document.getElementById('modalApac');
+  document.getElementById('maBody').innerHTML = '<div class="empty">Carregando...</div>';
+  ov.classList.add('show');
+  try {
+    var r = await fetch('/api/hospital/oncologia/apacs/' + id, { credentials:'include', headers: headers() });
+    if (!r.ok) { document.getElementById('maBody').innerHTML = '<div class="empty">Erro ao carregar.</div>'; return; }
+    apacAtual = await r.json();
+    renderApac(apacAtual);
+  } catch(e) { document.getElementById('maBody').innerHTML = '<div class="empty">Erro de conexão.</div>'; }
+}
+
+function renderApac(a) {
+  document.getElementById('maTitulo').textContent = 'APAC ' + (a.numero_apac||'') + ' — ' + a.paciente_nome;
+  var acoes = '';
+  if (a.status === 'elaborando') acoes = '<button class="btn btn-primary btn-sm" onclick="mudarStatusApac(\'submetida\')">Submeter ao SUS</button>';
+  else if (a.status === 'submetida') acoes = '<button class="btn btn-ok btn-sm" onclick="mudarStatusApac(\'aprovada\')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="mudarStatusApac(\'glosada\')">Glosar</button>';
+  document.getElementById('maBody').innerHTML =
+    '<div class="info-grid">' +
+      '<div><div class="k">Paciente</div>' + esc(a.paciente_nome) + '</div>' +
+      '<div><div class="k">Status</div><span class="badge ' + (statusApacMap[a.status]||'badge-gray') + '">' + esc(a.status_display) + '</span></div>' +
+      '<div><div class="k">CID-10</div>' + esc(a.cid10_principal) + '</div>' +
+      '<div><div class="k">Competência</div>' + esc(a.competencia) + '</div>' +
+      '<div><div class="k">Procedimento SIGTAP</div>' + esc(a.procedimento_principal||'—') + '</div>' +
+      '<div><div class="k">Valor solicitado</div>' + fmtR$(a.valor_solicitado) + '</div>' +
+      '<div><div class="k">Valor aprovado</div>' + fmtR$(a.valor_aprovado) + '</div>' +
+      '<div><div class="k">Motivo glosa</div>' + esc(a.motivo_glosa||'—') + '</div>' +
+    '</div>' +
+    (acoes ? ('<div style="display:flex;gap:8px">' + acoes + '</div>') : '');
+}
+
+async function mudarStatusApac(novo) {
+  if (!apacAtual) return;
+  var body = { status: novo };
+  if (novo === 'aprovada') {
+    var val = prompt('Valor aprovado (R$) — não pode exceder o solicitado ' + fmtR$(apacAtual.valor_solicitado) + ':', apacAtual.valor_solicitado || '');
+    if (val === null) return;
+    body.valor_aprovado = parseFloat(val);
+  }
+  if (novo === 'glosada') {
+    var motivo = prompt('Motivo da glosa (obrigatório):');
+    if (motivo === null) return;
+    if (!motivo.trim()) return toast('Motivo é obrigatório', false);
+    body.motivo_glosa = motivo.trim();
+  }
+  try {
+    var r = await fetch('/api/hospital/oncologia/apacs/' + apacAtual.id, { method:'PUT', credentials:'include', headers: headers(), body: JSON.stringify(body) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro', false);
+    toast('APAC atualizada: ' + (d.status||novo), true);
+    abrirApac(apacAtual.id); carregarApacs(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function abrirNovaApac() {
+  abrirNovaApacPreparar();
+  var card = document.getElementById('formApacCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+function abrirNovaApacPreparar() {
+  // popula o seletor de ciclo a partir do cache de ciclos
+  var sel = document.getElementById('aCiclo');
+  if (sel && window._ciclosCache) {
+    sel.innerHTML = '<option value="">— nenhum —</option>' + window._ciclosCache.map(function(c){
+      return '<option value="'+c.id+'">'+esc(c.paciente_nome)+' — '+esc(c.protocolo)+' (ciclo '+c.numero_ciclo+')</option>';
+    }).join('');
+  }
+}
 async function salvarApac() {
   var paciente = document.getElementById('aPaciente').value.trim();
   var cid = document.getElementById('aCid').value.trim();
   if (!paciente || !cid) return toast('Informe paciente e CID', false);
+  var comp = document.getElementById('aCompetencia').value.trim();
+  var ciclo = document.getElementById('aCiclo').value;
   try {
     var r = await fetch('/api/hospital/oncologia/apacs', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
-      paciente_nome: paciente, cid10_principal: cid, procedimento_principal: document.getElementById('aProcedimento').value, valor_solicitado: parseFloat(document.getElementById('aValor').value)||null,
+      paciente_nome: paciente, cpf_paciente: document.getElementById('aCpf').value.replace(/\D/g,''),
+      cid10_principal: cid, procedimento_principal: document.getElementById('aProcedimento').value,
+      competencia: comp || undefined, ciclo_id: ciclo ? parseInt(ciclo) : null,
+      cnes_solicitante: document.getElementById('aCnesSol').value.trim(),
+      cnes_executante: document.getElementById('aCnesExe').value.trim(),
+      carater_atendimento: document.getElementById('aCarater').value,
+      valor_solicitado: parseFloat(document.getElementById('aValor').value)||null,
     })});
-    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
-    toast('APAC registrada', true);
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { return toast(d.erro || 'Erro ao salvar', false); }
+    toast('APAC registrada: ' + (d.numero_apac||''), true);
     document.getElementById('formApacCard').style.display = 'none';
+    ['aPaciente','aCpf','aCid','aProcedimento','aCompetencia','aCnesSol','aCnesExe','aValor'].forEach(function(id){ document.getElementById(id).value=''; });
     carregarApacs();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
-function carregarTudo() { carregarKpis(); carregarProtocolos(); }
+// ── Jornada oncológica unificada ──────────────────────────────────────────────
+var jornadaIcone = {quimioterapia:'💊', radioterapia:'☢️', rhc:'📋', apac:'🧾'};
+var jornadaCor   = {quimioterapia:'badge-info', radioterapia:'badge-warn', rhc:'badge-ok', apac:'badge-gray'};
+async function buscarJornada() {
+  var termo = document.getElementById('jBusca').value.trim();
+  if (!termo) return toast('Informe CPF ou nome', false);
+  var soDigitos = termo.replace(/\D/g,'');
+  var param = (soDigitos.length === 11) ? ('cpf=' + soDigitos) : ('nome=' + encodeURIComponent(termo));
+  var resumo = document.getElementById('jResumo');
+  var tl = document.getElementById('jTimeline');
+  resumo.innerHTML = ''; tl.innerHTML = '<div class="empty">Carregando...</div>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/jornada?' + param, { credentials:'include', headers: headers() });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { tl.innerHTML = '<div class="empty">' + esc(d.erro||'Erro') + '</div>'; return; }
+    if (!d.total_eventos) { tl.innerHTML = '<div class="empty">Nenhum evento oncológico encontrado para este paciente.</div>'; return; }
+    resumo.innerHTML =
+      '<div style="font-weight:700;font-size:15px;margin-bottom:6px">' + esc(d.paciente.nome||'—') + (d.paciente.cpf?(' · CPF '+esc(d.paciente.cpf)):'') + '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<span class="badge badge-info">💊 ' + d.resumo.quimioterapia + ' quimio</span>' +
+        '<span class="badge badge-warn">☢️ ' + d.resumo.radioterapia + ' radio</span>' +
+        '<span class="badge badge-ok">📋 ' + d.resumo.rhc + ' RHC</span>' +
+        '<span class="badge badge-gray">🧾 ' + d.resumo.apac + ' APAC</span>' +
+      '</div>';
+    tl.innerHTML = '<table><thead><tr><th>Data</th><th>Tipo</th><th>Evento</th><th>Status</th></tr></thead><tbody>' +
+      d.timeline.map(function(e){
+        return '<tr><td>' + fmtData(e.data) + '</td><td>' + (jornadaIcone[e.tipo]||'') + ' <span class="badge ' + (jornadaCor[e.tipo]||'badge-gray') + '">' + esc(e.tipo) + '</span></td><td>' + esc(e.titulo) + '</td><td>' + esc(e.status||'—') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  } catch(e) { tl.innerHTML = '<div class="empty">Erro de conexão.</div>'; }
+}
+
+// preview de SC ao digitar peso/altura
+document.addEventListener('input', function(e){ if(e.target && (e.target.id==='cPeso'||e.target.id==='cAltura')) atualizarScPreview(); });
+// fecha modal ao clicar no fundo
+document.querySelectorAll('.overlay').forEach(function(ov){ ov.addEventListener('click', function(e){ if(e.target===ov) ov.classList.remove('show'); }); });
+
+function carregarTudo() { carregarKpis(); carregarProtocolos(); carregarCiclos(); carregarApacs(); }
 carregarTudo();
 </script>
 </body>

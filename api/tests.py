@@ -8209,6 +8209,7 @@ class OncologiaCcihIdentidadePacienteTests(TestCase):
                 "cid10_principal": "C18",
                 "numero_ciclo": 1,
                 "data_inicio": "2026-07-01",
+                "peso_kg": 68, "altura_cm": 165,
             }),
             content_type="application/json",
             secure=True,
@@ -8296,6 +8297,7 @@ class OncologiaCcihIdentidadePacienteTests(TestCase):
                 "cid10_principal": "C18",
                 "numero_ciclo": 1,
                 "data_inicio": "2026-07-01",
+                "peso_kg": 70, "altura_cm": 170,
             }),
             content_type="application/json",
             secure=True,
@@ -8316,6 +8318,48 @@ class OncologiaCcihIdentidadePacienteTests(TestCase):
         self.assertIsNotNone(ciclo.identidade_id)
         self.assertEqual(ciclo.identidade_id, infeccao.identidade_id)
         self.assertEqual(IdentidadePaciente.objects.filter(empresa=self.empresa, cpf=cpf).count(), 1)
+
+    def test_jornada_unifica_quimio_radio_rhc_apac_pelo_mesmo_cpf(self):
+        """A jornada oncológica cruza quimio + radio + RHC + APAC do mesmo
+        paciente numa única linha do tempo, pela identidade (MPI)."""
+        cpf = "52998224725"
+        # quimio
+        self.client.post("/api/hospital/oncologia/ciclos/", data=json.dumps({
+            "protocolo_id": self.protocolo.id, "paciente_nome": "Jornada Paciente",
+            "cpf_paciente": cpf, "cid10_principal": "C50", "numero_ciclo": 1,
+            "data_inicio": "2026-03-01", "peso_kg": 62, "altura_cm": 160,
+        }), content_type="application/json", secure=True)
+        # radioterapia
+        self.client.post("/api/hospital/radioterapia/sessoes/", data=json.dumps({
+            "paciente": "Jornada Paciente", "cpf_paciente": cpf, "cid": "C50",
+            "data_inicio": "2026-05-10",
+        }), content_type="application/json", secure=True)
+        # RHC
+        self.client.post("/api/hospital/rhc/registros/", data=json.dumps({
+            "nome_paciente": "Jornada Paciente", "cpf_paciente": cpf,
+            "data_nascimento": "1970-01-01", "sexo": "F", "cid_topografia": "C50",
+            "estadiamento": "II", "data_primeiro_atendimento": "2026-02-15",
+            "data_diagnostico": "2026-02-20",
+        }), content_type="application/json", secure=True)
+        # APAC
+        self.client.post("/api/hospital/oncologia/apacs/", data=json.dumps({
+            "paciente_nome": "Jornada Paciente", "cpf_paciente": cpf,
+            "cid10_principal": "C50", "competencia": "202603",
+        }), content_type="application/json", secure=True)
+
+        resp = self.client.get(
+            "/api/hospital/oncologia/jornada/?cpf=" + cpf, secure=True)
+        self.assertEqual(resp.status_code, 200, msg=resp.content)
+        j = resp.json()
+        self.assertEqual(j["resumo"]["quimioterapia"], 1)
+        self.assertEqual(j["resumo"]["radioterapia"], 1)
+        self.assertEqual(j["resumo"]["rhc"], 1)
+        self.assertEqual(j["resumo"]["apac"], 1)
+        self.assertEqual(j["total_eventos"], 4)
+        # timeline ordenada por data — RHC (fev) antes da radio (mai)
+        tipos = [e["tipo"] for e in j["timeline"]]
+        self.assertEqual(tipos[0], "rhc")
+        self.assertEqual(tipos[-1], "radioterapia")
 
 
 class AnsConformidadeAssistidaTests(TestCase):

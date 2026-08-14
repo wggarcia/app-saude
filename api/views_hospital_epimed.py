@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
-from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature
+from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature, api_requer_permissao_modulo
 
 try:
     from .models import TransmissaoEpimed, PacienteInternado, LeitoHospitalar
@@ -48,6 +48,7 @@ def hospital_epimed_page(request):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.uti_centro_cirurgico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_epimed_status(request):
     emp = _hosp(request)
     if not emp:
@@ -84,6 +85,7 @@ def api_epimed_status(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.uti_centro_cirurgico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_epimed_gerar(request):
     emp = _hosp(request)
     if not emp:
@@ -147,6 +149,7 @@ def api_epimed_gerar(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.uti_centro_cirurgico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_epimed_transmitir(request, id):
     emp = _hosp(request)
     if not emp:
@@ -227,6 +230,7 @@ def api_epimed_transmitir(request, id):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.uti_centro_cirurgico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_epimed_historico(request):
     emp = _hosp(request)
     if not emp:
@@ -253,6 +257,7 @@ def api_epimed_historico(request):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.uti_centro_cirurgico")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_epimed_kpis(request):
     emp = _hosp(request)
     if not emp:

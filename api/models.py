@@ -9370,6 +9370,22 @@ class CatalogoOPME(models.Model):
                                          help_text="Referência / modelo do fabricante")
     preco_maximo     = models.DecimalField(max_digits=12, decimal_places=2, null=True,
                                             blank=True, verbose_name="Preço máximo (SIGTAP/CBHPM)")
+    homologado       = models.BooleanField(default=True,
+                                            verbose_name="Homologado pela operadora/comissão")
+    preferencial     = models.BooleanField(default=False,
+                                            verbose_name="Material preferencial (padrão de menor custo)")
+    codigo_operadora = models.CharField(max_length=40, blank=True, default="",
+                                         verbose_name="Código da Operadora",
+                                         help_text="Codificação própria da operadora (ex.: TNU da "
+                                                    "Unimed), quando diferente da TUSS/ANVISA/SIGTAP.")
+    grupo_equivalencia = models.CharField(max_length=60, blank=True, default="", db_index=True,
+                                           verbose_name="Grupo de Equivalência Clínica",
+                                           help_text="Itens com o mesmo valor aqui são considerados "
+                                                      "clinicamente intercambiáveis — usado para "
+                                                      "oferecer marcas/fabricantes alternativos "
+                                                      "(RN 424/ANS, Junta Médica).")
+    data_validade_registro_anvisa = models.DateField(
+        null=True, blank=True, verbose_name="Validade do Registro ANVISA")
     ativo            = models.BooleanField(default=True)
     criado_em        = models.DateTimeField(auto_now_add=True)
 
@@ -9380,6 +9396,7 @@ class CatalogoOPME(models.Model):
         indexes             = [
             models.Index(fields=["empresa", "tipo"]),
             models.Index(fields=["empresa", "codigo_anvisa"]),
+            models.Index(fields=["empresa", "grupo_equivalencia"]),
         ]
 
     def __str__(self):
@@ -9401,6 +9418,21 @@ class AutorizacaoOPME(models.Model):
                                           null=True, blank=True, related_name="opmes")
     cirurgia_id      = models.PositiveIntegerField(null=True, blank=True,
                                                     help_text="ID do procedimento cirúrgico")
+    procedimento_tuss = models.CharField(max_length=10, blank=True, default="",
+                                         verbose_name="Procedimento TUSS/SIGTAP vinculado")
+    # Triagem automática (materiais fora do padrão) + recomendação do motor de IA
+    alertas_triagem  = models.JSONField(default=list, blank=True,
+                                        verbose_name="Alertas da triagem automática")
+    ia_decisao       = models.CharField(max_length=12, blank=True, default="",
+                                        help_text="Recomendação do motor de IA: aprovada/negada/revisao")
+    ia_score         = models.FloatField(null=True, blank=True,
+                                         help_text="Confiança da recomendação de IA (0-1)")
+    ia_justificativa = models.TextField(blank=True, default="")
+    # Detecção de padrão de fraude/abuso no pedido (volume atípico do médico,
+    # repetição do mesmo material) — regra estatística sobre o histórico real.
+    alertas_fraude   = models.JSONField(default=list, blank=True,
+                                        verbose_name="Alertas de padrão atípico/fraude")
+    tem_alerta_fraude = models.BooleanField(default=False, db_index=True)
     paciente_nome    = models.CharField(max_length=160)
     cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
     medico_solicitante = models.CharField(max_length=150)
@@ -9412,6 +9444,8 @@ class AutorizacaoOPME(models.Model):
     numero_protocolo = models.CharField(max_length=50, blank=True, default="")
     solicitado_em    = models.DateTimeField(auto_now_add=True)
     respondido_em    = models.DateTimeField(null=True, blank=True)
+    respondido_por   = models.CharField(max_length=160, blank=True, default="",
+                                         help_text="Operador que aprovou/negou (trilha de auditoria)")
     validade_ate     = models.DateField(null=True, blank=True,
                                          help_text="Validade da autorização")
 
@@ -9441,6 +9475,11 @@ class ItemAutorizacaoOPME(models.Model):
                                           related_name="autorizacoes")
     quantidade       = models.PositiveIntegerField(default=1)
     quantidade_aprovada = models.PositiveIntegerField(default=0)
+    preco_solicitado = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
+                                           verbose_name="Preço solicitado (para comparar com o teto)")
+    fora_padrao      = models.BooleanField(default=False,
+                                           verbose_name="Sinalizado fora do padrão pela triagem")
+    alerta_triagem   = models.CharField(max_length=200, blank=True, default="")
     status           = models.CharField(max_length=15, choices=STATUS_ITEM, default="pendente")
     motivo_negativa  = models.TextField(blank=True, default="")
 
@@ -9449,6 +9488,47 @@ class ItemAutorizacaoOPME(models.Model):
 
     def __str__(self):
         return f"{self.opme.descricao} × {self.quantidade}"
+
+
+class JuntaMedicaOPME(models.Model):
+    """Junta Médica/Odontológica para divergência técnica sobre marca/material de
+    OPME entre o médico assistente e a operadora — RN nº 424/2017 da ANS.
+    Registra as marcas alternativas oferecidas e o desfecho da disputa."""
+    STATUS = [
+        ("aberta",              "Aberta"),
+        ("em_analise",          "Em Análise"),
+        ("resolvida_medico",    "Resolvida — Mantida Indicação do Médico"),
+        ("resolvida_operadora", "Resolvida — Acatada Alternativa da Operadora"),
+        ("cancelada",           "Cancelada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="juntas_medicas_opme")
+    autorizacao      = models.ForeignKey(AutorizacaoOPME, on_delete=models.CASCADE,
+                                          related_name="juntas_medicas")
+    item             = models.ForeignKey(ItemAutorizacaoOPME, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="juntas_medicas")
+    motivo_divergencia = models.TextField(
+        verbose_name="Motivo da divergência técnica",
+        help_text="Por que a operadora diverge da marca/material indicado pelo médico assistente.")
+    # Snapshot das marcas alternativas ofertadas no momento da abertura (RN 424 exige
+    # ao menos 3 marcas de fabricantes diferentes regularizadas na ANVISA, quando existirem).
+    marcas_alternativas_oferecidas = models.JSONField(
+        default=list, blank=True, verbose_name="Marcas alternativas oferecidas")
+    status           = models.CharField(max_length=25, choices=STATUS, default="aberta")
+    parecer          = models.TextField(blank=True, default="", verbose_name="Parecer da junta")
+    aberta_por       = models.CharField(max_length=160, blank=True, default="")
+    resolvida_por    = models.CharField(max_length=160, blank=True, default="")
+    aberta_em        = models.DateTimeField(auto_now_add=True)
+    resolvida_em     = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name        = "Junta Médica OPME (RN 424/ANS)"
+        verbose_name_plural = "Juntas Médicas OPME (RN 424/ANS)"
+        ordering            = ["-aberta_em"]
+        indexes             = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"Junta Médica — {self.autorizacao.numero_protocolo} ({self.status})"
 
 
 class ImplantavelRegistro(models.Model):
@@ -9481,6 +9561,47 @@ class ImplantavelRegistro(models.Model):
 
     def __str__(self):
         return f"{self.opme.descricao} — {self.paciente_nome} ({self.data_implante})"
+
+
+class OPMEProcedimento(models.Model):
+    """Catálogo inteligente por procedimento: liga um procedimento (TUSS/SIGTAP)
+    aos materiais OPME permitidos, com quantidade máxima e material preferencial.
+    É a base da triagem 'fora do padrão'."""
+    empresa      = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                      related_name="opme_procedimentos")
+    codigo_tuss  = models.CharField(max_length=10, verbose_name="Código TUSS/SIGTAP")
+    descricao    = models.CharField(max_length=200)
+    ativo        = models.BooleanField(default=True)
+    criado_em    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Procedimento OPME"
+        verbose_name_plural = "Procedimentos OPME"
+        ordering            = ["descricao"]
+        unique_together     = [["empresa", "codigo_tuss"]]
+        indexes             = [models.Index(fields=["empresa", "codigo_tuss"])]
+
+    def __str__(self):
+        return f"{self.codigo_tuss} — {self.descricao}"
+
+
+class OPMEProcedimentoItem(models.Model):
+    """Material OPME permitido para um procedimento, com quantidade máxima."""
+    procedimento     = models.ForeignKey(OPMEProcedimento, on_delete=models.CASCADE,
+                                          related_name="itens_permitidos")
+    opme             = models.ForeignKey(CatalogoOPME, on_delete=models.CASCADE,
+                                          related_name="procedimentos_permitidos")
+    quantidade_maxima = models.PositiveIntegerField(default=1)
+    preferencial     = models.BooleanField(default=False,
+                                            verbose_name="Material preferencial para este procedimento")
+
+    class Meta:
+        verbose_name        = "Item permitido por procedimento"
+        verbose_name_plural = "Itens permitidos por procedimento"
+        unique_together     = [["procedimento", "opme"]]
+
+    def __str__(self):
+        return f"{self.procedimento.codigo_tuss} → {self.opme.descricao} (máx {self.quantidade_maxima})"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -10697,15 +10818,40 @@ class CicloQuimioterapia(models.Model):
     cid10_principal  = models.CharField(max_length=10)
     numero_ciclo     = models.PositiveSmallIntegerField(verbose_name="Número do ciclo")
     data_inicio      = models.DateField()
+    data_prevista    = models.DateField(null=True, blank=True,
+                                         verbose_name="Data prevista do próximo ciclo",
+                                         help_text="data_inicio + intervalo do protocolo — base do alerta de atraso")
     data_fim         = models.DateField(null=True, blank=True)
     status           = models.CharField(max_length=12, choices=STATUS, default="agendado")
     medico_oncologista = models.CharField(max_length=150, blank=True, default="")
     crm              = models.CharField(max_length=20, blank=True, default="")
     # Superfície corporal para cálculo de dose
     peso_kg          = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
-    altura_cm        = models.DecimalField(max_digits=4, decimal_places=0, null=True, blank=True)
+    altura_cm        = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
     sc_m2            = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True,
                                             verbose_name="Superfície corporal (m²)")
+    doses_calculadas = models.JSONField(default=list, blank=True,
+                                         verbose_name="Doses calculadas (mg) por droga, com caps")
+    # Parâmetros clínicos para ajuste de dose (função renal/hepática/hematológica)
+    creatinina_mg_dl = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    clearance_creatinina = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True,
+                                               verbose_name="Clearance de creatinina (mL/min)")
+    bilirrubina_mg_dl = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    neutrofilos      = models.PositiveIntegerField(null=True, blank=True,
+                                                   verbose_name="Neutrófilos (/mm³)")
+    plaquetas        = models.PositiveIntegerField(null=True, blank=True,
+                                                   verbose_name="Plaquetas (/mm³)")
+    MOTIVO_ADIAMENTO = [
+        ("clinico",        "Clínico (toxicidade/condição do paciente)"),
+        ("administrativo", "Administrativo (guia/autorização)"),
+        ("logistico",      "Logístico (falta de droga/agenda)"),
+    ]
+    motivo_adiamento = models.CharField(max_length=20, blank=True, default="",
+                                        choices=MOTIVO_ADIAMENTO,
+                                        verbose_name="Motivo de adiamento")
+    guia             = models.ForeignKey("GuiaOncologica", on_delete=models.SET_NULL,
+                                         null=True, blank=True, related_name="ciclos",
+                                         help_text="Guia/autorização que cobre este ciclo")
     obs              = models.TextField(blank=True, default="")
     criado_em        = models.DateTimeField(auto_now_add=True)
     atualizado_em    = models.DateTimeField(auto_now=True)
@@ -10751,7 +10897,19 @@ class APACOncologia(models.Model):
                                                verbose_name="Procedimento SIGTAP")
     ciclo_referencia = models.ForeignKey(CicloQuimioterapia, on_delete=models.PROTECT,
                                           related_name="apacs", null=True, blank=True)
-    competencia      = models.CharField(max_length=6, verbose_name="Competência AAAAMM")
+    competencia      = models.CharField(max_length=6, verbose_name="Competência inicial AAAAMM")
+    competencia_final = models.CharField(max_length=6, blank=True, default="",
+                                         verbose_name="Competência final de validade (APAC vale até 3)")
+    # Campos obrigatórios do laudo/APAC SIA-SUS
+    cnes_solicitante = models.CharField(max_length=7, blank=True, default="",
+                                        verbose_name="CNES do estabelecimento solicitante")
+    cnes_executante  = models.CharField(max_length=7, blank=True, default="",
+                                        verbose_name="CNES do estabelecimento executante")
+    CARATER_CHOICES  = [("1", "Eletivo"), ("2", "Urgência")]
+    carater_atendimento = models.CharField(max_length=1, choices=CARATER_CHOICES, default="1")
+    data_solicitacao = models.DateField(null=True, blank=True)
+    data_autorizacao = models.DateField(null=True, blank=True)
+    autorizador_nome = models.CharField(max_length=120, blank=True, default="")
     valor_solicitado = models.DecimalField(max_digits=12, decimal_places=2,
                                             null=True, blank=True)
     valor_aprovado   = models.DecimalField(max_digits=12, decimal_places=2,
@@ -10810,6 +10968,58 @@ class ToxicidadeQuimio(models.Model):
 
     def __str__(self):
         return f"Tox Grau {self.grau} — {self.categoria} — {self.ciclo.paciente_nome}"
+
+
+class GuiaOncologica(models.Model):
+    """Guia/autorização que cobre o tratamento oncológico. Tem validade e um teto
+    de ciclos autorizados — base para o alerta de vencimento de guia."""
+    TIPO = [
+        ("quimioterapia", "Quimioterapia"),
+        ("radioterapia",  "Radioterapia"),
+        ("geral",         "Tratamento oncológico"),
+    ]
+    STATUS = [
+        ("vigente",   "Vigente"),
+        ("vencida",   "Vencida"),
+        ("esgotada",  "Esgotada (ciclos consumidos)"),
+        ("cancelada", "Cancelada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="guias_oncologicas")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    identidade       = models.ForeignKey("IdentidadePaciente", on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="guias_oncologicas_mpi")
+    numero_guia      = models.CharField(max_length=40, verbose_name="Número da guia/autorização")
+    tipo             = models.CharField(max_length=15, choices=TIPO, default="quimioterapia")
+    operadora        = models.CharField(max_length=120, blank=True, default="")
+    data_emissao     = models.DateField()
+    data_validade    = models.DateField(verbose_name="Válida até")
+    ciclos_autorizados = models.PositiveSmallIntegerField(default=0,
+                                                          help_text="0 = sem limite de ciclos")
+    ciclos_utilizados  = models.PositiveSmallIntegerField(default=0)
+    status           = models.CharField(max_length=12, choices=STATUS, default="vigente")
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Guia Oncológica"
+        verbose_name_plural = "Guias Oncológicas"
+        ordering            = ["data_validade"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_validade"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def dias_para_vencer(self):
+        from datetime import date as _d
+        return (self.data_validade - _d.today()).days
+
+    def __str__(self):
+        return f"Guia {self.numero_guia} — {self.paciente_nome} (val. {self.data_validade})"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -12151,6 +12361,13 @@ class RegistroHospitalarCancer(models.Model):
 
     empresa                   = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="registros_hospitalares_cancer")
     nome_paciente             = models.CharField(max_length=200)
+    cpf_paciente              = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente              = models.CharField(max_length=18, blank=True, default="")
+    identidade                = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="rhc_mpi",
+        help_text="Identidade única do paciente (MPI) — liga RHC à quimio/radio/APAC",
+    )
     data_nascimento           = models.DateField()
     sexo                      = models.CharField(max_length=1, choices=SEXO_CHOICES)
     cid_topografia            = models.CharField(max_length=10)
@@ -12196,6 +12413,13 @@ class SessaoRadioterapia(models.Model):
 
     empresa                    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="sessoes_radioterapia")
     paciente                   = models.CharField(max_length=200)
+    cpf_paciente               = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente               = models.CharField(max_length=18, blank=True, default="")
+    identidade                 = models.ForeignKey(
+        "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="radioterapia_mpi",
+        help_text="Identidade única do paciente (MPI) — liga radio à quimio/RHC/APAC",
+    )
     cid                        = models.CharField(max_length=20, blank=True, default="")
     sistema_radioterapia       = models.CharField(max_length=20, choices=SISTEMA_CHOICES, default="aria")
     numero_plano               = models.CharField(max_length=50, blank=True, default="",

@@ -17,6 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -76,6 +77,7 @@ def _notificacao_dict(n):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.epidemiologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_nhve_notificacoes(request):
     """GET/POST /api/hospital/nhve/notificacoes"""
     empresa = _hosp(request)
@@ -141,6 +143,7 @@ def api_nhve_notificacoes(request):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
 @api_requer_feature("hospital.epidemiologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_nhve_notificacao_detalhe(request, pk):
     """GET/PATCH /api/hospital/nhve/notificacoes/<pk>"""
     empresa = _hosp(request)
@@ -185,6 +188,7 @@ def api_nhve_notificacao_detalhe(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.epidemiologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_nhve_confirmar(request, pk):
     """POST /api/hospital/nhve/notificacoes/<pk>/confirmar"""
     empresa = _hosp(request)
@@ -210,6 +214,7 @@ def api_nhve_confirmar(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.epidemiologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_nhve_descartar(request, pk):
     """POST /api/hospital/nhve/notificacoes/<pk>/descartar"""
     empresa = _hosp(request)
@@ -266,6 +271,7 @@ def _gerar_ficha_sinan(n, empresa):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.epidemiologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_nhve_notificar_sinan(request, pk):
     """POST /api/hospital/nhve/notificacoes/<pk>/notificar-sinan
     Marca notificado_sinan=True, registra data/hora e retorna ficha JSON SINAN.
@@ -301,6 +307,7 @@ def api_nhve_notificar_sinan(request, pk):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.epidemiologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_nhve_kpis(request):
     """GET /api/hospital/nhve/kpis"""
     empresa = _hosp(request)

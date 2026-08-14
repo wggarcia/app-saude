@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_permissao_modulo,
     get_setor, requer_setor, requer_feature_pacote, requer_operacao_page,
     requer_permissao_modulo, api_requer_feature,
 )
@@ -52,6 +53,7 @@ def hospital_comissao_etica_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.comissao_etica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_comissao_etica_membros(request):
     emp = _hosp(request)
     if not emp:
@@ -100,6 +102,7 @@ def api_comissao_etica_membros(request):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
 @api_requer_feature("hospital.comissao_etica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_comissao_etica_membro_detalhe(request, m_id):
     emp = _hosp(request)
     if not emp:
@@ -131,6 +134,7 @@ def api_comissao_etica_membro_detalhe(request, m_id):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.comissao_etica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_comissao_etica_casos(request):
     emp = _hosp(request)
     if not emp:
@@ -193,6 +197,7 @@ def api_comissao_etica_casos(request):
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
 @api_requer_feature("hospital.comissao_etica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_comissao_etica_caso_detalhe(request, c_id):
     emp = _hosp(request)
     if not emp:
@@ -232,6 +237,7 @@ def api_comissao_etica_caso_detalhe(request, c_id):
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.comissao_etica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_comissao_etica_kpis(request):
     emp = _hosp(request)
     if not emp:

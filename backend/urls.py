@@ -892,8 +892,12 @@ from api.views_hospital_opme import (
     api_opme_catalogo_detalhe,
     api_opme_autorizacoes,
     api_opme_autorizacao_acao,
+    api_opme_autorizacao_juntas,
+    api_opme_junta_detalhe,
     api_opme_implantaveis,
     api_opme_kpis,
+    api_opme_procedimentos,
+    api_opme_procedimento_detalhe,
     hospital_opme_page,
 )
 from api.views_governo_odontologia import (
@@ -1007,6 +1011,9 @@ from api.views_hospital_oncologia import (
     api_onco_apacs,
     api_onco_apac_detalhe,
     api_onco_kpis,
+    api_onco_jornada,
+    api_onco_guias,
+    api_onco_guias_alertas,
     hospital_oncologia_page,
 )
 from api.views_hospital_manutencao import (
@@ -2844,6 +2851,10 @@ urlpatterns = [
     # ── OPME — Órteses, Próteses e Materiais Especiais ───────────────────────
     path('api/hospital/opme/kpis',                               api_opme_kpis),
     path('api/hospital/opme/kpis/',                              api_opme_kpis),
+    path('api/hospital/opme/procedimentos',                      api_opme_procedimentos),
+    path('api/hospital/opme/procedimentos/',                     api_opme_procedimentos),
+    path('api/hospital/opme/procedimentos/<int:proc_id>',        api_opme_procedimento_detalhe),
+    path('api/hospital/opme/procedimentos/<int:proc_id>/',       api_opme_procedimento_detalhe),
     path('api/hospital/opme/catalogo',                           api_opme_catalogo),
     path('api/hospital/opme/catalogo/',                          api_opme_catalogo),
     path('api/hospital/opme/catalogo/<int:item_id>',             api_opme_catalogo_detalhe),
@@ -2852,6 +2863,10 @@ urlpatterns = [
     path('api/hospital/opme/autorizacoes/',                      api_opme_autorizacoes),
     path('api/hospital/opme/autorizacoes/<int:aut_id>/acao',     api_opme_autorizacao_acao),
     path('api/hospital/opme/autorizacoes/<int:aut_id>/acao/',    api_opme_autorizacao_acao),
+    path('api/hospital/opme/autorizacoes/<int:aut_id>/juntas',   api_opme_autorizacao_juntas),
+    path('api/hospital/opme/autorizacoes/<int:aut_id>/juntas/',  api_opme_autorizacao_juntas),
+    path('api/hospital/opme/juntas/<int:junta_id>',              api_opme_junta_detalhe),
+    path('api/hospital/opme/juntas/<int:junta_id>/',             api_opme_junta_detalhe),
     path('api/hospital/opme/implantaveis',                       api_opme_implantaveis),
     path('api/hospital/opme/implantaveis/',                      api_opme_implantaveis),
 
@@ -3043,6 +3058,12 @@ urlpatterns = [
     path('api/hospital/oncologia/apacs/<int:apac_id>/',         api_onco_apac_detalhe),
     path('api/hospital/oncologia/kpis',                         api_onco_kpis),
     path('api/hospital/oncologia/kpis/',                        api_onco_kpis),
+    path('api/hospital/oncologia/jornada',                      api_onco_jornada),
+    path('api/hospital/oncologia/jornada/',                     api_onco_jornada),
+    path('api/hospital/oncologia/guias/alertas',                api_onco_guias_alertas),
+    path('api/hospital/oncologia/guias/alertas/',               api_onco_guias_alertas),
+    path('api/hospital/oncologia/guias',                        api_onco_guias),
+    path('api/hospital/oncologia/guias/',                       api_onco_guias),
 
     # ── Manutenção Predial/Equipamentos ───────────────────────────────────────
     path('api/hospital/manutencao/ordens',                      api_manutencao_ordens),

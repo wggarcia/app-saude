@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature,
     api_requer_gerencia,
     get_setor,
@@ -76,6 +77,7 @@ def hospital_cirurgia_page(request):
 # ─── API: Agenda (hoje + 7 dias) ──────────────────────────────────────────────
 
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET"])
 def api_cirurgia_agenda(request):
     empresa = _empresa(request)
@@ -96,6 +98,7 @@ def api_cirurgia_agenda(request):
 # ─── API: Lista (todos, com filtros) ──────────────────────────────────────────
 
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET"])
 def api_cirurgia_lista(request):
     empresa = _empresa(request)
@@ -137,6 +140,7 @@ def api_cirurgia_lista(request):
 # ─── API: Nova cirurgia ───────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_cirurgia_nova(request):
@@ -251,6 +255,7 @@ def api_cirurgia_nova(request):
 
 
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_cirurgia(request):
@@ -262,6 +267,7 @@ def api_cirurgia(request):
 # ─── API: Atualizar situação / relatório ──────────────────────────────────────
 
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_cirurgia_atualizar(request, cir_id):
@@ -302,6 +308,7 @@ def api_cirurgia_atualizar(request, cir_id):
 # ─── API: KPIs ────────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.cirurgia")
+@api_requer_permissao_modulo("hospital.clinico")
 @require_http_methods(["GET"])
 def api_cirurgia_kpis(request):
     empresa = _empresa(request)

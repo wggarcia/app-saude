@@ -22,6 +22,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature,
     get_setor,
     requer_feature_pacote,
@@ -168,6 +169,7 @@ def hospital_radioterapia_page(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_radioterapia_hl7_receber(request):
     """
     Recebe mensagem HL7 v2.5 do sistema Varian (Aria/Halcyon).
@@ -292,6 +294,7 @@ def api_radioterapia_hl7_receber(request):
 # ─── GET/POST /api/hospital/radioterapia/sessoes ─────────────────────────────
 
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 def api_radioterapia_sessoes(request):
     empresa = _hosp(request)
@@ -397,9 +400,19 @@ def _sessoes_criar(request, empresa):
             except (ValueError, TypeError):
                 return JsonResponse({"erro": "numero_fracoes_total deve ser inteiro positivo"}, status=400)
 
+        # Vincula à identidade única (MPI) — a radio passa a ser o mesmo paciente
+        # da quimio/RHC/APAC na jornada oncológica.
+        from .services.identidade_paciente import resolver_identidade
+        identidade = resolver_identidade(
+            empresa, nome=paciente,
+            cpf=data.get("cpf_paciente", ""), cns=data.get("cns_paciente", ""),
+        )
         sessao = SessaoRadioterapia.objects.create(
             empresa=empresa,
             paciente=paciente,
+            cpf_paciente=data.get("cpf_paciente", ""),
+            cns_paciente=data.get("cns_paciente", ""),
+            identidade=identidade,
             cid=(data.get("cid") or "").strip(),
             sistema_radioterapia=sistema,
             numero_plano=(data.get("numero_plano") or "").strip(),
@@ -420,6 +433,7 @@ def _sessoes_criar(request, empresa):
 # ─── GET /api/hospital/radioterapia/sessoes/<pk> ──────────────────────────────
 
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_radioterapia_sessao_detalhe(request, pk: int):
     """Detalhe de uma sessão de radioterapia."""
     if request.method != "GET":
@@ -446,6 +460,7 @@ def api_radioterapia_sessao_detalhe(request, pk: int):
 # ─── PATCH /api/hospital/radioterapia/sessoes/<pk> ────────────────────────────
 
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 @csrf_exempt
 def api_radioterapia_sessao_atualizar(request, pk: int):
     """
@@ -538,6 +553,7 @@ def api_radioterapia_sessao(request, pk: int):
 # ─── GET /api/hospital/radioterapia/kpis ─────────────────────────────────────
 
 @api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_radioterapia_kpis(request):
     """
     KPIs resumidos de Radioterapia:

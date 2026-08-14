@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.db.models import Sum, Count, Avg, Q
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
-from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature
+from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature, api_requer_permissao_modulo
 from .views_dashboard import contexto_navegacao_setorial
 
 try:
@@ -48,6 +48,7 @@ def hospital_custos_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_custos_centros(request):
     emp = _hosp(request)
     if not emp:
@@ -86,6 +87,7 @@ def api_custos_centros(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_custos_lancamentos(request):
     emp = _hosp(request)
     if not emp:
@@ -138,6 +140,7 @@ def api_custos_lancamentos(request):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_custos_apuracao(request, comp):
     emp = _hosp(request)
     if not emp:
@@ -181,6 +184,7 @@ def api_custos_apuracao(request, comp):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_custos_drg(request):
     emp = _hosp(request)
     if not emp:
@@ -224,6 +228,7 @@ def api_custos_drg(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_custos_drg_enviar(request, pk):
     emp = _hosp(request)
     if not emp:
@@ -294,6 +299,7 @@ def api_custos_drg_enviar(request, pk):
 
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
 def api_custos_kpis(request):
     emp = _hosp(request)
     if not emp:

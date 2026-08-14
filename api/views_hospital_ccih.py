@@ -20,6 +20,7 @@ from .services.auth_session import empresa_autenticada_from_request as get_empre
 from .services.identidade_paciente import resolver_identidade
 from .utils import validar_cpf_cadastro
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo, principal_pode_operacao_setorial,
 )
@@ -53,6 +54,7 @@ def hospital_ccih_page(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.ccih")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_ccih_infeccoes(request):
     """GET/POST /api/hospital/ccih/infeccoes/"""
     empresa = _hosp(request)
@@ -145,6 +147,7 @@ def api_ccih_infeccoes(request):
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
 @api_requer_feature("hospital.ccih")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_ccih_infeccao_detalhe(request, ih_id):
     """GET/PUT /api/hospital/ccih/infeccoes/<id>/"""
     empresa = _hosp(request)
@@ -202,6 +205,7 @@ def api_ccih_infeccao_detalhe(request, ih_id):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.ccih")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_ccih_isolamentos(request):
     """GET/POST /api/hospital/ccih/isolamentos/"""
     empresa = _hosp(request)
@@ -272,6 +276,7 @@ def api_ccih_isolamentos(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_requer_feature("hospital.ccih")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_ccih_isolamento_encerrar(request, iso_id):
     """POST /api/hospital/ccih/isolamentos/<id>/encerrar/"""
     empresa = _hosp(request)
@@ -300,6 +305,7 @@ def api_ccih_isolamento_encerrar(request, iso_id):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.ccih")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_ccih_indicadores(request):
     """GET/POST /api/hospital/ccih/indicadores/"""
     empresa = _hosp(request)
@@ -365,6 +371,7 @@ def api_ccih_indicadores(request):
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.ccih")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_ccih_kpis(request):
     """GET /api/hospital/ccih/kpis/"""
     empresa = _hosp(request)

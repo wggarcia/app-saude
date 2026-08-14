@@ -17,6 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -82,6 +83,7 @@ def _ciclo_to_dict(ciclo):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.limpeza")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_lavanderia_itens(request):
     """GET/POST /api/hospital/lavanderia/itens"""
     empresa = _hosp(request)
@@ -139,6 +141,7 @@ def api_lavanderia_itens(request):
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @api_requer_feature("hospital.limpeza")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_lavanderia_item_detail(request, pk):
     """PATCH /api/hospital/lavanderia/itens/<pk>"""
     empresa = _hosp(request)
@@ -186,6 +189,7 @@ def api_lavanderia_item_detail(request, pk):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 @api_requer_feature("hospital.limpeza")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_lavanderia_ciclos(request):
     """GET/POST /api/hospital/lavanderia/ciclos"""
     empresa = _hosp(request)
@@ -280,6 +284,7 @@ def api_lavanderia_ciclos(request):
 @csrf_exempt
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.limpeza")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_lavanderia_saldo(request):
     """GET /api/hospital/lavanderia/saldo — saldo atual de roupas por setor"""
     empresa = _hosp(request)
@@ -314,6 +319,7 @@ def api_lavanderia_saldo(request):
 @csrf_exempt
 @require_http_methods(["GET"])
 @api_requer_feature("hospital.limpeza")
+@api_requer_permissao_modulo("hospital.operacional")
 def api_lavanderia_kpis(request):
     """GET /api/hospital/lavanderia/kpis"""
     empresa = _hosp(request)

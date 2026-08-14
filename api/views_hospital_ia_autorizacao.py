@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.core.cache import cache
 
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -122,6 +123,7 @@ def hospital_ia_autorizacao_page(request):
 # ── API: listagem ──────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.ia_autorizacao")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_ia_autorizacoes(request):
     empresa = _empresa(request)
     if not empresa:
@@ -150,6 +152,7 @@ _ML_RATE_LIMIT = 30  # max inferências por empresa por hora
 
 @csrf_exempt
 @api_requer_feature("hospital.ia_autorizacao")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_ia_analisar(request):
     empresa = _empresa(request)
     if not empresa:
@@ -200,6 +203,7 @@ def api_hospital_ia_analisar(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.ia_autorizacao")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_ia_revisar(request, ia_id):
     empresa = _empresa(request)
     if not empresa:
@@ -230,6 +234,7 @@ def api_hospital_ia_revisar(request, ia_id):
 # ── API: KPIs ───────────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.ia_autorizacao")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_ia_kpis(request):
     empresa = _empresa(request)
     if not empresa:

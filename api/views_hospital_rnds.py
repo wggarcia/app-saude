@@ -21,6 +21,7 @@ from django.utils import timezone
 
 from .services.auth_session import empresa_autenticada_from_request
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -69,6 +70,7 @@ def _get_cred(empresa):
 # ── Status das credenciais ────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.rnds")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_rnds_status(request):
     """GET /api/hospital/rnds/status — verifica se RNDS está configurado."""
     empresa = _hosp(request)
@@ -105,6 +107,7 @@ def api_hospital_rnds_status(request):
 # ── Histórico ─────────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.rnds")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_rnds_transmissoes(request):
     """GET /api/hospital/rnds/transmissoes — histórico paginado."""
     empresa = _hosp(request)
@@ -139,6 +142,7 @@ def api_hospital_rnds_transmissoes(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.rnds")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_rnds_transmitir_alta(request, internacao_id):
     """
     POST /api/hospital/rnds/transmitir-alta/<internacao_id>
@@ -206,6 +210,7 @@ def api_hospital_rnds_transmitir_alta(request, internacao_id):
 
 @csrf_exempt
 @api_requer_feature("hospital.rnds")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_rnds_transmitir_rac(request, prontuario_id):
     """
     POST /api/hospital/rnds/transmitir-rac/<prontuario_id>
@@ -266,6 +271,7 @@ def api_hospital_rnds_transmitir_rac(request, prontuario_id):
 
 @csrf_exempt
 @api_requer_feature("hospital.rnds")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_rnds_reprocessar(request, tx_id):
     """POST /api/hospital/rnds/reprocessar/<id> — reprocessa transmissão com erro."""
     empresa = _hosp_gerencia(request)
@@ -304,6 +310,7 @@ def api_hospital_rnds_reprocessar(request, tx_id):
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.rnds")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_hospital_rnds_kpis(request):
     """GET /api/hospital/rnds/kpis — cobertura e status das transmissões."""
     empresa = _hosp(request)

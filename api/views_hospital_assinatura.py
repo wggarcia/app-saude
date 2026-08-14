@@ -24,6 +24,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .services.auth_session import empresa_autenticada_from_request
 from .access_control import (
+    api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
@@ -59,6 +60,7 @@ def _get_cred(empresa):
 # ── Evoluções pendentes de assinatura ─────────────────────────────────────────
 
 @api_requer_feature("hospital.assinatura_eletronica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_assinatura_pendentes(request):
     """
     GET /api/hospital/assinatura/pendentes
@@ -102,6 +104,7 @@ def api_assinatura_pendentes(request):
 
 @csrf_exempt
 @api_requer_feature("hospital.assinatura_eletronica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_assinatura_assinar(request, evolucao_id):
     """
     POST /api/hospital/assinatura/assinar/<id>
@@ -188,6 +191,7 @@ def api_assinatura_assinar(request, evolucao_id):
 
 @csrf_exempt
 @api_requer_feature("hospital.assinatura_eletronica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_assinatura_assinar_lote(request):
     """
     POST /api/hospital/assinatura/assinar-lote
@@ -263,6 +267,7 @@ def api_assinatura_assinar_lote(request):
 # ── Verificar assinatura ──────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.assinatura_eletronica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_assinatura_verificar(request, evolucao_id):
     """
     GET /api/hospital/assinatura/verificar/<id>
@@ -310,6 +315,7 @@ def api_assinatura_verificar(request, evolucao_id):
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 
 @api_requer_feature("hospital.assinatura_eletronica")
+@api_requer_permissao_modulo("hospital.clinico")
 def api_assinatura_kpis(request):
     """GET /api/hospital/assinatura/kpis."""
     empresa = _hosp(request)
