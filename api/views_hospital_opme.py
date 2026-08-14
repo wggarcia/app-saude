@@ -465,11 +465,20 @@ def api_opme_autorizacoes(request):
                             "id": it.id,
                             "opme_descricao": it.opme.descricao,
                             "opme_tipo": it.opme.get_tipo_display(),
+                            "opme_id": it.opme_id,
+                            "fabricante": it.opme.fabricante,
+                            "codigo_operadora": it.opme.codigo_operadora,
                             "quantidade": it.quantidade,
                             "quantidade_aprovada": it.quantidade_aprovada,
+                            "preco_solicitado": (float(it.preco_solicitado)
+                                                 if it.preco_solicitado else None),
                             "fora_padrao": it.fora_padrao,
                             "alerta_triagem": it.alerta_triagem,
                             "status": it.status,
+                            "substituido_de": (it.substituido_de.descricao
+                                               if it.substituido_de else None),
+                            "economia_aplicada": (float(it.economia_aplicada)
+                                                  if it.economia_aplicada else None),
                         }
                         for it in a.itens.all()
                     ],
@@ -578,10 +587,40 @@ def api_opme_autorizacoes(request):
                     if alternativas:
                         marcas_alternativas_por_item[opme_obj.id] = alternativas
 
+                # Substituição aceita: o solicitante trocou o material original
+                # pela alternativa sugerida. Grava a economia COMPROVADA (é o
+                # único número que a operadora pode auditar depois).
+                substituido_de = None
+                economia = None
+                sub_id = it.get("substituido_de_id")
+                if sub_id:
+                    try:
+                        substituido_de = CatalogoOPME.objects.get(
+                            id=sub_id, empresa=empresa)
+                    except (CatalogoOPME.DoesNotExist, ValueError, TypeError):
+                        raise ValueError(
+                            f"Material substituído inválido: {sub_id!r}")
+                    preco_antigo = it.get("preco_substituido")
+                    if preco_antigo in (None, ""):
+                        preco_antigo = (float(substituido_de.preco_maximo)
+                                        if substituido_de.preco_maximo else None)
+                    else:
+                        try:
+                            preco_antigo = float(preco_antigo)
+                        except (TypeError, ValueError):
+                            raise ValueError("Preço do material substituído inválido")
+                    preco_novo = preco_sol if preco_sol is not None else (
+                        float(opme_obj.preco_maximo) if opme_obj.preco_maximo else None)
+                    if preco_antigo is not None and preco_novo is not None:
+                        economia = round((preco_antigo - preco_novo) * qtd, 2)
+                        if economia <= 0:
+                            economia = None  # troca não gerou economia — não infla o KPI
+
                 ItemAutorizacaoOPME.objects.create(
                     autorizacao=aut, opme=opme_obj, quantidade=qtd,
                     preco_solicitado=preco_sol, fora_padrao=fora,
-                    alerta_triagem=(alertas_item[0] if alertas_item else ""))
+                    alerta_triagem=(alertas_item[0] if alertas_item else ""),
+                    substituido_de=substituido_de, economia_aplicada=economia)
                 itens_criados += 1
 
             if itens_criados == 0:
@@ -848,6 +887,178 @@ def api_opme_junta_detalhe(request, junta_id):
         junta.parecer = data["parecer"]
     junta.save()
     return JsonResponse({"ok": True, "status": junta.status})
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_juntas(request):
+    """GET /api/hospital/opme/juntas/ — todas as Juntas Médicas da empresa."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    JuntaMedicaOPME = _get_junta_model()
+    qs = JuntaMedicaOPME.objects.filter(empresa=empresa).select_related(
+        "autorizacao", "item__opme")
+    status_f = request.GET.get("status")
+    if status_f:
+        qs = qs.filter(status=status_f)
+    total = qs.count()
+    limite, offset = _paginacao(request)
+    return JsonResponse({
+        "total": total,
+        "juntas": [
+            {
+                "id": j.id,
+                "autorizacao_id": j.autorizacao_id,
+                "protocolo": j.autorizacao.numero_protocolo,
+                "paciente_nome": j.autorizacao.paciente_nome,
+                "medico_solicitante": j.autorizacao.medico_solicitante,
+                "material": j.item.opme.descricao if j.item else "",
+                "motivo_divergencia": j.motivo_divergencia,
+                "marcas_alternativas_oferecidas": j.marcas_alternativas_oferecidas,
+                "status": j.status,
+                "status_display": j.get_status_display(),
+                "parecer": j.parecer,
+                "aberta_por": j.aberta_por,
+                "resolvida_por": j.resolvida_por,
+                "aberta_em": j.aberta_em.isoformat(),
+                "resolvida_em": j.resolvida_em.isoformat() if j.resolvida_em else None,
+            }
+            for j in qs.order_by("-aberta_em")[offset:offset + limite]
+        ],
+    })
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_alternativas(request, item_id):
+    """GET /api/hospital/opme/catalogo/<id>/alternativas/ — marcas equivalentes
+    homologadas (RN 424/ANS) com a economia de cada uma frente ao item escolhido."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    CatalogoOPME, *_ = _get_opme_models()
+    try:
+        item = CatalogoOPME.objects.get(id=item_id, empresa=empresa)
+    except CatalogoOPME.DoesNotExist:
+        return JsonResponse({"erro": "Item não encontrado"}, status=404)
+
+    # Preço de referência: o informado pelo solicitante, senão o teto do item.
+    try:
+        preco_ref = float(request.GET.get("preco", "") or 0) or None
+    except (TypeError, ValueError):
+        preco_ref = None
+    if preco_ref is None:
+        preco_ref = float(item.preco_maximo) if item.preco_maximo else None
+
+    alternativas = _marcas_alternativas(empresa, item)
+    for a in alternativas:
+        a["economia"] = (
+            round(preco_ref - a["preco_maximo"], 2)
+            if (preco_ref is not None and a["preco_maximo"] is not None
+                and preco_ref > a["preco_maximo"]) else None
+        )
+    return JsonResponse({
+        "item": {
+            "id": item.id, "descricao": item.descricao, "fabricante": item.fabricante,
+            "codigo_anvisa": item.codigo_anvisa, "codigo_operadora": item.codigo_operadora,
+            "grupo_equivalencia": item.grupo_equivalencia,
+            "homologado": item.homologado, "preferencial": item.preferencial,
+            "preco_maximo": float(item.preco_maximo) if item.preco_maximo else None,
+            "preco_referencia": preco_ref,
+        },
+        "alternativas": alternativas,
+    })
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_economia(request):
+    """GET /api/hospital/opme/economia/ — painel de custo evitado.
+
+    Separa deliberadamente o que é FATO do que é ESTIMATIVA:
+      - realizada:  substituições efetivamente aceitas (economia_aplicada gravada)
+      - potencial:  itens fora do padrão ainda pendentes, com alternativa mais
+                    barata disponível — dinheiro que dá para economizar se a
+                    auditoria atuar, não economia já obtida.
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from django.db.models import Sum
+    CatalogoOPME, AutorizacaoOPME, ItemAutorizacaoOPME, _ = _get_opme_models()
+    hoje = date.today()
+
+    itens_qs = ItemAutorizacaoOPME.objects.filter(autorizacao__empresa=empresa)
+
+    realizada = itens_qs.aggregate(t=Sum("economia_aplicada"))["t"] or 0
+    substituicoes = itens_qs.filter(economia_aplicada__isnull=False).count()
+
+    # Potencial em aberto: para cada item fora do padrão ainda pendente, a maior
+    # diferença frente a uma alternativa homologada do mesmo grupo clínico.
+    potencial = 0.0
+    itens_risco = []
+    pendentes = itens_qs.filter(
+        fora_padrao=True, autorizacao__status="solicitada"
+    ).select_related("opme", "autorizacao")
+    for it in pendentes:
+        preco = float(it.preco_solicitado) if it.preco_solicitado else (
+            float(it.opme.preco_maximo) if it.opme.preco_maximo else None)
+        if preco is None:
+            continue
+        alts = _marcas_alternativas(empresa, it.opme)
+        baratas = [a["preco_maximo"] for a in alts
+                   if a["preco_maximo"] is not None and a["preco_maximo"] < preco]
+        if not baratas:
+            continue
+        dif = (preco - min(baratas)) * it.quantidade
+        potencial += dif
+        itens_risco.append({
+            "protocolo": it.autorizacao.numero_protocolo,
+            "paciente_nome": it.autorizacao.paciente_nome,
+            "medico_solicitante": it.autorizacao.medico_solicitante,
+            "material": it.opme.descricao,
+            "preco_solicitado": preco,
+            "melhor_alternativa": min(baratas),
+            "economia_possivel": round(dif, 2),
+        })
+    itens_risco.sort(key=lambda x: x["economia_possivel"], reverse=True)
+
+    # Série dos últimos 6 meses: economia realizada por mês de solicitação.
+    serie = []
+    ref = date(hoje.year, hoje.month, 1)
+    for _ in range(6):
+        prox = date(ref.year + (ref.month // 12), (ref.month % 12) + 1, 1)
+        total_mes = itens_qs.filter(
+            autorizacao__solicitado_em__date__gte=ref,
+            autorizacao__solicitado_em__date__lt=prox,
+        ).aggregate(t=Sum("economia_aplicada"))["t"] or 0
+        serie.append({"mes": ref.strftime("%m/%Y"), "economia": float(total_mes)})
+        ref = date(ref.year - 1, 12, 1) if ref.month == 1 else date(ref.year, ref.month - 1, 1)
+    serie.reverse()
+
+    # Ranking de solicitantes por volume fora do padrão (últimos 90 dias).
+    ranking = list(
+        AutorizacaoOPME.objects.filter(
+            empresa=empresa, itens__fora_padrao=True,
+            solicitado_em__gte=timezone.now() - timedelta(days=90),
+        ).values("medico_solicitante").annotate(n=Count("id", distinct=True)).order_by("-n")[:5]
+    )
+
+    return JsonResponse({
+        "economia_realizada": float(realizada),
+        "substituicoes_aceitas": substituicoes,
+        "economia_potencial_aberta": round(potencial, 2),
+        "serie_mensal": serie,
+        "itens_em_risco": itens_risco[:10],
+        "ranking_fora_padrao": ranking,
+    })
 
 
 # ── implantáveis ───────────────────────────────────────────────────────────────

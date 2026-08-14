@@ -9482,6 +9482,15 @@ class ItemAutorizacaoOPME(models.Model):
     alerta_triagem   = models.CharField(max_length=200, blank=True, default="")
     status           = models.CharField(max_length=15, choices=STATUS_ITEM, default="pendente")
     motivo_negativa  = models.TextField(blank=True, default="")
+    # Economia comprovada: preenchidos quando o solicitante aceita a alternativa
+    # sugerida pelo sistema e troca o material no momento do pedido. Sem isso
+    # não há como afirmar que a ferramenta reduziu custo — seria estimativa.
+    substituido_de   = models.ForeignKey(CatalogoOPME, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="substituicoes",
+                                          verbose_name="Material originalmente escolhido")
+    economia_aplicada = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                             blank=True,
+                                             verbose_name="Economia obtida na substituição (R$)")
 
     class Meta:
         verbose_name = "Item Autorização OPME"

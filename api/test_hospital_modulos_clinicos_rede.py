@@ -671,6 +671,105 @@ class OPMETests(TestCase):
         kpi = client.get("/api/hospital/opme/kpis").json()
         self.assertGreaterEqual(kpi["catalogo_registros_anvisa_vencidos"], 1)
 
+    def test_substituicao_grava_economia_comprovada(self):
+        """Trocar pelo equivalente mais barato grava economia auditável (× quantidade)."""
+        empresa = _empresa("Hospital Rede", "opme-economia@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        caro = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Prótese Cara", "tipo": "protese", "fabricante": "A",
+                  "grupo_equivalencia": "GRP-1", "preco_maximo": 20000},
+            content_type="application/json").json()["id"]
+        barato = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Prótese Equivalente", "tipo": "protese", "fabricante": "B",
+                  "grupo_equivalencia": "GRP-1", "preco_maximo": 12000},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": barato, "quantidade": 2, "preco_solicitado": 12000,
+                             "substituido_de_id": caro, "preco_substituido": 20000}]},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        eco = client.get("/api/hospital/opme/economia").json()
+        self.assertEqual(eco["economia_realizada"], 16000.0)  # (20000-12000) × 2
+        self.assertEqual(eco["substituicoes_aceitas"], 1)
+
+    def test_substituicao_sem_ganho_nao_infla_kpi(self):
+        """Troca por item igual/mais caro não pode virar 'economia'."""
+        empresa = _empresa("Hospital Rede", "opme-eco-zero@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        a = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item A", "tipo": "protese", "grupo_equivalencia": "G",
+                  "preco_maximo": 5000}, content_type="application/json").json()["id"]
+        b = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item B", "tipo": "protese", "grupo_equivalencia": "G",
+                  "preco_maximo": 9000}, content_type="application/json").json()["id"]
+        client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": b, "quantidade": 1, "preco_solicitado": 9000,
+                             "substituido_de_id": a, "preco_substituido": 5000}]},
+            content_type="application/json")
+        eco = client.get("/api/hospital/opme/economia").json()
+        self.assertEqual(eco["economia_realizada"], 0.0)
+        self.assertEqual(eco["substituicoes_aceitas"], 0)
+
+    def test_economia_potencial_lista_itens_em_risco(self):
+        """Pedido pendente fora do padrão com equivalente barato entra em 'em risco'."""
+        empresa = _empresa("Hospital Rede", "opme-risco@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        caro = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Cara não homologada", "tipo": "protese", "fabricante": "X",
+                  "grupo_equivalencia": "GR", "preco_maximo": 30000, "homologado": False},
+            content_type="application/json").json()["id"]
+        client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Equivalente barata", "tipo": "protese", "fabricante": "Y",
+                  "grupo_equivalencia": "GR", "preco_maximo": 10000},
+            content_type="application/json")
+        client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "Paciente Risco", "medico_solicitante": "Dr",
+                  "justificativa": "Indicação técnica.",
+                  "itens": [{"opme_id": caro, "quantidade": 1, "preco_solicitado": 30000}]},
+            content_type="application/json")
+        eco = client.get("/api/hospital/opme/economia").json()
+        self.assertEqual(eco["economia_potencial_aberta"], 20000.0)
+        self.assertEqual(len(eco["itens_em_risco"]), 1)
+        self.assertEqual(eco["itens_em_risco"][0]["economia_possivel"], 20000.0)
+
+    def test_endpoint_alternativas_calcula_economia(self):
+        """Endpoint de alternativas devolve economia de cada marca equivalente."""
+        empresa = _empresa("Hospital Rede", "opme-alt@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        base = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Base", "tipo": "protese", "grupo_equivalencia": "GG",
+                  "preco_maximo": 10000}, content_type="application/json").json()["id"]
+        client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Alt barata", "tipo": "protese", "grupo_equivalencia": "GG",
+                  "preco_maximo": 6000}, content_type="application/json")
+        r = client.get(f"/api/hospital/opme/catalogo/{base}/alternativas?preco=10000")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["item"]["preco_referencia"], 10000.0)
+        self.assertEqual(d["alternativas"][0]["economia"], 4000.0)
+
+    def test_listagem_juntas_da_empresa(self):
+        """Endpoint de listagem de Juntas Médicas devolve as da empresa, com filtro."""
+        empresa = _empresa("Hospital Rede", "opme-lista-junta@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        item = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item J", "tipo": "material"},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "Pac J", "medico_solicitante": "Dr J",
+                  "itens": [{"opme_id": item, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/autorizacoes/{aut}/juntas",
+            data={"motivo_divergencia": "Divergência de marca."},
+            content_type="application/json")
+        d = client.get("/api/hospital/opme/juntas").json()
+        self.assertEqual(d["total"], 1)
+        self.assertEqual(d["juntas"][0]["paciente_nome"], "Pac J")
+        self.assertEqual(client.get("/api/hospital/opme/juntas?status=aberta").json()["total"], 1)
+        self.assertEqual(client.get("/api/hospital/opme/juntas?status=cancelada").json()["total"], 0)
+
     def test_deteccao_fraude_repeticao_mesmo_item(self):
         """Padrão atípico: mesmo médico pede o mesmo material repetidamente em 30 dias."""
         empresa = _empresa("Hospital Rede", "opme-fraude@example.com", "hospital_rede")
