@@ -1141,11 +1141,14 @@ function formItem(i) {
           var v=o.split('|'); return '<option value="'+v[0]+'"'+(i&&i.tipo===v[0]?' selected':'')+'>'+v[1]+'</option>'; }).join('')
     + '</select></div></div>'
     + '<div class="form-row">'
-    + '<div class="form-group"><label>Código ANVISA <span style="opacity:.6">(10 a 13 dígitos)</span></label><input id="iAnvisa" value="'+esc(i?i.codigo_anvisa:'')+'"></div>'
+    + '<div class="form-group"><label>Código ANVISA <span style="opacity:.6">(digite e clique em Verificar)</span></label>'
+    +   '<div style="display:flex;gap:6px"><input id="iAnvisa" value="'+esc(i?i.codigo_anvisa:'')+'" style="flex:1">'
+    +   '<button type="button" class="btn btn-ghost btn-sm" onclick="verificarAnvisa()">Verificar</button></div>'
+    +   '<span class="itens-mini" id="anvisaMsg"></span></div>'
     + '<div class="form-group"><label>Validade do registro ANVISA</label><input type="date" id="iValidadeAnvisa" value="'+esc(i&&i.data_validade_registro_anvisa?i.data_validade_registro_anvisa:'')+'"></div>'
     + '</div><div class="form-row">'
     + '<div class="form-group"><label>Código SIGTAP</label><input id="iSigtap" value="'+esc(i?i.codigo_sigtap:'')+'"></div>'
-    + '<div class="form-group"><label>Código da operadora <span style="opacity:.6">(ex.: TNU)</span></label><input id="iCodOperadora" value="'+esc(i?i.codigo_operadora:'')+'"></div>'
+    + '<div class="form-group"><label>Código da operadora <span style="opacity:.6">(código interno do plano/operadora)</span></label><input id="iCodOperadora" value="'+esc(i?i.codigo_operadora:'')+'"></div>'
     + '</div><div class="form-row">'
     + '<div class="form-group"><label>Fabricante</label><input id="iFabricante" value="'+esc(i?i.fabricante:'')+'"></div>'
     + '<div class="form-group"><label>Preço máximo (R$)</label><input type="number" step="0.01" id="iPreco" value="'+(i&&i.preco_maximo!=null?i.preco_maximo:'')+'"></div>'
@@ -1170,6 +1173,34 @@ function editarItem(id) {
   abrirModal('Editar Item de Catálogo', esc(i.descricao), formItem(i),
     '<button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>'
     + '<button class="btn btn-primary" onclick="salvarItem('+id+')">Salvar</button>', true);
+}
+
+// Valida o registro contra a base ANVISA sincronizada e autopreenche o item.
+async function verificarAnvisa() {
+  var reg = (document.getElementById('iAnvisa').value||'').replace(/\D/g,'');
+  var msg = document.getElementById('anvisaMsg');
+  if (!reg) { msg.innerHTML=''; return; }
+  msg.innerHTML = 'Consultando ANVISA…';
+  try {
+    var r = await fetch('/api/hospital/opme/anvisa/consulta?registro='+encodeURIComponent(reg), { credentials:'include', headers: headers() });
+    var d = await r.json();
+    if (d.base_indisponivel) {
+      msg.innerHTML = '<span style="color:var(--warn)">⚠ Base ANVISA ainda não sincronizada neste ambiente.</span>';
+      return;
+    }
+    if (!d.encontrado) {
+      msg.innerHTML = '<span style="color:var(--danger)">✗ '+esc(d.mensagem||'Registro não encontrado na ANVISA')+'</span>';
+      return;
+    }
+    // autopreenche o que veio da fonte oficial
+    if (d.nome_produto && !document.getElementById('iDescricao').value) document.getElementById('iDescricao').value = d.nome_produto;
+    if (d.detentor && !document.getElementById('iFabricante').value) document.getElementById('iFabricante').value = d.detentor;
+    if (d.data_vencimento) document.getElementById('iValidadeAnvisa').value = d.data_vencimento;
+    var cor = d.valido ? 'var(--ok)' : 'var(--danger)';
+    var sit = d.valido ? '✓ Registro VÁLIDO na ANVISA' : ('✗ Registro '+esc(d.situacao||'INVÁLIDO'));
+    if (d.vencido) sit += ' <span style="color:var(--warn)">(vencido em '+fmtData(d.data_vencimento)+')</span>';
+    msg.innerHTML = '<span style="color:'+cor+'">'+sit+'</span> — '+esc(d.nome_produto||'')+(d.detentor?(' · '+esc(d.detentor)):'');
+  } catch(e) { msg.innerHTML = '<span style="color:var(--danger)">Erro ao consultar</span>'; }
 }
 
 async function salvarItem(editId) {

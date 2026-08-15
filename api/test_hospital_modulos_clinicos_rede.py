@@ -553,7 +553,7 @@ class OPMETests(TestCase):
         al = client.get("/api/hospital/oncologia/guias/alertas/").json()
         self.assertGreaterEqual(al["total_vencidas"], 1)
 
-    # ── RN 424/ANS, TNU, ANVISA, fraude (pedido Unimed) ─────────────────────
+    # ── RN 424/ANS, código de operadora, ANVISA, fraude ─────────────────────
 
     def test_justificativa_obrigatoria_quando_fora_padrao(self):
         """RN 424/ANS: sem justificativa, pedido com item fora do padrão é bloqueado (400)."""

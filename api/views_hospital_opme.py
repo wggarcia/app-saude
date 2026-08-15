@@ -1061,6 +1061,147 @@ def api_opme_economia(request):
     })
 
 
+# ── ANVISA: consulta contra a base oficial sincronizada ─────────────────────────
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_anvisa_consulta(request):
+    """GET /api/hospital/opme/anvisa/consulta?registro=XXXX — valida o registro
+    contra a base pública da ANVISA já sincronizada localmente. Devolve dados do
+    produto para autopreenchimento do catálogo (nome, fabricante, validade,
+    situação). NÃO é webservice ao vivo — é o espelho diário do CSV oficial."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import RegistroAnvisaProdutoSaude
+    registro = "".join(ch for ch in (request.GET.get("registro") or "") if ch.isdigit())
+    if not registro:
+        return JsonResponse({"erro": "Informe o número de registro"}, status=400)
+
+    # Base ainda não sincronizada? Diz isso em vez de fingir "não encontrado".
+    if not RegistroAnvisaProdutoSaude.objects.exists():
+        return JsonResponse({
+            "encontrado": False,
+            "base_indisponivel": True,
+            "mensagem": "Base ANVISA ainda não sincronizada neste ambiente.",
+        })
+
+    reg = RegistroAnvisaProdutoSaude.objects.filter(numero_registro=registro).first()
+    if not reg:
+        return JsonResponse({
+            "encontrado": False,
+            "mensagem": f"Registro {registro} não encontrado na base da ANVISA.",
+        })
+    vencido = bool(reg.data_vencimento and reg.data_vencimento < date.today())
+    return JsonResponse({
+        "encontrado": True,
+        "numero_registro": reg.numero_registro,
+        "nome_produto": reg.nome_produto,
+        "detentor": reg.detentor,
+        "cnpj_detentor": reg.cnpj_detentor,
+        "classe_risco": reg.classe_risco,
+        "situacao": reg.situacao,
+        "valido": reg.situacao == "Válido",
+        "data_vencimento": reg.data_vencimento.isoformat() if reg.data_vencimento else None,
+        "vencido": vencido,
+        "atualizado_em": reg.atualizado_em.isoformat(),
+    })
+
+
+# ── Fornecedores (segmento Hospital) — com verificação de AFE ANVISA ─────────────
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_fornecedores(request):
+    """GET/POST /api/hospital/opme/fornecedores/"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import FornecedorHospital, EmpresaAfeAnvisa
+
+    if request.method == "GET":
+        qs = FornecedorHospital.objects.filter(empresa=empresa)
+        q = request.GET.get("q")
+        if q:
+            qs = qs.filter(Q(razao_social__icontains=q) | Q(cnpj=q)
+                           | Q(nome_fantasia__icontains=q))
+        total = qs.count()
+        limite, offset = _paginacao(request)
+        return JsonResponse({
+            "total": total,
+            "fornecedores": [
+                {
+                    "id": f.id, "razao_social": f.razao_social,
+                    "nome_fantasia": f.nome_fantasia, "cnpj": f.cnpj,
+                    "contato": f.contato, "telefone": f.telefone, "email": f.email,
+                    "afe_numero": f.afe_numero, "afe_situacao": f.afe_situacao,
+                    "afe_verificada_em": (f.afe_verificada_em.isoformat()
+                                          if f.afe_verificada_em else None),
+                    "ativo": f.ativo,
+                }
+                for f in qs.order_by("razao_social")[offset:offset + limite]
+            ],
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+    razao = (data.get("razao_social") or "").strip()
+    if not razao:
+        return JsonResponse({"erro": "Razão social é obrigatória"}, status=400)
+    cnpj = "".join(ch for ch in (data.get("cnpj") or "") if ch.isdigit())
+    if cnpj and len(cnpj) != 14:
+        return JsonResponse({"erro": "CNPJ deve ter 14 dígitos"}, status=400)
+
+    forn = FornecedorHospital.objects.create(
+        empresa=empresa, razao_social=razao,
+        nome_fantasia=data.get("nome_fantasia", ""), cnpj=cnpj,
+        contato=data.get("contato", ""), telefone=data.get("telefone", ""),
+        email=data.get("email", ""),
+    )
+    _verificar_afe(forn)
+    return JsonResponse({"id": forn.id, "afe_situacao": forn.afe_situacao}, status=201)
+
+
+def _verificar_afe(fornecedor):
+    """Cruza o CNPJ do fornecedor com a base AFE da ANVISA sincronizada."""
+    from .models import EmpresaAfeAnvisa
+    if not fornecedor.cnpj:
+        return
+    if not EmpresaAfeAnvisa.objects.exists():
+        return  # base não sincronizada — não afirma nada
+    afe = EmpresaAfeAnvisa.objects.filter(cnpj=fornecedor.cnpj).order_by("-ativo").first()
+    if not afe:
+        fornecedor.afe_situacao = "não encontrada"
+    else:
+        fornecedor.afe_numero = afe.numero_afe
+        fornecedor.afe_situacao = "ativa" if afe.ativo else "inativa"
+    fornecedor.afe_verificada_em = timezone.now()
+    fornecedor.save(update_fields=["afe_numero", "afe_situacao", "afe_verificada_em"])
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_fornecedores_verificar_afe(request):
+    """POST — reverifica a AFE de todos os fornecedores com CNPJ (após sync ANVISA)."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .models import FornecedorHospital
+    n = 0
+    for f in FornecedorHospital.objects.filter(empresa=empresa).exclude(cnpj=""):
+        _verificar_afe(f)
+        n += 1
+    return JsonResponse({"verificados": n})
+
+
 # ── implantáveis ───────────────────────────────────────────────────────────────
 
 @csrf_exempt

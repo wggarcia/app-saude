@@ -9376,8 +9376,8 @@ class CatalogoOPME(models.Model):
                                             verbose_name="Material preferencial (padrão de menor custo)")
     codigo_operadora = models.CharField(max_length=40, blank=True, default="",
                                          verbose_name="Código da Operadora",
-                                         help_text="Codificação própria da operadora (ex.: TNU da "
-                                                    "Unimed), quando diferente da TUSS/ANVISA/SIGTAP.")
+                                         help_text="Codificação própria da operadora/plano, quando "
+                                                    "diferente da TUSS/ANVISA/SIGTAP.")
     grupo_equivalencia = models.CharField(max_length=60, blank=True, default="", db_index=True,
                                            verbose_name="Grupo de Equivalência Clínica",
                                            help_text="Itens com o mesmo valor aqui são considerados "
@@ -9611,6 +9611,133 @@ class OPMEProcedimentoItem(models.Model):
 
     def __str__(self):
         return f"{self.procedimento.codigo_tuss} → {self.opme.descricao} (máx {self.quantidade_maxima})"
+
+
+class FornecedorHospital(models.Model):
+    """Fornecedor/distribuidor de OPME e materiais para o segmento Hospital.
+    CNPJ pode ser cruzado com a base de AFE da ANVISA para confirmar que a
+    empresa tem Autorização de Funcionamento vigente."""
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                        related_name="fornecedores_hospital")
+    razao_social   = models.CharField(max_length=200)
+    nome_fantasia  = models.CharField(max_length=200, blank=True, default="")
+    cnpj           = models.CharField(max_length=14, blank=True, default="", db_index=True)
+    contato        = models.CharField(max_length=150, blank=True, default="")
+    telefone       = models.CharField(max_length=30, blank=True, default="")
+    email          = models.EmailField(blank=True, default="")
+    # Preenchido pela verificação contra a base AFE da ANVISA (não editável à mão).
+    afe_numero     = models.CharField(max_length=40, blank=True, default="",
+                                       verbose_name="Nº da AFE (ANVISA)")
+    afe_situacao   = models.CharField(max_length=20, blank=True, default="",
+                                       help_text="ativa / inativa / não encontrada")
+    afe_verificada_em = models.DateTimeField(null=True, blank=True)
+    ativo          = models.BooleanField(default=True)
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Fornecedor Hospital"
+        verbose_name_plural = "Fornecedores Hospital"
+        ordering            = ["razao_social"]
+        indexes             = [models.Index(fields=["empresa", "cnpj"])]
+
+    def __str__(self):
+        return f"{self.razao_social} ({self.cnpj or 's/ CNPJ'})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ANVISA — bases públicas de referência (produtos para saúde + AFE)
+# Dados abertos oficiais, GLOBAIS (não por empresa) — como SIGTAP/TUSS.
+# Sincronizados por `manage.py import_anvisa_produtos` a partir do CSV oficial.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class RegistroAnvisaProdutoSaude(models.Model):
+    """Espelho local do registro de produto para saúde da ANVISA.
+    Fonte: dados.anvisa.gov.br/.../TA_CONSULTA_PRODUTOS_SAUDE.CSV (~191 mil linhas).
+    Permite validar de verdade o registro (existe? está válido? venceu?) sem
+    depender de webservice ao vivo."""
+    numero_registro = models.CharField(max_length=20, unique=True, db_index=True)
+    nome_produto    = models.CharField(max_length=300, blank=True, default="")
+    detentor        = models.CharField(max_length=250, blank=True, default="")
+    cnpj_detentor   = models.CharField(max_length=14, blank=True, default="")
+    classe_risco    = models.CharField(max_length=4, blank=True, default="")
+    situacao        = models.CharField(max_length=20, blank=True, default="",
+                                        help_text="Válido / Inválido / Em validação")
+    data_vencimento = models.DateField(null=True, blank=True)
+    atualizado_em   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Registro ANVISA (Produto p/ Saúde)"
+        verbose_name_plural = "Registros ANVISA (Produtos p/ Saúde)"
+        indexes             = [models.Index(fields=["situacao"])]
+
+    def __str__(self):
+        return f"{self.numero_registro} — {self.nome_produto} ({self.situacao})"
+
+
+class EmpresaAfeAnvisa(models.Model):
+    """Espelho local da Autorização de Funcionamento de Empresa (AFE) da ANVISA
+    para produtos para saúde. Permite conferir se um fornecedor tem AFE ativa."""
+    cnpj           = models.CharField(max_length=14, db_index=True)
+    razao_social   = models.CharField(max_length=250, blank=True, default="")
+    numero_afe     = models.CharField(max_length=40, blank=True, default="")
+    ativo          = models.BooleanField(default=True)
+    uf             = models.CharField(max_length=2, blank=True, default="")
+    atualizado_em  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "AFE ANVISA (Empresa)"
+        verbose_name_plural = "AFEs ANVISA (Empresas)"
+        indexes             = [models.Index(fields=["cnpj", "ativo"])]
+
+    def __str__(self):
+        return f"{self.razao_social} — AFE {self.numero_afe} ({'ativa' if self.ativo else 'inativa'})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Motor de Importação de Dados — segmento Hospital (genérico e reutilizável)
+# Upload de CSV/XLSX → mapeamento de colunas → prévia → confirmação.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ImportacaoDados(models.Model):
+    """Job de importação de dados de um arquivo (CSV/XLSX) para um cadastro do
+    Hospital. Guarda o mapeamento coluna→campo, o resultado e os erros por linha."""
+    STATUS = [
+        ("mapeando",   "Aguardando mapeamento"),
+        ("processando","Processando"),
+        ("concluido",  "Concluído"),
+        ("erro",       "Erro"),
+    ]
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                        related_name="importacoes_dados")
+    destino        = models.CharField(max_length=40,
+                                        help_text="Chave do alvo de importação (ex.: catalogo_opme)")
+    arquivo_nome   = models.CharField(max_length=255, blank=True, default="")
+    # Cabeçalhos detectados e uma amostra das primeiras linhas (para o mapeamento).
+    colunas_arquivo = models.JSONField(default=list, blank=True)
+    amostra        = models.JSONField(default=list, blank=True)
+    # Conteúdo completo do arquivo já parseado em linhas (lista de dicts). Fica
+    # aqui entre o upload e o processamento; limpo depois de concluir.
+    linhas_brutas  = models.JSONField(default=list, blank=True)
+    mapeamento     = models.JSONField(default=dict, blank=True,
+                                       help_text="campo_destino → coluna_arquivo")
+    status         = models.CharField(max_length=15, choices=STATUS, default="mapeando")
+    total_linhas   = models.PositiveIntegerField(default=0)
+    linhas_ok      = models.PositiveIntegerField(default=0)
+    linhas_erro    = models.PositiveIntegerField(default=0)
+    erros          = models.JSONField(default=list, blank=True,
+                                       help_text="[{linha, mensagem}] das que falharam")
+    criado_por     = models.CharField(max_length=160, blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+    processado_em  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name        = "Importação de Dados"
+        verbose_name_plural = "Importações de Dados"
+        ordering            = ["-criado_em"]
+        indexes             = [models.Index(fields=["empresa", "destino"])]
+
+    def __str__(self):
+        return f"Importação {self.destino} — {self.arquivo_nome} ({self.status})"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

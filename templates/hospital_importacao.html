@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Migração de Dados — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:720px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:18px 20px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:1200;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none;max-width:420px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+/* stepper */
+.stepper{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.step{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid var(--border)}
+.step.on{color:var(--accent);border-color:var(--accent);background:rgba(0,194,255,.08)}
+.step.done{color:var(--ok);border-color:rgba(0,229,176,.3)}
+.step .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.08);font-size:11px}
+.step.on .n{background:var(--accent);color:#001a2e}
+.step.done .n{background:var(--ok);color:#00352a}
+/* tipos */
+.tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.tipo{border:1px solid var(--border);border-radius:11px;padding:16px;background:rgba(255,255,255,.03);cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:6px}
+.tipo:hover{border-color:var(--accent)}
+.tipo.sel{border-color:var(--accent);background:rgba(0,194,255,.07)}
+.tipo-ico{font-size:22px}
+.tipo-nome{font-size:14px;font-weight:700}
+.tipo-desc{font-size:11px;color:var(--muted);line-height:1.5}
+/* dropzone */
+.drop{border:2px dashed var(--border);border-radius:12px;padding:34px;text-align:center;transition:.15s;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent);background:rgba(0,194,255,.04)}
+.drop .big{font-size:34px}
+.drop .t{font-size:14px;font-weight:700;margin-top:8px}
+.drop .s{font-size:12px;color:var(--muted);margin-top:4px}
+/* mapeamento */
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.map-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)}
+.map-row:first-child{border-top:none}
+.map-campo{font-size:13px;font-weight:600}
+.map-campo .req{color:var(--danger)}
+.map-campo .aj{display:block;font-size:10px;color:var(--muted);font-weight:400;margin-top:2px}
+.map-arrow{color:var(--muted)}
+select,input[type=text]{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);font-family:inherit;width:100%;outline:none}
+select:focus{border-color:var(--accent)}
+select option{background:#0a1a28}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:520px}
+th{padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:9px 14px;font-size:12.5px;border-top:1px solid var(--border);vertical-align:top}
+.linha-erro td{background:rgba(255,77,109,.05)}
+.empty{padding:34px;text-align:center;color:var(--muted);font-size:13px}
+.alert-box{border-radius:10px;padding:13px 15px;font-size:12.5px;line-height:1.55;border:1px solid;margin-bottom:14px}
+.alert-box .abt{font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.ab-ok{background:rgba(0,229,176,.07);border-color:rgba(0,229,176,.26);color:#d3fff3}.ab-ok .abt{color:var(--ok)}
+.ab-warn{background:rgba(255,179,71,.07);border-color:rgba(255,179,71,.28);color:#ffeed4}.ab-warn .abt{color:var(--warn)}
+.ab-info{background:rgba(0,194,255,.07);border-color:rgba(0,194,255,.26);color:#d6f2ff}.ab-info .abt{color:var(--accent)}
+.hidden{display:none}
+.big-num{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.res{border:1px solid var(--border);border-radius:11px;padding:16px;text-align:center}
+@media(max-width:800px){.map-grid,.res-grid{grid-template-columns:1fr}.map-row{grid-template-columns:1fr}}
+@media(max-width:700px){.main{padding:20px 16px}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+{% include "_hospital_sidebar.html" %}
+
+<main class="main">
+  <div>
+    <div class="page-title">📥 Migração de Dados</div>
+    <div class="page-sub">Suba os dados que a sua instituição já tem — catálogo de materiais, fornecedores, procedimentos — de uma planilha CSV ou Excel. O sistema mapeia as colunas, valida e importa, sem redigitar nada.</div>
+  </div>
+
+  <div class="stepper">
+    <div class="step on" id="st1"><span class="n">1</span> Escolher o que importar</div>
+    <div class="step" id="st2"><span class="n">2</span> Enviar arquivo</div>
+    <div class="step" id="st3"><span class="n">3</span> Mapear colunas</div>
+    <div class="step" id="st4"><span class="n">4</span> Conferir e importar</div>
+  </div>
+
+  <!-- PASSO 1 -->
+  <div class="card" id="card1">
+    <div class="card-header"><div class="card-title">1 · O que você quer importar?</div></div>
+    <div class="card-body"><div class="tipos" id="tipos"><div class="empty">Carregando…</div></div></div>
+  </div>
+
+  <!-- PASSO 2 -->
+  <div class="card hidden" id="card2">
+    <div class="card-header">
+      <div class="card-title">2 · Envie o arquivo — <span id="tipoNome2" style="color:var(--accent)"></span></div>
+      <button class="btn btn-ghost btn-sm" id="btnModelo">⬇ Baixar planilha modelo</button>
+    </div>
+    <div class="card-body">
+      <div class="alert-box ab-info"><div class="abt">Formatos aceitos</div>
+        CSV (separado por <b>;</b> ou <b>,</b>) ou Excel (.xlsx). A primeira linha deve ser o cabeçalho.
+        Se não tiver o arquivo pronto, baixe a planilha modelo, preencha e envie.</div>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Enviar arquivo">
+        <div class="big">📄</div>
+        <div class="t">Arraste o arquivo aqui ou clique para escolher</div>
+        <div class="s">CSV ou XLSX, até 15 MB</div>
+        <input type="file" id="fileInput" accept=".csv,.xlsx" class="hidden">
+      </div>
+      <div style="margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="voltar(1)">← Trocar tipo</button></div>
+    </div>
+  </div>
+
+  <!-- PASSO 3 -->
+  <div class="card hidden" id="card3">
+    <div class="card-header">
+      <div class="card-title">3 · Ligue as colunas do arquivo aos campos do sistema</div>
+      <div style="font-size:12px;color:var(--muted)"><span id="totalLinhas">0</span> linha(s) no arquivo</div>
+    </div>
+    <div class="card-body">
+      <div class="alert-box ab-info"><div class="abt">Mapeamento automático</div>
+        Preenchi o que consegui reconhecer pelo nome da coluna. Confira, ajuste o que faltar e clique em “Ver prévia”.</div>
+      <div class="map-grid" id="mapGrid"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="voltar(2)">← Trocar arquivo</button>
+        <button class="btn btn-primary" id="btnPrevia">Ver prévia →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASSO 4 -->
+  <div class="card hidden" id="card4">
+    <div class="card-header"><div class="card-title">4 · Confira a prévia e importe</div></div>
+    <div class="card-body">
+      <div id="previaResumo"></div>
+      <div class="table-wrap"><table id="previaTabela"></table></div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="voltar(3)">← Ajustar mapeamento</button>
+        <button class="btn btn-primary" id="btnImportar">Importar tudo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="card hidden" id="cardResultado">
+    <div class="card-header"><div class="card-title">✓ Resultado da importação</div></div>
+    <div class="card-body">
+      <div class="res-grid" style="margin-bottom:16px">
+        <div class="res"><div class="big-num" style="color:var(--ok)" id="resOk">0</div><div style="font-size:12px;color:var(--muted)">importadas</div></div>
+        <div class="res"><div class="big-num" style="color:var(--danger)" id="resErro">0</div><div style="font-size:12px;color:var(--muted)">com erro</div></div>
+        <div class="res"><div class="big-num" id="resTotal">0</div><div style="font-size:12px;color:var(--muted)">total</div></div>
+      </div>
+      <div id="resErros"></div>
+      <button class="btn btn-primary" onclick="reiniciar()">Nova importação</button>
+    </div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">🕐 Importações anteriores</div>
+      <button class="btn btn-ghost btn-sm" onclick="carregarHistorico()">↻ Atualizar</button></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Arquivo</th><th>Status</th><th>OK</th><th>Erros</th><th>Por</th></tr></thead>
+      <tbody id="historicoBody"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+    </table></div>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4500); }
+function esc(v){ if(v==null) return ''; return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+var TIPOS = [], tipoSel = null, impId = null, colunas = [], campos = [];
+
+function marcarStep(n){
+  [1,2,3,4].forEach(function(i){
+    var el = document.getElementById('st'+i);
+    el.classList.toggle('on', i===n);
+    el.classList.toggle('done', i<n);
+  });
+}
+function mostrarCard(n){
+  ['card1','card2','card3','card4','cardResultado'].forEach(function(id){ document.getElementById(id).classList.add('hidden'); });
+  if(n==='res'){ document.getElementById('cardResultado').classList.remove('hidden'); return; }
+  document.getElementById('card'+n).classList.remove('hidden');
+  marcarStep(n);
+}
+function voltar(n){ mostrarCard(n); }
+
+async function carregarTipos(){
+  try{
+    var r = await fetch('/api/hospital/importacao/tipos', {credentials:'include'});
+    var d = await r.json();
+    TIPOS = d.tipos;
+    document.getElementById('tipos').innerHTML = TIPOS.map(function(t){
+      return '<div class="tipo" data-k="'+t.chave+'" onclick="selecionarTipo(\''+t.chave+'\')">'
+        + '<div class="tipo-ico">'+t.icone+'</div>'
+        + '<div class="tipo-nome">'+esc(t.label)+'</div>'
+        + '<div class="tipo-desc">'+esc(t.descricao)+'</div>'
+        + '<div style="margin-top:4px"><span class="badge badge-gray">'+t.campos.filter(function(c){return c.obrigatorio;}).length+' campo(s) obrigatório(s)</span></div>'
+        + '</div>';
+    }).join('');
+  }catch(e){ document.getElementById('tipos').innerHTML='<div class="empty">Erro ao carregar.</div>'; }
+}
+
+function selecionarTipo(k){
+  tipoSel = TIPOS.filter(function(t){return t.chave===k;})[0];
+  campos = tipoSel.campos;
+  document.querySelectorAll('.tipo').forEach(function(el){ el.classList.toggle('sel', el.dataset.k===k); });
+  document.getElementById('tipoNome2').textContent = tipoSel.label;
+  document.getElementById('btnModelo').onclick = function(){ window.location='/api/hospital/importacao/modelo/'+k; };
+  mostrarCard(2);
+}
+
+// upload
+var drop = document.getElementById('drop'), fileInput = document.getElementById('fileInput');
+drop.onclick = function(){ fileInput.click(); };
+drop.onkeydown = function(e){ if(e.key==='Enter'||e.key===' ') fileInput.click(); };
+['dragover','dragenter'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+drop.addEventListener('drop', function(e){ if(e.dataTransfer.files.length) enviarArquivo(e.dataTransfer.files[0]); });
+fileInput.onchange = function(){ if(fileInput.files.length) enviarArquivo(fileInput.files[0]); };
+
+async function enviarArquivo(file){
+  var fd = new FormData();
+  fd.append('destino', tipoSel.chave);
+  fd.append('arquivo', file);
+  toast('Enviando '+file.name+'…', true);
+  try{
+    var r = await fetch('/api/hospital/importacao/upload', {method:'POST', credentials:'include', headers:{'X-CSRFToken':getCsrf()}, body:fd});
+    var d = await r.json();
+    if(!r.ok){ return toast(d.erro||'Erro ao enviar', false); }
+    impId = d.id; colunas = d.colunas;
+    document.getElementById('totalLinhas').textContent = d.total_linhas;
+    montarMapeamento(d.mapeamento_sugerido, d.amostra);
+    mostrarCard(3);
+  }catch(e){ toast('Erro de conexão', false); }
+}
+
+function montarMapeamento(sugerido, amostra){
+  document.getElementById('mapGrid').innerHTML = campos.map(function(c){
+    var opts = '<option value="">— não importar —</option>' + colunas.map(function(col){
+      var sel = (sugerido[c.chave]===col) ? ' selected' : '';
+      return '<option value="'+esc(col)+'"'+sel+'>'+esc(col)+'</option>';
+    }).join('');
+    return '<div class="map-row">'
+      + '<div class="map-campo">'+esc(c.rotulo)+(c.obrigatorio?' <span class="req">*</span>':'')
+      +   (c.ajuda?('<span class="aj">'+esc(c.ajuda)+'</span>'):'')+'</div>'
+      + '<div class="map-arrow">←</div>'
+      + '<div><select data-campo="'+c.chave+'">'+opts+'</select></div>'
+      + '</div>';
+  }).join('');
+}
+
+function coletarMapeamento(){
+  var m = {};
+  document.querySelectorAll('#mapGrid select').forEach(function(s){ if(s.value) m[s.dataset.campo]=s.value; });
+  return m;
+}
+
+document.getElementById('btnPrevia').onclick = async function(){
+  var m = coletarMapeamento();
+  try{
+    var r = await fetch('/api/hospital/importacao/'+impId+'/previa', {method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()}, body:JSON.stringify({mapeamento:m})});
+    var d = await r.json();
+    if(!r.ok){ return toast(d.erro||'Erro', false); }
+    if(d.obrigatorios_sem_coluna.length){
+      return toast('Faltou mapear: '+d.obrigatorios_sem_coluna.join(', '), false);
+    }
+    montarPrevia(d);
+    mostrarCard(4);
+  }catch(e){ toast('Erro de conexão', false); }
+};
+
+function montarPrevia(d){
+  var temErro = d.previa_erro>0;
+  document.getElementById('previaResumo').innerHTML =
+    '<div class="alert-box '+(temErro?'ab-warn':'ab-ok')+'"><div class="abt">'+(temErro?'Atenção':'Tudo certo')+'</div>'
+    + 'Amostra das primeiras linhas: <b>'+d.previa_ok+'</b> válida(s), <b>'+d.previa_erro+'</b> com erro. '
+    + 'Ao importar, o sistema processa todas as <b>'+d.total_linhas+'</b> linhas; as com erro são puladas e listadas no fim.'
+    + (temErro?' Corrija o arquivo ou o mapeamento se quiser importar essas também.':'')+'</div>';
+  var mapeados = campos.filter(function(c){ return document.querySelector('#mapGrid select[data-campo="'+c.chave+'"]').value; });
+  var head = '<thead><tr><th>#</th>'+mapeados.map(function(c){return '<th>'+esc(c.rotulo)+'</th>';}).join('')+'<th>Situação</th></tr></thead>';
+  var body = '<tbody>'+d.previa.map(function(p){
+    var cells = mapeados.map(function(c){ return '<td>'+esc(p.dados[c.chave]||'—')+'</td>'; }).join('');
+    var sit = p.erros.length ? '<span class="badge badge-danger" title="'+esc(p.erros.join(' | '))+'">'+esc(p.erros[0])+'</span>' : '<span class="badge badge-ok">ok</span>';
+    return '<tr class="'+(p.erros.length?'linha-erro':'')+'"><td>'+p.linha+'</td>'+cells+'<td>'+sit+'</td></tr>';
+  }).join('')+'</tbody>';
+  document.getElementById('previaTabela').innerHTML = head+body;
+}
+
+document.getElementById('btnImportar').onclick = async function(){
+  this.disabled = true; this.textContent = 'Importando…';
+  try{
+    var r = await fetch('/api/hospital/importacao/'+impId+'/processar', {method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()}, body:'{}'});
+    var d = await r.json();
+    if(!r.ok){ this.disabled=false; this.textContent='Importar tudo'; return toast(d.erro||'Erro', false); }
+    document.getElementById('resOk').textContent = d.linhas_ok;
+    document.getElementById('resErro').textContent = d.linhas_erro;
+    document.getElementById('resTotal').textContent = d.linhas_ok + d.linhas_erro;
+    document.getElementById('resErros').innerHTML = (d.erros && d.erros.length)
+      ? '<div class="alert-box ab-warn"><div class="abt">Linhas puladas</div><div class="table-wrap"><table><thead><tr><th>Linha</th><th>Motivo</th></tr></thead><tbody>'
+        + d.erros.map(function(e){return '<tr><td>'+e.linha+'</td><td>'+esc(e.mensagem)+'</td></tr>';}).join('')+'</tbody></table></div></div>'
+      : '';
+    mostrarCard('res');
+    toast(d.linhas_ok+' registro(s) importado(s)', true);
+    carregarHistorico();
+  }catch(e){ this.disabled=false; this.textContent='Importar tudo'; toast('Erro de conexão', false); }
+};
+
+function reiniciar(){ tipoSel=null; impId=null; document.querySelectorAll('.tipo').forEach(function(el){el.classList.remove('sel');}); mostrarCard(1); }
+
+async function carregarHistorico(){
+  var tb = document.getElementById('historicoBody');
+  try{
+    var r = await fetch('/api/hospital/importacao/historico', {credentials:'include'});
+    var d = await r.json();
+    if(!d.importacoes.length){ tb.innerHTML='<tr><td colspan="7" class="empty">Nenhuma importação ainda.</td></tr>'; return; }
+    var sm = {concluido:'badge-ok', processando:'badge-info', erro:'badge-danger', mapeando:'badge-gray'};
+    tb.innerHTML = d.importacoes.map(function(h){
+      var dt = new Date(h.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      return '<tr><td>'+dt+'</td><td>'+esc(h.destino_label)+'</td><td>'+esc(h.arquivo_nome)+'</td>'
+        + '<td><span class="badge '+(sm[h.status]||'badge-gray')+'">'+esc(h.status_display)+'</span></td>'
+        + '<td>'+h.linhas_ok+'</td><td>'+(h.linhas_erro||0)+'</td><td>'+esc(h.criado_por||'—')+'</td></tr>';
+    }).join('');
+  }catch(e){ tb.innerHTML='<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; }
+}
+
+carregarTipos();
+carregarHistorico();
+</script>
+</body>
+</html>
