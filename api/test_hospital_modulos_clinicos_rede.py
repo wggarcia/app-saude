@@ -750,6 +750,99 @@ class OPMETests(TestCase):
         self.assertEqual(d["item"]["preco_referencia"], 10000.0)
         self.assertEqual(d["alternativas"][0]["economia"], 4000.0)
 
+    def test_via_rapida_pre_aprova_pedido_100_conforme(self):
+        """Via Rápida: pedido homologado + ANVISA válido + sem alertas é
+        pré-aprovado na hora (status aprovada, via_rapida=True), sem fila."""
+        from api.models import RegistroAnvisaProdutoSaude, AutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-viarapida@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="80044680371", situacao="Válido",
+            data_vencimento=date.today() + timedelta(days=400))
+        item_id = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Prótese Homologada", "tipo": "protese",
+                  "homologado": True, "preferencial": True, "preco_maximo": 9000,
+                  "codigo_anvisa": "80044680371"},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr. Correto",
+                  "itens": [{"opme_id": item_id, "quantidade": 1, "preco_solicitado": 8000}]},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        d = r.json()
+        self.assertTrue(d["via_rapida"], "pedido 100% conforme deveria ir pela Via Rápida")
+        self.assertEqual(d["status"], "aprovada")
+        aut = AutorizacaoOPME.objects.get(id=d["id"])
+        self.assertTrue(aut.via_rapida)
+        self.assertEqual(aut.status, "aprovada")
+        self.assertTrue(aut.itens.filter(status="aprovado").exists())
+
+    def test_via_rapida_NAO_dispara_com_alerta(self):
+        """Pedido fora do padrão (não homologado) NÃO pode ser auto-aprovado —
+        vai para auditoria humana."""
+        from api.models import AutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-vr-bloq@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        item_id = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Não homologada", "tipo": "protese", "homologado": False},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "justificativa": "necessário",
+                  "itens": [{"opme_id": item_id, "quantidade": 1}]},
+            content_type="application/json")
+        d = r.json()
+        self.assertFalse(d["via_rapida"])
+        self.assertEqual(d["status"], "solicitada")
+
+    def test_via_rapida_NAO_dispara_sem_base_anvisa(self):
+        """Sem base ANVISA sincronizada, não há como confirmar o registro —
+        a Via Rápida é conservadora e NÃO auto-aprova."""
+        empresa = _empresa("Hospital Rede", "opme-vr-semanvisa@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        item_id = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Homologada s/ base ANVISA", "tipo": "protese",
+                  "homologado": True, "preco_maximo": 9000, "codigo_anvisa": "80044680371"},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": item_id, "quantidade": 1, "preco_solicitado": 8000}]},
+            content_type="application/json")
+        self.assertFalse(r.json()["via_rapida"])
+
+    def test_ia_recomenda_custo_beneficio_mesma_qualidade(self):
+        """A IA recomenda o equivalente mais barato de MESMA qualidade (homologado
+        + ANVISA válido), não simplesmente o mais barato."""
+        from api.models import RegistroAnvisaProdutoSaude, AutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-mcb@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="80044680371", situacao="Válido",
+            data_vencimento=date.today() + timedelta(days=400))
+        # caro, fora do padrão (não homologado)
+        caro = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Premium", "tipo": "protese", "homologado": False,
+                  "grupo_equivalencia": "GEQ", "preco_maximo": 20000},
+            content_type="application/json").json()["id"]
+        # barato mas SEM registro ANVISA válido (não deve ser recomendado)
+        client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Barata sem ANVISA", "tipo": "protese", "homologado": True,
+                  "grupo_equivalencia": "GEQ", "preco_maximo": 7000, "codigo_anvisa": "80000000000"},
+            content_type="application/json")
+        # equivalente de mesma qualidade (homologado + ANVISA válido)
+        client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Equivalente válida", "tipo": "protese", "homologado": True,
+                  "grupo_equivalencia": "GEQ", "preco_maximo": 12000, "codigo_anvisa": "80044680371"},
+            content_type="application/json")
+        r = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "justificativa": "indicação",
+                  "itens": [{"opme_id": caro, "quantidade": 1, "preco_solicitado": 20000}]},
+            content_type="application/json")
+        rec = r.json()["recomendacao"]
+        self.assertEqual(rec["para_descricao"], "Equivalente válida")  # não a "barata sem ANVISA"
+        self.assertEqual(rec["economia"], 8000.0)
+
     def test_alternativas_trazem_atributos_clinicos_e_anvisa(self):
         """Comparação clínica: a alternativa vem com material, especificação e a
         situação REAL do registro na ANVISA — não só preço."""

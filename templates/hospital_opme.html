@@ -158,6 +158,11 @@ tr:hover td{background:rgba(0,194,255,.03)}
   </div>
 
   <div class="kpi-row">
+    <div class="kpi ok" style="border:1px solid rgba(0,229,176,.35)">
+      <div class="kpi-val" id="kpiViaRapida">—</div>
+      <div class="kpi-lbl">⚡ Auto-aprovados (Via Rápida)</div>
+      <div class="kpi-sub" id="kpiViaRapidaSub">pré-aprovados pela IA, sem fila</div>
+    </div>
     <div class="kpi ok">
       <div class="kpi-val" id="kpiEconomia">—</div>
       <div class="kpi-lbl">Economia Comprovada</div>
@@ -403,6 +408,8 @@ async function carregarKpis() {
     document.getElementById('kpiJuntas').textContent = d.juntas_medicas_abertas;
     document.getElementById('kpiFraude').textContent = d.medicos_padrao_atipico_30d;
     document.getElementById('kpiAnvisaVencido').textContent = d.catalogo_registros_anvisa_vencidos;
+    document.getElementById('kpiViaRapida').textContent = (d.via_rapida_pct||0) + '%';
+    document.getElementById('kpiViaRapidaSub').textContent = (d.via_rapida_total||0) + ' pré-aprovado(s) pela IA, sem fila';
     var pill = document.getElementById('pillJuntas');
     if (d.juntas_medicas_abertas > 0) { pill.textContent = d.juntas_medicas_abertas; pill.style.display=''; }
     else pill.style.display='none';
@@ -513,6 +520,7 @@ async function carregarAutorizacoes() {
         return esc(it.opme_descricao)+' (x'+esc(qt)+')'+eco;
       }).join('<br>');
       var flags = '';
+      if (a.via_rapida) flags += ' <span class="badge badge-ok">⚡ Via Rápida (IA)</span>';
       if (a.alertas_triagem && a.alertas_triagem.length) flags += ' <span class="badge badge-danger">⚠ fora do padrão</span>';
       if (a.tem_alerta_fraude) flags += ' <span class="badge badge-warn">🔎 padrão atípico</span>';
       var acoes = '<button class="btn btn-ghost btn-sm" onclick="verDetalhe('+a.id+')">Ver</button>';
@@ -555,10 +563,24 @@ function verDetalhe(id) {
     h += '<div class="alert-box ab-warn"><div class="ab-title">🔎 Padrão atípico detectado</div><ul>'
        + a.alertas_fraude.map(function(x){return '<li>'+esc(x)+'</li>';}).join('') + '</ul></div>';
   }
-  if (a.ia_decisao) {
-    h += '<div class="alert-box ab-info"><div class="ab-title">🤖 Recomendação do motor de IA</div>'
-       + '<strong>'+esc(a.ia_decisao.toUpperCase())+'</strong> — confiança '+Math.round((a.ia_score||0)*100)+'%<br>'
+  if (a.via_rapida) {
+    h += '<div class="alert-box ab-ok"><div class="ab-title">⚡ Pré-aprovado na hora — Via Rápida</div>'
+       + 'Passou em todas as validações automáticas (triagem + ANVISA + IA + fraude). '
+       + '<b>Não entrou na fila de auditoria</b> — economia de dias no processo.</div>';
+  }
+  if (a.ia_parecer_auditoria || a.ia_decisao) {
+    h += '<div class="alert-box ab-info"><div class="ab-title">🤖 Auditoria da IA</div>'
+       + (a.ia_parecer_auditoria ? ('<strong>'+esc(a.ia_parecer_auditoria)+'</strong><br>') : '')
+       + (a.ia_decisao ? ('Decisão: '+esc(a.ia_decisao.toUpperCase())+' — confiança '+Math.round((a.ia_score||0)*100)+'%<br>') : '')
        + esc(a.ia_justificativa||'') + '</div>';
+  }
+  if (a.ia_recomendacao && a.ia_recomendacao.para_descricao) {
+    var rc = a.ia_recomendacao;
+    h += '<div class="alert-box ab-warn"><div class="ab-title">💡 Recomendação de custo-benefício da IA</div>'
+       + 'Trocar <b>'+esc(rc.de_descricao)+'</b> por <b>'+esc(rc.para_descricao)+'</b>'
+       + (rc.para_fabricante?(' ('+esc(rc.para_fabricante)+')'):'')
+       + ' — <span style="color:var(--ok);font-weight:700">economia de '+money(rc.economia)+'</span>.<br>'
+       + '<span class="itens-mini">'+esc(rc.justificativa||'')+'</span></div>';
   }
 
   h += '<div><div class="dl" style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Materiais solicitados</div>'
@@ -936,10 +958,24 @@ async function salvarAutorizacao() {
     fecharModal();
     carregarAutorizacoes(); carregarKpis(); carregarEconomia();
     var eco = itens.reduce(function(s,i){ return s + (i.substituido_de_id && i.preco_substituido ? (i.preco_substituido-(i.preco_solicitado||0))*i.quantidade : 0); }, 0);
-    if (d.alertas_triagem && d.alertas_triagem.length) {
-      toast('Solicitação '+d.numero_protocolo+' criada com '+d.alertas_triagem.length+' alerta(s)', false);
+    if (d.via_rapida) {
+      // Pré-aprovação instantânea — destaque forte (é o diferencial).
+      var rec = (d.recomendacao && d.recomendacao.para_descricao)
+        ? ('\n\n💡 A IA ainda sugere: trocar por '+d.recomendacao.para_descricao+' e economizar '+money(d.recomendacao.economia)+'.') : '';
+      abrirModal('⚡ Pré-aprovado na hora — Via Rápida',
+        'Protocolo '+esc(d.numero_protocolo),
+        '<div class="alert-box ab-ok"><div class="ab-title">✓ APROVADO AUTOMATICAMENTE pela IA</div>'
+        + 'O pedido passou em todas as validações — material homologado, registro ANVISA válido, '
+        + 'dentro do teto e do procedimento padronizado, sem padrão atípico. '
+        + '<b>Não entrou na fila de auditoria: aprovação na hora, não em dias.</b></div>'
+        + '<div class="alert-box ab-info"><div class="ab-title">🤖 Parecer da IA</div>'+esc(d.ia.parecer||'')+'</div>'
+        + (rec?('<div class="itens-mini">'+esc(rec)+'</div>'):''),
+        '<button class="btn btn-primary" onclick="fecharModal()">Entendi</button>');
+      toast('⚡ '+d.numero_protocolo+' pré-aprovado na hora (Via Rápida)', true);
+    } else if (d.alertas_triagem && d.alertas_triagem.length) {
+      toast('Solicitação '+d.numero_protocolo+' criada com '+d.alertas_triagem.length+' alerta(s) — foi p/ auditoria', false);
     } else {
-      toast('Solicitação '+d.numero_protocolo+' criada sem alertas'+(eco>0?(' — economia de '+money(eco)):''), true);
+      toast('Solicitação '+d.numero_protocolo+' criada'+(eco>0?(' — economia de '+money(eco)):''), true);
     }
   } catch(e) { toast('Erro de conexão', false); }
 }

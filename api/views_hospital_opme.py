@@ -221,6 +221,88 @@ def _detectar_padrao_fraude(empresa, medico_solicitante, opme_ids_solicitados,
     return alertas
 
 
+# Confiança mínima da IA para a Via Rápida disparar a pré-aprovação automática.
+IA_SCORE_MINIMO_VIA_RAPIDA = 0.7
+
+
+def _melhor_custo_beneficio(empresa, opme_item, preco_ref):
+    """Melhor alternativa de MESMA QUALIDADE e menor custo, não só a mais barata.
+    Qualidade = homologada + registro ANVISA válido (não vencido) + mesmo grupo
+    de equivalência clínica. Retorna dict {para, economia, justificativa} ou None."""
+    from .models import CatalogoOPME
+    if not opme_item.grupo_equivalencia:
+        return None
+    candidatos = CatalogoOPME.objects.filter(
+        empresa=empresa, grupo_equivalencia=opme_item.grupo_equivalencia,
+        ativo=True, homologado=True,
+    ).exclude(id=opme_item.id).order_by("preco_maximo")
+    ref = preco_ref if preco_ref is not None else (
+        float(opme_item.preco_maximo) if opme_item.preco_maximo else None)
+    for c in candidatos:
+        if c.preco_maximo is None or ref is None or float(c.preco_maximo) >= ref:
+            continue
+        anv = _anvisa_status(c.codigo_anvisa)
+        # Mesma qualidade: registro válido e não vencido. Se a base ANVISA não
+        # está disponível, ainda aceita (homologação da comissão já é um selo),
+        # mas se ESTÁ e o registro é inválido/vencido/inexistente, descarta.
+        if anv is not None and not (anv.get("encontrado") and anv.get("valido")
+                                    and not anv.get("vencido")):
+            continue
+        economia = round(ref - float(c.preco_maximo), 2)
+        just = (f"Mesmo grupo de equivalência clínica"
+                + (f", material {c.material}" if c.material else "")
+                + (f", registro ANVISA válido" if anv and anv.get("valido") else "")
+                + f". Economia de R$ {economia:.2f} sem perda de qualidade.")
+        return {
+            "para_id": c.id, "para_descricao": c.descricao,
+            "para_fabricante": c.fabricante, "para_preco": float(c.preco_maximo),
+            "economia": economia, "justificativa": just,
+        }
+    return None
+
+
+def _auditoria_ia_completa(empresa, procedimento_tuss, descricao_itens, cid10,
+                           urgente, alertas_triagem, alertas_fraude, anvisa_ok):
+    """IA de auditoria: consolida o motor de ML + triagem + fraude + ANVISA num
+    parecer único e numa decisão. Retorna (decisao, score, justificativa, parecer).
+
+    decisao ∈ {aprovada, revisao, negada}. É esta decisão + a ausência de
+    ressalvas que habilita a Via Rápida."""
+    ml_dec, ml_score, ml_just = _recomendacao_ia_opme(
+        empresa, procedimento_tuss, descricao_itens, cid10, urgente)
+
+    ressalvas = []
+    if alertas_triagem:
+        ressalvas.append(f"{len(alertas_triagem)} alerta(s) de triagem (fora do padrão)")
+    if alertas_fraude:
+        ressalvas.append("padrão atípico do solicitante")
+    if anvisa_ok is False:
+        ressalvas.append("registro ANVISA inválido/vencido/ausente")
+
+    # Decisão final: o pior sinal manda. Sem ressalvas E ML aprova → aprovada.
+    if ressalvas:
+        decisao = "negada" if (alertas_fraude and alertas_triagem) else "revisao"
+        score = min(ml_score or 0.5, 0.5)
+    else:
+        decisao = ml_dec if ml_dec in ("aprovada", "revisao", "negada") else "revisao"
+        score = ml_score or 0.6
+
+    if decisao == "aprovada" and not ressalvas:
+        parecer = ("PARECER DA IA — APROVAR. Pedido em conformidade: material "
+                   "homologado, dentro do teto e do procedimento padronizado, "
+                   "registro ANVISA válido e sem padrão atípico. "
+                   "Elegível para Via Rápida (pré-aprovação automática).")
+    elif ressalvas:
+        parecer = ("PARECER DA IA — " + ("NEGAR" if decisao == "negada" else "REVISAR")
+                   + ". Ressalvas: " + "; ".join(ressalvas)
+                   + ". Encaminhado à auditoria humana.")
+    else:
+        parecer = ("PARECER DA IA — REVISAR. Sem ressalvas objetivas, mas o "
+                   "modelo não teve confiança suficiente para aprovação automática. "
+                   "Encaminhado à auditoria humana.")
+    return decisao, score, ml_just, parecer
+
+
 def _triar_item(empresa, opme, quantidade, preco_solicitado, permitidos_por_opme):
     """Triagem de um item OPME. Retorna (fora_padrao: bool, alertas: list[str]).
     Regras: material homologado? dentro do teto de preço? permitido para o
@@ -497,6 +579,9 @@ def api_opme_autorizacoes(request):
                     "ia_decisao": a.ia_decisao,
                     "ia_score": a.ia_score,
                     "ia_justificativa": a.ia_justificativa,
+                    "ia_parecer_auditoria": a.ia_parecer_auditoria,
+                    "ia_recomendacao": a.ia_recomendacao or {},
+                    "via_rapida": a.via_rapida,
                     "solicitado_em": a.solicitado_em.isoformat(),
                     "respondido_em": a.respondido_em.isoformat() if a.respondido_em else None,
                     "validade_ate": a.validade_ate.isoformat() if a.validade_ate else None,
@@ -568,6 +653,7 @@ def api_opme_autorizacoes(request):
     descricao_itens = []
     opme_ids_solicitados = []
     marcas_alternativas_por_item = {}
+    itens_avaliados = []   # (opme_obj, preco_sol, fora) — p/ ANVISA + custo-benefício
     try:
         with transaction.atomic():
             aut = AutorizacaoOPME.objects.create(
@@ -619,6 +705,7 @@ def api_opme_autorizacoes(request):
                 alertas_triagem.extend(alertas_item)
                 descricao_itens.append(opme_obj.descricao)
                 opme_ids_solicitados.append(opme_obj.id)
+                itens_avaliados.append((opme_obj, preco_sol, fora))
 
                 # RN 424/ANS: quando o item diverge do padrão, já oferece até
                 # 3 marcas/fabricantes alternativos do mesmo grupo clínico.
@@ -676,26 +763,65 @@ def api_opme_autorizacoes(request):
                     "justificativa clínica ou escolha uma das marcas alternativas."
                 )
 
-            # ── Recomendação do motor de IA ─────────────────────────────────
-            ia_dec, ia_score, ia_just = _recomendacao_ia_opme(
-                empresa, procedimento_tuss, "; ".join(descricao_itens),
-                aut.cid10, bool(data.get("urgente", False)))
-
             # ── Detecção de padrão atípico/fraude no pedido do médico ───────
             alertas_fraude = _detectar_padrao_fraude(
                 empresa, medico_solicitante, opme_ids_solicitados,
                 AutorizacaoOPME, ItemAutorizacaoOPME)
 
+            # ── ANVISA: todos os itens têm registro válido e não vencido? ────
+            # Só é True se a base está disponível E todos confirmam válidos.
+            anvisa_ok = None
+            for opme_obj, _preco, _fora in itens_avaliados:
+                st = _anvisa_status(opme_obj.codigo_anvisa)
+                if st is None:
+                    anvisa_ok = None if anvisa_ok is None else anvisa_ok
+                    continue
+                item_ok = st.get("encontrado") and st.get("valido") and not st.get("vencido")
+                anvisa_ok = item_ok if anvisa_ok is None else (anvisa_ok and item_ok)
+
+            # ── IA de auditoria (consolida triagem + fraude + ANVISA + ML) ──
+            ia_dec, ia_score, ia_just, ia_parecer = _auditoria_ia_completa(
+                empresa, procedimento_tuss, "; ".join(descricao_itens),
+                aut.cid10, bool(data.get("urgente", False)),
+                alertas_triagem, alertas_fraude, anvisa_ok)
+
+            # ── Melhor custo-benefício de MESMA qualidade (p/ itens fora) ───
+            recomendacao = {}
+            for opme_obj, preco_sol, fora in itens_avaliados:
+                if fora:
+                    mcb = _melhor_custo_beneficio(empresa, opme_obj, preco_sol)
+                    if mcb:
+                        recomendacao = {"de_id": opme_obj.id,
+                                        "de_descricao": opme_obj.descricao, **mcb}
+                        break
+
+            # ── VIA RÁPIDA: pré-aprovação automática se TUDO passou ─────────
+            elegivel_via_rapida = (
+                ia_dec == "aprovada"
+                and not alertas_triagem
+                and not alertas_fraude
+                and anvisa_ok is True
+                and (ia_score or 0) >= IA_SCORE_MINIMO_VIA_RAPIDA
+            )
+
             aut.alertas_triagem = alertas_triagem
             aut.ia_decisao = ia_dec
             aut.ia_score = ia_score
             aut.ia_justificativa = ia_just
+            aut.ia_parecer_auditoria = ia_parecer
+            aut.ia_recomendacao = recomendacao
             aut.alertas_fraude = alertas_fraude
             aut.tem_alerta_fraude = bool(alertas_fraude)
-            aut.save(update_fields=[
-                "numero_protocolo", "alertas_triagem",
-                "ia_decisao", "ia_score", "ia_justificativa",
-                "alertas_fraude", "tem_alerta_fraude"])
+
+            if elegivel_via_rapida:
+                aut.via_rapida = True
+                aut.status = "aprovada"
+                aut.respondido_por = "IA — Via Rápida (pré-aprovação automática)"
+                aut.respondido_em = timezone.now()
+                aut.observacao_auditoria = ia_parecer
+                aut.itens.all().update(status="aprovado", quantidade_aprovada=F("quantidade"))
+
+            aut.save()
     except ValueError as e:
         return JsonResponse({"erro": str(e)}, status=400)
 
@@ -705,8 +831,12 @@ def api_opme_autorizacoes(request):
         "alertas_triagem": alertas_triagem,
         "marcas_alternativas": marcas_alternativas_por_item,
         "alertas_fraude": aut.alertas_fraude,
+        "via_rapida": aut.via_rapida,
+        "status": aut.status,
         "ia": {"decisao": aut.ia_decisao, "score": aut.ia_score,
-               "justificativa": aut.ia_justificativa},
+               "justificativa": aut.ia_justificativa,
+               "parecer": aut.ia_parecer_auditoria},
+        "recomendacao": aut.ia_recomendacao or {},
     }, status=201)
 
 
@@ -1392,6 +1522,11 @@ def api_opme_kpis(request):
         data_validade_registro_anvisa__lt=hoje,
     ).count()
 
+    # ── Via Rápida: quanto foi pré-aprovado automaticamente ─────────────────
+    total_aut = aut_qs.count()
+    via_rapida_total = aut_qs.filter(via_rapida=True).count()
+    via_rapida_pct = round(via_rapida_total / total_aut * 100, 1) if total_aut else 0
+
     return JsonResponse({
         "catalogo_itens_ativos": total_catalogo,
         "autorizacoes_por_status": por_status,
@@ -1406,6 +1541,9 @@ def api_opme_kpis(request):
         "juntas_medicas_abertas": juntas_abertas,
         "medicos_padrao_atipico_30d": medicos_padrao_atipico_30d,
         "catalogo_registros_anvisa_vencidos": catalogo_anvisa_vencido,
+        # Via Rápida (IA)
+        "via_rapida_total": via_rapida_total,
+        "via_rapida_pct": via_rapida_pct,
     })
 
 

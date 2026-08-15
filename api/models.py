@@ -9437,6 +9437,15 @@ class AutorizacaoOPME(models.Model):
     ia_score         = models.FloatField(null=True, blank=True,
                                          help_text="Confiança da recomendação de IA (0-1)")
     ia_justificativa = models.TextField(blank=True, default="")
+    # Parecer de auditoria da IA (consolida triagem + fraude + ANVISA + ML num
+    # parecer único) e a recomendação de melhor custo-benefício de MESMA qualidade.
+    ia_parecer_auditoria = models.TextField(blank=True, default="")
+    ia_recomendacao      = models.JSONField(default=dict, blank=True,
+                                            help_text="Substituição sugerida (mesma qualidade, menor custo)")
+    # Via Rápida: pré-aprovação automática quando o pedido passa em TODAS as
+    # validações (triagem + fraude + ANVISA + IA). Pula a fila de auditoria.
+    via_rapida       = models.BooleanField(default=False, db_index=True,
+                                           verbose_name="Pré-aprovado automaticamente (Via Rápida)")
     # Detecção de padrão de fraude/abuso no pedido (volume atípico do médico,
     # repetição do mesmo material) — regra estatística sobre o histórico real.
     alertas_fraude   = models.JSONField(default=list, blank=True,
