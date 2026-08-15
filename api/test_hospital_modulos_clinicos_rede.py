@@ -750,6 +750,52 @@ class OPMETests(TestCase):
         self.assertEqual(d["item"]["preco_referencia"], 10000.0)
         self.assertEqual(d["alternativas"][0]["economia"], 4000.0)
 
+    def test_alternativas_trazem_atributos_clinicos_e_anvisa(self):
+        """Comparação clínica: a alternativa vem com material, especificação e a
+        situação REAL do registro na ANVISA — não só preço."""
+        from api.models import RegistroAnvisaProdutoSaude
+        empresa = _empresa("Hospital Rede", "opme-clinico@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="80111222333", situacao="Válido", classe_risco="III",
+            data_vencimento=date.today() + timedelta(days=365))
+        base = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Prótese Premium", "tipo": "protese", "fabricante": "A",
+                  "grupo_equivalencia": "GRPX", "preco_maximo": 20000},
+            content_type="application/json").json()["id"]
+        client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Prótese Equivalente", "tipo": "protese", "fabricante": "B",
+                  "grupo_equivalencia": "GRPX", "preco_maximo": 12000,
+                  "material": "Titânio revestido", "especificacoes": "Não cimentada, haste reta",
+                  "codigo_anvisa": "80111222333"},
+            content_type="application/json")
+        r = client.get(f"/api/hospital/opme/catalogo/{base}/alternativas?preco=20000")
+        alt = r.json()["alternativas"][0]
+        self.assertEqual(alt["material"], "Titânio revestido")
+        self.assertEqual(alt["especificacoes"], "Não cimentada, haste reta")
+        self.assertEqual(alt["economia"], 8000.0)
+        self.assertTrue(alt["anvisa"]["encontrado"])
+        self.assertTrue(alt["anvisa"]["valido"])
+        self.assertEqual(alt["anvisa"]["classe_risco"], "III")
+
+    def test_alternativa_com_anvisa_vencida_e_sinalizada(self):
+        """Alternativa mais barata mas com registro ANVISA vencido é sinalizada."""
+        from api.models import RegistroAnvisaProdutoSaude
+        empresa = _empresa("Hospital Rede", "opme-alt-venc@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="80999888777", situacao="Válido", data_vencimento=date(2020, 1, 1))
+        base = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Base", "tipo": "protese", "grupo_equivalencia": "GV",
+                  "preco_maximo": 15000}, content_type="application/json").json()["id"]
+        client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Alt vencida", "tipo": "protese", "grupo_equivalencia": "GV",
+                  "preco_maximo": 8000, "codigo_anvisa": "80999888777"},
+            content_type="application/json")
+        r = client.get(f"/api/hospital/opme/catalogo/{base}/alternativas?preco=15000")
+        alt = r.json()["alternativas"][0]
+        self.assertTrue(alt["anvisa"]["vencido"])
+
     def test_listagem_juntas_da_empresa(self):
         """Endpoint de listagem de Juntas Médicas devolve as da empresa, com filtro."""
         empresa = _empresa("Hospital Rede", "opme-lista-junta@example.com", "hospital_rede")

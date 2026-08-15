@@ -9368,6 +9368,15 @@ class CatalogoOPME(models.Model):
     fabricante       = models.CharField(max_length=150, blank=True, default="")
     referencia       = models.CharField(max_length=100, blank=True, default="",
                                          help_text="Referência / modelo do fabricante")
+    # Atributos clínicos: permitem ao médico comparar EQUIVALÊNCIA (material,
+    # técnica), não só preço, antes de aceitar uma alternativa mais barata.
+    material         = models.CharField(max_length=150, blank=True, default="",
+                                         verbose_name="Material / composição",
+                                         help_text="Ex.: Titânio, Cromo-cobalto, PEEK, Cerâmica…")
+    especificacoes   = models.TextField(blank=True, default="",
+                                         verbose_name="Especificações técnicas",
+                                         help_text="Fixação, dimensões, revestimento, indicação — o "
+                                                    "que a comissão considera na equivalência clínica.")
     preco_maximo     = models.DecimalField(max_digits=12, decimal_places=2, null=True,
                                             blank=True, verbose_name="Preço máximo (SIGTAP/CBHPM)")
     homologado       = models.BooleanField(default=True,

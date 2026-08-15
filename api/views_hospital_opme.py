@@ -125,11 +125,53 @@ def _validar_formato_registro_anvisa(codigo):
     return True, None
 
 
+def _anvisa_status(codigo_anvisa):
+    """Cruza o registro com a base ANVISA sincronizada. Retorna dict com
+    situação real (ou None se a base não está disponível / não tem o registro)."""
+    from .models import RegistroAnvisaProdutoSaude
+    if not codigo_anvisa:
+        return None
+    digitos = "".join(ch for ch in str(codigo_anvisa) if ch.isdigit())
+    if not digitos or not RegistroAnvisaProdutoSaude.objects.exists():
+        return None
+    reg = RegistroAnvisaProdutoSaude.objects.filter(numero_registro=digitos).first()
+    if not reg:
+        return {"encontrado": False}
+    vencido = bool(reg.data_vencimento and reg.data_vencimento < date.today())
+    return {
+        "encontrado": True,
+        "situacao": reg.situacao,
+        "valido": reg.situacao == "Válido",
+        "vencido": vencido,
+        "classe_risco": reg.classe_risco,
+        "data_vencimento": reg.data_vencimento.isoformat() if reg.data_vencimento else None,
+    }
+
+
+def _item_clinico(a):
+    """Serializa os atributos clínicos de um item do catálogo para comparação."""
+    return {
+        "id": a.id,
+        "descricao": a.descricao,
+        "fabricante": a.fabricante,
+        "material": a.material,
+        "especificacoes": a.especificacoes,
+        "referencia": a.referencia,
+        "codigo_anvisa": a.codigo_anvisa,
+        "codigo_operadora": a.codigo_operadora,
+        "homologado": a.homologado,
+        "preferencial": a.preferencial,
+        "preco_maximo": float(a.preco_maximo) if a.preco_maximo else None,
+        "anvisa": _anvisa_status(a.codigo_anvisa),
+    }
+
+
 def _marcas_alternativas(empresa, opme_item, limite=3):
     """Busca até `limite` marcas/fabricantes alternativos homologados no mesmo
     grupo de equivalência clínica — base da exigência da RN 424/ANS (o médico
     assistente deve poder escolher entre ao menos 3 marcas registradas na
-    ANVISA, quando existirem)."""
+    ANVISA, quando existirem). Traz atributos clínicos (material, especificação,
+    situação ANVISA) para o médico comparar QUALIDADE, não só preço."""
     from .models import CatalogoOPME
     if not opme_item.grupo_equivalencia:
         return []
@@ -139,16 +181,7 @@ def _marcas_alternativas(empresa, opme_item, limite=3):
             ativo=True, homologado=True,
         ).exclude(id=opme_item.id).order_by("preco_maximo")[:limite]
     )
-    return [
-        {
-            "id": a.id,
-            "descricao": a.descricao,
-            "fabricante": a.fabricante,
-            "codigo_anvisa": a.codigo_anvisa,
-            "preco_maximo": float(a.preco_maximo) if a.preco_maximo else None,
-        }
-        for a in alternativos
-    ]
+    return [_item_clinico(a) for a in alternativos]
 
 
 def _detectar_padrao_fraude(empresa, medico_solicitante, opme_ids_solicitados,
@@ -282,6 +315,8 @@ def api_opme_catalogo(request):
                     "codigo_sigtap": o.codigo_sigtap,
                     "fabricante": o.fabricante,
                     "referencia": o.referencia,
+                    "material": o.material,
+                    "especificacoes": o.especificacoes,
                     "preco_maximo": float(o.preco_maximo) if o.preco_maximo else None,
                     "homologado": o.homologado,
                     "preferencial": o.preferencial,
@@ -324,6 +359,8 @@ def api_opme_catalogo(request):
             codigo_sigtap=data.get("codigo_sigtap", ""),
             fabricante=data.get("fabricante", ""),
             referencia=data.get("referencia", ""),
+            material=data.get("material", ""),
+            especificacoes=data.get("especificacoes", ""),
             preco_maximo=data.get("preco_maximo"),
             homologado=data.get("homologado", True),
             preferencial=data.get("preferencial", False),
@@ -361,6 +398,8 @@ def api_opme_catalogo_detalhe(request, item_id):
             "codigo_sigtap": item.codigo_sigtap,
             "fabricante": item.fabricante,
             "referencia": item.referencia,
+            "material": item.material,
+            "especificacoes": item.especificacoes,
             "preco_maximo": float(item.preco_maximo) if item.preco_maximo else None,
             "codigo_operadora": item.codigo_operadora,
             "grupo_equivalencia": item.grupo_equivalencia,
@@ -393,7 +432,8 @@ def api_opme_catalogo_detalhe(request, item_id):
         campos = ["descricao", "tipo", "codigo_anvisa", "codigo_sigtap",
                   "fabricante", "referencia", "preco_maximo", "ativo",
                   "homologado", "preferencial", "codigo_operadora",
-                  "grupo_equivalencia", "data_validade_registro_anvisa"]
+                  "grupo_equivalencia", "data_validade_registro_anvisa",
+                  "material", "especificacoes"]
         for c in campos:
             if c in data:
                 setattr(item, c, data[c])
@@ -962,15 +1002,11 @@ def api_opme_alternativas(request, item_id):
             if (preco_ref is not None and a["preco_maximo"] is not None
                 and preco_ref > a["preco_maximo"]) else None
         )
+    item_clinico = _item_clinico(item)
+    item_clinico["grupo_equivalencia"] = item.grupo_equivalencia
+    item_clinico["preco_referencia"] = preco_ref
     return JsonResponse({
-        "item": {
-            "id": item.id, "descricao": item.descricao, "fabricante": item.fabricante,
-            "codigo_anvisa": item.codigo_anvisa, "codigo_operadora": item.codigo_operadora,
-            "grupo_equivalencia": item.grupo_equivalencia,
-            "homologado": item.homologado, "preferencial": item.preferencial,
-            "preco_maximo": float(item.preco_maximo) if item.preco_maximo else None,
-            "preco_referencia": preco_ref,
-        },
+        "item": item_clinico,
         "alternativas": alternativas,
     })
 
@@ -1024,6 +1060,7 @@ def api_opme_economia(request):
             "paciente_nome": it.autorizacao.paciente_nome,
             "medico_solicitante": it.autorizacao.medico_solicitante,
             "material": it.opme.descricao,
+            "opme_id": it.opme_id,          # permite abrir a comparação clínica
             "preco_solicitado": preco,
             "melhor_alternativa": min(baratas),
             "economia_possivel": round(dif, 2),

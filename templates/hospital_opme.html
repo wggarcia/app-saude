@@ -208,8 +208,8 @@ tr:hover td{background:rgba(0,194,255,.03)}
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Protocolo</th><th>Paciente</th><th>Médico</th><th>Material solicitado</th><th class="num">Solicitado</th><th class="num">Melhor equivalente</th><th class="num">Economia possível</th></tr></thead>
-          <tbody id="riscoBody"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          <thead><tr><th>Protocolo</th><th>Paciente</th><th>Médico</th><th>Material solicitado</th><th class="num">Solicitado</th><th class="num">Equivalente + barato</th><th class="num">Economia possível</th><th></th></tr></thead>
+          <tbody id="riscoBody"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -422,14 +422,16 @@ async function carregarEconomia() {
 
     var tb = document.getElementById('riscoBody');
     if (!d.itens_em_risco.length) {
-      tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum pedido pendente com equivalente mais barato disponível. 👍</td></tr>';
+      tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum pedido pendente com equivalente mais barato disponível. 👍</td></tr>';
     } else {
       tb.innerHTML = d.itens_em_risco.map(function(i){
+        var cmp = i.opme_id ? ('<button class="btn btn-ghost btn-sm" onclick="abrirComparacaoClinica('+i.opme_id+','+(i.preco_solicitado||0)+',null)">🔬 Comparar</button>') : '';
         return '<tr><td><strong>'+esc(i.protocolo)+'</strong></td><td>'+esc(i.paciente_nome)+'</td><td>'+esc(i.medico_solicitante)+'</td>'+
           '<td class="itens-mini">'+esc(i.material)+'</td>'+
           '<td class="num">'+money(i.preco_solicitado)+'</td>'+
           '<td class="num" style="color:var(--ok)">'+money(i.melhor_alternativa)+'</td>'+
-          '<td class="num"><strong style="color:var(--warn)">'+money(i.economia_possivel)+'</strong></td></tr>';
+          '<td class="num"><strong style="color:var(--warn)">'+money(i.economia_possivel)+'</strong></td>'+
+          '<td>'+cmp+'</td></tr>';
       }).join('');
     }
 
@@ -730,6 +732,88 @@ function removerLinha(idx) {
   atualizarAvisoJustificativa();
 }
 
+// Selo da situação real do registro na ANVISA (cruzado com a base sincronizada).
+function anvisaBadge(anvisa) {
+  if (!anvisa) return '<span class="badge badge-gray" title="Base ANVISA não consultada ou item sem registro">ANVISA —</span>';
+  if (!anvisa.encontrado) return '<span class="badge badge-danger">✗ não consta na ANVISA</span>';
+  if (anvisa.vencido) return '<span class="badge badge-warn">⚠ registro vencido</span>';
+  if (anvisa.valido) return '<span class="badge badge-ok">✓ registro válido</span>';
+  return '<span class="badge badge-danger">✗ '+esc(anvisa.situacao||'inválido')+'</span>';
+}
+
+// Quadro de comparação CLÍNICA lado a lado: solicitado × equivalentes.
+// Compara qualidade (material, especificação, fabricante, situação ANVISA),
+// não só preço. A equivalência foi definida pela comissão (grupo de
+// equivalência) — o sistema mostra os dados, o médico decide.
+var comparacaoCtx = null;  // {idx, precoRef} quando aberto dentro de um pedido
+async function abrirComparacaoClinica(opmeId, precoRef, idx) {
+  comparacaoCtx = (idx!=null) ? {idx: idx, precoRef: precoRef} : null;
+  abrirModal('Comparação clínica de equivalentes', 'Carregando…', '<div class="empty">Consultando…</div>', '', true);
+  try {
+    var url = '/api/hospital/opme/catalogo/'+opmeId+'/alternativas'+(precoRef?('?preco='+encodeURIComponent(precoRef)):'');
+    var r = await fetch(url, { credentials:'include', headers: headers() });
+    var d = await r.json();
+    if (!r.ok) { fecharModal(); return toast(d.erro||'Erro', false); }
+    montarComparacao(d);
+  } catch(e) { fecharModal(); toast('Erro de conexão', false); }
+}
+
+function colItem(o, marcado, precoRef) {
+  var eco = (o.economia!=null && o.economia>0);
+  var head = marcado==='escolhido'
+    ? '<span class="badge badge-warn">Solicitado pelo médico</span>'
+    : (marcado==='barato' ? '<span class="badge badge-ok">Menor custo</span>' : '');
+  var preco = (marcado==='escolhido' && precoRef!=null) ? precoRef : o.preco_maximo;
+  return { head: head, o: o, preco: preco, eco: eco };
+}
+
+function montarComparacao(d) {
+  var it = d.item;
+  var alts = (d.alternativas||[]);
+  // Ordena alternativas: primeiro as mais baratas COM registro ANVISA válido.
+  var cols = [colItem(it, 'escolhido', it.preco_referencia)];
+  alts.forEach(function(a,i){ cols.push(colItem(a, i===0?'barato':'', null)); });
+
+  function linha(rot, fn){
+    return '<tr><th style="position:sticky;left:0;background:var(--surface)">'+esc(rot)+'</th>'
+      + cols.map(function(c){ return '<td>'+fn(c)+'</td>'; }).join('') + '</tr>';
+  }
+  var tabela = '<div class="table-wrap"><table style="min-width:auto">'
+    + '<thead><tr><th style="position:sticky;left:0;background:var(--surface)"></th>'
+    + cols.map(function(c){ return '<th>'+c.head+'</th>'; }).join('') + '</tr></thead><tbody>'
+    + linha('Material', function(c){ return '<strong>'+esc(c.o.descricao)+'</strong>'; })
+    + linha('Fabricante', function(c){ return esc(c.o.fabricante||'—'); })
+    + linha('Material / composição', function(c){ return esc(c.o.material||'—'); })
+    + linha('Especificações', function(c){ return c.o.especificacoes ? esc(c.o.especificacoes) : '<span style="opacity:.5">não informado</span>'; })
+    + linha('Registro ANVISA', function(c){ return esc(c.o.codigo_anvisa||'—')+'<br>'+anvisaBadge(c.o.anvisa)
+        + (c.o.anvisa && c.o.anvisa.classe_risco ? (' <span class="badge badge-gray">Classe '+esc(c.o.anvisa.classe_risco)+'</span>') : ''); })
+    + linha('Homologação', function(c){ return c.o.homologado ? '<span class="badge badge-ok">homologado</span>' : '<span class="badge badge-danger">não homologado</span>'; })
+    + linha('Preço', function(c){ return '<strong class="num">'+money(c.preco)+'</strong>'; })
+    + linha('Diferença vs. solicitado', function(c){
+        if (c.head.indexOf('Solicitado')>=0) return '—';
+        return c.eco ? '<span style="color:var(--ok);font-weight:700">economiza '+money(c.o.economia)+'</span>'
+                     : '<span style="opacity:.6">sem economia</span>'; })
+    + '</tbody></table></div>';
+
+  var acoes = '';
+  if (comparacaoCtx) {
+    // dentro de um pedido: permite trocar por uma alternativa
+    acoes = alts.filter(function(a){return a.economia>0;}).map(function(a){
+      return '<button class="btn btn-ok btn-sm" onclick="trocarMaterial('+comparacaoCtx.idx+','+a.id+','+(comparacaoCtx.precoRef||0)+','+a.preco_maximo+');fecharModal();">Trocar por '+esc(a.fabricante||a.descricao)+' (−'+money(a.economia)+')</button>';
+    }).join(' ');
+  }
+
+  var corpo = '<div class="alert-box ab-info"><div class="ab-title">Como ler</div>'
+    + 'Estes materiais foram marcados como <b>clinicamente equivalentes pela comissão</b> (mesmo grupo de equivalência). '
+    + 'O quadro compara qualidade — material, especificação, fabricante e situação real do registro na ANVISA — não só o preço. '
+    + 'A decisão de trocar é do médico assistente (RN 424/ANS).</div>'
+    + tabela;
+  document.getElementById('modalTitulo').textContent = 'Comparação clínica — '+(it.grupo_equivalencia||'equivalentes');
+  document.getElementById('modalSub').innerHTML = (alts.length)+' equivalente(s) homologado(s) no mesmo grupo clínico';
+  document.getElementById('modalCorpo').innerHTML = corpo;
+  document.getElementById('modalRodape').innerHTML = acoes + '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>';
+}
+
 async function aoEscolherMaterial(idx) {
   var sel = document.getElementById('matOpme'+idx);
   var box = document.getElementById('matSub'+idx);
@@ -748,6 +832,7 @@ async function aoEscolherMaterial(idx) {
     if (!it.homologado) avisos += '<span class="badge badge-danger">não homologado</span> ';
     if (it.preferencial) avisos += '<span class="badge badge-ok">preferencial</span> ';
     if (it.codigo_operadora) avisos += '<span class="badge badge-info">'+esc(it.codigo_operadora)+'</span> ';
+    avisos += anvisaBadge(it.anvisa) + ' ';
     var precoRef = preco ? parseFloat(preco) : it.preco_maximo;
     if (precoRef!=null && it.preco_maximo!=null && precoRef > it.preco_maximo)
       avisos += '<span class="badge badge-danger">acima do teto ('+money(it.preco_maximo)+')</span> ';
@@ -755,26 +840,30 @@ async function aoEscolherMaterial(idx) {
     var maisBaratas = (d.alternativas||[]).filter(function(a){ return a.economia && a.economia>0; });
     var html = avisos ? ('<div style="margin-bottom:6px">'+avisos+'</div>') : '';
     if (maisBaratas.length) {
-      html += '<div class="alert-box ab-warn" style="margin-top:6px"><div class="ab-title">💊 Existem equivalentes homologados mais baratos — RN 424/ANS</div>'
-            + 'Materiais do mesmo grupo de equivalência clínica. Trocar registra a economia como comprovada.'
+      var precoRefN = (precoRef||0);
+      html += '<div class="alert-box ab-warn" style="margin-top:6px"><div class="ab-title">💊 Existe equivalente homologado mais barato — RN 424/ANS</div>'
+            + 'Materiais do mesmo grupo de equivalência clínica. Confira a qualidade lado a lado antes de trocar — trocar registra a economia como comprovada.'
             + '<div class="compare">'
-            + '<div class="opt escolhido"><span class="opt-tag">Escolhido</span>'
+            + '<div class="opt escolhido"><span class="opt-tag">Solicitado</span>'
             +   '<div class="opt-nome">'+esc(it.descricao)+'</div>'
-            +   '<div class="opt-fab">'+esc(it.fabricante||'—')+'</div>'
+            +   '<div class="opt-fab">'+esc(it.fabricante||'—')+(it.material?(' · '+esc(it.material)):'')+'</div>'
             +   '<div class="opt-preco">'+money(precoRef)+'</div>'
-            +   '<div class="opt-meta">ANVISA '+esc(it.codigo_anvisa||'—')+'</div></div>'
+            +   '<div class="opt-meta">'+anvisaBadge(it.anvisa)+'</div></div>'
             + maisBaratas.map(function(a,i){
-                return '<div class="opt'+(i===0?' melhor':'')+'">'+(i===0?'<span class="opt-tag">Melhor custo</span>':'')
+                return '<div class="opt'+(i===0?' melhor':'')+'">'+(i===0?'<span class="opt-tag">Menor custo</span>':'')
                   + '<div class="opt-nome">'+esc(a.descricao)+'</div>'
-                  + '<div class="opt-fab">'+esc(a.fabricante||'—')+'</div>'
+                  + '<div class="opt-fab">'+esc(a.fabricante||'—')+(a.material?(' · '+esc(a.material)):'')+'</div>'
                   + '<div class="opt-preco">'+money(a.preco_maximo)+'</div>'
                   + '<div class="opt-eco">economiza '+money(a.economia)+'</div>'
-                  + '<div class="opt-meta">ANVISA '+esc(a.codigo_anvisa||'—')+'</div>'
-                  + '<button class="btn btn-ok btn-sm" onclick="trocarMaterial('+idx+','+a.id+','+(precoRef||0)+','+a.preco_maximo+')">Trocar e economizar</button></div>';
+                  + '<div class="opt-meta">'+anvisaBadge(a.anvisa)+'</div>'
+                  + '<button class="btn btn-ok btn-sm" onclick="trocarMaterial('+idx+','+a.id+','+precoRefN+','+a.preco_maximo+')">Trocar e economizar</button></div>';
               }).join('')
-            + '</div></div>';
+            + '</div>'
+            + '<button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="abrirComparacaoClinica('+sel.value+','+precoRefN+','+idx+')">🔬 Comparar qualidade lado a lado</button>'
+            + '</div>';
     } else if ((d.alternativas||[]).length) {
-      html += '<div class="itens-mini" style="margin-top:6px">'+d.alternativas.length+' equivalente(s) no mesmo grupo clínico, nenhum mais barato.</div>';
+      html += '<div class="itens-mini" style="margin-top:6px">'+d.alternativas.length+' equivalente(s) no mesmo grupo clínico, nenhum mais barato. '
+            + '<a href="javascript:void(0)" onclick="abrirComparacaoClinica('+sel.value+','+(precoRef||0)+','+idx+')" style="color:var(--accent)">ver comparação</a></div>';
     }
     box.innerHTML = html;
   } catch(e) { box.innerHTML=''; }
@@ -1153,9 +1242,13 @@ function formItem(i) {
     + '<div class="form-group"><label>Fabricante</label><input id="iFabricante" value="'+esc(i?i.fabricante:'')+'"></div>'
     + '<div class="form-group"><label>Preço máximo (R$)</label><input type="number" step="0.01" id="iPreco" value="'+(i&&i.preco_maximo!=null?i.preco_maximo:'')+'"></div>'
     + '</div>'
-    + '<div class="form-group"><label>Grupo de equivalência clínica</label>'
-    + '<input id="iGrupoEquivalencia" value="'+esc(i?i.grupo_equivalencia:'')+'" placeholder="ex: PROTESE-QUADRIL-NAO-CIMENTADA">'
-    + '<span class="itens-mini">Itens com o mesmo grupo viram marcas alternativas entre si — é o que alimenta a exigência de 3 marcas da RN 424/ANS.</span></div>'
+    + '<div class="form-row">'
+    + '<div class="form-group"><label>Material / composição <span style="opacity:.6">(p/ comparação clínica)</span></label><input id="iMaterial" value="'+esc(i?i.material:'')+'" placeholder="ex: Titânio revestido com cerâmica"></div>'
+    + '<div class="form-group"><label>Grupo de equivalência clínica</label><input id="iGrupoEquivalencia" value="'+esc(i?i.grupo_equivalencia:'')+'" placeholder="ex: PROTESE-QUADRIL-NAO-CIMENTADA"></div>'
+    + '</div>'
+    + '<div class="form-group"><label>Especificações técnicas</label>'
+    + '<textarea id="iEspecificacoes" rows="2" placeholder="Fixação, dimensões, revestimento, indicação — o que a comissão considera na equivalência.">'+esc(i?i.especificacoes:'')+'</textarea>'
+    + '<span class="itens-mini">Material, grupo e especificações são o que o médico compara lado a lado antes de aceitar uma alternativa — é o que sustenta a exigência de 3 marcas da RN 424/ANS.</span></div>'
     + '<div class="form-row">'
     + '<div class="form-group"><label style="color:var(--text)"><input type="checkbox" id="iHomologado"'+(!i||i.homologado!==false?' checked':'')+' style="width:auto;margin-right:6px">Homologado pela operadora/comissão</label></div>'
     + '<div class="form-group"><label style="color:var(--text)"><input type="checkbox" id="iPreferencial"'+(i&&i.preferencial?' checked':'')+' style="width:auto;margin-right:6px">Material preferencial (menor custo)</label></div>'
@@ -1216,6 +1309,8 @@ async function salvarItem(editId) {
     preferencial: document.getElementById('iPreferencial').checked,
     codigo_operadora: document.getElementById('iCodOperadora').value,
     grupo_equivalencia: document.getElementById('iGrupoEquivalencia').value,
+    material: document.getElementById('iMaterial').value,
+    especificacoes: document.getElementById('iEspecificacoes').value,
     data_validade_registro_anvisa: document.getElementById('iValidadeAnvisa').value || null,
   };
   try {
