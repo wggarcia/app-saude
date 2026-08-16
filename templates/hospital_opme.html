@@ -131,6 +131,32 @@ tr:hover td{background:rgba(0,194,255,.03)}
 .mat-top .form-group{margin-bottom:0}
 .mat-sub{margin-top:10px}
 .swap-note{font-size:11px;color:var(--ok);font-weight:700;margin-top:9px;display:flex;align-items:center;gap:6px}
+/* ── Esteira do processo ─────────────────────────────────────────── */
+.esteira{display:flex;gap:0;overflow-x:auto;padding:8px 2px 14px}
+.et{flex:0 0 128px;position:relative;text-align:center;padding:0 4px}
+.et:not(:last-child)::after{content:'';position:absolute;top:16px;left:50%;width:100%;height:2px;background:var(--border);z-index:0}
+.et.done:not(:last-child)::after{background:var(--ok)}
+.et-dot{position:relative;z-index:1;width:32px;height:32px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:var(--surface2);border:2px solid var(--border);color:var(--muted)}
+.et.done .et-dot{background:var(--ok);border-color:var(--ok);color:#00352a}
+.et.atual .et-dot{background:var(--accent);border-color:var(--accent);color:#001a2e;box-shadow:0 0 0 4px rgba(0,194,255,.18)}
+.et.pend .et-dot{background:var(--warn);border-color:var(--warn);color:#3a2600}
+.et.reprov .et-dot{background:var(--danger);border-color:var(--danger);color:#fff}
+.et.disp .et-dot{background:rgba(0,229,176,.15);border-color:var(--ok);color:var(--ok)}
+.et-lbl{font-size:11px;font-weight:700;line-height:1.25}
+.et-papel{font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.3}
+.et-sit{font-size:9px;font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:.4px}
+.et.done .et-sit{color:var(--ok)}.et.atual .et-sit{color:var(--accent)}.et.pend .et-sit{color:var(--warn)}.et.reprov .et-sit{color:var(--danger)}.et.disp .et-sit{color:var(--ok)}
+.trilho-tag{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.trilho-regulacao{background:rgba(0,194,255,.12);color:var(--accent)}
+.trilho-logistica{background:rgba(255,179,71,.12);color:var(--warn)}
+.tl{position:relative;padding-left:22px;margin-top:6px}
+.tl-item{position:relative;padding:0 0 14px 16px;border-left:2px solid var(--border)}
+.tl-item:last-child{border-left-color:transparent}
+.tl-item::before{content:'';position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.tl-item.s-concluida::before{background:var(--ok)}.tl-item.s-pendencia::before{background:var(--warn)}.tl-item.s-reprovada::before{background:var(--danger)}.tl-item.s-dispensada::before{background:var(--ok)}
+.tl-top{font-size:12.5px;font-weight:700}
+.tl-meta{font-size:10.5px;color:var(--muted);margin-top:1px}
+.tl-obs{font-size:11.5px;margin-top:3px;line-height:1.45}
 /* ── Gráfico ─────────────────────────────────────────────────────── */
 .chart-wrap{overflow-x:auto}
 .chart-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px}
@@ -523,18 +549,14 @@ async function carregarAutorizacoes() {
       if (a.via_rapida) flags += ' <span class="badge badge-ok">⚡ Via Rápida (IA)</span>';
       if (a.alertas_triagem && a.alertas_triagem.length) flags += ' <span class="badge badge-danger">⚠ fora do padrão</span>';
       if (a.tem_alerta_fraude) flags += ' <span class="badge badge-warn">🔎 padrão atípico</span>';
-      var acoes = '<button class="btn btn-ghost btn-sm" onclick="verDetalhe('+a.id+')">Ver</button>';
-      if (a.status === 'solicitada') {
-        acoes = '<button class="btn btn-ok btn-sm" onclick="acaoAutorizacao('+a.id+',\'aprovar\')">Aprovar</button> '
-              + '<button class="btn btn-danger btn-sm" onclick="acaoAutorizacao('+a.id+',\'negar\')">Negar</button> ' + acoes;
-      } else if (a.status==='aprovada' || a.status==='parcial') {
-        acoes = acoes + ' <button class="btn btn-danger btn-sm" onclick="acaoAutorizacao('+a.id+',\'cancelar\')">Cancelar</button>';
-      }
+      var acoes = '<button class="btn btn-warn btn-sm" onclick="abrirEsteira('+a.id+')">Esteira</button> '
+                + '<button class="btn btn-ghost btn-sm" onclick="verDetalhe('+a.id+')">Ver</button>';
       return '<tr><td><strong>'+esc(a.numero_protocolo)+'</strong><div class="itens-mini">'+fmtData(a.solicitado_em)+'</div></td>'
         + '<td>'+esc(a.paciente_nome)+'</td><td>'+esc(a.medico_solicitante)+'</td>'
         + '<td class="itens-mini">'+esc(a.procedimento_tuss||'—')+'<br>'+esc(a.cid10||'')+'</td>'
         + '<td class="itens-mini">'+itensTxt+flags+'</td>'
-        + '<td><span class="badge '+(statusAutMap[a.status]||'badge-gray')+'">'+esc(a.status_display)+'</span></td>'
+        + '<td><span class="badge '+(statusAutMap[a.status]||'badge-gray')+'">'+esc(a.status_display)+'</span>'
+        +   (a.etapa_display?('<div class="itens-mini">📍 '+esc(a.etapa_display)+'</div>'):'')+'</td>'
         + '<td>'+acoes+'</td></tr>';
     }).join('');
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
@@ -638,6 +660,77 @@ async function confirmarAcao(id, acao) {
     fecharModal();
     toast('Autorização atualizada: '+(d.novo_status||acao), true);
     carregarAutorizacoes(); carregarKpis(); carregarEconomia();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+/* ── Esteira do processo (linha do tempo do pedido) ─────────────────── */
+var esteiraAutId = null;
+async function abrirEsteira(autId) {
+  esteiraAutId = autId;
+  abrirModal('Esteira do pedido', 'Carregando…', '<div class="empty">Consultando…</div>', '', true);
+  try {
+    var r = await fetch('/api/hospital/opme/autorizacoes/'+autId+'/esteira', { credentials:'include', headers: headers() });
+    var d = await r.json();
+    if (!r.ok) { fecharModal(); return toast(d.erro||'Erro', false); }
+    montarEsteira(d);
+  } catch(e) { fecharModal(); toast('Erro de conexão', false); }
+}
+
+var SIT_LABEL = {em_andamento:'em andamento', concluida:'concluída', pendencia:'pendência', reprovada:'reprovada', dispensada:'dispensada ⚡'};
+function montarEsteira(d) {
+  // régua de etapas
+  var regua = '<div class="esteira">' + d.etapas.map(function(e){
+    var cls = 'et';
+    if (e.situacao==='concluida') cls+=' done';
+    else if (e.situacao==='dispensada') cls+=' done disp';
+    else if (e.situacao==='pendencia') cls+=' pend';
+    else if (e.situacao==='reprovada') cls+=' reprov';
+    if (e.atual) cls+=' atual';
+    var icon = e.situacao==='concluida'?'✓':(e.situacao==='dispensada'?'⚡':(e.situacao==='pendencia'?'!':(e.situacao==='reprovada'?'✕':(e.atual?'●':''))));
+    var sit = e.situacao ? ('<div class="et-sit">'+esc(SIT_LABEL[e.situacao]||e.situacao)+'</div>') : (e.atual?'<div class="et-sit">atual</div>':'');
+    return '<div class="'+cls+'"><div class="et-dot">'+icon+'</div>'
+      + '<div class="et-lbl">'+esc(e.label)+'</div>'
+      + '<div class="et-papel">'+esc(e.papel)+'</div>'+sit+'</div>';
+  }).join('') + '</div>';
+
+  var vr = d.via_rapida ? '<div class="alert-box ab-ok" style="margin-bottom:10px"><div class="ab-title">⚡ Via Rápida</div>A IA dispensou as etapas de análise e auditoria (≈10 dias) — o pedido nasceu correto e foi autorizado na hora.</div>' : '';
+
+  // trilha (histórico)
+  var tl = '<div class="ab-title" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px">Trilha de auditoria</div><div class="tl">'
+    + d.historico.map(function(h){
+        return '<div class="tl-item s-'+esc(h.situacao)+'">'
+          + '<div class="tl-top">'+esc(h.etapa_label)+' — <span style="font-weight:600">'+esc(h.situacao_display)+'</span></div>'
+          + '<div class="tl-meta">'+(h.papel?esc(h.papel):'')+(h.responsavel?(' · '+esc(h.responsavel)):'')+' · '+fmtDataHora(h.criado_em)+'</div>'
+          + (h.observacao?('<div class="tl-obs">'+esc(h.observacao)+'</div>'):'')
+          + '</div>';
+      }).join('') + '</div>';
+
+  // ações conforme etapa atual
+  var rodape = '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>';
+  if (d.etapa_atual !== 'concluido' && d.status !== 'negada') {
+    rodape = '<button class="btn btn-danger" onclick="acaoEsteira(\'reprovar\')">Reprovar</button>'
+           + '<button class="btn btn-warn" onclick="acaoEsteira(\'pendenciar\')">Pôr em pendência</button>'
+           + '<button class="btn btn-ok" onclick="acaoEsteira(\'avancar\')">Concluir etapa e avançar →</button>'
+           + rodape;
+  }
+  document.getElementById('modalTitulo').innerHTML = 'Esteira do pedido';
+  document.getElementById('modalSub').innerHTML = 'Etapa atual: <b>'+esc(d.etapa_atual_label)+'</b>';
+  document.getElementById('modalCorpo').innerHTML = vr + regua + tl;
+  document.getElementById('modalRodape').innerHTML = rodape;
+}
+
+async function acaoEsteira(acao) {
+  var obs = '';
+  if (acao==='pendenciar') { obs = prompt('Descreva a pendência/diligência:'); if (obs===null) return; if(!obs.trim()) return toast('Descreva a pendência', false); }
+  if (acao==='reprovar')   { obs = prompt('Motivo da reprovação:'); if (obs===null) return; if(!obs.trim()) return toast('Informe o motivo', false); }
+  try {
+    var r = await fetch('/api/hospital/opme/autorizacoes/'+esteiraAutId+'/esteira', { method:'POST', credentials:'include',
+      headers: headers(), body: JSON.stringify({acao:acao, observacao:obs}) });
+    var d = await r.json();
+    if (!r.ok) return toast(d.erro||'Erro', false);
+    montarEsteira(d);
+    carregarAutorizacoes(); carregarKpis();
+    toast('Etapa atualizada', true);
   } catch(e) { toast('Erro de conexão', false); }
 }
 

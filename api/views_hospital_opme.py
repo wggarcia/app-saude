@@ -224,6 +224,45 @@ def _detectar_padrao_fraude(empresa, medico_solicitante, opme_ids_solicitados,
 # Confiança mínima da IA para a Via Rápida disparar a pré-aprovação automática.
 IA_SCORE_MINIMO_VIA_RAPIDA = 0.7
 
+# ── Esteira do processo (workflow OPME) ─────────────────────────────────────────
+# Etapas-marco na ordem real, cada uma com o ator/setor responsável e o trilho.
+# 'junta' fica fora da ordem linear — só entra quando há divergência (RN 424).
+ETAPAS_META = {
+    "solicitacao":     {"label": "Solicitação médica",            "papel": "Médico assistente",        "trilho": "regulacao"},
+    "analise_adm":     {"label": "Análise administrativa",        "papel": "Regulação / autorização",  "trilho": "regulacao"},
+    "auditoria":       {"label": "Auditoria técnica e médica",    "papel": "Enfermeiro + médico auditor", "trilho": "regulacao"},
+    "junta":           {"label": "Junta médica (RN 424)",         "papel": "Comissão / desempatador",  "trilho": "regulacao"},
+    "autorizacao":     {"label": "Autorização",                   "papel": "Regulação",                "trilho": "regulacao"},
+    "cotacao":         {"label": "Cotação / Aquisição",           "papel": "Suprimentos + fornecedor", "trilho": "logistica"},
+    "dispensacao":     {"label": "Recebimento / Dispensação",     "papel": "Farmácia hospitalar",      "trilho": "logistica"},
+    "implante":        {"label": "Implante / Utilização",         "papel": "Centro cirúrgico",         "trilho": "logistica"},
+    "rastreabilidade": {"label": "Rastreabilidade (etiqueta UDI)","papel": "Enfermagem do CC",         "trilho": "logistica"},
+    "faturamento":     {"label": "Faturamento TISS",              "papel": "Faturamento",              "trilho": "logistica"},
+    "concluido":       {"label": "Concluído",                     "papel": "—",                        "trilho": "logistica"},
+}
+# Ordem linear da esteira (junta é acionada à parte).
+ETAPAS_ORDEM = ["solicitacao", "analise_adm", "auditoria", "autorizacao", "cotacao",
+                "dispensacao", "implante", "rastreabilidade", "faturamento", "concluido"]
+
+
+def _registrar_etapa(aut, etapa, situacao, responsavel="", papel="", observacao=""):
+    """Grava um movimento na trilha da esteira."""
+    from .models import EtapaHistoricoOPME
+    if not papel:
+        papel = ETAPAS_META.get(etapa, {}).get("papel", "")
+    EtapaHistoricoOPME.objects.create(
+        autorizacao=aut, etapa=etapa, situacao=situacao,
+        responsavel=responsavel or "", papel=papel or "", observacao=observacao or "")
+
+
+def _proxima_etapa(etapa_atual):
+    """Próxima etapa na ordem linear (pula 'junta'). None se já no fim."""
+    try:
+        i = ETAPAS_ORDEM.index(etapa_atual)
+    except ValueError:
+        return None
+    return ETAPAS_ORDEM[i + 1] if i + 1 < len(ETAPAS_ORDEM) else None
+
 
 def _melhor_custo_beneficio(empresa, opme_item, preco_ref):
     """Melhor alternativa de MESMA QUALIDADE e menor custo, não só a mais barata.
@@ -570,6 +609,8 @@ def api_opme_autorizacoes(request):
                     "procedimento_tuss": a.procedimento_tuss,
                     "status": a.status,
                     "status_display": a.get_status_display(),
+                    "etapa": a.etapa,
+                    "etapa_display": a.get_etapa_display(),
                     "justificativa": a.justificativa,
                     "observacao_auditoria": a.observacao_auditoria,
                     "respondido_por": a.respondido_por,
@@ -816,12 +857,35 @@ def api_opme_autorizacoes(request):
             if elegivel_via_rapida:
                 aut.via_rapida = True
                 aut.status = "aprovada"
+                aut.etapa = "cotacao"   # já autorizado → segue direto p/ suprimentos
                 aut.respondido_por = "IA — Via Rápida (pré-aprovação automática)"
                 aut.respondido_em = timezone.now()
                 aut.observacao_auditoria = ia_parecer
                 aut.itens.all().update(status="aprovado", quantidade_aprovada=F("quantidade"))
+            else:
+                aut.etapa = "auditoria"  # aguardando auditoria humana
 
             aut.save()
+
+            # ── Trilha da esteira ────────────────────────────────────────────
+            _registrar_etapa(aut, "solicitacao", "concluida",
+                             responsavel=medico_solicitante, papel="Médico assistente")
+            if elegivel_via_rapida:
+                _registrar_etapa(aut, "analise_adm", "dispensada",
+                                 responsavel="IA — Via Rápida",
+                                 observacao="Elegibilidade e triagem OK automaticamente.")
+                _registrar_etapa(aut, "auditoria", "dispensada",
+                                 responsavel="IA — Via Rápida",
+                                 observacao="Sem ressalvas: material homologado, ANVISA válido, "
+                                            "dentro do teto e do procedimento. Dispensou a fila "
+                                            "de auditoria (≈10 dias).")
+                _registrar_etapa(aut, "autorizacao", "concluida",
+                                 responsavel="IA — Via Rápida", observacao=ia_parecer)
+            else:
+                _registrar_etapa(aut, "analise_adm", "concluida",
+                                 responsavel="Sistema", observacao="Elegibilidade e triagem verificadas.")
+                _registrar_etapa(aut, "auditoria", "em_andamento",
+                                 observacao="Aguardando auditoria (SLA ≈10 dias).")
     except ValueError as e:
         return JsonResponse({"erro": str(e)}, status=400)
 
@@ -1367,6 +1431,125 @@ def api_opme_fornecedores_verificar_afe(request):
         _verificar_afe(f)
         n += 1
     return JsonResponse({"verificados": n})
+
+
+# ── Esteira do processo (linha do tempo do pedido) ──────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_esteira(request, aut_id):
+    """GET  /api/hospital/opme/autorizacoes/<id>/esteira/ — etapa atual + trilha.
+    POST — move a esteira: {acao: avancar|pendenciar|reprovar|reabrir, observacao}."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _, AutorizacaoOPME, ItemAutorizacaoOPME, _ = _get_opme_models()
+    try:
+        aut = AutorizacaoOPME.objects.get(id=aut_id, empresa=empresa)
+    except AutorizacaoOPME.DoesNotExist:
+        return JsonResponse({"erro": "Autorização não encontrada"}, status=404)
+
+    tem_junta = aut.juntas_medicas.exists()
+
+    def _payload():
+        hist = list(aut.historico_etapas.all())
+        # última situação registrada por etapa (para pintar a régua)
+        sit_por_etapa = {}
+        for h in hist:
+            sit_por_etapa[h.etapa] = h.situacao
+        etapas = []
+        for chave in ETAPAS_ORDEM:
+            if chave == "concluido":
+                continue
+            m = ETAPAS_META[chave]
+            etapas.append({
+                "chave": chave, "label": m["label"], "papel": m["papel"],
+                "trilho": m["trilho"], "situacao": sit_por_etapa.get(chave, ""),
+                "atual": (aut.etapa == chave),
+            })
+        # junta entra na régua logo após auditoria, se existir
+        if tem_junta:
+            etapas.insert(3, {
+                "chave": "junta", "label": ETAPAS_META["junta"]["label"],
+                "papel": ETAPAS_META["junta"]["papel"], "trilho": "regulacao",
+                "situacao": sit_por_etapa.get("junta", "em_andamento"),
+                "atual": (aut.etapa == "junta"),
+            })
+        return {
+            "etapa_atual": aut.etapa,
+            "etapa_atual_label": aut.get_etapa_display(),
+            "status": aut.status,
+            "via_rapida": aut.via_rapida,
+            "etapas": etapas,
+            "historico": [
+                {
+                    "etapa": h.etapa,
+                    "etapa_label": ETAPAS_META.get(h.etapa, {}).get("label", h.etapa),
+                    "situacao": h.situacao, "situacao_display": h.get_situacao_display(),
+                    "responsavel": h.responsavel, "papel": h.papel,
+                    "observacao": h.observacao, "criado_em": h.criado_em.isoformat(),
+                }
+                for h in hist
+            ],
+        }
+
+    if request.method == "GET":
+        return JsonResponse(_payload())
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+    acao = data.get("acao")
+    obs = (data.get("observacao") or "").strip()
+    quem = _principal_nome(request, empresa)
+
+    if aut.etapa == "concluido":
+        return JsonResponse({"erro": "Pedido já concluído — esteira encerrada."}, status=409)
+
+    if acao == "avancar":
+        # conclui a etapa atual e passa para a próxima
+        _registrar_etapa(aut, aut.etapa, "concluida", responsavel=quem, observacao=obs)
+        prox = _proxima_etapa(aut.etapa)
+        if prox:
+            aut.etapa = prox
+            if prox != "concluido":
+                _registrar_etapa(aut, prox, "em_andamento", responsavel=quem)
+            # ao passar pela autorização, reflete a decisão regulatória
+            if prox == "cotacao" and aut.status == "solicitada":
+                aut.status = "aprovada"
+                aut.respondido_por = quem
+                aut.respondido_em = timezone.now()
+                aut.itens.all().update(status="aprovado", quantidade_aprovada=F("quantidade"))
+        aut.save(update_fields=["etapa", "status", "respondido_por", "respondido_em"])
+        return JsonResponse(_payload())
+
+    if acao == "pendenciar":
+        if not obs:
+            return JsonResponse({"erro": "Descreva a pendência/diligência (obrigatório)."}, status=400)
+        _registrar_etapa(aut, aut.etapa, "pendencia", responsavel=quem, observacao=obs)
+        return JsonResponse(_payload())
+
+    if acao == "reabrir":
+        _registrar_etapa(aut, aut.etapa, "em_andamento", responsavel=quem,
+                         observacao=obs or "Pendência resolvida — retomando.")
+        return JsonResponse(_payload())
+
+    if acao == "reprovar":
+        if not obs:
+            return JsonResponse({"erro": "Informe o motivo da reprovação (obrigatório)."}, status=400)
+        _registrar_etapa(aut, aut.etapa, "reprovada", responsavel=quem, observacao=obs)
+        aut.status = "negada"
+        aut.observacao_auditoria = obs
+        aut.respondido_por = quem
+        aut.respondido_em = timezone.now()
+        aut.save(update_fields=["status", "observacao_auditoria", "respondido_por", "respondido_em"])
+        aut.itens.all().update(status="negado", quantidade_aprovada=0)
+        return JsonResponse(_payload())
+
+    return JsonResponse({"erro": f"Ação inválida: {acao}"}, status=400)
 
 
 # ── implantáveis ───────────────────────────────────────────────────────────────

@@ -9457,6 +9457,23 @@ class AutorizacaoOPME(models.Model):
     crm_medico       = models.CharField(max_length=20, blank=True, default="")
     cid10            = models.CharField(max_length=6, blank=True, default="")
     status           = models.CharField(max_length=15, choices=STATUS, default="solicitada")
+    # Esteira do processo: etapa-marco atual do pedido (do médico ao faturamento).
+    # O `status` é a decisão regulatória; a `etapa` é onde ele está na esteira.
+    ETAPAS = [
+        ("solicitacao",     "Solicitação médica"),
+        ("analise_adm",     "Análise administrativa"),
+        ("auditoria",       "Auditoria técnica e médica"),
+        ("junta",           "Junta médica (RN 424)"),
+        ("autorizacao",     "Autorização"),
+        ("cotacao",         "Cotação / Aquisição"),
+        ("dispensacao",     "Recebimento / Dispensação"),
+        ("implante",        "Implante / Utilização"),
+        ("rastreabilidade", "Rastreabilidade"),
+        ("faturamento",     "Faturamento TISS"),
+        ("concluido",       "Concluído"),
+    ]
+    etapa            = models.CharField(max_length=20, choices=ETAPAS, default="solicitacao",
+                                        db_index=True, verbose_name="Etapa atual na esteira")
     justificativa    = models.TextField(blank=True, default="")
     observacao_auditoria = models.TextField(blank=True, default="")
     numero_protocolo = models.CharField(max_length=50, blank=True, default="")
@@ -9478,6 +9495,38 @@ class AutorizacaoOPME(models.Model):
 
     def __str__(self):
         return f"OPME {self.numero_protocolo or self.pk} — {self.paciente_nome} ({self.status})"
+
+
+class EtapaHistoricoOPME(models.Model):
+    """Trilha de auditoria da esteira do pedido de OPME: cada movimento entre
+    etapas/setores, com quem, quando, a situação e a observação. Alimenta a
+    linha do tempo que os atores acompanham (RN 424/259, TISS)."""
+    SITUACAO = [
+        ("em_andamento", "Em andamento"),
+        ("concluida",    "Concluída / Liberada"),
+        ("pendencia",    "Pendência / Diligência"),
+        ("reprovada",    "Reprovada"),
+        ("dispensada",   "Dispensada (Via Rápida)"),
+    ]
+    autorizacao   = models.ForeignKey(AutorizacaoOPME, on_delete=models.CASCADE,
+                                       related_name="historico_etapas")
+    etapa         = models.CharField(max_length=20, choices=AutorizacaoOPME.ETAPAS)
+    situacao      = models.CharField(max_length=15, choices=SITUACAO, default="em_andamento")
+    responsavel   = models.CharField(max_length=160, blank=True, default="",
+                                      help_text="Quem atuou (nome)")
+    papel         = models.CharField(max_length=80, blank=True, default="",
+                                      help_text="Papel/setor: médico assistente, auditor, suprimentos…")
+    observacao    = models.TextField(blank=True, default="")
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Histórico de Etapa OPME"
+        verbose_name_plural = "Histórico de Etapas OPME"
+        ordering            = ["criado_em", "id"]
+        indexes             = [models.Index(fields=["autorizacao", "criado_em"])]
+
+    def __str__(self):
+        return f"{self.autorizacao_id} — {self.etapa} ({self.situacao})"
 
 
 class ItemAutorizacaoOPME(models.Model):

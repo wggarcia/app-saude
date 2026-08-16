@@ -750,6 +750,68 @@ class OPMETests(TestCase):
         self.assertEqual(d["item"]["preco_referencia"], 10000.0)
         self.assertEqual(d["alternativas"][0]["economia"], 4000.0)
 
+    def test_esteira_registra_solicitacao_e_avanca(self):
+        """Esteira: pedido nasce em 'auditoria', a trilha tem a solicitação, e
+        avançar move para a próxima etapa registrando quem/quando."""
+        from api.models import AutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-esteira@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        item_id = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item Esteira", "tipo": "material"},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr. Fulano",
+                  "itens": [{"opme_id": item_id, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        e = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(e["etapa_atual"], "auditoria")
+        etapas_hist = [h["etapa"] for h in e["historico"]]
+        self.assertIn("solicitacao", etapas_hist)
+        # avança a auditoria → autorização
+        e2 = client.post(f"/api/hospital/opme/autorizacoes/{aut}/esteira",
+            data={"acao": "avancar", "observacao": "Auditoria aprovada."},
+            content_type="application/json").json()
+        self.assertEqual(e2["etapa_atual"], "autorizacao")
+
+    def test_esteira_via_rapida_dispensa_auditoria(self):
+        """Via Rápida marca análise/auditoria como 'dispensada' na esteira e já
+        posiciona o pedido em cotação (pós-autorização)."""
+        from api.models import RegistroAnvisaProdutoSaude
+        empresa = _empresa("Hospital Rede", "opme-esteira-vr@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="80044680371", situacao="Válido",
+            data_vencimento=date.today() + timedelta(days=400))
+        item_id = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Homologada", "tipo": "protese", "homologado": True,
+                  "preco_maximo": 9000, "codigo_anvisa": "80044680371"},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": item_id, "quantidade": 1, "preco_solicitado": 8000}]},
+            content_type="application/json").json()["id"]
+        e = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(e["etapa_atual"], "cotacao")
+        sit = {h["etapa"]: h["situacao"] for h in e["historico"]}
+        self.assertEqual(sit.get("auditoria"), "dispensada")
+        self.assertEqual(sit.get("autorizacao"), "concluida")
+
+    def test_esteira_pendencia_exige_observacao(self):
+        """Pôr em pendência sem observação é bloqueado."""
+        empresa = _empresa("Hospital Rede", "opme-esteira-pend@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        item_id = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "X", "tipo": "material"},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": item_id, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut}/esteira",
+            data={"acao": "pendenciar", "observacao": ""},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
     def test_via_rapida_pre_aprova_pedido_100_conforme(self):
         """Via Rápida: pedido homologado + ANVISA válido + sem alertas é
         pré-aprovado na hora (status aprovada, via_rapida=True), sem fila."""
