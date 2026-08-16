@@ -750,6 +750,55 @@ class OPMETests(TestCase):
         self.assertEqual(d["item"]["preco_referencia"], 10000.0)
         self.assertEqual(d["alternativas"][0]["economia"], 4000.0)
 
+    def test_ia_area_treina_e_status(self):
+        """IA por área: treina o modelo OPME da empresa (bootstrap) e expõe status."""
+        from api.models import ModeloIAArea
+        empresa = _empresa("Hospital Rede", "opme-iaarea@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        # status antes de treinar
+        r0 = client.get("/api/hospital/opme/ia/modelo").json()
+        self.assertFalse(r0["treinado"])
+        # treina
+        r1 = client.post("/api/hospital/opme/ia/modelo", data={}, content_type="application/json")
+        self.assertEqual(r1.status_code, 200)
+        d = r1.json()
+        self.assertTrue(d["treinado"])
+        self.assertIn("aprovada", d["classes"])
+        self.assertIn("negada", d["classes"])
+        self.assertTrue(d["dataset_sintetico"])  # sem decisões reais → bootstrap
+        # registro persistido, isolado por empresa
+        self.assertEqual(ModeloIAArea.objects.filter(empresa=empresa, area="opme").count(), 1)
+
+    def test_ia_area_isolada_por_empresa(self):
+        """O modelo de uma empresa não vaza para outra (LGPD)."""
+        from api.services.ia_areas import treinar_area, inferir
+        emp_a = _empresa("A", "iaa-a@example.com", "hospital_rede")
+        emp_b = _empresa("B", "iaa-b@example.com", "hospital_rede")
+        treinar_area("opme", emp_a.id)
+        # inferência de B treina o próprio modelo de B (não usa o de A)
+        r = inferir("opme", emp_b.id, {"tem_fora_padrao": 0, "nao_homologado": 0,
+                                       "acima_teto": 0, "tem_alerta_fraude": 0,
+                                       "tem_procedimento_tuss": 1, "tem_justificativa": 1,
+                                       "n_itens": 1, "qtd_alertas": 0})
+        self.assertIn(r["decisao"], ["aprovada", "negada", "parcial", "revisao"])
+        from api.models import ModeloIAArea
+        self.assertTrue(ModeloIAArea.objects.filter(empresa=emp_b, area="opme").exists())
+
+    def test_ia_area_aprende_padrao_conforme(self):
+        """Caso 100% conforme tende a 'aprovada'; caso fora do padrão + fraude tende
+        a 'negada' — o modelo capta o padrão do bootstrap."""
+        from api.services.ia_areas import treinar_area, inferir
+        emp = _empresa("Hospital Rede", "iaa-padrao@example.com", "hospital_rede")
+        treinar_area("opme", emp.id)
+        conforme = inferir("opme", emp.id, {"tem_fora_padrao": 0, "nao_homologado": 0,
+            "acima_teto": 0, "tem_alerta_fraude": 0, "tem_procedimento_tuss": 1,
+            "tem_justificativa": 1, "n_itens": 1, "qtd_alertas": 0})
+        ruim = inferir("opme", emp.id, {"tem_fora_padrao": 1, "nao_homologado": 1,
+            "acima_teto": 1, "tem_alerta_fraude": 1, "tem_procedimento_tuss": 0,
+            "tem_justificativa": 0, "n_itens": 2, "qtd_alertas": 3})
+        self.assertEqual(conforme["decisao"], "aprovada")
+        self.assertEqual(ruim["decisao"], "negada")
+
     def test_anvisa_busca_por_registro_e_por_nome(self):
         """Buscar na ANVISA por número de registro e por nome (base dentro do sistema)."""
         from api.models import RegistroAnvisaProdutoSaude

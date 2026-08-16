@@ -300,15 +300,37 @@ def _melhor_custo_beneficio(empresa, opme_item, preco_ref):
     return None
 
 
+def _ia_opme_por_area(empresa, features_opme):
+    """Tenta o modelo de IA DEDICADO À ÁREA OPME (treinado com as decisões reais
+    da empresa). Retorna (decisao, score, justificativa) ou None se indisponível
+    — nesse caso o chamador usa o motor clínico genérico."""
+    try:
+        from .services.ia_areas import inferir
+        r = inferir("opme", empresa.id, features_opme or {})
+        return r["decisao"], r["score_confianca"], r["justificativa_ia"]
+    except Exception:
+        return None
+
+
 def _auditoria_ia_completa(empresa, procedimento_tuss, descricao_itens, cid10,
-                           urgente, alertas_triagem, alertas_fraude, anvisa_ok):
+                           urgente, alertas_triagem, alertas_fraude, anvisa_ok,
+                           features_opme=None):
     """IA de auditoria: consolida o motor de ML + triagem + fraude + ANVISA num
     parecer único e numa decisão. Retorna (decisao, score, justificativa, parecer).
 
+    Prioriza o modelo DEDICADO À ÁREA OPME (aprende com as decisões reais da
+    empresa); cai no motor clínico genérico se a IA de área ainda não existe.
     decisao ∈ {aprovada, revisao, negada}. É esta decisão + a ausência de
     ressalvas que habilita a Via Rápida."""
-    ml_dec, ml_score, ml_just = _recomendacao_ia_opme(
-        empresa, procedimento_tuss, descricao_itens, cid10, urgente)
+    por_area = _ia_opme_por_area(empresa, features_opme)
+    if por_area:
+        ml_dec, ml_score, ml_just = por_area
+        # a IA de área devolve 'parcial' às vezes — mapeia para 'revisao'
+        if ml_dec == "parcial":
+            ml_dec = "revisao"
+    else:
+        ml_dec, ml_score, ml_just = _recomendacao_ia_opme(
+            empresa, procedimento_tuss, descricao_itens, cid10, urgente)
 
     ressalvas = []
     if alertas_triagem:
@@ -820,11 +842,28 @@ def api_opme_autorizacoes(request):
                 item_ok = st.get("encontrado") and st.get("valido") and not st.get("vencido")
                 anvisa_ok = item_ok if anvisa_ok is None else (anvisa_ok and item_ok)
 
-            # ── IA de auditoria (consolida triagem + fraude + ANVISA + ML) ──
+            # ── Features p/ a IA DEDICADA à área OPME (aprende com o histórico) ──
+            _nao_homol = any(o.homologado is False for o, _p, _f in itens_avaliados)
+            _acima_teto = any(
+                (p is not None and o.preco_maximo is not None
+                 and float(p) > float(o.preco_maximo))
+                for o, p, _f in itens_avaliados)
+            features_opme = {
+                "tem_fora_padrao": any(f for _o, _p, f in itens_avaliados),
+                "nao_homologado": _nao_homol,
+                "acima_teto": _acima_teto,
+                "tem_alerta_fraude": bool(alertas_fraude),
+                "tem_procedimento_tuss": bool(procedimento_tuss),
+                "tem_justificativa": bool((data.get("justificativa") or "").strip()),
+                "n_itens": len(itens_avaliados) or 1,
+                "qtd_alertas": len(alertas_triagem),
+            }
+
+            # ── IA de auditoria (IA de área OPME + triagem + fraude + ANVISA) ──
             ia_dec, ia_score, ia_just, ia_parecer = _auditoria_ia_completa(
                 empresa, procedimento_tuss, "; ".join(descricao_itens),
                 aut.cid10, bool(data.get("urgente", False)),
-                alertas_triagem, alertas_fraude, anvisa_ok)
+                alertas_triagem, alertas_fraude, anvisa_ok, features_opme)
 
             # ── Melhor custo-benefício de MESMA qualidade (p/ itens fora) ───
             recomendacao = {}
@@ -1289,6 +1328,51 @@ def api_opme_economia(request):
         "serie_mensal": serie,
         "itens_em_risco": itens_risco[:10],
         "ranking_fora_padrao": ranking,
+    })
+
+
+# ── IA por área: status e retreino ──────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_ia_modelo(request):
+    """GET — status do modelo de IA da área OPME desta empresa.
+    POST — retreina agora (com as decisões reais acumuladas)."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import ModeloIAArea
+
+    if request.method == "POST":
+        try:
+            from .services.ia_areas import treinar_area
+            meta = treinar_area("opme", empresa.id)
+        except Exception as e:
+            return JsonResponse({"erro": f"Não foi possível treinar: {e}"}, status=400)
+        # fallthrough para devolver o status atualizado
+
+    reg = ModeloIAArea.objects.filter(empresa=empresa, area="opme").first()
+    if not reg:
+        return JsonResponse({
+            "treinado": False,
+            "mensagem": "Modelo da área OPME ainda não treinado. Clique em 'Treinar agora'.",
+        })
+    return JsonResponse({
+        "treinado": True,
+        "area": "opme",
+        "versao": reg.versao,
+        "n_amostras": reg.n_amostras,
+        "acuracia_f1": reg.acuracia_f1,
+        "acuracia_pct": round((reg.acuracia_f1 or 0) * 100, 1),
+        "dataset_sintetico": reg.dataset_sintetico,
+        "classes": reg.classes,
+        "treinado_em": reg.treinado_em.isoformat(),
+        "maturidade": ("aprendendo (poucos dados reais — em bootstrap)"
+                       if reg.dataset_sintetico else
+                       f"treinada com {reg.n_amostras} decisões reais da sua operação"),
     })
 
 

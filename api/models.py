@@ -9529,6 +9529,36 @@ class EtapaHistoricoOPME(models.Model):
         return f"{self.autorizacao_id} — {self.etapa} ({self.situacao})"
 
 
+class ModeloIAArea(models.Model):
+    """Registro de um modelo de IA treinado POR ÁREA e POR EMPRESA (LGPD).
+    Cada área clínica/operacional (OPME, oncologia, …) treina o seu próprio
+    modelo com as decisões reais daquela área. Guarda a versão, o volume de
+    dados e a acurácia — para o painel mostrar o quanto cada IA aprendeu."""
+    empresa       = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="modelos_ia_area")
+    area          = models.CharField(max_length=40, db_index=True,
+                                      help_text="Chave da área: opme, oncologia, …")
+    versao        = models.PositiveIntegerField(default=1)
+    n_amostras    = models.PositiveIntegerField(default=0,
+                                                verbose_name="Decisões reais usadas no treino")
+    acuracia_f1   = models.FloatField(null=True, blank=True,
+                                      verbose_name="F1 (validação cruzada)")
+    dataset_sintetico = models.BooleanField(default=True,
+                                            help_text="True = ainda em bootstrap (poucos dados reais)")
+    classes       = models.JSONField(default=list, blank=True)
+    arquivo       = models.CharField(max_length=300, blank=True, default="")
+    treinado_em   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Modelo de IA por Área"
+        verbose_name_plural = "Modelos de IA por Área"
+        unique_together     = [["empresa", "area"]]
+        indexes             = [models.Index(fields=["empresa", "area"])]
+
+    def __str__(self):
+        return f"IA {self.area} — empresa {self.empresa_id} (v{self.versao}, {self.n_amostras} amostras)"
+
+
 class ItemAutorizacaoOPME(models.Model):
     """Item individual de uma autorização OPME (pode ter múltiplos itens)."""
     STATUS_ITEM = [
