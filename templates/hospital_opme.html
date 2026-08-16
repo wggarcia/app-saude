@@ -330,6 +330,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
         <div class="card-title">📦 Catálogo de OPME</div>
         <div style="display:flex;gap:8px;align-items:center">
           <input id="catBusca" placeholder="Buscar descrição/ANVISA…" onkeydown="if(event.key==='Enter')carregarCatalogo()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--text)">
+          <button class="btn btn-ok btn-sm" onclick="abrirBuscaAnvisa()">🔎 Buscar na ANVISA</button>
           <button class="btn btn-primary btn-sm" onclick="abrirNovoItem()">+ Novo Item</button>
         </div>
       </div>
@@ -1382,6 +1383,57 @@ function formItem(i) {
     + '<div class="form-group"><label style="color:var(--text)"><input type="checkbox" id="iHomologado"'+(!i||i.homologado!==false?' checked':'')+' style="width:auto;margin-right:6px">Homologado pela operadora/comissão</label></div>'
     + '<div class="form-group"><label style="color:var(--text)"><input type="checkbox" id="iPreferencial"'+(i&&i.preferencial?' checked':'')+' style="width:auto;margin-right:6px">Material preferencial (menor custo)</label></div>'
     + '</div>';
+}
+
+// ── Buscar na ANVISA (traz a base oficial para dentro — sem sair do sistema) ──
+function abrirBuscaAnvisa() {
+  var h = '<div class="alert-box ab-info"><div class="ab-title">🔎 Base oficial da ANVISA, aqui dentro</div>'
+        + 'Procure o material pelo <b>número de registro</b> ou pelo <b>nome</b> — direto na base da ANVISA sincronizada. '
+        + 'Não precisa abrir o site da ANVISA: acha aqui e cadastra com 1 clique, já validado.</div>'
+        + '<div class="form-group"><input id="anvisaBuscaQ" placeholder="Ex.: 80044680371  ou  prótese de quadril" '
+        + 'onkeydown="if(event.key===\'Enter\')buscarAnvisa()" autofocus></div>'
+        + '<div style="margin-bottom:10px"><button class="btn btn-primary btn-sm" onclick="buscarAnvisa()">Buscar</button></div>'
+        + '<div id="anvisaResultados"><div class="itens-mini">Digite e clique em Buscar.</div></div>';
+  abrirModal('Buscar material na ANVISA', 'Concentre o cadastro num lugar só', h,
+    '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>', true);
+}
+
+async function buscarAnvisa() {
+  var q = (document.getElementById('anvisaBuscaQ').value||'').trim();
+  var box = document.getElementById('anvisaResultados');
+  if (q.length < 3) { box.innerHTML = '<div class="itens-mini">Digite ao menos 3 caracteres.</div>'; return; }
+  box.innerHTML = '<div class="itens-mini">Consultando ANVISA…</div>';
+  try {
+    var r = await fetch('/api/hospital/opme/anvisa/buscar?tipo=produto&q='+encodeURIComponent(q), { credentials:'include', headers: headers() });
+    var d = await r.json();
+    if (!r.ok) { box.innerHTML = '<div class="itens-mini" style="color:var(--danger)">'+esc(d.erro||'Erro')+'</div>'; return; }
+    if (!d.resultados.length) { box.innerHTML = '<div class="empty">Nada encontrado na ANVISA para "'+esc(q)+'".</div>'; return; }
+    box.innerHTML = '<div class="table-wrap"><table style="min-width:auto"><thead><tr><th>Registro</th><th>Produto</th><th>Fabricante</th><th>Situação</th><th></th></tr></thead><tbody>'
+      + d.resultados.map(function(p){
+          var sit = p.valido ? (p.vencido?'<span class="badge badge-warn">vencido</span>':'<span class="badge badge-ok">válido</span>') : '<span class="badge badge-danger">'+esc(p.situacao||'inválido')+'</span>';
+          var podeCad = p.valido && !p.vencido;
+          var btn = podeCad
+            ? '<button class="btn btn-ok btn-sm" onclick=\'cadastrarMaterialAnvisa('+JSON.stringify(JSON.stringify(p))+')\'>Cadastrar</button>'
+            : '<span class="itens-mini" title="Registro inválido/vencido não deve ser cadastrado">—</span>';
+          return '<tr><td class="itens-mini">'+esc(p.numero_registro)+(p.classe_risco?('<br><span class="badge badge-gray">Classe '+esc(p.classe_risco)+'</span>'):'')+'</td>'
+            + '<td>'+esc(p.nome_produto||'—')+'</td><td class="itens-mini">'+esc(p.detentor||'—')+'</td>'
+            + '<td>'+sit+'</td><td>'+btn+'</td></tr>';
+        }).join('') + '</tbody></table></div>';
+  } catch(e) { box.innerHTML = '<div class="itens-mini" style="color:var(--danger)">Erro de conexão.</div>'; }
+}
+
+// 1 clique: abre o formulário do catálogo já preenchido com os dados oficiais.
+function cadastrarMaterialAnvisa(pJson) {
+  var p = (typeof pJson === 'string') ? JSON.parse(pJson) : pJson;
+  abrirNovoItem();
+  setTimeout(function(){
+    document.getElementById('iDescricao').value = p.nome_produto || '';
+    document.getElementById('iAnvisa').value = p.numero_registro || '';
+    document.getElementById('iFabricante').value = p.detentor || '';
+    if (p.data_vencimento) document.getElementById('iValidadeAnvisa').value = p.data_vencimento;
+    var msg = document.getElementById('anvisaMsg');
+    if (msg) msg.innerHTML = '<span style="color:var(--ok)">✓ Puxado da ANVISA — Classe '+esc(p.classe_risco||'—')+', registro '+(p.vencido?'vencido':'válido')+'. Complete preço e grupo e salve.</span>';
+  }, 80);
 }
 
 function abrirNovoItem() {

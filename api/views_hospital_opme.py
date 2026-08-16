@@ -1292,6 +1292,68 @@ def api_opme_economia(request):
     })
 
 
+# ── ANVISA: busca unificada (traz a ANVISA para DENTRO do sistema) ──────────────
+# Elimina a ida a plataformas separadas: o usuário procura material/fornecedor
+# pela base oficial aqui mesmo e cadastra com 1 clique.
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_anvisa_buscar(request):
+    """GET /api/hospital/opme/anvisa/buscar?tipo=produto|fornecedor&q=...
+    Busca na base ANVISA sincronizada (produtos p/ saúde ou empresas AFE)."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import RegistroAnvisaProdutoSaude, EmpresaAfeAnvisa
+    tipo = request.GET.get("tipo", "produto")
+    q = (request.GET.get("q") or "").strip()
+    if len(q) < 3:
+        return JsonResponse({"erro": "Digite ao menos 3 caracteres"}, status=400)
+    digitos = "".join(ch for ch in q if ch.isdigit())
+
+    if tipo == "fornecedor":
+        qs = EmpresaAfeAnvisa.objects.all()
+        if digitos and len(digitos) >= 4:
+            qs = qs.filter(cnpj__startswith=digitos)
+        else:
+            qs = qs.filter(razao_social__icontains=q)
+        # ativos primeiro
+        qs = qs.order_by("-ativo", "razao_social")[:25]
+        return JsonResponse({
+            "tipo": "fornecedor",
+            "resultados": [
+                {"cnpj": e.cnpj, "razao_social": e.razao_social,
+                 "numero_afe": e.numero_afe, "ativo": e.ativo, "uf": e.uf}
+                for e in qs
+            ],
+        })
+
+    # produto (padrão): busca por registro (dígitos) ou por nome
+    qs = RegistroAnvisaProdutoSaude.objects.all()
+    if digitos and len(digitos) >= 6:
+        qs = qs.filter(numero_registro__startswith=digitos)
+    else:
+        qs = qs.filter(nome_produto__icontains=q)
+    qs = qs.order_by("-situacao", "nome_produto")[:25]  # 'Válido' antes de 'Inválido'
+    hoje = date.today()
+    return JsonResponse({
+        "tipo": "produto",
+        "resultados": [
+            {
+                "numero_registro": r.numero_registro, "nome_produto": r.nome_produto,
+                "detentor": r.detentor, "cnpj_detentor": r.cnpj_detentor,
+                "classe_risco": r.classe_risco, "situacao": r.situacao,
+                "valido": r.situacao == "Válido",
+                "vencido": bool(r.data_vencimento and r.data_vencimento < hoje),
+                "data_vencimento": r.data_vencimento.isoformat() if r.data_vencimento else None,
+            }
+            for r in qs
+        ],
+    })
+
+
 # ── ANVISA: consulta contra a base oficial sincronizada ─────────────────────────
 
 @require_http_methods(["GET"])

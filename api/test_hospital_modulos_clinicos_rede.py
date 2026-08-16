@@ -750,6 +750,40 @@ class OPMETests(TestCase):
         self.assertEqual(d["item"]["preco_referencia"], 10000.0)
         self.assertEqual(d["alternativas"][0]["economia"], 4000.0)
 
+    def test_anvisa_busca_por_registro_e_por_nome(self):
+        """Buscar na ANVISA por número de registro e por nome (base dentro do sistema)."""
+        from api.models import RegistroAnvisaProdutoSaude
+        empresa = _empresa("Hospital Rede", "opme-anvisabusca@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="80044680371", nome_produto="PROTESE FEMURAL DE QUADRIL",
+            detentor="ZIMMER", situacao="Válido")
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="10132590627", nome_produto="KIT INSTRUMENTAL QUADRIL",
+            detentor="J&J", situacao="Inválido")
+        # por registro
+        r1 = client.get("/api/hospital/opme/anvisa/buscar?tipo=produto&q=80044680371").json()
+        self.assertEqual(len(r1["resultados"]), 1)
+        self.assertTrue(r1["resultados"][0]["valido"])
+        # por nome (retorna os 2, válido primeiro)
+        r2 = client.get("/api/hospital/opme/anvisa/buscar?tipo=produto&q=quadril").json()
+        self.assertEqual(len(r2["resultados"]), 2)
+        self.assertTrue(r2["resultados"][0]["valido"])  # 'Válido' ordena antes
+        # curto demais
+        self.assertEqual(client.get("/api/hospital/opme/anvisa/buscar?q=ab").status_code, 400)
+
+    def test_anvisa_busca_fornecedor_afe(self):
+        """Buscar fornecedor na base de AFE da ANVISA por CNPJ e por razão social."""
+        from api.models import EmpresaAfeAnvisa
+        empresa = _empresa("Hospital Rede", "opme-afebusca@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        EmpresaAfeAnvisa.objects.create(cnpj="11222333000181", razao_social="DISTRIBUIDORA ALFA",
+                                        numero_afe="1.02.030-4", ativo=True, uf="MS")
+        r = client.get("/api/hospital/opme/anvisa/buscar?tipo=fornecedor&q=alfa").json()
+        self.assertEqual(r["tipo"], "fornecedor")
+        self.assertEqual(r["resultados"][0]["razao_social"], "DISTRIBUIDORA ALFA")
+        self.assertTrue(r["resultados"][0]["ativo"])
+
     def test_esteira_registra_solicitacao_e_avanca(self):
         """Esteira: pedido nasce em 'auditoria', a trilha tem a solicitação, e
         avançar move para a próxima etapa registrando quem/quando."""
