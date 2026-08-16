@@ -221,6 +221,16 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div class="card">
       <div class="card-header">
         <div>
+          <div class="card-title">🧠 IA da área OPME — aprende com a sua operação</div>
+          <div class="page-sub" style="font-size:11px;margin-top:2px">Modelo dedicado ao OPME, isolado por operadora (LGPD), re-treinado com as decisões reais. Fica mais preciso a cada mês.</div>
+        </div>
+        <button class="btn btn-ok btn-sm" onclick="retreinarIA()">↻ Treinar agora</button>
+      </div>
+      <div class="card-body" id="iaModeloBox"><div class="itens-mini">Carregando…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
           <div class="card-title">📉 Economia por mês</div>
           <div class="page-sub" style="font-size:11px;margin-top:2px">Só conta substituição efetivamente aceita no momento do pedido — é auditável item a item.</div>
         </div>
@@ -331,6 +341,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
         <div style="display:flex;gap:8px;align-items:center">
           <input id="catBusca" placeholder="Buscar descrição/ANVISA…" onkeydown="if(event.key==='Enter')carregarCatalogo()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--text)">
           <button class="btn btn-ok btn-sm" onclick="abrirBuscaAnvisa()">🔎 Buscar na ANVISA</button>
+          <button class="btn btn-ok btn-sm" onclick="abrirBuscaAns()">🔎 Buscar na ANS (TUSS)</button>
           <button class="btn btn-primary btn-sm" onclick="abrirNovoItem()">+ Novo Item</button>
         </div>
       </div>
@@ -444,7 +455,45 @@ async function carregarKpis() {
 }
 
 /* ── Painel de custo ───────────────────────────────────────────────── */
+async function carregarIAModelo() {
+  var box = document.getElementById('iaModeloBox');
+  if (!box) return;
+  try {
+    var r = await fetch('/api/hospital/opme/ia/modelo', { credentials:'include', headers: headers() });
+    var d = await r.json();
+    if (!d.treinado) {
+      box.innerHTML = '<div class="alert-box ab-warn" style="margin:0"><div class="ab-title">Ainda não treinada</div>'
+        + esc(d.mensagem||'Clique em Treinar agora.')+'</div>';
+      return;
+    }
+    var mat = d.dataset_sintetico
+      ? '<span class="badge badge-warn">aprendendo (bootstrap)</span>'
+      : '<span class="badge badge-ok">treinada com dados reais</span>';
+    box.innerHTML = '<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">'
+      + '<div><div class="big-num" style="color:var(--accent);font-size:26px">'+(d.acuracia_pct||0)+'%</div><div class="itens-mini">acurácia (F1, validação cruzada)</div></div>'
+      + '<div><div class="big-num" style="font-size:26px">'+d.n_amostras+'</div><div class="itens-mini">decisões reais aprendidas</div></div>'
+      + '<div><div class="big-num" style="font-size:26px">v'+d.versao+'</div><div class="itens-mini">versão do modelo</div></div>'
+      + '<div style="flex:1;min-width:220px">'+mat
+      + '<div class="itens-mini" style="margin-top:6px">'+esc(d.maturidade||'')+'</div>'
+      + '<div class="itens-mini">Decide entre: '+(d.classes||[]).map(esc).join(' · ')+' · atualizada em '+fmtDataHora(d.treinado_em)+'</div></div>'
+      + '</div>';
+  } catch(e) { box.innerHTML = '<div class="itens-mini">Erro ao carregar o modelo.</div>'; }
+}
+
+async function retreinarIA() {
+  var box = document.getElementById('iaModeloBox');
+  if (box) box.innerHTML = '<div class="itens-mini">Treinando o modelo com as decisões reais…</div>';
+  try {
+    var r = await fetch('/api/hospital/opme/ia/modelo', { method:'POST', credentials:'include', headers: headers(), body:'{}' });
+    var d = await r.json();
+    if (!r.ok) { toast(d.erro||'Erro ao treinar', false); carregarIAModelo(); return; }
+    toast('IA da área OPME re-treinada', true);
+    carregarIAModelo();
+  } catch(e) { toast('Erro de conexão', false); carregarIAModelo(); }
+}
+
 async function carregarEconomia() {
+  carregarIAModelo();
   try {
     var r = await fetch('/api/hospital/opme/economia', { credentials:'include', headers: headers() });
     if (!r.ok) { document.getElementById('chartEconomia').innerHTML='<div class="empty">Erro ao carregar.</div>'; return; }
@@ -1433,6 +1482,84 @@ function cadastrarMaterialAnvisa(pJson) {
     if (p.data_vencimento) document.getElementById('iValidadeAnvisa').value = p.data_vencimento;
     var msg = document.getElementById('anvisaMsg');
     if (msg) msg.innerHTML = '<span style="color:var(--ok)">✓ Puxado da ANVISA — Classe '+esc(p.classe_risco||'—')+', registro '+(p.vencido?'vencido':'válido')+'. Complete preço e grupo e salve.</span>';
+  }, 80);
+}
+
+// ── Buscar na ANS / TUSS (traz o código oficial + cruza a ANVISA numa tela só) ──
+function abrirBuscaAns() {
+  var h = '<div class="alert-box ab-info"><div class="ab-title">🔎 Terminologia oficial da ANS (TUSS), aqui dentro</div>'
+        + 'Procure o material (tabela 19 — OPME) pelo <b>nome</b> ou <b>registro ANVISA</b>. '
+        + 'O sistema traz o <b>código TUSS oficial</b> da ANS e, ao lado, já cruza a <b>situação do registro na ANVISA</b> '
+        + '— o que hoje exige abrir 3 ou 4 plataformas. Cadastre com 1 clique, já validado.</div>'
+        + '<div class="form-group"><div style="display:flex;gap:6px;align-items:center">'
+        + '<select id="ansTabela" style="max-width:230px">'
+        +   '<option value="tuss-19">Tabela 19 — Materiais / OPME</option>'
+        +   '<option value="tuss-22">Tabela 22 — Procedimentos</option>'
+        +   '<option value="tuss-20">Tabela 20 — Medicamentos</option>'
+        + '</select>'
+        + '<input id="ansBuscaQ" placeholder="Ex.: stent coronário  ou  80174300001" style="flex:1" '
+        + 'onkeydown="if(event.key===\'Enter\')buscarAns()" autofocus></div></div>'
+        + '<div style="margin-bottom:10px"><button class="btn btn-primary btn-sm" onclick="buscarAns()">Buscar</button> '
+        + '<span class="itens-mini" id="ansFonte"></span></div>'
+        + '<div id="ansResultados"><div class="itens-mini">Digite e clique em Buscar.</div></div>';
+  abrirModal('Buscar na ANS (TUSS)', 'Código oficial da ANS + situação ANVISA, num lugar só', h,
+    '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>', true);
+}
+
+async function buscarAns() {
+  var q = (document.getElementById('ansBuscaQ').value||'').trim();
+  var tab = document.getElementById('ansTabela').value;
+  var box = document.getElementById('ansResultados');
+  var fonteEl = document.getElementById('ansFonte');
+  if (q.length < 3) { box.innerHTML = '<div class="itens-mini">Digite ao menos 3 caracteres.</div>'; return; }
+  box.innerHTML = '<div class="itens-mini">Consultando a ANS…</div>'; fonteEl.textContent='';
+  try {
+    var r = await fetch('/api/hospital/opme/ans/buscar?tabela='+encodeURIComponent(tab)+'&q='+encodeURIComponent(q), { credentials:'include', headers: headers() });
+    var d = await r.json();
+    if (!r.ok) { box.innerHTML = '<div class="itens-mini" style="color:var(--danger)">'+esc(d.erro||'Erro')+'</div>'; return; }
+    if (!d.resultados.length) { box.innerHTML = '<div class="empty">Nada encontrado na ANS para "'+esc(q)+'".</div>'; return; }
+    fonteEl.innerHTML = (d.fonte==='ans_ao_vivo')
+      ? '<span class="badge badge-ok">↻ buscado ao vivo na ANS agora</span>'
+      : '<span class="badge badge-gray">do espelho local</span>';
+    var temAnvisa = (tab==='tuss-19');
+    box.innerHTML = '<div class="table-wrap"><table style="min-width:auto"><thead><tr><th>Cód. TUSS</th><th>Descrição</th>'
+      + (temAnvisa?'<th>Fabricante</th><th>Registro / ANVISA</th>':'<th>Vigência</th>')+'<th></th></tr></thead><tbody>'
+      + d.resultados.map(function(p){
+          var vig = p.vigente ? '' : ' <span class="badge badge-warn" title="Fim de vigência: '+esc(p.fim_vigencia||'')+'">fora de vigência</span>';
+          var col3, col4, btn;
+          if (temAnvisa) {
+            col3 = '<td class="itens-mini">'+esc(p.fabricante||'—')+(p.classe_risco?('<br><span class="badge badge-gray">Classe '+esc(p.classe_risco)+'</span>'):'')+'</td>';
+            col4 = '<td class="itens-mini">'+esc(p.registro_anvisa||'—')+'<br>'+anvisaBadge(p.anvisa)+'</td>';
+            // só deixa cadastrar 1-clique se o registro ANVISA consta e está válido/vigente
+            var okAnvisa = p.anvisa && p.anvisa.encontrado && p.anvisa.valido && !p.anvisa.vencido;
+            btn = okAnvisa
+              ? '<button class="btn btn-ok btn-sm" onclick=\'cadastrarMaterialAns('+JSON.stringify(JSON.stringify(p))+')\'>Cadastrar</button>'
+              : '<span class="itens-mini" title="Sem registro ANVISA válido — confira antes de cadastrar">—</span>';
+          } else {
+            col3 = '<td class="itens-mini">'+(p.vigente?'<span class="badge badge-ok">vigente</span>':'<span class="badge badge-warn">encerrada</span>')+'</td>';
+            col4 = ''; btn = '<span class="itens-mini">—</span>';
+          }
+          return '<tr><td class="itens-mini"><strong>'+esc(p.codigo)+'</strong></td>'
+            + '<td>'+esc(p.descricao||'—')+vig+'</td>'+col3+col4+'<td>'+btn+'</td></tr>';
+        }).join('') + '</tbody></table></div>'
+      + '<div class="itens-mini" style="margin-top:8px;opacity:.7">Código TUSS oficial da ANS'
+      + (temAnvisa?' cruzado com a base de registros da ANVISA sincronizada. O selo mostra a situação real do registro.':'')+'</div>';
+  } catch(e) { box.innerHTML = '<div class="itens-mini" style="color:var(--danger)">Erro de conexão.</div>'; }
+}
+
+// 1 clique: abre o formulário do catálogo já preenchido com o dado oficial da ANS+ANVISA.
+function cadastrarMaterialAns(pJson) {
+  var p = (typeof pJson === 'string') ? JSON.parse(pJson) : pJson;
+  abrirNovoItem();
+  setTimeout(function(){
+    document.getElementById('iDescricao').value = p.descricao || '';
+    if (p.registro_anvisa) document.getElementById('iAnvisa').value = p.registro_anvisa;
+    if (p.fabricante) document.getElementById('iFabricante').value = p.fabricante;
+    if (p.anvisa && p.anvisa.data_vencimento) document.getElementById('iValidadeAnvisa').value = p.anvisa.data_vencimento;
+    var msg = document.getElementById('anvisaMsg');
+    if (msg) msg.innerHTML = '<span style="color:var(--ok)">✓ Puxado da ANS (TUSS '+esc(p.codigo)+')'
+      + (p.anvisa && p.anvisa.encontrado ? ' + ANVISA '+(p.anvisa.vencido?'vencido':'válido') : '')
+      + '. Complete preço e grupo e salve.</span>';
   }, 80);
 }
 

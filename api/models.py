@@ -9790,6 +9790,52 @@ class EmpresaAfeAnvisa(models.Model):
         return f"{self.razao_social} — AFE {self.numero_afe} ({'ativa' if self.ativo else 'inativa'})"
 
 
+class TerminologiaTuss(models.Model):
+    """Espelho local da Terminologia Unificada da Saúde Suplementar (TUSS) da ANS.
+    Fonte: API oficial OpenConceptLab da ANS
+    (consulta-ocl.apps.sa-1a.mendixcloud.com/rest/oclservice/ANS).
+
+    Referência NACIONAL e pública — não pertence a nenhuma empresa (mesma natureza
+    do RegistroAnvisaProdutoSaude). Cada linha é um código TUSS de uma tabela:
+      tuss-19 (Materiais/OPME), tuss-22 (Procedimentos), tuss-20 (Medicamentos),
+      tuss-18 (Diárias/taxas/gases) etc.
+
+    A grande virada: a tabela 19 (OPME) traz o `registro_anvisa` de cada material —
+    é isso que nos deixa cruzar, numa tela só, o código TUSS ↔ o registro ANVISA
+    ↔ a situação do registro (via RegistroAnvisaProdutoSaude), o que hoje obriga o
+    usuário a garimpar em 3-4 plataformas diferentes."""
+    tabela          = models.CharField(max_length=12, db_index=True,
+                                        help_text="Código da tabela TUSS, ex.: tuss-19, tuss-22")
+    tabela_nome     = models.CharField(max_length=120, blank=True, default="")
+    codigo          = models.CharField(max_length=20, db_index=True,
+                                        help_text="Código TUSS do item (id do conceito)")
+    descricao       = models.CharField(max_length=400, blank=True, default="")
+    # Extras específicos das tabelas de item (materiais/medicamentos).
+    registro_anvisa = models.CharField(max_length=20, blank=True, default="", db_index=True)
+    fabricante      = models.CharField(max_length=250, blank=True, default="",
+                                        help_text="Fabricante (OPME) ou laboratório (medicamento)")
+    classe_risco    = models.CharField(max_length=8, blank=True, default="")
+    apresentacao    = models.CharField(max_length=250, blank=True, default="")
+    modelo          = models.CharField(max_length=250, blank=True, default="")
+    inicio_vigencia = models.DateField(null=True, blank=True)
+    fim_vigencia    = models.DateField(null=True, blank=True)
+    vigente         = models.BooleanField(default=True,
+                                          help_text="False quando a ANS marcou fim de vigência")
+    atualizado_em   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Terminologia TUSS (ANS)"
+        verbose_name_plural = "Terminologias TUSS (ANS)"
+        unique_together     = [["tabela", "codigo"]]
+        indexes             = [
+            models.Index(fields=["tabela", "vigente"]),
+            models.Index(fields=["tabela", "registro_anvisa"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.tabela}] {self.codigo} — {self.descricao[:60]}"
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Motor de Importação de Dados — segmento Hospital (genérico e reutilizável)
 # Upload de CSV/XLSX → mapeamento de colunas → prévia → confirmação.

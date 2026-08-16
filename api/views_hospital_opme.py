@@ -1487,6 +1487,141 @@ def api_opme_anvisa_consulta(request):
     })
 
 
+# ── ANS / TUSS: busca unificada com cruzamento ANVISA ───────────────────────────
+
+def _ans_item(t):
+    """Serializa uma linha do espelho TUSS + cruza com a base ANVISA local.
+    É AQUI que a plataforma resolve a dor: numa resposta só vêm o código TUSS
+    oficial, o material/fabricante e a SITUAÇÃO do registro na ANVISA — o que hoje
+    obriga o usuário a abrir 3-4 sites."""
+    anvisa = _anvisa_status(t.registro_anvisa) if t.registro_anvisa else None
+    return {
+        "tabela": t.tabela,
+        "tabela_nome": t.tabela_nome,
+        "codigo": t.codigo,
+        "descricao": t.descricao,
+        "fabricante": t.fabricante,
+        "classe_risco": t.classe_risco,
+        "apresentacao": t.apresentacao,
+        "modelo": t.modelo,
+        "registro_anvisa": t.registro_anvisa,
+        "vigente": t.vigente,
+        "fim_vigencia": t.fim_vigencia.isoformat() if t.fim_vigencia else None,
+        # cruzamento com a base ANVISA sincronizada (o diferencial)
+        "anvisa": anvisa,
+    }
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_ans_buscar(request):
+    """GET /api/hospital/opme/ans/buscar?tabela=tuss-19&q=stent[&ao_vivo=1]
+    Busca na Terminologia TUSS da ANS. Primeiro no espelho local (rápido, já
+    cruzado com a ANVISA); se vazio (ou ao_vivo=1), cai para a API oficial da ANS
+    ao vivo e grava o que achar no espelho, aprendendo com o uso."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import TerminologiaTuss
+    from .services import ans_tuss
+
+    tabela = (request.GET.get("tabela") or "tuss-19").strip()
+    q = (request.GET.get("q") or "").strip()
+    if len(q) < 3:
+        return JsonResponse({"erro": "Digite ao menos 3 caracteres"}, status=400)
+    digitos = "".join(ch for ch in q if ch.isdigit())
+
+    # 1) espelho local
+    qs = TerminologiaTuss.objects.filter(tabela=tabela)
+    if digitos and len(digitos) >= 4:
+        qs = qs.filter(Q(codigo=digitos) | Q(registro_anvisa=digitos)
+                       | Q(descricao__icontains=q))
+    else:
+        qs = qs.filter(descricao__icontains=q)
+    locais = list(qs.order_by("-vigente", "descricao")[:25])
+
+    fonte = "espelho"
+    if not locais or request.GET.get("ao_vivo") == "1":
+        # 2) ao vivo na ANS, gravando no espelho (o sistema aprende os itens usados)
+        vivos = ans_tuss.buscar_ao_vivo(tabela, q, limite=25)
+        if vivos:
+            fonte = "ans_ao_vivo"
+            nomes = ans_tuss.TABELAS_RELEVANTES
+            for d in vivos:
+                if not d["codigo"]:
+                    continue
+                TerminologiaTuss.objects.update_or_create(
+                    tabela=d["tabela"] or tabela, codigo=d["codigo"],
+                    defaults={**{k: v for k, v in d.items()
+                                 if k not in ("tabela", "codigo")},
+                              "tabela_nome": nomes.get(d["tabela"] or tabela, "")})
+            codigos = [d["codigo"] for d in vivos if d["codigo"]]
+            locais = list(TerminologiaTuss.objects.filter(
+                tabela=tabela, codigo__in=codigos).order_by("-vigente", "descricao"))
+
+    return JsonResponse({
+        "tabela": tabela,
+        "fonte": fonte,   # "espelho" (local) ou "ans_ao_vivo" (buscou agora)
+        "resultados": [_ans_item(t) for t in locais],
+    })
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_ans_consulta(request):
+    """GET /api/hospital/opme/ans/consulta?tabela=tuss-19&codigo=XXXX
+    Consulta um código TUSS específico no espelho da ANS (autopreenchimento de
+    procedimento/material). Já devolve o cruzamento ANVISA junto."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import TerminologiaTuss
+    tabela = (request.GET.get("tabela") or "tuss-22").strip()
+    codigo = (request.GET.get("codigo") or "").strip()
+    if not codigo:
+        return JsonResponse({"erro": "Informe o código TUSS"}, status=400)
+
+    if not TerminologiaTuss.objects.filter(tabela=tabela).exists():
+        return JsonResponse({
+            "encontrado": False, "base_indisponivel": True,
+            "mensagem": f"Tabela {tabela} ainda não sincronizada neste ambiente.",
+        })
+    t = TerminologiaTuss.objects.filter(tabela=tabela, codigo=codigo).first()
+    if not t:
+        return JsonResponse({
+            "encontrado": False,
+            "mensagem": f"Código {codigo} não encontrado na tabela {tabela} da ANS.",
+        })
+    return JsonResponse({"encontrado": True, **_ans_item(t),
+                         "atualizado_em": t.atualizado_em.isoformat()})
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_ans_tabelas(request):
+    """GET /api/hospital/opme/ans/tabelas — quais tabelas TUSS já têm espelho local
+    e quantos itens, para a tela oferecer o que buscar."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from django.db.models import Count
+    from .models import TerminologiaTuss
+    from .services import ans_tuss
+    contagem = {r["tabela"]: r["n"] for r in TerminologiaTuss.objects
+                .values("tabela").annotate(n=Count("id"))}
+    return JsonResponse({
+        "tabelas": [
+            {"codigo": cod, "nome": nome, "itens_locais": contagem.get(cod, 0)}
+            for cod, nome in ans_tuss.TABELAS_RELEVANTES.items()
+        ],
+    })
+
+
 # ── Fornecedores (segmento Hospital) — com verificação de AFE ANVISA ─────────────
 
 @csrf_exempt

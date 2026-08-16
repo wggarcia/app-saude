@@ -833,6 +833,75 @@ class OPMETests(TestCase):
         self.assertEqual(r["resultados"][0]["razao_social"], "DISTRIBUIDORA ALFA")
         self.assertTrue(r["resultados"][0]["ativo"])
 
+    def test_ans_busca_no_espelho_cruza_anvisa(self):
+        """Buscar na ANS (TUSS-19) no espelho local já devolve o cruzamento com a
+        situação do registro na ANVISA — o diferencial de 'tudo numa tela só'."""
+        from api.models import TerminologiaTuss, RegistroAnvisaProdutoSaude
+        empresa = _empresa("Hospital Rede", "opme-ansbusca@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        TerminologiaTuss.objects.create(
+            tabela="tuss-19", tabela_nome="OPME", codigo="74317270",
+            descricao="STENT CORONARIO H-STENT", fabricante="SCITECH",
+            classe_risco="III", registro_anvisa="80174300001", vigente=True)
+        RegistroAnvisaProdutoSaude.objects.create(
+            numero_registro="80174300001", nome_produto="STENT CORONARIO",
+            detentor="SCITECH", situacao="Válido", classe_risco="III")
+        r = client.get("/api/hospital/opme/ans/buscar?tabela=tuss-19&q=stent").json()
+        self.assertEqual(r["fonte"], "espelho")
+        self.assertEqual(len(r["resultados"]), 1)
+        res = r["resultados"][0]
+        self.assertEqual(res["codigo"], "74317270")
+        # o cruzamento ANVISA veio junto e diz que o registro é válido
+        self.assertIsNotNone(res["anvisa"])
+        self.assertTrue(res["anvisa"]["encontrado"])
+        self.assertTrue(res["anvisa"]["valido"])
+        # curto demais → 400
+        self.assertEqual(client.get("/api/hospital/opme/ans/buscar?q=ab").status_code, 400)
+
+    def test_ans_consulta_por_codigo(self):
+        """Consulta de um código TUSS específico no espelho + estado da base."""
+        from api.models import TerminologiaTuss
+        empresa = _empresa("Hospital Rede", "opme-ansconsulta@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        # base ainda vazia p/ tuss-22 → responde base_indisponivel (sem fingir 404)
+        vazio = client.get("/api/hospital/opme/ans/consulta?tabela=tuss-22&codigo=30914175").json()
+        self.assertFalse(vazio["encontrado"])
+        self.assertTrue(vazio.get("base_indisponivel"))
+        TerminologiaTuss.objects.create(
+            tabela="tuss-22", tabela_nome="Procedimentos", codigo="30914175",
+            descricao="Linfadenectomia pélvica robótica", vigente=True)
+        ok = client.get("/api/hospital/opme/ans/consulta?tabela=tuss-22&codigo=30914175").json()
+        self.assertTrue(ok["encontrado"])
+        self.assertEqual(ok["descricao"], "Linfadenectomia pélvica robótica")
+        nao = client.get("/api/hospital/opme/ans/consulta?tabela=tuss-22&codigo=999").json()
+        self.assertFalse(nao["encontrado"])
+
+    def test_ans_busca_ao_vivo_grava_no_espelho(self):
+        """Quando não há no espelho, cai para a API da ANS ao vivo e GRAVA o que
+        achar (o sistema aprende os itens usados). API mockada — sem rede no teste."""
+        from unittest.mock import patch
+        from api.models import TerminologiaTuss
+        empresa = _empresa("Hospital Rede", "opme-ansaovivo@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        fake = [{
+            "tabela": "tuss-19", "codigo": "76611701",
+            "descricao": "STENT CASPER - ARTERIA CAROTIDA", "registro_anvisa": "80583400005",
+            "fabricante": "MICROVENTION", "classe_risco": "III", "apresentacao": "",
+            "modelo": "", "inicio_vigencia": None, "fim_vigencia": None, "vigente": True,
+        }]
+        with patch("api.services.ans_tuss.buscar_ao_vivo", return_value=fake):
+            r = client.get("/api/hospital/opme/ans/buscar?tabela=tuss-19&q=casper").json()
+        self.assertEqual(r["fonte"], "ans_ao_vivo")
+        self.assertEqual(len(r["resultados"]), 1)
+        # persistiu no espelho para a próxima busca ser instantânea
+        self.assertTrue(TerminologiaTuss.objects.filter(tabela="tuss-19", codigo="76611701").exists())
+
+    def test_ans_busca_exige_login(self):
+        """LGPD/RBAC: sem sessão de hospital não responde."""
+        from django.test import Client
+        r = Client().get("/api/hospital/opme/ans/buscar?tabela=tuss-19&q=stent")
+        self.assertIn(r.status_code, (401, 403))
+
     def test_esteira_registra_solicitacao_e_avanca(self):
         """Esteira: pedido nasce em 'auditoria', a trilha tem a solicitação, e
         avançar move para a próxima etapa registrando quem/quando."""
