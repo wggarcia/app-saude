@@ -13915,3 +13915,130 @@ class BuscaAtivaSocial(models.Model):
 
     def __str__(self):
         return f"{self.nome_referencia} — {self.get_motivo_display()}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Agente Comercial — Prospecção e Outreach Automatizado
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class LeadProspeccao(models.Model):
+    """Lead para prospecção comercial (agente de outreach) do SoloCRT Saúde.
+
+    NÃO confundir com LeadComercial (CRM/GTM, definido acima) — este modelo é do
+    agente de prospecção automática e tem tabela própria (api_leadprospeccao).
+    """
+    SEGMENTO = [
+        ('sst',      'SST / Medicina do Trabalho'),
+        ('farmacia', 'Farmácia'),
+    ]
+    TIPO = [
+        ('medico_trabalho',     'Médico do Trabalho'),
+        ('engenheiro_sst',      'Engenheiro de SST'),
+        ('tecnico_sst',         'Técnico de SST'),
+        ('clinica_ocupacional', 'Clínica de Medicina Ocupacional'),
+        ('empresa_sesmt',       'Empresa com SESMT'),
+        ('farmacia_dispensacao','Farmácia de Dispensação'),
+        ('farmacia_manipulacao','Farmácia de Manipulação'),
+        ('rede_farmacia',       'Rede de Farmácias'),
+    ]
+    STATUS = [
+        ('novo',           'Novo'),
+        ('email_enviado',  'Email Enviado'),
+        ('followup_1',     'Follow-up 1'),
+        ('followup_2',     'Follow-up 2'),
+        ('followup_final', 'Follow-up Final'),
+        ('respondeu',      'Respondeu!'),
+        ('demo_agendada',  'Demo Agendada'),
+        ('trial',          'Em Trial'),
+        ('cliente',        'Cliente'),
+        ('descartado',     'Descartado'),
+        ('bounce',         'Email Inválido'),
+        ('unsubscribe',    'Descadastrado'),
+    ]
+    ORIGEM = [
+        ('manual',        'Manual'),
+        ('csv',           'CSV Importado'),
+        ('google_places', 'Google Places'),
+        ('linkedin',      'LinkedIn Search'),
+        ('indicacao',     'Indicação'),
+    ]
+
+    segmento                = models.CharField(max_length=20, choices=SEGMENTO)
+    tipo                    = models.CharField(max_length=30, choices=TIPO)
+    nome                    = models.CharField(max_length=200)
+    empresa                 = models.CharField(max_length=200)
+    cargo                   = models.CharField(max_length=100, blank=True, default='')
+    email                   = models.EmailField(unique=True)
+    telefone                = models.CharField(max_length=20,  blank=True, default='')
+    cidade                  = models.CharField(max_length=100)
+    estado                  = models.CharField(max_length=2)
+    website                 = models.URLField(blank=True, default='')
+    linkedin_url            = models.URLField(blank=True, default='')
+    funcionarios_estimados  = models.IntegerField(null=True, blank=True, help_text='Nº de colaboradores — dimensiona o plano SST sugerido')
+    unidades_estimadas      = models.IntegerField(null=True, blank=True, help_text='Nº de lojas/unidades — dimensiona o plano de Farmácia sugerido')
+    status                  = models.CharField(max_length=20, choices=STATUS, default='novo')
+    score                   = models.IntegerField(default=50, help_text='0=frio, 100=quente')
+    notas                   = models.TextField(blank=True, default='')
+    dados_adicionais        = models.JSONField(default=dict, blank=True)
+    origem                  = models.CharField(max_length=20, choices=ORIGEM, default='manual')
+    ultimo_contato_em       = models.DateTimeField(null=True, blank=True)
+    proximo_followup_em     = models.DateTimeField(null=True, blank=True)
+    criado_em               = models.DateTimeField(auto_now_add=True)
+    atualizado_em           = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ['-criado_em']
+        verbose_name        = 'Lead de Prospecção'
+        verbose_name_plural = 'Leads de Prospecção'
+        indexes             = [
+            models.Index(fields=['status']),
+            models.Index(fields=['segmento', 'status']),
+            models.Index(fields=['proximo_followup_em']),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} — {self.empresa} ({self.get_status_display()})"
+
+    def pacote_sugerido(self) -> str:
+        """Plano que melhor comporta o tamanho informado do lead (ou o de entrada, se desconhecido)."""
+        from .planos import sugerir_pacote
+        setor = "empresa" if self.segmento == "sst" else "farmacia"
+        tamanho = self.funcionarios_estimados if self.segmento == "sst" else self.unidades_estimadas
+        return sugerir_pacote(setor, tamanho)
+
+
+class EmailProspeccao(models.Model):
+    """Histórico de emails enviados para um lead de prospecção."""
+    STATUS = [
+        ('rascunho', 'Rascunho'),
+        ('enviado',  'Enviado'),
+        ('entregue', 'Entregue'),
+        ('aberto',   'Aberto'),
+        ('clicado',  'Clicado'),
+        ('respondeu','Respondeu'),
+        ('bounce',   'Bounce'),
+        ('spam',     'Spam'),
+        ('erro',     'Erro'),
+    ]
+
+    lead                = models.ForeignKey(LeadProspeccao, on_delete=models.CASCADE, related_name='emails')
+    numero_sequencia    = models.IntegerField(default=1)
+    assunto             = models.CharField(max_length=300)
+    corpo_html          = models.TextField()
+    corpo_texto         = models.TextField(blank=True, default='')
+    enviado_em          = models.DateTimeField(null=True, blank=True)
+    aberto_em           = models.DateTimeField(null=True, blank=True)
+    clicou_em           = models.DateTimeField(null=True, blank=True)
+    respondeu_em        = models.DateTimeField(null=True, blank=True)
+    sendgrid_message_id = models.CharField(max_length=200, blank=True, default='')
+    status              = models.CharField(max_length=20, choices=STATUS, default='rascunho')
+    erro                = models.TextField(blank=True, default='')
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ['criado_em']
+        verbose_name        = 'Email de Prospecção'
+        verbose_name_plural = 'Emails de Prospecção'
+
+    def __str__(self):
+        return f"Seq{self.numero_sequencia} → {self.lead.email} [{self.get_status_display()}]"

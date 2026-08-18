@@ -532,3 +532,40 @@ def pacotes_por_setor(setor=None, incluir_governo=False):
     if not incluir_governo:
         itens = {codigo: pacote for codigo, pacote in itens.items() if pacote["setor"] != "governo"}
     return itens
+
+
+# Dimensão de dimensionamento por setor — SST cresce por nº de colaboradores
+# geridos no sistema (ASO/PPP/eSocial), Farmácia cresce por nº de unidades/lojas.
+# Usado pra sugerir automaticamente o plano certo pra um lead, em vez de sempre
+# oferecer o de entrada.
+_DIMENSAO_POR_SETOR = {
+    "empresa":  "max_funcionarios",
+    "farmacia": "max_unidades",
+}
+
+
+def sugerir_pacote(setor: str, tamanho: int | None) -> str:
+    """
+    Sugere o pacote mais barato que comporta `tamanho` (colaboradores para
+    'empresa'/SST, unidades para 'farmacia'). Se `tamanho` for None/0, ou o
+    setor não tiver dimensão conhecida, retorna o plano de entrada do setor.
+    """
+    campo_limite = _DIMENSAO_POR_SETOR.get(setor)
+    candidatos = [
+        (codigo, pacote) for codigo, pacote in PACOTES_SAAS.items()
+        if pacote["setor"] == setor
+    ]
+    if not candidatos:
+        return pacote_padrao()
+
+    candidatos.sort(key=lambda item: item[1]["mensal"])
+
+    if not tamanho or not campo_limite:
+        return candidatos[0][0]
+
+    for codigo, pacote in candidatos:
+        limite = pacote.get("limites", {}).get(campo_limite)
+        if limite is not None and tamanho <= limite:
+            return codigo
+
+    return candidatos[-1][0]  # maior de todos — tamanho excede até o topo da tabela

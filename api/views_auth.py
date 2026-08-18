@@ -512,6 +512,13 @@ def ativar_trial(request):
     except Exception:
         pass
 
+    # Se esta empresa veio de um lead do agente de prospecção, fecha o loop
+    try:
+        from .prospeccao_funil import marcar_trial_iniciado
+        marcar_trial_iniciado(empresa.email)
+    except Exception:
+        logger.exception("prospeccao_funil.marcar_trial_iniciado falhou para %s", empresa.email)
+
     from .services.auth_session import destino_conta as _destino_conta
     return JsonResponse({
         "status": "ok",

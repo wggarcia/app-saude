@@ -1376,6 +1376,19 @@ from api.views_assistencia_gestao import (
     api_ass_suas_relatorio_mensal,
     assistencia_relatorio_mensal_page,
 )
+from api.views_comercial import (
+    comercial_dashboard,
+    api_leads_lista,
+    api_lead_detalhe,
+    api_lead_gerar_email,
+    api_lead_enviar_email,
+    api_lead_status,
+    api_leads_importar_csv,
+    api_leads_buscar_google,
+    api_comercial_stats,
+    api_sendgrid_webhook,
+    api_sendgrid_inbound,
+)
 
 
 def service_worker(request):
@@ -3628,4 +3641,17 @@ urlpatterns = [
     path('api/assistencia-social/beneficios-eventuais/',                          api_ass_beneficios_eventuais),
     path('api/assistencia-social/beneficios-eventuais/<int:beneficio_id>',        api_ass_beneficio_eventual_detalhe),
     path('api/assistencia-social/beneficios-eventuais/<int:beneficio_id>/',       api_ass_beneficio_eventual_detalhe),
+
+    # ── Comercial / Agente de Outreach ───────────────────────────────────────
+    path('comercial/', comercial_dashboard),
+    path('api/comercial/stats/', api_comercial_stats),
+    path('api/comercial/leads/', api_leads_lista),
+    path('api/comercial/leads/importar/', api_leads_importar_csv),
+    path('api/comercial/leads/buscar-google/', api_leads_buscar_google),
+    path('api/comercial/leads/<int:lead_id>/', api_lead_detalhe),
+    path('api/comercial/leads/<int:lead_id>/gerar-email/', api_lead_gerar_email),
+    path('api/comercial/leads/<int:lead_id>/enviar/', api_lead_enviar_email),
+    path('api/comercial/leads/<int:lead_id>/status/', api_lead_status),
+    path('api/comercial/webhook/sendgrid/', api_sendgrid_webhook),
+    path('api/comercial/webhook/inbound/', api_sendgrid_inbound),
 ]

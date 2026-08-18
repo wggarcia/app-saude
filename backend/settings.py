@@ -381,6 +381,20 @@ MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN", "")
 GOOGLE_MAPS_BROWSER_KEY = os.environ.get("GOOGLE_MAPS_BROWSER_KEY", "")
 GOOGLE_MAPS_IOS_KEY = os.environ.get("GOOGLE_MAPS_IOS_KEY", "")
 
+# ── Agente Comercial (prospecção / outreach automatizado) ────────────────────
+# Busca de leads. Se GOOGLE_PLACES_API_KEY não existir, o lead_hunter usa a
+# GOOGLE_MAPS_BROWSER_KEY acima como fallback.
+GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
+# Envio de e-mails via SendGrid.
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+SENDGRID_WEBHOOK_SECRET = os.environ.get("SENDGRID_WEBHOOK_SECRET", "")
+EMAIL_COMERCIAL_FROM = os.environ.get("EMAIL_COMERCIAL_FROM", "comercial@solocrt.com")
+EMAIL_COMERCIAL_NOME = os.environ.get("EMAIL_COMERCIAL_NOME", "Wagner Garcia — SoloCRT Saúde")
+# Notificação por WhatsApp quando um lead responde (via CallMeBot, grátis).
+# Cadastre em https://www.callmebot.com/blog/free-api-whatsapp-messages/
+WHATSAPP_NOTIFY_PHONE = os.environ.get("WHATSAPP_NOTIFY_PHONE", "")
+WHATSAPP_CALLMEBOT_APIKEY = os.environ.get("WHATSAPP_CALLMEBOT_APIKEY", "")
+
 SESSION_COOKIE_SECURE = IS_PRODUCTION
 CSRF_COOKIE_SECURE = IS_PRODUCTION
 SESSION_COOKIE_HTTPONLY = True

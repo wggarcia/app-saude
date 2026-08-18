@@ -674,6 +674,22 @@ function showError(msg) {
   el.style.display = 'block';
   el.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
+
+// Pré-seleciona módulo + plano vindos de link de prospecção (?pacote=empresa_starter_5)
+(function preselecionarDoLink() {
+  const codigo = new URLSearchParams(window.location.search).get('pacote');
+  if (!codigo) return;
+  for (const modulo of Object.keys(PLANOS)) {
+    const plano = PLANOS[modulo].find(p => p.codigo === codigo);
+    if (!plano) continue;
+    const card = document.querySelector(`.mod-card[data-module="${modulo}"]`);
+    if (card) selectModule(card);
+    goToStep2();
+    const planCard = document.querySelector(`.plan-card[data-codigo="${codigo}"]`);
+    if (planCard) selectPlan(planCard, plano.codigo, plano.nome);
+    break;
+  }
+})();
 </script>
 </body>
 </html>

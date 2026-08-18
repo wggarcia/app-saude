@@ -1,6 +1,7 @@
 import datetime
 import hmac
 import json
+import logging
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -23,6 +24,8 @@ from .planos import (
     preco_pacote,
 )
 from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
+
+logger = logging.getLogger(__name__)
 
 STATUS_APROVADOS_ASAAS = {
     "RECEIVED",
@@ -224,6 +227,15 @@ def _processar_pagamento_aprovado(empresa, origem, payment_id="", valor=None):
         valor_evento,
         f"{origem}{sufixo}".strip(),
     )
+
+    # Se esta empresa veio de um lead do agente de prospecção, fecha o loop
+    # e avisa no WhatsApp — é o evento mais importante do funil.
+    try:
+        from .prospeccao_funil import marcar_cliente_fechado
+        marcar_cliente_fechado(empresa.email)
+    except Exception:
+        logger.exception("prospeccao_funil.marcar_cliente_fechado falhou para %s", empresa.email)
+
     return True
 
 
