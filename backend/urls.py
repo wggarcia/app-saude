@@ -1386,8 +1386,8 @@ from api.views_comercial import (
     api_leads_importar_csv,
     api_leads_buscar_google,
     api_comercial_stats,
-    api_sendgrid_webhook,
-    api_sendgrid_inbound,
+    api_brevo_webhook,
+    api_brevo_inbound,
     api_social_imagem,
 )
 
@@ -3653,7 +3653,7 @@ urlpatterns = [
     path('api/comercial/leads/<int:lead_id>/gerar-email/', api_lead_gerar_email),
     path('api/comercial/leads/<int:lead_id>/enviar/', api_lead_enviar_email),
     path('api/comercial/leads/<int:lead_id>/status/', api_lead_status),
-    path('api/comercial/webhook/sendgrid/', api_sendgrid_webhook),
-    path('api/comercial/webhook/inbound/', api_sendgrid_inbound),
+    path('api/comercial/webhook/eventos/', api_brevo_webhook),
+    path('api/comercial/webhook/inbound/', api_brevo_inbound),
     path('api/comercial/social/imagem/<str:nome_arquivo>/', api_social_imagem),
 ]

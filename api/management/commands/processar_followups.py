@@ -7,7 +7,7 @@ Roda diariamente (adicionar ao cron do VPS):
 Para cada lead com proximo_followup_em <= agora e status ativo:
   1. Determina o número da sequência (followup 2, 3 ou 4)
   2. Gera email com IA via email_ai.gerar_email()
-  3. Envia via sendgrid_service.enviar_email()
+  3. Envia via brevo_service.enviar_email()
   4. Atualiza status + proximo_followup_em do lead
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from api.models import LeadProspeccao, EmailProspeccao
         from api.email_ai import gerar_email
-        from api.sendgrid_service import enviar_email
+        from api.brevo_service import enviar_email
 
         dry_run = options["dry_run"]
         max_emails = options["max"]

@@ -225,7 +225,7 @@ class EmpresaMiddleware:
             "/api/plano-saude/rh/portal/",    # Portal RH B2B — APIs públicas via token (dados/solicitar)
             "/api/gestao/integracoes/webhook/",  # webhook de sistemas de RH (auth própria via HMAC)
             "/api/farmacia/ifood/webhook/",      # webhook do iFood (auth própria via assinatura por farmácia)
-            "/api/comercial/webhook/",           # webhooks do SendGrid (eventos + inbound) — auth própria via secret
+            "/api/comercial/webhook/",           # webhooks do Brevo (eventos + inbound) — auth própria via secret
             "/api/comercial/social/imagem/",     # imagens de post — a Meta busca sem cookie/token nosso
             "/api/v1/dados",        # dados via API Key (BI/ERP externo)
             "/api/v1/plano-saude/dados",  # dados via API Key (Plano de Saúde — Enterprise)

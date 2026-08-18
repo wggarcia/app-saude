@@ -14030,7 +14030,7 @@ class EmailProspeccao(models.Model):
     aberto_em           = models.DateTimeField(null=True, blank=True)
     clicou_em           = models.DateTimeField(null=True, blank=True)
     respondeu_em        = models.DateTimeField(null=True, blank=True)
-    sendgrid_message_id = models.CharField(max_length=200, blank=True, default='')
+    provedor_message_id = models.CharField(max_length=200, blank=True, default='')
     status              = models.CharField(max_length=20, choices=STATUS, default='rascunho')
     erro                = models.TextField(blank=True, default='')
     criado_em           = models.DateTimeField(auto_now_add=True)

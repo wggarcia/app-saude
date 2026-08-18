@@ -17,9 +17,9 @@ Endpoints:
   PUT  /api/comercial/leads/<id>/      → atualizar lead
   DELETE /api/comercial/leads/<id>/    → excluir lead
   POST /api/comercial/leads/<id>/gerar-email/ → gera email com IA
-  POST /api/comercial/leads/<id>/enviar/      → envia email via SendGrid
+  POST /api/comercial/leads/<id>/enviar/      → envia email via Brevo
   PATCH /api/comercial/leads/<id>/status/     → muda status
-  POST /api/comercial/webhook/sendgrid/       → webhook eventos SendGrid (público)
+  POST /api/comercial/webhook/eventos/        → webhook eventos Brevo (público)
   POST /api/comercial/webhook/inbound/        → respostas de leads (público)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -350,7 +350,7 @@ def api_lead_enviar_email(request, lead_id: int):
         )
 
     # Enviar
-    from .sendgrid_service import enviar_email
+    from .brevo_service import enviar_email
     sucesso = enviar_email(email_obj)
 
     if sucesso:
@@ -518,18 +518,18 @@ def api_leads_buscar_google(request):
     })
 
 
-# ─── Webhook SendGrid ─────────────────────────────────────────────────────────
+# ─── Webhook Brevo ────────────────────────────────────────────────────────────
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def api_sendgrid_webhook(request):
+def api_brevo_webhook(request):
     """
-    Recebe eventos do SendGrid: open, click, bounce, spam, unsubscribe.
+    Recebe eventos do Brevo: opened, click, hard_bounce, spam, unsubscribed.
     Não exige autenticação (endpoint público, mas valida secret no header).
     """
-    # Verificação simples de secret (configure SENDGRID_WEBHOOK_SECRET no .env)
+    # Verificação simples de secret (configure EMAIL_WEBHOOK_SECRET no .env)
     from django.conf import settings
-    webhook_secret = getattr(settings, "SENDGRID_WEBHOOK_SECRET", "")
+    webhook_secret = getattr(settings, "EMAIL_WEBHOOK_SECRET", "")
     if webhook_secret:
         token = request.headers.get("X-SoloCRT-Token", "")
         if token != webhook_secret:
@@ -542,72 +542,85 @@ def api_sendgrid_webhook(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"erro": "JSON inválido."}, status=400)
 
-    from .sendgrid_service import processar_evento_webhook
+    from .brevo_service import processar_evento_webhook
     processados = processar_evento_webhook(payload)
 
     return JsonResponse({"ok": True, "processados": processados})
 
 
-# ─── Webhook SendGrid Inbound Parse (respostas de leads) ──────────────────────
+# ─── Webhook Brevo Inbound Parse (respostas de leads) ─────────────────────────
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def api_sendgrid_inbound(request):
+def api_brevo_inbound(request):
     """
-    Recebe respostas de leads via SendGrid Inbound Parse.
+    Recebe respostas de leads via Brevo Inbound Parse.
 
-    Quando um lead responde o email de prospecção, o SendGrid faz POST
-    (multipart/form-data) com os campos 'from', 'subject', 'text'.
-    Identificamos o lead pelo remetente, marcamos status='respondeu' e
-    disparamos a notificação de WhatsApp.
+    Quando um lead responde o email de prospecção, o Brevo faz POST em
+    JSON com {"items": [{"From": "...", "Subject": "...",
+    "ExtractedMarkdownMessage": "..."}]}. Identificamos o lead pelo
+    remetente, marcamos status='respondeu' e disparamos WhatsApp.
 
-    Configurar em: SendGrid → Settings → Inbound Parse → apontar o MX do
-    subdomínio (ex. parse.solocrt.com) para este endpoint.
+    Configurar: domínio dedicado (ex. reply.solocrt.com) com MX apontando
+    pra inbound1.sendinblue.com / inbound2.sendinblue.com, depois cadastrar
+    esse domínio no painel Brevo → Inbound Parsing → esta URL.
     """
     import re
 
-    remetente = request.POST.get("from", "")
-    assunto = request.POST.get("subject", "")
-    texto = request.POST.get("text", "") or request.POST.get("html", "")
-
-    # Extrai o email de dentro de "Nome <email@dominio>"
-    m = re.search(r"[\w.+-]+@[\w.-]+\.\w+", remetente)
-    email_lead = m.group(0).lower() if m else ""
-
-    if not email_lead:
-        return JsonResponse({"ok": False, "erro": "remetente sem email"}, status=200)
-
     try:
-        lead = LeadProspeccao.objects.get(email=email_lead)
-    except LeadProspeccao.DoesNotExist:
-        logger.info("inbound: resposta de %s não corresponde a nenhum lead", email_lead)
-        return JsonResponse({"ok": True, "lead_encontrado": False}, status=200)
+        payload = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"ok": False, "erro": "JSON inválido"}, status=200)
 
-    status_anterior = lead.status
-    if lead.status not in ("cliente", "trial", "demo_agendada"):
-        lead.status = "respondeu"
-    lead.notas = (
-        lead.notas + f"\n\n[RESPOSTA {timezone.now():%d/%m %H:%M}] {assunto}\n{texto[:1000]}"
-    ).strip()
-    lead.ultimo_contato_em = timezone.now()
-    lead.proximo_followup_em = None  # para os follow-ups automáticos
-    lead.save(update_fields=["status", "notas", "ultimo_contato_em", "proximo_followup_em"])
+    itens = payload.get("items", [])
+    if not itens:
+        return JsonResponse({"ok": True, "processados": 0})
 
-    # Marca o último email como respondido
-    ultimo_email = lead.emails.filter(enviado_em__isnull=False).order_by("-enviado_em").first()
-    if ultimo_email and not ultimo_email.respondeu_em:
-        ultimo_email.respondeu_em = timezone.now()
-        ultimo_email.status = "respondeu"
-        ultimo_email.save(update_fields=["respondeu_em", "status"])
+    processados = 0
+    for item in itens:
+        remetente = item.get("From", "")
+        assunto = item.get("Subject", "")
+        texto = item.get("ExtractedMarkdownMessage", "") or item.get("RawTextBody", "")
 
-    if status_anterior != "respondeu":
+        # Extrai o email de dentro de "Nome <email@dominio>"
+        m = re.search(r"[\w.+-]+@[\w.-]+\.\w+", remetente)
+        email_lead = m.group(0).lower() if m else ""
+        if not email_lead:
+            continue
+
         try:
-            from .notificacao_comercial import notificar_resposta
-            notificar_resposta(lead, "respondeu")
-        except Exception:
-            logger.exception("notificar_resposta (inbound) falhou lead=%s", lead.id)
+            lead = LeadProspeccao.objects.get(email=email_lead)
+        except LeadProspeccao.DoesNotExist:
+            logger.info("inbound: resposta de %s não corresponde a nenhum lead", email_lead)
+            continue
 
-    return JsonResponse({"ok": True, "lead_encontrado": True, "lead_id": lead.id})
+        status_anterior = lead.status
+        if lead.status not in ("cliente", "trial", "demo_agendada"):
+            lead.status = "respondeu"
+        lead.notas = (
+            lead.notas + f"\n\n[RESPOSTA {timezone.now():%d/%m %H:%M}] {assunto}\n{texto[:1000]}"
+        ).strip()
+        lead.ultimo_contato_em = timezone.now()
+        lead.proximo_followup_em = None  # para os follow-ups automáticos
+        lead.save(update_fields=["status", "notas", "ultimo_contato_em", "proximo_followup_em"])
+
+        # Marca o último email como respondido
+        ultimo_email = lead.emails.filter(enviado_em__isnull=False).order_by("-enviado_em").first()
+        if ultimo_email and not ultimo_email.respondeu_em:
+            ultimo_email.respondeu_em = timezone.now()
+            ultimo_email.status = "respondeu"
+            ultimo_email.save(update_fields=["respondeu_em", "status"])
+
+        if status_anterior != "respondeu":
+            try:
+                from .notificacao_comercial import notificar_resposta
+                notificar_resposta(lead, "respondeu")
+            except Exception:
+                logger.exception("notificar_resposta (inbound) falhou lead=%s", lead.id)
+
+        processados += 1
+
+    return JsonResponse({"ok": True, "processados": processados})
 
 
 # ─── Imagens de post de rede social (públicas — a Meta precisa buscar) ────────

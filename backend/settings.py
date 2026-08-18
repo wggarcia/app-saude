@@ -385,9 +385,10 @@ GOOGLE_MAPS_IOS_KEY = os.environ.get("GOOGLE_MAPS_IOS_KEY", "")
 # Busca de leads. Se GOOGLE_PLACES_API_KEY não existir, o lead_hunter usa a
 # GOOGLE_MAPS_BROWSER_KEY acima como fallback.
 GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
-# Envio de e-mails via SendGrid.
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
-SENDGRID_WEBHOOK_SECRET = os.environ.get("SENDGRID_WEBHOOK_SECRET", "")
+# Envio de e-mails via Brevo (antigo Sendinblue) — grátis de verdade,
+# 300/dia sem prazo de validade (SendGrid só é grátis por 60 dias).
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+EMAIL_WEBHOOK_SECRET = os.environ.get("EMAIL_WEBHOOK_SECRET", "")
 EMAIL_COMERCIAL_FROM = os.environ.get("EMAIL_COMERCIAL_FROM", "comercial@solocrt.com")
 EMAIL_COMERCIAL_NOME = os.environ.get("EMAIL_COMERCIAL_NOME", "Wagner Garcia — SoloCRT Saúde")
 # Notificação por WhatsApp quando um lead responde (via CallMeBot, grátis).

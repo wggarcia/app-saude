@@ -33,7 +33,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from api.models import TrialEmpresa, OnboardingPasso
         from api.trial_nurture import gerar_nurture, PONTOS_DE_CONTATO
-        from api.sendgrid_service import enviar_email_transacional
+        from api.brevo_service import enviar_email_transacional
 
         dry_run = options["dry_run"]
         agora = timezone.now()
@@ -81,7 +81,7 @@ class Command(BaseCommand):
                 self.stdout.write("    ✓ Enviado")
             else:
                 erros += 1
-                self.stderr.write("    ERRO ao enviar via SendGrid")
+                self.stderr.write("    ERRO ao enviar via Brevo")
 
         self.stdout.write(
             f"\n[nutrir_trials] {enviados} enviados, {erros} erros"
