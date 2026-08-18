@@ -391,9 +391,9 @@ async function buscarProdutoFn(){
   const q = document.getElementById('buscarProduto').value.trim();
   if(!q)return;
   try{
-    const r = await fetch(`/api/farmacia/itens/?q=${encodeURIComponent(q)}&limit=5&ativo=1`, {headers});
+    const r = await fetch(`/api/farmacia/pdv/buscar-produto?q=${encodeURIComponent(q)}`, {headers});
     const d = await r.json();
-    const items = d.itens || d.medicamentos || [];
+    const items = d.produtos || [];
     if(items.length === 0){
       alert('Produto não encontrado');
       return;
