@@ -392,7 +392,23 @@ EMAIL_COMERCIAL_FROM = os.environ.get("EMAIL_COMERCIAL_FROM", "comercial@solocrt
 EMAIL_COMERCIAL_NOME = os.environ.get("EMAIL_COMERCIAL_NOME", "Wagner Garcia — SoloCRT Saúde")
 # Notificação por WhatsApp quando um lead responde (via CallMeBot, grátis).
 # Cadastre em https://www.callmebot.com/blog/free-api-whatsapp-messages/
-WHATSAPP_NOTIFY_PHONE = os.environ.get("WHATSAPP_NOTIFY_PHONE", "")
+WHATSAPP_NOTIFY_PHONE = os.environ.get("WHATSAPP_NOTIFY_PHONE", "5521988921758")
+# Número exposto aos leads no email de prospecção (botão "falar no WhatsApp").
+# É um link wa.me — o LEAD inicia a conversa clicando, nunca mensagem automática
+# pro número dele. Por isso não exige API oficial nem aprovação da Meta.
+WHATSAPP_COMERCIAL_NUMERO = os.environ.get("WHATSAPP_COMERCIAL_NUMERO", "5521988921758")
+
+# Postagem automática de conteúdo no Instagram (conta própria — sem app review,
+# só exige a conta estar como "Instagram Tester" no app da Meta). Token gerado
+# manualmente no Graph API Explorer, ver instagram_service.py.
+INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
+INSTAGRAM_BUSINESS_ACCOUNT_ID = os.environ.get("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
+INSTAGRAM_GRAPH_API_VERSION = os.environ.get("INSTAGRAM_GRAPH_API_VERSION", "v21.0")
+# Pasta PÚBLICA só pra imagens de post geradas — DELIBERADAMENTE separada do
+# MEDIA_ROOT clínico acima (DICOM/laudos nunca podem ficar acessíveis sem
+# autenticação; imagens de marketing precisam ser públicas pro crawler da
+# Meta conseguir buscar). Ver rota pública em views_comercial.api_social_imagem.
+SOCIAL_MEDIA_CACHE_DIR = os.environ.get("SOCIAL_MEDIA_CACHE_DIR") or str(BASE_DIR / "social_media_cache")
 WHATSAPP_CALLMEBOT_APIKEY = os.environ.get("WHATSAPP_CALLMEBOT_APIKEY", "")
 
 SESSION_COOKIE_SECURE = IS_PRODUCTION

@@ -99,6 +99,7 @@ simular_dados.py
 
 # Runtime/generated artifacts — not source
 mediafiles/
+social_media_cache/
 ml_models/
 outputs/
 .playwright-cli/

@@ -515,13 +515,15 @@ async function buscarGoogle(){
   try{
     const d=await api('/api/comercial/leads/buscar-google/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!d.candidatos.length){ box.innerHTML='<div class="empty">Nada encontrado.</div>'; return; }
-    box.innerHTML='<div class="muted" style="font-size:12px;margin-bottom:8px">'+d.total+' encontrados. Preencha o email e salve os que interessarem:</div>'+
+    const comEmail = d.candidatos.filter(c=>c.email).length;
+    box.innerHTML=`<div class="muted" style="font-size:12px;margin-bottom:8px">${d.total} encontrados — ${comEmail} já com email achado automaticamente no site. Confira e salve os que interessarem:</div>`+
       d.candidatos.map((c,i)=>`
       <div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px" id="cand_${i}">
         <strong>${esc(c.empresa)}</strong> <span class="muted" style="font-size:12px">${esc(c.telefone||'')} ${c.website?'· '+esc(c.website):''}</span>
+        ${c.email ? '<span class="badge b-respondeu" style="margin-left:6px">✓ email achado</span>' : ''}
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="inp" id="cand_nome_${i}" placeholder="Nome do contato" value="${esc(c.empresa)}" style="flex:1">
-          <input class="inp" id="cand_email_${i}" placeholder="email@..." style="flex:1">
+          <input class="inp" id="cand_email_${i}" placeholder="email@..." value="${esc(c.email||'')}" style="flex:1">
           <button class="btn btn-primary btn-sm" onclick='salvarCandidato(${i}, ${JSON.stringify(c).replace(/'/g,"&#39;")}, "${payload.tipo}")'>Salvar</button>
         </div>
       </div>`).join('');

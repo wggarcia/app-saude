@@ -63,7 +63,10 @@ _TEMA_INSTRUCAO = {
     ),
 }
 
-_LINK_ATIVACAO = "https://solocrt.com.br/pagamento/"
+def _link_ativacao() -> str:
+    # Mesmo padrão de api.email_service._base_url() — nunca hardcoded.
+    base = getattr(settings, "PUBLIC_BASE_URL", "https://app.solocrt.com.br").rstrip("/")
+    return f"{base}/pagamento/"
 
 
 def gerar_nurture(empresa, tema: str, progresso: str) -> dict:
@@ -105,7 +108,7 @@ def gerar_nurture(empresa, tema: str, progresso: str) -> dict:
 Empresa: {empresa.nome}
 Segmento: {setor_label}
 Progresso no trial até agora: {progresso}
-Link de ativação do plano (usar só se a instrução pedir): {_LINK_ATIVACAO}
+Link de ativação do plano (usar só se a instrução pedir): {_link_ativacao()}
 
 Instrução para este email:
 {instrucao}

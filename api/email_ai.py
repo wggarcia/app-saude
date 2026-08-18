@@ -27,11 +27,15 @@ logger = logging.getLogger(__name__)
 # usa o pacote que melhor comporta esse tamanho (LeadProspeccao.pacote_sugerido());
 # senão cai no plano de entrada do segmento. O lead pode trocar de plano na
 # própria tela de cadastro antes de confirmar.
-_LINK_BASE = "https://solocrt.com.br/cadastro/"
+def _base_url() -> str:
+    # Mesmo padrão de api.email_service._base_url() — PUBLIC_BASE_URL é a
+    # fonte única de verdade pro domínio onde este app Django está publicado
+    # (app.solocrt.com.br), nunca hardcoded aqui.
+    return getattr(settings, "PUBLIC_BASE_URL", "https://app.solocrt.com.br").rstrip("/")
 
 
 def _link_trial(codigo: str) -> str:
-    return f"{_LINK_BASE}?pacote={codigo}"
+    return f"{_base_url()}/cadastro/?pacote={codigo}"
 
 
 def _preco_plano(codigo: str) -> str:
@@ -43,6 +47,21 @@ def _preco_plano(codigo: str) -> str:
 def _label_plano(codigo: str) -> str:
     pacote = PACOTES_SAAS.get(codigo, {})
     return pacote.get("label", codigo)
+
+
+def _link_whatsapp(lead) -> str:
+    """
+    Link wa.me — o LEAD é quem inicia a conversa ao clicar, então não exige
+    API oficial do WhatsApp Business nem template aprovado pela Meta (isso
+    só seria necessário pra ENVIAR mensagem pro número dele automaticamente,
+    o que não fazemos).
+    """
+    import urllib.parse
+    numero = getattr(settings, "WHATSAPP_COMERCIAL_NUMERO", "")
+    if not numero:
+        return ""
+    texto = f"Olá! Vi o email sobre o SoloCRT Saúde e quero saber mais sobre o plano pra {lead.empresa}."
+    return f"https://wa.me/{numero}?text={urllib.parse.quote(texto)}"
 
 # ─── Textos de apoio por sequência ────────────────────────────────────────────
 
@@ -94,6 +113,7 @@ O SoloCRT SST é um sistema completo de Saúde e Segurança do Trabalho que auto
 - Dashboard de indicadores de saúde ocupacional por empresa
 Plano recomendado pro tamanho desta empresa: {plano_label} — {preco}/mês.
 Teste grátis por 15 dias, sem cartão de crédito: {link}
+Prefere tirar dúvida no WhatsApp antes? {whatsapp}
 """
 
 _PRODUTO_FARMACIA = """
@@ -108,6 +128,7 @@ O SoloCRT Farmácia é um sistema de gestão completo para farmácias que cobre:
 - e-commerce / vitrine digital
 Plano recomendado pro tamanho desta farmácia: {plano_label} — {preco}/mês.
 Teste grátis por 15 dias, sem cartão de crédito: {link}
+Prefere tirar dúvida no WhatsApp antes? {whatsapp}
 """
 
 
@@ -127,9 +148,10 @@ def gerar_email(lead, numero_sequencia: int = 1) -> dict:
     link = _link_trial(pacote_codigo)
     preco = _preco_plano(pacote_codigo)
     plano_label = _label_plano(pacote_codigo)
+    whatsapp = _link_whatsapp(lead) or "não disponível"
 
     if lead.segmento == "sst":
-        produto_desc = _PRODUTO_SST.format(preco=preco, link=link, plano_label=plano_label)
+        produto_desc = _PRODUTO_SST.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp)
         contexto_lead = f"""
 Nome: {lead.nome}
 Empresa: {lead.empresa}
@@ -142,7 +164,7 @@ Telefone: {lead.telefone or 'não informado'}
 Website: {lead.website or 'não informado'}
 """
     else:  # farmacia
-        produto_desc = _PRODUTO_FARMACIA.format(preco=preco, link=link, plano_label=plano_label)
+        produto_desc = _PRODUTO_FARMACIA.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp)
         contexto_lead = f"""
 Nome: {lead.nome}
 Farmácia: {lead.empresa}
@@ -165,6 +187,10 @@ Website: {lead.website or 'não informado'}
         "O CTA principal é sempre o link de teste grátis fornecido — no CORPO_HTML ele deve "
         "aparecer como um botão/link clicável de verdade: <a href=\"LINK_EXATO\">texto</a>, "
         "usando a URL exatamente como foi fornecida, sem alterar nem inventar outra URL. "
+        "Se um link de WhatsApp for fornecido (e não for 'não disponível'), inclua-o como CTA "
+        "SECUNDÁRIO e discreto — algo como '<a href=\"LINK_EXATO\">falar no WhatsApp</a>' — nunca "
+        "como opção principal, só pra quem prefere tirar dúvida antes de clicar no teste grátis. "
+        "Se vier 'não disponível', simplesmente não mencione WhatsApp. "
         "NUNCA sugira agendar uma reunião, call ou demonstração ao vivo — o teste grátis "
         "self-service substitui isso completamente. "
         "Assine como: Wagner Garcia | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"

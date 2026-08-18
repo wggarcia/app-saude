@@ -17,6 +17,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 
 import requests
 from django.conf import settings
@@ -84,12 +85,13 @@ def buscar_google_places(tipo: str, cidade: str, estado: str, max_resultados: in
             nome_empresa = place.get("name", "")
             website = detalhes.get("website", "")
             telefone = detalhes.get("formatted_phone_number", "")
+            email_encontrado = _extrair_email_do_site(website) if website else ""
 
             lead_dict = {
                 "nome":             nome_empresa,  # será sobrescrito pelo usuário
                 "empresa":          nome_empresa,
                 "cargo":            "",
-                "email":            "",            # usuário preenche ou usa Hunter.io depois
+                "email":            email_encontrado,  # achado no site; vazio = usuário preenche
                 "telefone":         _normalizar_telefone(telefone),
                 "cidade":           cidade,
                 "estado":           estado.upper()[:2],
@@ -112,6 +114,46 @@ def buscar_google_places(tipo: str, cidade: str, estado: str, max_resultados: in
             break
 
     return resultados
+
+
+_EMAIL_REGEX = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+_EMAIL_EXCLUIR = ("sentry.io", "wixpress.com", "@example.", "@domain.", "png", "jpg", "jpeg", "gif", "webp", "svg")
+_PREFERENCIA_PREFIXO = ("contato", "comercial", "vendas", "atendimento", "sac", "info")
+
+
+def _extrair_email_do_site(website: str) -> str:
+    """
+    Tenta achar um email de contato PUBLICADO na home do site da empresa.
+
+    Muita farmácia/clínica pequena põe um "contato@..." ou "vendas@..." no
+    rodapé do próprio site — isso evita ter que preencher email na mão pra
+    cada lead do Google Maps. Falha silenciosamente (retorna "") se o site
+    não responder, não tiver email visível, ou o e-mail parecer spam/lixo.
+    """
+    if not website:
+        return ""
+    try:
+        resp = requests.get(website, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        if resp.status_code != 200:
+            return ""
+        candidatos = set(_EMAIL_REGEX.findall(resp.text))
+    except Exception:
+        return ""
+
+    candidatos = {
+        e.lower() for e in candidatos
+        if not any(lixo in e.lower() for lixo in _EMAIL_EXCLUIR)
+    }
+    if not candidatos:
+        return ""
+
+    # Prioriza email genérico de contato/comercial sobre email pessoal aleatório
+    for prefixo in _PREFERENCIA_PREFIXO:
+        for email in candidatos:
+            if email.startswith(prefixo):
+                return email
+
+    return sorted(candidatos)[0]
 
 
 def _buscar_detalhes_place(place_id: str, api_key: str) -> dict:
@@ -137,7 +179,6 @@ def _normalizar_telefone(telefone: str) -> str:
     if not telefone:
         return ""
     # Remove +55 e espaços/parênteses
-    import re
     return re.sub(r"[^\d]", "", telefone.replace("+55", ""))[:15]
 
 

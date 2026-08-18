@@ -608,3 +608,31 @@ def api_sendgrid_inbound(request):
             logger.exception("notificar_resposta (inbound) falhou lead=%s", lead.id)
 
     return JsonResponse({"ok": True, "lead_encontrado": True, "lead_id": lead.id})
+
+
+# ─── Imagens de post de rede social (públicas — a Meta precisa buscar) ────────
+
+@require_http_methods(["GET"])
+def api_social_imagem(request, nome_arquivo: str):
+    """
+    Serve imagens de post geradas por instagram_service.gerar_imagem_post().
+
+    Pública de propósito (sem auth) — a Instagram Graph API busca a imagem
+    diretamente dos servidores da Meta, sem enviar nenhum cookie/token nosso.
+    NUNCA serve nada fora de settings.SOCIAL_MEDIA_CACHE_DIR (pasta dedicada,
+    separada do MEDIA_ROOT clínico) — nome de arquivo é validado contra
+    path traversal antes de tocar o disco.
+    """
+    import os
+    from django.conf import settings
+    from django.http import FileResponse, Http404
+
+    nome_seguro = os.path.basename(nome_arquivo)
+    if nome_seguro != nome_arquivo or not nome_seguro.endswith(".png"):
+        raise Http404("Nome de arquivo inválido.")
+
+    caminho = os.path.join(settings.SOCIAL_MEDIA_CACHE_DIR, nome_seguro)
+    if not os.path.isfile(caminho):
+        raise Http404("Imagem não encontrada.")
+
+    return FileResponse(open(caminho, "rb"), content_type="image/png")
