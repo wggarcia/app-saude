@@ -9549,6 +9549,23 @@ class DesvioProducao(models.Model):
     descricao        = models.TextField()
     detectado_por    = models.CharField(max_length=10, choices=ORIGEM, default="sistema")
 
+    # CAPA (BPF): tratamento formal do desvio — causa raiz + ação corretiva e
+    # preventiva. Fecha a exigência de gestão de desvios das Boas Práticas.
+    CATEGORIA_CAUSA = [
+        ("humano",       "Erro humano / operação"),
+        ("processo",     "Processo / procedimento"),
+        ("equipamento",  "Equipamento / instrumento"),
+        ("material",     "Material / insumo"),
+        ("sistema",      "Sistema / digitação"),
+        ("outro",        "Outro"),
+    ]
+    categoria_causa  = models.CharField(max_length=15, choices=CATEGORIA_CAUSA,
+                                        blank=True, default="")
+    acao_corretiva   = models.TextField(blank=True, default="",
+                                        help_text="O que foi feito para corrigir agora")
+    acao_preventiva  = models.TextField(blank=True, default="",
+                                        help_text="O que evita a recorrência")
+
     resolvido        = models.BooleanField(default=False)
     resolucao        = models.TextField(blank=True, default="")
     resolvido_por    = models.CharField(max_length=160, blank=True, default="")

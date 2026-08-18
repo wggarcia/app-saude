@@ -234,3 +234,100 @@ class ProducaoIndustrialTest(TestCase):
         cli2 = _client_for(outra)
         r = cli2.get(f"/api/producao/ordens/{op}")
         self.assertEqual(r.status_code, 404)
+
+    # ── Fase 2: BPF/integridade ────────────────────────────────────────────────
+
+    def test_segregacao_de_funcoes(self):
+        """A mesma pessoa não pode assinar dois papéis na mesma etapa."""
+        esp = self._criar_especificacao()
+        op = self._abrir_ordem(esp)
+        self._patch(f"/api/producao/ordens/{op}/avancar",
+                    {"acao": "status", "novo": "em_producao"})
+        self._post(f"/api/producao/ordens/{op}/campo",
+                   {"chave_campo": "peso_ativo", "valor": "500"})
+        r = self._post(f"/api/producao/ordens/{op}/assinar",
+                       {"etapa": "pesagem", "papel": "operador",
+                        "assinante_nome": "Maria", "assinante_registro": "CRF123"})
+        self.assertEqual(r.status_code, 200, r.content)
+        # Mesma pessoa tentando assinar como supervisor da MESMA etapa → bloqueado.
+        r = self._post(f"/api/producao/ordens/{op}/assinar",
+                       {"etapa": "pesagem", "papel": "supervisor",
+                        "assinante_nome": "Maria", "assinante_registro": "CRF123"})
+        self.assertEqual(r.status_code, 422, r.content)
+        self.assertIn("egrega", r.json()["erro"])
+
+    def test_controle_de_mudanca_gera_nova_versao(self):
+        """Editar estrutura de um MBR já usado em ordem cria nova versão."""
+        esp = self._criar_especificacao()
+        self._abrir_ordem(esp)  # torna o MBR "usado"
+        novos_campos = CAMPOS + [{
+            "chave": "dureza", "rotulo": "Dureza", "etapa": "compressao",
+            "tipo": "numero", "obrigatorio": True, "min": 5, "max": 12}]
+        r = self._patch(f"/api/producao/especificacoes/{esp}",
+                        {"campos": novos_campos})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(r.json().get("controle_mudanca"))
+        self.assertEqual(r.json().get("nova_versao"), 2)
+        # A versão 1 foi inativada, a 2 é a ativa.
+        v1 = EspecificacaoProducao.objects.get(id=esp)
+        self.assertFalse(v1.ativo)
+
+    def test_capa_obrigatorio_em_desvio_grave(self):
+        esp = self._criar_especificacao()
+        op = self._abrir_ordem(esp)
+        self._patch(f"/api/producao/ordens/{op}/avancar",
+                    {"acao": "status", "novo": "em_producao"})
+        # Gera desvio de faixa (severidade alta).
+        self._post(f"/api/producao/ordens/{op}/campo",
+                   {"chave_campo": "peso_ativo", "valor": "600"})
+        dv = DesvioProducao.objects.filter(ordem_id=op, resolvido=False).first()
+        # Resolver sem causa-raiz → recusado.
+        r = self._patch(f"/api/producao/ordens/{op}/desvios",
+                        {"desvio_id": dv.id, "resolucao": "corrigido"})
+        self.assertEqual(r.status_code, 400, r.content)
+        # Com causa-raiz → aceito.
+        r = self._patch(f"/api/producao/ordens/{op}/desvios",
+                        {"desvio_id": dv.id, "resolucao": "corrigido",
+                         "categoria_causa": "sistema", "acao_corretiva": "revalidado",
+                         "acao_preventiva": "treinamento"})
+        self.assertEqual(r.status_code, 200, r.content)
+        dv.refresh_from_db()
+        self.assertTrue(dv.resolvido)
+        self.assertEqual(dv.categoria_causa, "sistema")
+
+    def test_auditoria_de_preenchimento_alcoa(self):
+        from .models import FarmaciaAuditLog
+        esp = self._criar_especificacao()
+        op = self._abrir_ordem(esp)
+        self._patch(f"/api/producao/ordens/{op}/avancar",
+                    {"acao": "status", "novo": "em_producao"})
+        self._post(f"/api/producao/ordens/{op}/campo",
+                   {"chave_campo": "peso_ativo", "valor": "500"})
+        self._post(f"/api/producao/ordens/{op}/campo",
+                   {"chave_campo": "peso_ativo", "valor": "498"})  # alteração
+        logs = FarmaciaAuditLog.objects.filter(
+            empresa=self.empresa, modelo="RegistroCampoProducao")
+        self.assertGreaterEqual(logs.count(), 2)
+        ultimo = logs.order_by("-id").first()
+        self.assertEqual(ultimo.dados_antes["valor"], "500")
+        self.assertEqual(ultimo.dados_depois["valor"], "498")
+
+    def test_batch_record_pdf(self):
+        esp = self._criar_especificacao()
+        op = self._abrir_ordem(esp)
+        r = self.client.get(f"/api/producao/ordens/{op}/batch-record.pdf")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/pdf")
+        self.assertTrue(r.content.startswith(b"%PDF"))
+
+    def test_analise_endpoint(self):
+        esp = self._criar_especificacao()
+        op = self._abrir_ordem(esp)
+        self._patch(f"/api/producao/ordens/{op}/avancar",
+                    {"acao": "status", "novo": "em_producao"})
+        self._post(f"/api/producao/ordens/{op}/campo",
+                   {"chave_campo": "peso_ativo", "valor": "600"})  # gera desvio
+        r = self.client.get("/api/producao/analise")
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(r.json()["total_desvios"], 1)
+        self.assertTrue(r.json()["pareto_tipo"])

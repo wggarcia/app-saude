@@ -113,6 +113,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--muted);display:block;margin
     </div>
     <div class="tabs">
       <button class="tab-btn active" id="tb-ordens" onclick="setTab('ordens')">Ordens</button>
+      <button class="tab-btn" id="tb-analise" onclick="setTab('analise')">Análise</button>
       <button class="tab-btn" id="tb-mbr" onclick="setTab('mbr')">Especificações (MBR)</button>
     </div>
   </div>
@@ -134,6 +135,14 @@ label.lbl{font-size:12px;font-weight:600;color:var(--muted);display:block;margin
   <div class="tab-panel" id="tab-exec">
     <button class="btn btn-ghost" onclick="setTab('ordens')" style="margin-bottom:16px">← Voltar às ordens</button>
     <div id="execArea"></div>
+  </div>
+
+  <!-- ANÁLISE -->
+  <div class="tab-panel" id="tab-analise">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Análise de desvios — melhoria contínua</div><div class="mini">Pareto dos tipos de erro e campos que mais geram retrabalho.</div></div>
+      <div class="card-body" id="analiseArea"><div class="empty">Carregando…</div></div>
+    </div>
   </div>
 
   <!-- MBR -->
@@ -185,6 +194,35 @@ label.lbl{font-size:12px;font-weight:600;color:var(--muted);display:block;margin
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalSig')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarAssinatura()">Assinar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal CAPA (tratamento de desvio) -->
+<div class="modal-bg" id="modalCapa">
+  <div class="modal">
+    <h3>Tratar desvio (CAPA)</h3>
+    <div><label class="lbl">Resolução / justificativa (BPF)</label><textarea class="inp" id="capaResol" rows="2"></textarea></div>
+    <div id="capaObrig" style="margin-top:12px">
+      <div class="grid2">
+        <div><label class="lbl">Categoria da causa-raiz</label><select class="inp" id="capaCausa">
+          <option value="">—</option>
+          <option value="humano">Erro humano / operação</option>
+          <option value="processo">Processo / procedimento</option>
+          <option value="equipamento">Equipamento / instrumento</option>
+          <option value="material">Material / insumo</option>
+          <option value="sistema">Sistema / digitação</option>
+          <option value="outro">Outro</option>
+        </select></div>
+        <div></div>
+        <div><label class="lbl">Ação corretiva (agora)</label><textarea class="inp" id="capaCorr" rows="2"></textarea></div>
+        <div><label class="lbl">Ação preventiva (recorrência)</label><textarea class="inp" id="capaPrev" rows="2"></textarea></div>
+      </div>
+      <p class="mini" style="margin-top:8px">Desvios de severidade alta/crítica exigem a categoria da causa-raiz.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCapa')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCapa()">Resolver desvio</button>
     </div>
   </div>
 </div>
@@ -249,9 +287,32 @@ function setTab(t){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   document.getElementById('tb-ordens').classList.toggle('active',t==='ordens');
+  document.getElementById('tb-analise').classList.toggle('active',t==='analise');
   document.getElementById('tb-mbr').classList.toggle('active',t==='mbr');
   if(t==='ordens')carregarOrdens();
+  if(t==='analise')carregarAnalise();
   if(t==='mbr')carregarMbr();
+}
+const TIPO_LABEL={faixa:'Fora da faixa',calculo:'Erro de cálculo',campo_ausente:'Campo ausente',sequencia:'Fora de sequência',assinatura:'Assinatura ausente',anomalia_ia:'Anomalia (IA)'};
+const CAUSA_LABEL={humano:'Erro humano',processo:'Processo',equipamento:'Equipamento',material:'Material',sistema:'Sistema/digitação',outro:'Outro'};
+async function carregarAnalise(){
+  const r=await api('/api/producao/analise');if(!r)return;const a=r.data;
+  if(!a.total_desvios){document.getElementById('analiseArea').innerHTML='<div class="empty">Nenhum desvio registrado ainda. Quando houver, o Pareto aparece aqui.</div>';return;}
+  const max=Math.max(...a.pareto_tipo.map(x=>x.n),1);
+  const bar=(label,n)=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${esc(label)}</span><b>${n}</b></div><div style="height:10px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden"><div style="height:100%;width:${Math.round(n/max*100)}%;background:var(--accent)"></div></div></div>`;
+  const pareto=a.pareto_tipo.map(x=>bar(TIPO_LABEL[x.tipo]||x.tipo,x.n)).join('');
+  const campos=a.top_campos.length?`<table><thead><tr><th>Campo</th><th>Desvios</th></tr></thead><tbody>${a.top_campos.map(c=>`<tr><td>${esc(c.campo)}</td><td>${c.n}</td></tr>`).join('')}</tbody></table>`:'<div class="mini">Sem campos recorrentes.</div>';
+  const causa=a.por_causa_raiz.length?a.por_causa_raiz.map(c=>`<span class="pill pill-em_producao" style="margin:3px">${esc(CAUSA_LABEL[c.categoria_causa]||c.categoria_causa)}: ${c.n}</span>`).join(''):'<div class="mini">Sem CAPA registrado ainda.</div>';
+  document.getElementById('analiseArea').innerHTML=`
+    <div class="kpi-row" style="margin-bottom:18px">
+      <div class="kpi"><div class="kpi-val">${a.total_desvios}</div><div class="kpi-lbl">Desvios totais</div></div>
+      <div class="kpi ok"><div class="kpi-val">${a.taxa_resolucao??'—'}%</div><div class="kpi-lbl">Taxa de resolução</div></div>
+    </div>
+    <div class="grid2">
+      <div><div class="card-title" style="margin-bottom:10px">Pareto — tipos de erro</div>${pareto}</div>
+      <div><div class="card-title" style="margin-bottom:10px">Campos mais problemáticos</div>${campos}
+        <div class="card-title" style="margin:16px 0 10px">Causa-raiz (CAPA)</div>${causa}</div>
+    </div>`;
 }
 
 // ── KPIs ──────────────────────────────────────────────
@@ -342,6 +403,7 @@ function renderExecucao(){
     <div class="page-header" style="margin-bottom:16px">
       <div><div class="page-title">OP ${esc(o.numero_op)} — ${esc(o.produto)}</div>
       <div class="page-sub">Lote ${esc(o.numero_lote_fabricacao||'—')} · ${esc(o.tamanho_lote)} ${esc(o.unidade)} · <span class="pill pill-${o.status}">${esc(o.status_label)}</span></div></div>
+      <a class="btn btn-ghost" href="/api/producao/ordens/${o.id}/batch-record.pdf" target="_blank" rel="noopener">📄 Batch Record (PDF)</a>
     </div>
     ${bloqueio}
     <div class="stepper">${stepper}</div>
@@ -391,10 +453,24 @@ async function mudarStatus(novo,extra={}){
 function enviarRevisao(){const rr=v('rendReal');mudarStatus('revisao_qualidade',{rendimento_real:rr});}
 function liberar(){if(confirm('Confirmar liberação do lote? Esta ação conclui a ordem.'))mudarStatus('liberado');}
 function rejeitar(){const m=prompt('Motivo da rejeição do lote (BPF):');if(m)mudarStatus('rejeitado',{motivo:m});}
-async function resolverDesvio(id){
-  const just=prompt('Justificativa / ação corretiva (BPF):');if(!just)return;
-  const r=await api('/api/producao/ordens/'+ORDEM.id+'/desvios',{method:'PATCH',body:JSON.stringify({desvio_id:id,resolucao:just})});
-  if(r){abrirExecucao(ORDEM.id);carregarKpis();}
+let DESVIO_ATUAL=null;
+function resolverDesvio(id){
+  DESVIO_ATUAL=id;
+  const dv=(ORDEM.desvios||[]).find(d=>d.id===id);
+  const critico=dv&&['alta','critica'].includes(dv.severidade);
+  document.getElementById('capaObrig').style.display=critico?'block':'none';
+  ['capaResol','capaCorr','capaPrev'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('capaCausa').value='';
+  abrirModal('modalCapa');
+}
+async function confirmarCapa(){
+  const body={desvio_id:DESVIO_ATUAL,resolucao:v('capaResol'),categoria_causa:v('capaCausa'),
+    acao_corretiva:v('capaCorr'),acao_preventiva:v('capaPrev')};
+  if(!body.resolucao){alert('Descreva a resolução.');return;}
+  const r=await api('/api/producao/ordens/'+ORDEM.id+'/desvios',{method:'PATCH',body:JSON.stringify(body)});
+  if(!r)return;
+  if(r.status>=400){alert(r.data.erro||'Erro');return;}
+  fecharModal('modalCapa');abrirExecucao(ORDEM.id);carregarKpis();
 }
 
 // ── Assinatura ────────────────────────────────────────

@@ -899,6 +899,8 @@ from api.views_producao_industrial import (
     api_producao_assinar,
     api_producao_desvios,
     api_producao_kpis,
+    api_producao_batch_record,
+    api_producao_analise,
 )
 from api.views_hospital_opme import (
     api_opme_catalogo,
@@ -2497,6 +2499,9 @@ urlpatterns = [
     path('api/producao/ordens/<int:op_id>/desvios/',                      api_producao_desvios),
     path('api/producao/kpis',                                             api_producao_kpis),
     path('api/producao/kpis/',                                            api_producao_kpis),
+    path('api/producao/analise',                                          api_producao_analise),
+    path('api/producao/analise/',                                         api_producao_analise),
+    path('api/producao/ordens/<int:op_id>/batch-record.pdf',             api_producao_batch_record),
     path('api/governanca/metodologia', api_metodologia_epidemiologica),
     path('api/governanca/matriz-decisao', api_matriz_decisao),
     path('api/governanca/auditoria', api_auditoria_institucional),

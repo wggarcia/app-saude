@@ -189,6 +189,44 @@ def api_producao_especificacao_detail(request, esp_id):
                    f"MBR inativado: {esp.codigo_produto} v{esp.versao}", request)
             return JsonResponse({"ok": True, "ativo": False})
 
+        # Mudança estrutural = alteração de etapas, campos ou faixas de rendimento.
+        mudanca_estrutural = (
+            isinstance(d.get("etapas"), list) or isinstance(d.get("campos"), list) or
+            any(k in d for k in ("faixa_rendimento_min", "faixa_rendimento_max",
+                                 "rendimento_teorico", "tamanho_lote_padrao"))
+        )
+        tem_ordens = esp.ordens.exists()
+
+        # Controle de mudança (BPF): se o MBR já foi usado em ordens e a mudança
+        # é estrutural, NÃO sobrescreve — cria uma nova versão e inativa a antiga.
+        # A rastreabilidade das ordens antigas fica preservada na versão original.
+        if mudanca_estrutural and tem_ordens:
+            nova_versao = (EspecificacaoProducao.objects
+                           .filter(empresa=empresa, codigo_produto=esp.codigo_produto)
+                           .order_by("-versao").first().versao) + 1
+            nova = EspecificacaoProducao.objects.create(
+                empresa=empresa, codigo_produto=esp.codigo_produto,
+                nome=d.get("nome", esp.nome), concentracao=d.get("concentracao", esp.concentracao),
+                forma_farmaceutica=d.get("forma_farmaceutica", esp.forma_farmaceutica),
+                unidade_rendimento=d.get("unidade_rendimento", esp.unidade_rendimento),
+                tamanho_lote_padrao=_dec(d.get("tamanho_lote_padrao"), esp.tamanho_lote_padrao),
+                rendimento_teorico=_dec(d.get("rendimento_teorico"), esp.rendimento_teorico),
+                faixa_rendimento_min=_dec(d.get("faixa_rendimento_min"), esp.faixa_rendimento_min),
+                faixa_rendimento_max=_dec(d.get("faixa_rendimento_max"), esp.faixa_rendimento_max),
+                etapas=d["etapas"] if isinstance(d.get("etapas"), list) else esp.etapas,
+                campos=d["campos"] if isinstance(d.get("campos"), list) else esp.campos,
+                versao=nova_versao, ativo=True,
+            )
+            esp.ativo = False
+            esp.save(update_fields=["ativo", "atualizado_em"])
+            _audit(empresa, "editar", "EspecificacaoProducao", nova.id,
+                   f"Controle de mudança: {esp.codigo_produto} v{esp.versao} → v{nova_versao} "
+                   f"(mudança estrutural com ordens existentes)", request,
+                   dados_antes={"versao": esp.versao}, dados_depois={"versao": nova_versao})
+            return JsonResponse({"ok": True, "nova_versao": nova_versao, "id": nova.id,
+                                 "controle_mudanca": True})
+
+        # Sem ordens ou mudança não-estrutural: edita no lugar.
         for campo_attr in ("nome", "concentracao", "forma_farmaceutica", "unidade_rendimento"):
             if campo_attr in d:
                 setattr(esp, campo_attr, d[campo_attr])
@@ -387,6 +425,12 @@ def api_producao_preencher_campo(request, op_id):
             resultado["mensagem"] = (resultado["mensagem"] + " " + anomalia["mensagem"]).strip()
 
     with transaction.atomic():
+        # ALCOA+: captura o valor anterior ANTES de sobrescrever, para a trilha
+        # de integridade de dados (quem mudou o quê, quando, de → para).
+        anterior = RegistroCampoProducao.objects.filter(
+            ordem=ordem, chave_campo=chave).values_list("valor", flat=True).first()
+        valor_novo = "" if valor is None else str(valor)
+
         reg, _criado = RegistroCampoProducao.objects.update_or_create(
             ordem=ordem, chave_campo=chave,
             defaults={
@@ -394,7 +438,7 @@ def api_producao_preencher_campo(request, op_id):
                 "rotulo": campo_spec.get("rotulo") or chave,
                 "etapa": campo_spec.get("etapa") or "",
                 "tipo": campo_spec.get("tipo") or "numero",
-                "valor": "" if valor is None else str(valor),
+                "valor": valor_novo,
                 "unidade": campo_spec.get("unidade") or "",
                 "status_validacao": resultado["status"],
                 "fora_faixa": resultado["fora_faixa"],
@@ -404,6 +448,15 @@ def api_producao_preencher_campo(request, op_id):
                 "preenchido_por": _usuario(request),
             },
         )
+
+        # Registro imutável da alteração — dado nunca é apagado, só versionado
+        # na trilha (princípio ALCOA+ de integridade de dados farmacêutica).
+        if (anterior or "") != valor_novo:
+            _audit(empresa, "editar", "RegistroCampoProducao", reg.id,
+                   f"OP {ordem.numero_op}: campo '{campo_spec.get('rotulo') or chave}' "
+                   f"[{resultado['status']}]", request,
+                   dados_antes={"valor": anterior or ""},
+                   dados_depois={"valor": valor_novo})
 
         # 3) Abre/limpa desvio conforme o resultado.
         desvio_existente = DesvioProducao.objects.filter(
@@ -661,6 +714,21 @@ def api_producao_assinar(request, op_id):
             "faltando": check["faltando"], "com_erro": check["com_erro"],
         }, status=422)
 
+    # Segregação de funções (dupla checagem BPF): quem executou não pode ser
+    # quem confere/libera a mesma etapa. Bloqueia a mesma pessoa assinando dois
+    # papéis distintos na mesma etapa.
+    reg_ass = (d.get("assinante_registro") or "").strip()
+    conflito = ordem.assinaturas.filter(etapa=etapa).exclude(papel=papel)
+    for outra in conflito:
+        mesmo_nome = outra.assinante_nome.strip().lower() == nome.lower()
+        mesmo_reg = reg_ass and outra.assinante_registro.strip().lower() == reg_ass.lower()
+        if mesmo_nome or mesmo_reg:
+            return JsonResponse({
+                "ok": False,
+                "erro": (f"Segregação de funções: {nome} já assinou esta etapa como "
+                         f"'{outra.get_papel_display()}'. Quem executa não pode conferir/liberar."),
+            }, status=422)
+
     # Snapshot canônico do que está sendo assinado.
     campos_snapshot = {c.get("chave"): registros.get(c.get("chave"), "")
                        for c in esp.campos_da_etapa(etapa)}
@@ -714,6 +782,8 @@ def api_producao_desvios(request, op_id):
             "valor_encontrado": dv.valor_encontrado, "valor_esperado": dv.valor_esperado,
             "descricao": dv.descricao, "detectado_por": dv.detectado_por,
             "resolvido": dv.resolvido, "resolucao": dv.resolucao,
+            "categoria_causa": dv.categoria_causa, "acao_corretiva": dv.acao_corretiva,
+            "acao_preventiva": dv.acao_preventiva,
             "criado_em": dv.criado_em.isoformat(),
         } for dv in ordem.desvios.all()]
         return JsonResponse({"desvios": dados})
@@ -726,13 +796,24 @@ def api_producao_desvios(request, op_id):
         resolucao = (d.get("resolucao") or "").strip()
         if not resolucao:
             return JsonResponse({"erro": "Descreva a resolução/justificativa (BPF)."}, status=400)
+        # CAPA (BPF): desvio de severidade alta/crítica exige causa-raiz + ação.
+        categoria = (d.get("categoria_causa") or "").strip()
+        if dv.severidade in ("alta", "critica") and not categoria:
+            return JsonResponse(
+                {"erro": "Desvio de severidade alta/crítica exige a categoria da causa-raiz (CAPA)."},
+                status=400)
         dv.resolvido = True
         dv.resolucao = resolucao
+        dv.categoria_causa = categoria
+        dv.acao_corretiva = (d.get("acao_corretiva") or "").strip()
+        dv.acao_preventiva = (d.get("acao_preventiva") or "").strip()
         dv.resolvido_por = _usuario(request)
         dv.resolvido_em = timezone.now()
-        dv.save(update_fields=["resolvido", "resolucao", "resolvido_por", "resolvido_em"])
+        dv.save(update_fields=["resolvido", "resolucao", "categoria_causa", "acao_corretiva",
+                               "acao_preventiva", "resolvido_por", "resolvido_em"])
         _audit(empresa, "editar", "DesvioProducao", dv.id,
-               f"OP {ordem.numero_op}: desvio {dv.tipo} resolvido — {resolucao}", request)
+               f"OP {ordem.numero_op}: desvio {dv.tipo} resolvido [causa: {categoria or 'n/d'}] "
+               f"— {resolucao}", request)
         return JsonResponse({"ok": True})
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
@@ -779,4 +860,63 @@ def api_producao_kpis(request):
             "amostras": modelo_ia.n_amostras if modelo_ia else 0,
             "em_bootstrap": modelo_ia.dataset_sintetico if modelo_ia else True,
         },
+    })
+
+
+# ── Batch Record (PDF) ────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_producao_batch_record(request, op_id):
+    """GET → PDF do registro de lote (dossiê auditável)."""
+    empresa = _farm(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito ao módulo Farmácia"}, status=403)
+    from django.http import HttpResponse
+    from .models import OrdemProducaoIndustrial
+    from .pdf_producao import gerar_batch_record
+
+    ordem = (OrdemProducaoIndustrial.objects
+             .filter(empresa=empresa, id=op_id).select_related("especificacao").first())
+    if not ordem:
+        return JsonResponse({"erro": "Ordem não encontrada"}, status=404)
+
+    pdf = gerar_batch_record(ordem)
+    _audit(empresa, "editar", "OrdemProducaoIndustrial", ordem.id,
+           f"OP {ordem.numero_op}: batch record (PDF) emitido", request)
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="BatchRecord_{ordem.numero_op}.pdf"'
+    return resp
+
+
+# ── Análise / melhoria contínua ───────────────────────────────────────────────
+
+@csrf_exempt
+def api_producao_analise(request):
+    """GET painel de análise: Pareto de desvios, campos mais problemáticos, CAPA."""
+    empresa = _farm(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito ao módulo Farmácia"}, status=403)
+    from .models import DesvioProducao
+    from django.db.models import Count
+
+    desvios = DesvioProducao.objects.filter(empresa=empresa)
+
+    # Pareto por tipo (ordenado do maior).
+    pareto_tipo = list(desvios.values("tipo").annotate(n=Count("id")).order_by("-n"))
+    # Campos que mais geram desvio.
+    top_campos = list(desvios.exclude(campo="")
+                      .values("campo").annotate(n=Count("id")).order_by("-n")[:10])
+    # Causa-raiz (CAPA) dos resolvidos.
+    por_causa = list(desvios.filter(resolvido=True).exclude(categoria_causa="")
+                     .values("categoria_causa").annotate(n=Count("id")).order_by("-n"))
+
+    total = desvios.count()
+    resolvidos = desvios.filter(resolvido=True).count()
+    return JsonResponse({
+        "total_desvios": total,
+        "resolvidos": resolvidos,
+        "taxa_resolucao": round((resolvidos / total) * 100, 1) if total else None,
+        "pareto_tipo": pareto_tipo,
+        "top_campos": top_campos,
+        "por_causa_raiz": por_causa,
     })
