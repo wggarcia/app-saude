@@ -22,6 +22,7 @@ Referência: Manual de Transmissão SNGPC disponível em:
 """
 
 import re
+import base64
 import json
 import hashlib
 import requests
@@ -54,8 +55,12 @@ from .views_dashboard import _empresa_autenticada
 from .access_control import api_requer_feature
 
 # ─── Endpoints ANVISA ──────────────────────────────────────────────────────────
-SNGPC_PROD  = "https://www.anvisa.gov.br/sngpc-ws/envio"
-SNGPC_HML   = "https://hom.anvisa.gov.br/sngpc-ws/envio"
+# SOAP 1.1 — Manual SNGPC v3, webservice SngpcService
+URL_SNGPC_HOM = "https://hom-sngpc.anvisa.gov.br/SngpcWS/SngpcService"
+URL_SNGPC_PRD = "https://sngpc.anvisa.gov.br/SngpcWS/SngpcService"
+# Aliases mantidos por compatibilidade interna (não remover)
+SNGPC_PROD  = URL_SNGPC_PRD
+SNGPC_HML   = URL_SNGPC_HOM
 
 # Versão do formato SNGPC
 SNGPC_VERSAO = "3.0"
@@ -131,7 +136,7 @@ def gerar_xml_sngpc(empresa: Empresa, registros, periodo_ini: date, periodo_fim:
 
     root = Element("SngpcFile",
                    versao=SNGPC_VERSAO,
-                   xmlns="http://www.anvisa.gov.br/sngpc/schema")
+                   xmlns="http://www.anvisa.gov.br/sngpc/v1/schema")
 
     # Header
     header = SubElement(root, "Header")
@@ -200,62 +205,72 @@ def gerar_xml_sngpc(empresa: Empresa, registros, periodo_ini: date, periodo_fim:
     return _xml_str(root)
 
 
-# ─── Transmissão ao ANVISA ────────────────────────────────────────────────────
+# ─── Transmissão ao ANVISA — SOAP 1.1 ────────────────────────────────────────
+
+def _transmitir_soap(xml_bytes: bytes, usuario: str, senha: str, cnpj: str, homologacao: bool = True) -> str:
+    """
+    Envia o arquivo XML ao webservice SNGPC via envelope SOAP 1.1.
+    Retorna o corpo da resposta como string.
+    Lança requests.HTTPError em HTTP != 2xx, Timeout, ConnectionError em
+    falhas de rede (tratados em transmitir_sngpc).
+    """
+    url = URL_SNGPC_HOM if homologacao else URL_SNGPC_PRD
+    xml_b64 = base64.b64encode(xml_bytes).decode()
+    soap_body = f"""<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:sngpc="http://www.anvisa.gov.br/sngpc/v1/schema">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <sngpc:enviarArquivo>
+      <sngpc:usuarioCpf>{usuario}</sngpc:usuarioCpf>
+      <sngpc:usuarioSenha>{senha}</sngpc:usuarioSenha>
+      <sngpc:cnpjFarmacia>{cnpj}</sngpc:cnpjFarmacia>
+      <sngpc:arquivo>{xml_b64}</sngpc:arquivo>
+    </sngpc:enviarArquivo>
+  </soapenv:Body>
+</soapenv:Envelope>"""
+    resp = requests.post(
+        url,
+        data=soap_body.encode("utf-8"),
+        headers={
+            "Content-Type": "text/xml; charset=utf-8",
+            "SOAPAction": "enviarArquivo",
+            "User-Agent": "SoloCRT/2.0 SNGPC-Client",
+        },
+        timeout=30,
+        verify=True,
+    )
+    resp.raise_for_status()
+    return resp.text
+
 
 def transmitir_sngpc(empresa: Empresa, xml_content: str, usuario: str, senha: str, ambiente: str = "homologacao") -> dict:
     """
-    Envia arquivo XML SNGPC ao webservice ANVISA.
+    Gera os bytes do arquivo XML SNGPC e envia via SOAP 1.1 ao webservice ANVISA.
     Retorna dict com resultado da transmissão.
     """
-    endpoint = SNGPC_PROD if ambiente == "producao" else SNGPC_HML
     cnpj = _cnpj(getattr(empresa, "cnpj", ""))
+    homologacao = (ambiente != "producao")
 
     try:
-        files = {
-            "arquivo": (f"SNGPC_{cnpj}_{date.today().isoformat()}.xml",
-                        xml_content.encode("utf-8"),
-                        "application/xml")
-        }
-        data = {
-            "cnpj":    cnpj,
-            "usuario": usuario,
-            "versao":  SNGPC_VERSAO,
-        }
-        resp = requests.post(
-            endpoint,
-            files=files,
-            data=data,
-            auth=(usuario, senha),
-            headers={"User-Agent": "SoloCRT/2.0 SNGPC-Client"},
-            timeout=120,
-            verify=True,
-        )
+        xml_bytes = xml_content.encode("utf-8")
+        resp_text = _transmitir_soap(xml_bytes, usuario, senha, cnpj, homologacao)
 
-        if resp.status_code == 200:
-            # ANVISA retorna protocolo no corpo da resposta
-            protocolo = ""
-            if "protocolo" in resp.text.lower():
-                import re as _re
-                m = _re.search(r"protocolo[:\s]+([0-9A-Z\-]+)", resp.text, _re.IGNORECASE)
-                protocolo = m.group(1) if m else resp.text[:100]
+        # Extrai número de protocolo do envelope SOAP de retorno
+        import re as _re
+        match = _re.search(r"<(?:ns\d+:)?(?:protocolo|numeroProtocolo)>([^<]+)</", resp_text)
+        protocolo = match.group(1).strip() if match else ""
 
-            return {
-                "ok": True,
-                "protocolo": protocolo,
-                "status_http": resp.status_code,
-                "retorno_anvisa": resp.text[:2000],
-                "transmitido_em": timezone.now().isoformat(),
-            }
-        else:
-            return {
-                "ok": False,
-                "status_http": resp.status_code,
-                "erro": f"ANVISA retornou HTTP {resp.status_code}",
-                "retorno_anvisa": resp.text[:2000],
-            }
+        return {
+            "ok": True,
+            "protocolo": protocolo,
+            "retorno_anvisa": resp_text[:2000],
+            "transmitido_em": timezone.now().isoformat(),
+        }
 
     except requests.Timeout:
-        return {"ok": False, "erro": "Timeout (120s) ao conectar ao webservice ANVISA SNGPC."}
+        return {"ok": False, "erro": "Timeout (30s) ao conectar ao webservice ANVISA SNGPC."}
     except requests.ConnectionError as e:
         return {"ok": False, "erro": f"Falha de conexão com ANVISA: {str(e)[:200]}"}
     except Exception as e:

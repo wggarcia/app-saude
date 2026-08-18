@@ -3,6 +3,7 @@ Views para rastreabilidade de lotes de medicamentos (FEFO) e prescrições médi
 """
 import json
 from datetime import date, timedelta
+from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import LoteMedicamento, ItemFarmacia, FornecedorFarmacia, MovimentoEstoque
@@ -95,33 +96,34 @@ def api_lotes_farmacia(request):
 
         qtd = float(data.get("quantidade_inicial", 0))
 
-        lote = LoteMedicamento.objects.create(
-            empresa=empresa,
-            item=item,
-            numero_lote=data.get("numero_lote", ""),
-            fabricante=data.get("fabricante", ""),
-            data_fabricacao=data.get("data_fabricacao") or None,
-            data_validade=data_val,
-            quantidade_inicial=qtd,
-            quantidade_atual=qtd,
-            nota_fiscal=data.get("nota_fiscal", ""),
-            fornecedor=fornecedor,
-        )
+        with transaction.atomic():
+            lote = LoteMedicamento.objects.create(
+                empresa=empresa,
+                item=item,
+                numero_lote=data.get("numero_lote", ""),
+                fabricante=data.get("fabricante", ""),
+                data_fabricacao=data.get("data_fabricacao") or None,
+                data_validade=data_val,
+                quantidade_inicial=qtd,
+                quantidade_atual=qtd,
+                nota_fiscal=data.get("nota_fiscal", ""),
+                fornecedor=fornecedor,
+            )
 
-        # Atualizar estoque do item
-        anterior = float(item.estoque_atual)
-        item.estoque_atual = float(item.estoque_atual) + qtd
-        item.save()
+            # Atualizar estoque do item
+            anterior = float(item.estoque_atual)
+            item.estoque_atual = float(item.estoque_atual) + qtd
+            item.save()
 
-        MovimentoEstoque.objects.create(
-            empresa=empresa,
-            item=item,
-            tipo="entrada",
-            quantidade=qtd,
-            motivo=f"Entrada lote {lote.numero_lote}",
-            estoque_anterior=anterior,
-            estoque_posterior=float(item.estoque_atual),
-        )
+            MovimentoEstoque.objects.create(
+                empresa=empresa,
+                item=item,
+                tipo="entrada",
+                quantidade=qtd,
+                motivo=f"Entrada lote {lote.numero_lote}",
+                estoque_anterior=anterior,
+                estoque_posterior=float(item.estoque_atual),
+            )
 
         return JsonResponse({"lote": _lote_to_dict(lote)}, status=201)
 
@@ -163,17 +165,18 @@ def api_lote_farmacia_detalhe(request, lote_id):
         # não têm ItemFarmacia associado (item=None) — nesse caso não há estoque de
         # item a estornar aqui.
         if lote.quantidade_atual > 0 and lote.item_id:
-            item = lote.item
-            anterior = float(item.estoque_atual)
-            item.estoque_atual = max(0, float(item.estoque_atual) - float(lote.quantidade_atual))
-            item.save()
-            MovimentoEstoque.objects.create(
-                empresa=empresa, item=item, tipo="saida",
-                quantidade=float(lote.quantidade_atual),
-                motivo=f"Exclusão lote {lote.numero_lote}",
-                estoque_anterior=anterior,
-                estoque_posterior=float(item.estoque_atual),
-            )
+            with transaction.atomic():
+                item = lote.item
+                anterior = float(item.estoque_atual)
+                item.estoque_atual = max(0, float(item.estoque_atual) - float(lote.quantidade_atual))
+                item.save()
+                MovimentoEstoque.objects.create(
+                    empresa=empresa, item=item, tipo="saida",
+                    quantidade=float(lote.quantidade_atual),
+                    motivo=f"Exclusão lote {lote.numero_lote}",
+                    estoque_anterior=anterior,
+                    estoque_posterior=float(item.estoque_atual),
+                )
         lote.delete()
         return JsonResponse({"ok": True})
 

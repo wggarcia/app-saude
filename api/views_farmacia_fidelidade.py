@@ -56,6 +56,7 @@ def farmacia_fidelidade_page(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("farmacia.fidelidade")
 def api_fidelidade_clientes(request):
     empresa = _e(request)
     if not empresa:
@@ -95,6 +96,7 @@ def api_fidelidade_clientes(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.fidelidade")
 def api_fidelidade_cliente_detalhe(request, cpf):
     empresa = _e(request)
     if not empresa:
@@ -126,6 +128,7 @@ def api_fidelidade_cliente_detalhe(request, cpf):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("farmacia.fidelidade")
 def api_fidelidade_acumular(request):
     empresa = _e(request)
     if not empresa:
@@ -167,6 +170,7 @@ def api_fidelidade_acumular(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("farmacia.fidelidade")
 def api_fidelidade_resgatar(request):
     empresa = _e(request)
     if not empresa:
@@ -213,6 +217,7 @@ def api_fidelidade_resgatar(request):
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.fidelidade")
 def api_fidelidade_kpis(request):
     empresa = _e(request)
     if not empresa:

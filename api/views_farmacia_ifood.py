@@ -8,7 +8,10 @@ PedidoDelivery automaticamente conforme o pedido avança no iFood.
 """
 import hmac
 import json
+import time as _time
 from decimal import Decimal, InvalidOperation
+
+import requests
 
 from django.http import JsonResponse
 from django.utils import timezone
@@ -18,6 +21,73 @@ from .models import IntegracaoIfood, PedidoDelivery, ItemPedidoDelivery, Medicam
 from .views_farmacia_ecommerce import baixar_estoque_pedido, STATUS_CONFIRMA_BAIXA
 from .access_control import api_requer_gerencia, api_requer_feature
 
+
+# ─── iFood OAuth 2.0 — token cache em memória ─────────────────────────────────
+
+_IFOOD_TOKEN_CACHE: dict = {}  # {config_pk: {"token": str, "expires_at": float}}
+
+
+def _ifood_get_token(config):
+    """Obtém token OAuth2 do iFood Merchant API, com cache em memória."""
+    cache = _IFOOD_TOKEN_CACHE.get(config.pk)
+    if cache and cache["expires_at"] > _time.time() + 30:
+        return cache["token"]
+    try:
+        resp = requests.post(
+            "https://merchant-api.ifood.com.br/authentication/v1.0/oauth/token",
+            data={
+                "grantType": "client_credentials",
+                "clientId": config.client_id,
+                "clientSecret": config.client_secret,
+            },
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            _IFOOD_TOKEN_CACHE[config.pk] = {
+                "token": data.get("accessToken", ""),
+                "expires_at": _time.time() + data.get("expiresIn", 3600),
+            }
+            return data.get("accessToken", "")
+    except Exception:
+        pass
+    return None
+
+
+def _ifood_ack_events(config, event_ids):
+    """Confirma recebimento de eventos ao iFood (acknowledgment)."""
+    if not event_ids:
+        return
+    try:
+        token = _ifood_get_token(config)
+        if not token:
+            return
+        requests.post(
+            "https://merchant-api.ifood.com.br/order/v1.0/events/acknowledgment",
+            json=[{"id": eid} for eid in event_ids],
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            timeout=10,
+        )
+    except Exception:
+        pass  # Não-fatal: iFood reenvia o evento caso não receba ack
+
+
+def _ifood_confirm_order(config, order_id):
+    """Envia confirmação de aceite do pedido ao iFood."""
+    try:
+        token = _ifood_get_token(config)
+        if not token:
+            return
+        requests.post(
+            f"https://merchant-api.ifood.com.br/order/v1.0/orders/{order_id}/statuses/confirm",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
+# ─── Helpers gerais ───────────────────────────────────────────────────────────
 
 def _decimal(value, default=Decimal("0")):
     try:
@@ -110,6 +180,9 @@ def api_ifood_webhook(request):
     if not order_id:
         return JsonResponse({"erro": "orderId ausente"}, status=400)
 
+    # Coleta o ID deste evento para acknowledgment ao final
+    event_id = str(data.get("id") or "").strip()
+
     evento = str(data.get("code") or data.get("event") or "PLACED").strip().upper()
     novo_status = STATUS_MAP_IFOOD.get(evento, "aguardando")
 
@@ -161,5 +234,15 @@ def api_ifood_webhook(request):
     if novo_status in STATUS_CONFIRMA_BAIXA and not pedido.estoque_baixado:
         baixar_estoque_pedido(pedido)
         pedido.refresh_from_db()
+
+    # ── iFood outbound: acknowledgment e confirmação de pedido ────────────────
+    # Acknowledgment informa ao iFood que o evento foi recebido com sucesso.
+    processed_event_ids = [event_id] if event_id else []
+    _ifood_ack_events(config, processed_event_ids)
+
+    # Confirmação de aceite enviada quando o evento resulta em CONFIRMED ou
+    # quando o pedido é recém-criado via PLACED (iFood aguarda nosso aceite).
+    if evento == "CONFIRMED" or (criado and evento == "PLACED"):
+        _ifood_confirm_order(config, order_id)
 
     return JsonResponse({"ok": True, "pedido_id": pedido.id, "criado": criado})

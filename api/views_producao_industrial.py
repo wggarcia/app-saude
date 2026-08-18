@@ -472,6 +472,10 @@ def api_producao_preencher_campo(request, op_id):
                     valor_esperado=f"{resultado['min']}–{resultado['max']}",
                     descricao=resultado["mensagem"], detectado_por="sistema",
                 )
+            # Desvio "alta" → bloqueia o avanço da ordem imediatamente.
+            if not ordem.bloqueada:
+                ordem.bloqueada = True
+                ordem.save(update_fields=["bloqueada"])
         elif anomalia.get("anomalia"):
             if not desvio_existente:
                 DesvioProducao.objects.create(
@@ -490,6 +494,14 @@ def api_producao_preencher_campo(request, op_id):
                 desvio_existente.resolvido_em = timezone.now()
                 desvio_existente.save(update_fields=["resolvido", "resolucao",
                                                      "resolvido_por", "resolvido_em"])
+            # Se não há mais desvios alta/critica em aberto, desbloqueia a ordem.
+            if ordem.bloqueada:
+                tem_aberto = DesvioProducao.objects.filter(
+                    ordem=ordem, severidade__in=("critica", "alta"), resolvido=False
+                ).exists()
+                if not tem_aberto:
+                    ordem.bloqueada = False
+                    ordem.save(update_fields=["bloqueada"])
 
         if resultado["status"] == val.OK:
             pia.registrar_aprendizado(empresa, 1)
@@ -814,6 +826,14 @@ def api_producao_desvios(request, op_id):
         _audit(empresa, "editar", "DesvioProducao", dv.id,
                f"OP {ordem.numero_op}: desvio {dv.tipo} resolvido [causa: {categoria or 'n/d'}] "
                f"— {resolucao}", request)
+        # Se não há mais desvios críticos/altos em aberto, desbloqueia a ordem.
+        if ordem.bloqueada:
+            tem_aberto = DesvioProducao.objects.filter(
+                ordem=ordem, severidade__in=("critica", "alta"), resolvido=False
+            ).exists()
+            if not tem_aberto:
+                ordem.bloqueada = False
+                ordem.save(update_fields=["bloqueada"])
         return JsonResponse({"ok": True})
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
@@ -919,4 +939,76 @@ def api_producao_analise(request):
         "pareto_tipo": pareto_tipo,
         "top_campos": top_campos,
         "por_causa_raiz": por_causa,
+    })
+
+
+# ── Controle de Qualidade industrial ─────────────────────────────────────────
+
+@csrf_exempt
+def api_producao_registrar_cq(request, ordem_id):
+    """
+    POST — Registra medições de CQ e deriva aprovado/reprovado.
+    Body: {"medicoes": {"<chave_campo>": <valor_medido>, ...}}
+    As chaves devem corresponder a campos definidos em etapas de CQ da EspecificacaoProducao.
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
+    empresa = _farm(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito ao módulo Farmácia"}, status=403)
+    from .models import OrdemProducaoIndustrial
+
+    try:
+        with transaction.atomic():
+            ordem = (OrdemProducaoIndustrial.objects
+                     .select_for_update()
+                     .select_related("especificacao")
+                     .get(pk=ordem_id, empresa=empresa))
+
+            if ordem.status != "controle_qualidade":
+                return JsonResponse(
+                    {"erro": f"Ordem está em '{ordem.status}', não em controle_qualidade"},
+                    status=400)
+
+            corpo = _body(request)
+            medicoes = corpo.get("medicoes", {})
+            if not medicoes:
+                return JsonResponse({"erro": "Informe as medições no campo 'medicoes'"}, status=400)
+
+            especificacao = ordem.especificacao
+            # Coleta critérios de etapas de CQ da especificação.
+            criterios = []
+            for etapa in (especificacao.etapas or []):
+                chave_etapa = (etapa.get("chave") or "").lower()
+                nome_etapa = (etapa.get("nome") or etapa.get("rotulo") or "").lower()
+                if "cq" in chave_etapa or "qualidade" in nome_etapa or "controle" in nome_etapa:
+                    criterios.extend(etapa.get("campos", []))
+
+            resultado = val.derivar_resultado_cq(criterios, medicoes)
+            aprovado = resultado.get("resultado") == "aprovado"
+
+            ordem.cq_aprovado = aprovado
+            ordem.cq_resultado_json = {
+                "medicoes": medicoes,
+                "resultado": resultado,
+                "timestamp": timezone.now().isoformat(),
+                "registrado_por": _usuario(request),
+            }
+            ordem.save(update_fields=["cq_aprovado", "cq_resultado_json"])
+
+            _audit(empresa, "cq_industrial_registrado", "OrdemProducaoIndustrial",
+                   ordem.id,
+                   f"OP {ordem.numero_op}: CQ {'aprovado' if aprovado else 'reprovado'} "
+                   f"({len(resultado.get('reprovas', []))} reprovações)",
+                   request,
+                   dados_antes={},
+                   dados_depois=ordem.cq_resultado_json)
+
+    except OrdemProducaoIndustrial.DoesNotExist:
+        return JsonResponse({"erro": "Ordem não encontrada"}, status=404)
+
+    return JsonResponse({
+        "ok": True,
+        "cq_aprovado": aprovado,
+        "resultado": resultado,
     })

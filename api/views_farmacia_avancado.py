@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     PacienteFarmacia, ReceitaMedica, InventarioFarmacia, ItemInventario,
     DescarteItemFarmacia, ItemFarmacia, LoteMedicamento, MovimentoEstoque,
@@ -28,6 +28,7 @@ def _e(req):
 # ── Pacientes ──────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("farmacia.avancado")
 def api_pacientes_farmacia(request):
     e = _e(request)
     if not e:
@@ -67,6 +68,7 @@ def api_pacientes_farmacia(request):
 
 
 @require_http_methods(["GET", "PUT", "DELETE"])
+@api_requer_feature("farmacia.avancado")
 def api_paciente_farmacia_detalhe(request, paciente_id):
     e = _e(request)
     if not e:
@@ -117,6 +119,7 @@ def _pac_dict(p):
 # ── Receitas ───────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("farmacia.avancado")
 def api_receitas_farmacia(request):
     e = _e(request)
     if not e:
@@ -146,13 +149,13 @@ def api_receitas_farmacia(request):
         try:
             item = ItemFarmacia.objects.get(pk=data["item_id"], empresa=e)
         except ItemFarmacia.DoesNotExist:
-            pass
+            return JsonResponse({"erro": "item_id inválido ou não encontrado"}, status=400)
     paciente = None
     if data.get("paciente_id"):
         try:
             paciente = PacienteFarmacia.objects.get(pk=data["paciente_id"], empresa=e)
         except PacienteFarmacia.DoesNotExist:
-            pass
+            return JsonResponse({"erro": "paciente_id inválido ou não encontrado"}, status=400)
     r = ReceitaMedica.objects.create(
         empresa=e,
         paciente=paciente,
@@ -174,6 +177,7 @@ def api_receitas_farmacia(request):
 
 
 @require_http_methods(["PUT", "DELETE"])
+@api_requer_feature("farmacia.avancado")
 def api_receita_farmacia_detalhe(request, receita_id):
     e = _e(request)
     if not e:
@@ -225,6 +229,7 @@ def _rec_dict(r):
 # ── Inventário Periódico ───────────────────────────────────────────────────────
 
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("farmacia.avancado")
 def api_inventarios_farmacia(request):
     e = _e(request)
     if not e:
@@ -251,6 +256,7 @@ def api_inventarios_farmacia(request):
 
 
 @require_http_methods(["GET", "PUT"])
+@api_requer_feature("farmacia.avancado")
 def api_inventario_farmacia_detalhe(request, inventario_id):
     e = _e(request)
     if not e:
@@ -281,8 +287,10 @@ def api_inventario_farmacia_detalhe(request, inventario_id):
             ii.diferenca = contado - ii.estoque_sistema
             ii.observacao = c.get("observacao", ii.observacao)
             ii.save()
-        except (ItemInventario.DoesNotExist, KeyError):
-            pass
+        except ItemInventario.DoesNotExist:
+            return JsonResponse({"erro": f"Item de inventário {c.get('id')} não encontrado"}, status=400)
+        except KeyError:
+            return JsonResponse({"erro": "Cada contagem deve ter o campo 'id'"}, status=400)
     # concluir se solicitado
     acao = data.get("acao", "")
     if acao == "concluir" and inv.status == "aberto":
@@ -332,6 +340,7 @@ def _inv_dict(inv):
 # ── Descarte de Medicamentos ───────────────────────────────────────────────────
 
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("farmacia.avancado")
 def api_descartes_farmacia(request):
     e = _e(request)
     if not e:
@@ -393,6 +402,7 @@ def _desc_dict(d):
 # ── KPIs Avançados e Relatórios ────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.avancado")
 def api_farmacia_kpis_avancados(request):
     e = _e(request)
     if not e:
@@ -446,6 +456,7 @@ def api_farmacia_kpis_avancados(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.avancado")
 def api_farmacia_relatorio_curva_abc(request):
     e = _e(request)
     if not e:
@@ -486,6 +497,7 @@ def api_farmacia_relatorio_curva_abc(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.avancado")
 def api_farmacia_relatorio_cmm(request):
     e = _e(request)
     if not e:
@@ -527,6 +539,7 @@ def api_farmacia_relatorio_cmm(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.avancado")
 def api_farmacia_relatorio_giro(request):
     e = _e(request)
     if not e:

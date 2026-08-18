@@ -26,6 +26,16 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+# Suporte a envelope PKCS#7 real (CAdES-BES) — disponível a partir da versão
+# 41.x da biblioteca cryptography. Detectado em import-time para não quebrar
+# instalações mais antigas (fallback para RSA raw com label honesto).
+try:
+    from cryptography.hazmat.primitives.serialization import pkcs7 as _pkcs7_mod
+    from cryptography.hazmat.primitives.serialization import Encoding as _Enc
+    _PKCS7_OK = True
+except ImportError:
+    _PKCS7_OK = False
+
 
 def _assinar_hash_simples(conteudo, identificador):
     """Assinatura funcional SHA-256. Retorna (ok, assinatura_b64, hash_hex, erro)."""
@@ -65,13 +75,28 @@ def _assinar_icp_brasil(conteudo, cred, senha_override=""):
         )
         senha_bytes = senha.encode() if senha else None
 
-        priv_key, _cert, _ = pkcs12.load_key_and_certificates(
+        priv_key, cert, _ = pkcs12.load_key_and_certificates(
             pfx_bytes, senha_bytes, backend=default_backend()
         )
 
-        hash_hex = hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
+        dados_bytes = conteudo.encode("utf-8")
+        hash_hex = hashlib.sha256(dados_bytes).hexdigest()
+
+        # Tenta envelope CAdES-BES (PKCS#7 DER) — validade jurídica mais robusta.
+        if _PKCS7_OK and cert is not None:
+            try:
+                builder = _pkcs7_mod.PKCS7SignatureBuilder()
+                builder = builder.set_data(dados_bytes)
+                builder = builder.add_signer(cert, priv_key, hashes.SHA256())
+                signed_bytes = builder.sign(_Enc.DER, [_pkcs7_mod.PKCS7Options.Binary])
+                assinatura_b64 = base64.b64encode(signed_bytes).decode("utf-8")
+                return True, assinatura_b64, hash_hex, None
+            except Exception:
+                pass  # fallback para RSA raw abaixo
+
+        # Fallback: assinatura RSA raw (PKCS#1 v1.5 SHA-256) — label honesto.
         assinatura_bytes = priv_key.sign(
-            conteudo.encode("utf-8"),
+            dados_bytes,
             padding.PKCS1v15(),
             hashes.SHA256(),
         )
@@ -98,7 +123,15 @@ def assinar_conteudo(conteudo, cred, identificador="", senha_override=""):
     if pfx_b64:
         ok, assinatura, hash_hex, erro = _assinar_icp_brasil(conteudo, cred, senha_override)
         if ok:
-            return True, assinatura, hash_hex, "ICP-Brasil-PKCS7", None
+            # Detecta se o envelope é CAdES-BES (prefixo DER 0x30) ou RSA raw.
+            metodo = "ICP-Brasil-RSA-SHA256"
+            try:
+                raw = base64.b64decode(assinatura[:4] + "==")
+                if raw[0] == 0x30:
+                    metodo = "ICP-Brasil-CAdES-BES"
+            except Exception:
+                pass
+            return True, assinatura, hash_hex, metodo, None
         # falha recuperável (sem biblioteca/erro) → cai para SHA-256
     ok, assinatura, hash_hex, erro = _assinar_hash_simples(conteudo, identificador)
     if ok:

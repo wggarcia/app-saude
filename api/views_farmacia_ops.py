@@ -1,4 +1,5 @@
 import json
+from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from .utils import validar_cpf_cadastro
@@ -231,15 +232,16 @@ def api_movimentos_estoque(request):
         item.estoque_atual -= quantidade
     else:  # ajuste
         item.estoque_atual = quantidade
-    item.save()
-    m = MovimentoEstoque.objects.create(
-        empresa=e, item=item, tipo=tipo,
-        quantidade=quantidade,
-        estoque_anterior=estoque_anterior,
-        estoque_posterior=item.estoque_atual,
-        motivo=data.get("motivo", ""),
-        responsavel=data.get("responsavel", ""),
-    )
+    with transaction.atomic():
+        item.save()
+        m = MovimentoEstoque.objects.create(
+            empresa=e, item=item, tipo=tipo,
+            quantidade=quantidade,
+            estoque_anterior=estoque_anterior,
+            estoque_posterior=item.estoque_atual,
+            motivo=data.get("motivo", ""),
+            responsavel=data.get("responsavel", ""),
+        )
     return JsonResponse({"id": m.id, "estoque_atual": item.estoque_atual}, status=201)
 
 
@@ -273,27 +275,28 @@ def api_dispensacoes_farmacia(request):
     except (KeyError, ItemFarmacia.DoesNotExist):
         return JsonResponse({"erro": "Item não encontrado"}, status=404)
     quantidade = int(data.get("quantidade", 1))
-    ant = item.estoque_atual
-    item.estoque_atual -= quantidade
-    item.save()
     ok_cpf, erro_cpf = validar_cpf_cadastro(data.get("paciente_cpf", ""), e)
     if not ok_cpf:
         return JsonResponse({"erro": erro_cpf}, status=400)
-    MovimentoEstoque.objects.create(
-        empresa=e, item=item, tipo="saida",
-        quantidade=quantidade, estoque_anterior=ant,
-        estoque_posterior=item.estoque_atual,
-        motivo=f"Dispensação para {data.get('paciente_nome', '')}",
-        responsavel=data.get("responsavel", ""),
-    )
-    d = DispensacaoMedicamento.objects.create(
-        empresa=e, item=item,
-        paciente_nome=data.get("paciente_nome", ""),
-        paciente_cpf=data.get("paciente_cpf", ""),
-        quantidade=quantidade,
-        responsavel=data.get("responsavel", ""),
-        observacoes=data.get("observacoes", ""),
-    )
+    with transaction.atomic():
+        ant = item.estoque_atual
+        item.estoque_atual -= quantidade
+        item.save()
+        MovimentoEstoque.objects.create(
+            empresa=e, item=item, tipo="saida",
+            quantidade=quantidade, estoque_anterior=ant,
+            estoque_posterior=item.estoque_atual,
+            motivo=f"Dispensação para {data.get('paciente_nome', '')}",
+            responsavel=data.get("responsavel", ""),
+        )
+        d = DispensacaoMedicamento.objects.create(
+            empresa=e, item=item,
+            paciente_nome=data.get("paciente_nome", ""),
+            paciente_cpf=data.get("paciente_cpf", ""),
+            quantidade=quantidade,
+            responsavel=data.get("responsavel", ""),
+            observacoes=data.get("observacoes", ""),
+        )
     return JsonResponse({"id": d.id}, status=201)
 
 
@@ -372,20 +375,21 @@ def api_pedido_compra_status(request, pedido_id):
     p.status = data.get("status", p.status)
     p.save()
     if p.status == "recebido":
-        for ip in p.itens.select_related("item").all():
-            item = ip.item
-            ant = item.estoque_atual
-            item.estoque_atual += ip.quantidade_solicitada
-            item.save()
-            ip.quantidade_recebida = ip.quantidade_solicitada
-            ip.save()
-            MovimentoEstoque.objects.create(
-                empresa=e, item=item, tipo="entrada",
-                quantidade=ip.quantidade_solicitada,
-                estoque_anterior=ant,
-                estoque_posterior=item.estoque_atual,
-                motivo=f"Recebimento pedido #{p.id}",
-            )
+        with transaction.atomic():
+            for ip in p.itens.select_related("item").all():
+                item = ip.item
+                ant = item.estoque_atual
+                item.estoque_atual += ip.quantidade_solicitada
+                item.save()
+                ip.quantidade_recebida = ip.quantidade_solicitada
+                ip.save()
+                MovimentoEstoque.objects.create(
+                    empresa=e, item=item, tipo="entrada",
+                    quantidade=ip.quantidade_solicitada,
+                    estoque_anterior=ant,
+                    estoque_posterior=item.estoque_atual,
+                    motivo=f"Recebimento pedido #{p.id}",
+                )
     return JsonResponse({"ok": True})
 
 

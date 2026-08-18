@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Case, CharField, F, Sum, Q, Value, When
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -246,14 +246,20 @@ def api_farmacia_estoque(request):
                 Q(registro_anvisa__icontains=q)
             )
 
-        status_filtro = request.GET.get("status", "").strip()
-        if status_filtro == "baixo":
-            qs = qs.filter(
-                quantidade_atual__gt=0,
-                quantidade_minima__gt=0,
+        # Anotação de status_estoque no banco para filtro correto antes da paginação
+        qs = qs.annotate(
+            status_estoque_db=Case(
+                When(quantidade_atual__lte=0, then=Value("critico")),
+                When(quantidade_atual__lte=F("quantidade_minima"), then=Value("critico")),
+                When(quantidade_atual__lte=F("quantidade_minima") * 2, then=Value("baixo")),
+                default=Value("ok"),
+                output_field=CharField(),
             )
-        elif status_filtro == "critico":
-            qs = qs.filter(quantidade_atual__lte=0)
+        )
+
+        status_filtro = request.GET.get("status", "").strip()
+        if status_filtro in ("baixo", "critico", "zerado", "ok"):
+            qs = qs.filter(status_estoque_db=status_filtro)
 
         ativo = request.GET.get("ativo", "").strip()
         if ativo == "1":
@@ -263,10 +269,6 @@ def api_farmacia_estoque(request):
 
         page_qs, meta = _paginar(request, qs)
         medicamentos = [_med_to_dict(m) for m in page_qs]
-
-        # Filtro pós-queryset para status (evita lógica complexa no ORM)
-        if status_filtro in ("baixo", "critico"):
-            medicamentos = [m for m in medicamentos if m["status"] == status_filtro]
 
         return JsonResponse({
             "ok": True,

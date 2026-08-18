@@ -164,9 +164,11 @@ def pode_transicionar_status(ordem, especificacao, novo_status, contexto: dict) 
         rend = contexto.get("rendimento")
         if rend and rend.get("aplicavel") and not rend.get("dentro_faixa"):
             motivos.append(rend.get("mensagem", "Rendimento fora da faixa."))
-        cq = contexto.get("cq")
-        if cq and cq.get("resultado") == "reprovado":
-            motivos.append("Controle de qualidade reprovado: " + "; ".join(cq.get("reprovas", [])))
+        # Verifica o campo cq_aprovado diretamente na ordem (campo real, não contexto efêmero).
+        if ordem.cq_aprovado is None:
+            motivos.append("Registre as medições de CQ antes de avançar para revisão.")
+        elif not ordem.cq_aprovado:
+            motivos.append("CQ reprovado — registre desvio, resolva CAPA e reregistre o CQ.")
 
     # revisao_qualidade → liberado: assinatura da GQ
     elif atual == "revisao_qualidade" and novo_status == "liberado":

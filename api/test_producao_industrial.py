@@ -184,6 +184,12 @@ class ProducaoIndustrialTest(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(OrdemProducaoIndustrial.objects.get(id=op).status, "controle_qualidade")
 
+        # Registra medições de CQ (etapas de teste não têm critérios → aprovado trivialmente).
+        r = self._post(f"/api/producao/ordens/{op}/cq",
+                       {"medicoes": {"peso_ativo": "500", "peso_nucleo": "600"}})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(r.json()["cq_aprovado"])
+
         # CQ → revisão (rendimento dentro da faixa: 99.500/100.000 = 99,5%)
         r = self._patch(f"/api/producao/ordens/{op}/avancar",
                         {"acao": "status", "novo": "revisao_qualidade",

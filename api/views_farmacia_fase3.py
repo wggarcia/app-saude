@@ -12,12 +12,12 @@ from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Sum, Q
+from django.db.models import Count, Sum, Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import EstoqueMovimento, MedicamentoFarmacia, Dispensacao
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
@@ -67,7 +67,7 @@ _INTERACOES = [
     {"a": "carbamazepina",  "b": "eritromicina",   "risco": "alto",   "efeito": "Toxicidade por carbamazepina"},
     {"a": "tacrolimus",     "b": "fluconazol",     "risco": "alto",   "efeito": "Nefrotoxicidade / imunossupressão excessiva"},
     {"a": "ciclosporina",   "b": "sinvastatina",   "risco": "alto",   "efeito": "Risco de miopatia / rabdomiólise"},
-    {"a": "metotexato",     "b": "ibuprofeno",     "risco": "alto",   "efeito": "Toxicidade por metotrexato"},
+    {"a": "metotrexato",    "b": "ibuprofeno",     "risco": "alto",   "efeito": "Toxicidade por metotrexato"},
     {"a": "rivaroxabana",   "b": "aspirina",       "risco": "medio",  "efeito": "Risco aumentado de hemorragia"},
     {"a": "alopurinol",     "b": "azatioprina",    "risco": "alto",   "efeito": "Toxicidade por azatioprina — inibição do metabolismo"},
 ]
@@ -109,6 +109,7 @@ def verificar_interacoes(principios_ativos: list[str]) -> list[dict]:
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("farmacia.ia")
 def api_verificar_interacoes(request):
     """Verifica interações entre princípios ativos de uma lista de medicamentos."""
     empresa = _empresa_autenticada(request)
@@ -202,6 +203,7 @@ def _tendencia_linear(valores: list[float]) -> float:
 
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.analytics")
 def api_farmacia_previsao_demanda(request):
     """CMM + EOQ + score de ruptura + tendência para todos os medicamentos."""
     empresa = _empresa_autenticada(request)
@@ -214,24 +216,43 @@ def api_farmacia_previsao_demanda(request):
     meds = MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True)
     resultado = []
 
+    # Pré-agrega CMM total para evitar N+1 query por medicamento
+    desde_cmm = date.today() - timedelta(days=30 * meses)
+    movs_agg_total = (
+        EstoqueMovimento.objects
+        .filter(empresa=empresa, tipo__in=["saida", "descarte"], criado_em__date__gte=desde_cmm)
+        .values("medicamento_id")
+        .annotate(total_saida=Sum("quantidade"), num_movimentos=Count("id"))
+    )
+    movs_por_med_total = {m["medicamento_id"]: float(m["total_saida"] or 0) for m in movs_agg_total}
+
+    # Pré-agrega consumo mensal: meses queries ao invés de N*meses queries
+    med_ids = list(meds.values_list("id", flat=True))
+    consumo_mensal_por_med = {mid: [] for mid in med_ids}
+    for i in range(meses, 0, -1):
+        inicio = date.today() - timedelta(days=30 * i)
+        fim = date.today() - timedelta(days=30 * (i - 1))
+        mes_agg = (
+            EstoqueMovimento.objects
+            .filter(empresa=empresa, tipo__in=["saida", "descarte"],
+                    criado_em__date__gte=inicio, criado_em__date__lt=fim,
+                    medicamento_id__in=med_ids)
+            .values("medicamento_id")
+            .annotate(total=Sum("quantidade"))
+        )
+        mes_por_med = {m["medicamento_id"]: float(m["total"] or 0) for m in mes_agg}
+        for mid in med_ids:
+            consumo_mensal_por_med[mid].append(mes_por_med.get(mid, 0.0))
+
     for med in meds:
-        cmm = _calcular_cmm(empresa, med.id, meses)
+        total_saida = movs_por_med_total.get(med.id, 0.0)
+        cmm = total_saida / meses if meses > 0 else 0.0
         eoq = _calcular_eoq(cmm, med.preco_custo)
         score = _score_ruptura(med.quantidade_atual, cmm)
         dias_cobertura = round(float(med.quantidade_atual) / (cmm / 30), 1) if cmm > 0 else None
 
-        # Tendência: consumo dos últimos N meses individualmente
-        consumo_por_mes = []
-        for i in range(meses, 0, -1):
-            inicio = date.today() - timedelta(days=30 * i)
-            fim = date.today() - timedelta(days=30 * (i - 1))
-            total_mes = EstoqueMovimento.objects.filter(
-                empresa=empresa, medicamento_id=med.id,
-                tipo__in=["saida", "descarte"],
-                criado_em__date__gte=inicio,
-                criado_em__date__lt=fim,
-            ).aggregate(t=Sum("quantidade"))["t"] or Decimal("0")
-            consumo_por_mes.append(float(total_mes))
+        # Tendência a partir dos dados pré-agregados por mês
+        consumo_por_mes = consumo_mensal_por_med.get(med.id, [])
 
         tendencia = _tendencia_linear(consumo_por_mes)
         ponto_reposicao = round(cmm / 30 * 7 + float(med.quantidade_minima), 2)  # lead 7 dias + estoque min
@@ -263,6 +284,7 @@ def api_farmacia_previsao_demanda(request):
 # ─── Curva ABC ────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.analytics")
 def api_farmacia_curva_abc(request):
     """Classifica medicamentos como A/B/C por valor de consumo real."""
     empresa = _empresa_autenticada(request)
@@ -275,13 +297,19 @@ def api_farmacia_curva_abc(request):
 
     meds = MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True)
 
+    # Pré-agrega consumo para evitar N+1 query por medicamento
+    movs_agg = (
+        EstoqueMovimento.objects
+        .filter(empresa=empresa, tipo__in=["saida", "descarte"], criado_em__date__gte=desde)
+        .values("medicamento_id")
+        .annotate(total_saida=Sum("quantidade"), num_movimentos=Count("id"))
+    )
+    movs_por_med = {m["medicamento_id"]: m for m in movs_agg}
+
     dados = []
     for med in meds:
-        consumo = EstoqueMovimento.objects.filter(
-            empresa=empresa, medicamento_id=med.id,
-            tipo__in=["saida", "descarte"],
-            criado_em__date__gte=desde,
-        ).aggregate(t=Sum("quantidade"))["t"] or Decimal("0")
+        agg = movs_por_med.get(med.id, {})
+        consumo = agg.get("total_saida") or Decimal("0")
         valor_consumo = float(consumo) * float(med.preco_custo)
         dados.append({
             "id": med.id,
@@ -341,6 +369,7 @@ def api_farmacia_curva_abc(request):
 # ─── Dashboard de IA ─────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("farmacia.ia")
 def api_farmacia_ia_dashboard(request):
     """Resumo executivo de IA: top riscos, recomendações de compra, alertas."""
     empresa = _empresa_autenticada(request)
@@ -351,8 +380,18 @@ def api_farmacia_ia_dashboard(request):
     alertas_ruptura = []
     recomendacoes_compra = []
 
+    # Pré-agrega CMM (3 meses) para evitar N+1 query por medicamento
+    desde_ia = date.today() - timedelta(days=90)
+    movs_agg_ia = (
+        EstoqueMovimento.objects
+        .filter(empresa=empresa, tipo__in=["saida", "descarte"], criado_em__date__gte=desde_ia)
+        .values("medicamento_id")
+        .annotate(total_saida=Sum("quantidade"), num_movimentos=Count("id"))
+    )
+    movs_por_med_ia = {m["medicamento_id"]: float(m["total_saida"] or 0) for m in movs_agg_ia}
+
     for med in meds:
-        cmm = _calcular_cmm(empresa, med.id, 3)
+        cmm = movs_por_med_ia.get(med.id, 0.0) / 3
         score = _score_ruptura(med.quantidade_atual, cmm)
         eoq = _calcular_eoq(cmm, med.preco_custo)
 

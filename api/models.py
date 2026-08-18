@@ -9424,6 +9424,15 @@ class OrdemProducaoIndustrial(models.Model):
     rendimento_pct       = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True,
                                                help_text="Rendimento real / teórico (%)")
 
+    cq_aprovado          = models.BooleanField(
+        null=True, blank=True,
+        help_text="Resultado derivado do CQ industrial. None=pendente, True=aprovado, False=reprovado."
+    )
+    cq_resultado_json    = models.JSONField(
+        default=dict, blank=True,
+        help_text="Snapshot das medições e resultado derivado pelo CQ industrial."
+    )
+
     data_inicio          = models.DateTimeField(null=True, blank=True)
     data_conclusao       = models.DateTimeField(null=True, blank=True)
     responsavel          = models.CharField(max_length=160, blank=True, default="",
