@@ -21,7 +21,7 @@ opencv-python-headless==4.9.0.80
 # deepface e tensorflow-cpu reativados no Hostinger (8GB RAM disponivel).
 deepface==0.0.93
 tensorflow-cpu==2.16.1
-tf-keras==2.16.0
+tf-keras==2.21.0
 python-dotenv==1.2.2
 anthropic==0.40.0
 Pillow==11.0.0
