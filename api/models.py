@@ -9293,6 +9293,322 @@ class ControleQualidadeMagistral(models.Model):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Ordem de Produção Industrial — Motor Anti-Erro (Farmácia / Indústria)
+# Previne erro no preenchimento de ordens de produção antes que avancem de etapa.
+# BPF (RDC 658/2022 e RDC 843/2024 ANVISA), rastreabilidade e assinatura por etapa.
+# Segmento farmácia — isolado dos demais por LGPD.
+# ══════════════════════════════════════════════════════════════════════════════
+
+class EspecificacaoProducao(models.Model):
+    """
+    Especificação-mestre (Master Batch Record) de um produto industrial.
+
+    Define o esqueleto da ordem de produção: as etapas da linha, os campos que o
+    operador precisa preencher em cada etapa e — crucialmente — a FAIXA DE
+    ACEITAÇÃO de cada campo. É contra esta faixa que o motor anti-erro valida cada
+    valor digitado, impedindo que uma ordem incorreta avance.
+
+    Os campos são declarados em `campos` (JSON), o que permite reproduzir
+    EXATAMENTE a ordem de produção que a indústria já usa (requisito do desafio:
+    "preservar todos os campos existentes"), sem alterar a estrutura documental.
+    """
+    FORMA = [
+        ("comprimido",  "Comprimido"),
+        ("capsula",     "Cápsula"),
+        ("solucao",     "Solução"),
+        ("suspensao",   "Suspensão"),
+        ("pomada",      "Pomada / Creme"),
+        ("injetavel",   "Injetável"),
+        ("xarope",      "Xarope"),
+        ("granulado",   "Granulado"),
+        ("outro",       "Outra forma farmacêutica"),
+    ]
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                           related_name="especificacoes_producao")
+    codigo_produto     = models.CharField(max_length=60,
+                                          help_text="Código interno do produto (SKU industrial)")
+    nome               = models.CharField(max_length=200)
+    forma_farmaceutica = models.CharField(max_length=20, choices=FORMA, default="comprimido")
+    concentracao       = models.CharField(max_length=120, blank=True, default="",
+                                          help_text="Ex.: 500 mg, 10 mg/mL")
+    versao             = models.PositiveSmallIntegerField(default=1,
+                                                          help_text="Versão do MBR — troca gera nova versão")
+    ativo              = models.BooleanField(default=True)
+
+    # Rendimento teórico e janela de aceitação (BPF: reconciliação de rendimento)
+    unidade_rendimento     = models.CharField(max_length=15, default="unid",
+                                              help_text="unid, kg, L, comprimidos")
+    tamanho_lote_padrao    = models.DecimalField(max_digits=14, decimal_places=3, default=1,
+                                                 help_text="Tamanho do lote de referência do MBR")
+    rendimento_teorico     = models.DecimalField(max_digits=14, decimal_places=3, default=0,
+                                                 help_text="Rendimento teórico para o lote padrão")
+    faixa_rendimento_min   = models.DecimalField(max_digits=5, decimal_places=2, default=98,
+                                                 help_text="Limite inferior de rendimento aceitável (%)")
+    faixa_rendimento_max   = models.DecimalField(max_digits=5, decimal_places=2, default=102,
+                                                 help_text="Limite superior de rendimento aceitável (%)")
+
+    # Etapas ordenadas da linha de produção.
+    # Ex.: [{"chave":"pesagem","rotulo":"Pesagem","papel_assina":"operador"}, ...]
+    etapas             = models.JSONField(default=list,
+                                          help_text='Etapas ordenadas da linha. Cada uma: '
+                                                    '{"chave","rotulo","papel_assina"}')
+
+    # Campos a preencher, com faixa de aceitação por campo.
+    # Cada campo: {"chave","rotulo","etapa","tipo","unidade","obrigatorio",
+    #              "min","max","casas_decimais","ajuda"}
+    # tipo ∈ numero | texto | booleano | data | selecao
+    campos             = models.JSONField(default=list,
+                                          help_text="Campos da ordem com faixa de aceitação (min/max)")
+
+    criado_em          = models.DateTimeField(auto_now_add=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together     = [("empresa", "codigo_produto", "versao")]
+        ordering            = ["nome", "-versao"]
+        verbose_name        = "Especificação de Produção"
+        verbose_name_plural = "Especificações de Produção"
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["empresa", "codigo_produto"]),
+        ]
+
+    def __str__(self):
+        return f"{self.codigo_produto} — {self.nome} v{self.versao}"
+
+    def campos_da_etapa(self, chave_etapa):
+        """Retorna os campos declarados para uma etapa específica."""
+        campos = self.campos if isinstance(self.campos, list) else []
+        return [c for c in campos if str(c.get("etapa", "")) == str(chave_etapa)]
+
+    def lista_etapas(self):
+        etapas = self.etapas if isinstance(self.etapas, list) else []
+        return [e for e in etapas if e.get("chave")]
+
+
+class OrdemProducaoIndustrial(models.Model):
+    """
+    Ordem de Produção Industrial (OP) — o batch record preenchido na linha.
+
+    Percorre uma máquina de estados: uma etapa só é liberada quando a anterior
+    está COMPLETA, VÁLIDA e ASSINADA. É o "evitar que ordens incorretas ou
+    incompletas avancem no processo" do desafio, aplicado no código.
+    """
+    STATUS = [
+        ("rascunho",            "Rascunho — em abertura"),
+        ("em_producao",         "Em produção"),
+        ("controle_qualidade",  "Em controle de qualidade"),
+        ("revisao_qualidade",   "Revisão da Garantia da Qualidade"),
+        ("liberado",            "Liberado — lote aprovado"),
+        ("rejeitado",           "Rejeitado — reprovado no CQ/GQ"),
+        ("cancelado",           "Cancelado"),
+    ]
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                             related_name="ordens_producao_industrial")
+    especificacao        = models.ForeignKey(EspecificacaoProducao, on_delete=models.PROTECT,
+                                             related_name="ordens")
+    numero_op            = models.CharField(max_length=40,
+                                            help_text="Número da ordem de produção")
+    numero_lote_fabricacao = models.CharField(max_length=60, blank=True, default="",
+                                              help_text="Lote de fabricação do produto")
+    tamanho_lote         = models.DecimalField(max_digits=14, decimal_places=3, default=0,
+                                               help_text="Tamanho do lote desta ordem")
+    unidade              = models.CharField(max_length=15, default="unid")
+
+    status               = models.CharField(max_length=25, choices=STATUS, default="rascunho")
+    etapa_atual          = models.CharField(max_length=40, blank=True, default="",
+                                            help_text="Chave da etapa corrente da linha")
+
+    rendimento_real      = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True,
+                                               help_text="Rendimento efetivamente obtido")
+    rendimento_pct       = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True,
+                                               help_text="Rendimento real / teórico (%)")
+
+    data_inicio          = models.DateTimeField(null=True, blank=True)
+    data_conclusao       = models.DateTimeField(null=True, blank=True)
+    responsavel          = models.CharField(max_length=160, blank=True, default="",
+                                            help_text="Responsável pela ordem")
+    criado_por           = models.CharField(max_length=160, blank=True, default="")
+
+    bloqueada            = models.BooleanField(default=False,
+                                               help_text="Impedida de avançar por desvio não resolvido")
+    motivo_bloqueio      = models.CharField(max_length=300, blank=True, default="")
+    observacoes          = models.TextField(blank=True, default="")
+
+    criado_em            = models.DateTimeField(auto_now_add=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together     = [("empresa", "numero_op")]
+        ordering            = ["-criado_em"]
+        verbose_name        = "Ordem de Produção Industrial"
+        verbose_name_plural = "Ordens de Produção Industrial"
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "numero_op"]),
+            models.Index(fields=["numero_lote_fabricacao"]),
+        ]
+
+    def __str__(self):
+        return f"OP {self.numero_op} — {self.especificacao.nome} ({self.status})"
+
+    @property
+    def tem_desvio_aberto(self):
+        return self.desvios.filter(resolvido=False).exists()
+
+    @property
+    def tem_desvio_critico_aberto(self):
+        return self.desvios.filter(resolvido=False, severidade="critica").exists()
+
+
+class RegistroCampoProducao(models.Model):
+    """
+    Um valor preenchido pelo operador em um campo da ordem de produção, com o
+    resultado da validação anti-erro no momento do preenchimento.
+
+    Guarda o snapshot da faixa esperada — assim a trilha de auditoria mostra
+    contra qual especificação o valor foi julgado, mesmo que o MBR mude depois.
+    """
+    STATUS_VALIDACAO = [
+        ("pendente", "Pendente"),
+        ("ok",       "OK — dentro da faixa"),
+        ("alerta",   "Alerta — revisar"),
+        ("erro",     "Erro — fora da faixa"),
+    ]
+    ordem            = models.ForeignKey(OrdemProducaoIndustrial, on_delete=models.CASCADE,
+                                         related_name="registros")
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                         related_name="registros_campo_producao")
+    chave_campo      = models.CharField(max_length=60)
+    rotulo           = models.CharField(max_length=160, blank=True, default="")
+    etapa            = models.CharField(max_length=40, blank=True, default="")
+    tipo             = models.CharField(max_length=20, default="numero")
+    valor            = models.TextField(blank=True, default="")
+    unidade          = models.CharField(max_length=15, blank=True, default="")
+
+    status_validacao = models.CharField(max_length=12, choices=STATUS_VALIDACAO, default="pendente")
+    fora_faixa       = models.BooleanField(default=False)
+    mensagem_validacao = models.CharField(max_length=300, blank=True, default="")
+    valor_min_esperado = models.CharField(max_length=40, blank=True, default="")
+    valor_max_esperado = models.CharField(max_length=40, blank=True, default="")
+
+    preenchido_por   = models.CharField(max_length=160, blank=True, default="")
+    preenchido_em    = models.DateTimeField(auto_now=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together     = [("ordem", "chave_campo")]
+        ordering            = ["etapa", "chave_campo"]
+        verbose_name        = "Registro de Campo de Produção"
+        verbose_name_plural = "Registros de Campo de Produção"
+        indexes             = [
+            models.Index(fields=["ordem", "etapa"]),
+            models.Index(fields=["ordem", "status_validacao"]),
+        ]
+
+    def __str__(self):
+        return f"{self.chave_campo}={self.valor} ({self.status_validacao})"
+
+
+class DesvioProducao(models.Model):
+    """
+    Desvio detectado numa ordem de produção — o registro do erro que o sistema
+    impediu de avançar. Alimenta o indicador RFT (Right First Time) e a análise
+    de causa. Pode ser detectado pela validação de faixa, pela máquina de estados
+    ou pelo motor de IA de anomalia.
+    """
+    TIPO = [
+        ("faixa",         "Valor fora da faixa de aceitação"),
+        ("calculo",       "Erro de cálculo / reconciliação de rendimento"),
+        ("campo_ausente", "Campo obrigatório não preenchido"),
+        ("sequencia",     "Tentativa de avanço fora de sequência"),
+        ("assinatura",    "Assinatura ausente na etapa"),
+        ("anomalia_ia",   "Anomalia estatística sinalizada pela IA"),
+    ]
+    SEVERIDADE = [
+        ("baixa",   "Baixa"),
+        ("media",   "Média"),
+        ("alta",    "Alta"),
+        ("critica", "Crítica"),
+    ]
+    ORIGEM = [
+        ("sistema", "Validação do sistema"),
+        ("ia",      "Motor de IA"),
+        ("usuario", "Apontado por usuário"),
+    ]
+    ordem            = models.ForeignKey(OrdemProducaoIndustrial, on_delete=models.CASCADE,
+                                         related_name="desvios")
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                         related_name="desvios_producao")
+    tipo             = models.CharField(max_length=20, choices=TIPO)
+    severidade       = models.CharField(max_length=10, choices=SEVERIDADE, default="media")
+    etapa            = models.CharField(max_length=40, blank=True, default="")
+    campo            = models.CharField(max_length=60, blank=True, default="")
+    valor_encontrado = models.CharField(max_length=120, blank=True, default="")
+    valor_esperado   = models.CharField(max_length=120, blank=True, default="")
+    descricao        = models.TextField()
+    detectado_por    = models.CharField(max_length=10, choices=ORIGEM, default="sistema")
+
+    resolvido        = models.BooleanField(default=False)
+    resolucao        = models.TextField(blank=True, default="")
+    resolvido_por    = models.CharField(max_length=160, blank=True, default="")
+    resolvido_em     = models.DateTimeField(null=True, blank=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ["-criado_em"]
+        verbose_name        = "Desvio de Produção"
+        verbose_name_plural = "Desvios de Produção"
+        indexes             = [
+            models.Index(fields=["empresa", "resolvido"]),
+            models.Index(fields=["ordem", "severidade"]),
+        ]
+
+    def __str__(self):
+        return f"Desvio {self.tipo}/{self.severidade} — OP {self.ordem.numero_op}"
+
+
+class AssinaturaEtapaProducao(models.Model):
+    """
+    Assinatura eletrônica de uma etapa da ordem de produção. Conecta o motor de
+    assinatura ICP-Brasil (assinatura_digital.py) ao fluxo de produção — cada
+    etapa crítica é liberada com quem/quando/hash rastreáveis (BPF: quem executou
+    e quem verificou).
+    """
+    PAPEL = [
+        ("operador",        "Operador — executou"),
+        ("supervisor",      "Supervisor — conferiu"),
+        ("farmaceutico_qa", "Farmacêutico / GQ — liberou"),
+    ]
+    ordem             = models.ForeignKey(OrdemProducaoIndustrial, on_delete=models.CASCADE,
+                                          related_name="assinaturas")
+    empresa           = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                          related_name="assinaturas_producao")
+    etapa             = models.CharField(max_length=40)
+    papel             = models.CharField(max_length=20, choices=PAPEL, default="operador")
+    assinante_nome    = models.CharField(max_length=160)
+    assinante_registro = models.CharField(max_length=40, blank=True, default="",
+                                          help_text="CRF / matrícula do assinante")
+    conteudo_assinado = models.TextField(blank=True, default="",
+                                         help_text="Snapshot canônico do que foi assinado")
+    assinatura_b64    = models.TextField(blank=True, default="")
+    hash_documento    = models.CharField(max_length=80, blank=True, default="")
+    metodo            = models.CharField(max_length=30, blank=True, default="",
+                                         help_text="ICP-Brasil-PKCS7 | SHA256")
+    assinado_em       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together     = [("ordem", "etapa", "papel")]
+        ordering            = ["ordem", "etapa"]
+        verbose_name        = "Assinatura de Etapa de Produção"
+        verbose_name_plural = "Assinaturas de Etapa de Produção"
+        indexes             = [models.Index(fields=["ordem", "etapa"])]
+
+    def __str__(self):
+        return f"Assinatura {self.papel} — OP {self.ordem.numero_op}/{self.etapa}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # RNDS Hospital — Sumário de Alta e Registro de Atendimento Clínico
 # Obrigatório para interoperabilidade com SUS (RNDS/DATASUS)
 # ══════════════════════════════════════════════════════════════════════════════

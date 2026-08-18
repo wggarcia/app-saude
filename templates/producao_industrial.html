@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ordem de Produção Industrial — Motor Anti-Erro</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:220px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab-btn{padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);font-family:Manrope,sans-serif}
+.tab-btn.active{background:var(--accent);color:#041018;border-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:26px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:20px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:12px 16px;border-bottom:1px solid var(--border)}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.btn{padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:Manrope,sans-serif;transition:.15s}
+.btn-primary{background:var(--accent);color:#041018}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-ok{background:var(--ok);color:#041018}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:rgba(255,77,109,.16);color:var(--danger);border:1px solid rgba(255,77,109,.4)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-lg{padding:16px 26px;font-size:16px}
+.pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.pill-rascunho{background:rgba(122,155,181,.2);color:var(--muted)}
+.pill-em_producao{background:rgba(0,194,255,.16);color:var(--accent)}
+.pill-controle_qualidade,.pill-revisao_qualidade{background:rgba(255,179,71,.16);color:var(--warn)}
+.pill-liberado{background:rgba(0,229,176,.16);color:var(--ok)}
+.pill-rejeitado,.pill-cancelado{background:rgba(255,77,109,.16);color:var(--danger)}
+/* Stepper */
+.stepper{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.step{flex:1;min-width:120px;padding:12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.03);text-align:center;position:relative}
+.step.done{border-color:var(--ok);background:rgba(0,229,176,.08)}
+.step.current{border-color:var(--accent);background:rgba(0,194,255,.1);box-shadow:0 0 0 2px rgba(0,194,255,.25)}
+.step-num{font-size:11px;font-weight:700;color:var(--muted)}
+.step.done .step-num{color:var(--ok)}.step.current .step-num{color:var(--accent)}
+.step-name{font-size:13px;font-weight:700;margin-top:4px}
+.step-sig{font-size:10px;color:var(--muted);margin-top:4px}
+/* Field with live validation */
+.field{margin-bottom:16px}
+.field-label{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.field-range{font-size:11px;color:var(--muted);font-weight:500}
+.field-input{width:100%;padding:16px;font-size:18px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-family:Manrope,sans-serif;transition:.15s}
+.field-input:focus{outline:none;border-color:var(--accent)}
+.field.ok .field-input{border-color:var(--ok);background:rgba(0,229,176,.06)}
+.field.erro .field-input{border-color:var(--danger);background:rgba(255,77,109,.08)}
+.field.alerta .field-input{border-color:var(--warn);background:rgba(255,179,71,.08)}
+.field-msg{font-size:12px;font-weight:600;margin-top:6px;min-height:16px}
+.field.ok .field-msg{color:var(--ok)}
+.field.erro .field-msg{color:var(--danger)}
+.field.alerta .field-msg{color:var(--warn)}
+.req{color:var(--danger)}
+.desvio{padding:12px 14px;border-radius:10px;border-left:3px solid var(--danger);background:rgba(255,77,109,.07);margin-bottom:10px}
+.desvio.media{border-left-color:var(--warn);background:rgba(255,179,71,.07)}
+.desvio.critica{border-left-color:var(--danger);background:rgba(255,77,109,.12)}
+.desvio-top{display:flex;justify-content:space-between;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.desvio-desc{font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.inp{width:100%;padding:11px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:Manrope,sans-serif;font-size:13px}
+.inp:focus{outline:none;border-color:var(--accent)}
+label.lbl{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:640px;max-height:90vh;overflow:auto;padding:24px}
+.modal h3{font-size:18px;font-weight:800;margin-bottom:16px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.banner{padding:14px 18px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:16px;display:none}
+.banner.show{display:block}
+.banner-block{background:rgba(255,77,109,.12);border:1px solid rgba(255,77,109,.4);color:#ffc6d3}
+.banner-ok{background:rgba(0,229,176,.1);border:1px solid rgba(0,229,176,.4);color:var(--ok)}
+.row-builder{display:grid;grid-template-columns:1.4fr 1fr .8fr .7fr .7fr .6fr auto;gap:8px;align-items:end;margin-bottom:8px}
+.mini{font-size:11px;color:var(--muted)}
+@media(max-width:820px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.row-builder{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+{% include "_farmacia_sidebar.html" %}
+
+<div class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🏭 Ordem de Produção Industrial</div>
+      <div class="page-sub">Motor anti-erro: valida cada campo contra a especificação no momento do preenchimento e impede que uma ordem incompleta, fora de faixa ou sem assinatura avance de etapa. Rastreabilidade e assinatura por etapa (BPF).</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tb-ordens" onclick="setTab('ordens')">Ordens</button>
+      <button class="tab-btn" id="tb-mbr" onclick="setTab('mbr')">Especificações (MBR)</button>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="kpis"></div>
+
+  <!-- ORDENS -->
+  <div class="tab-panel active" id="tab-ordens">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Ordens de produção</div>
+        <button class="btn btn-primary" onclick="abrirNovaOrdem()">+ Nova ordem</button>
+      </div>
+      <div id="listaOrdens"></div>
+    </div>
+  </div>
+
+  <!-- EXECUÇÃO -->
+  <div class="tab-panel" id="tab-exec">
+    <button class="btn btn-ghost" onclick="setTab('ordens')" style="margin-bottom:16px">← Voltar às ordens</button>
+    <div id="execArea"></div>
+  </div>
+
+  <!-- MBR -->
+  <div class="tab-panel" id="tab-mbr">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Especificações-mestre (Master Batch Record)</div>
+        <button class="btn btn-primary" onclick="abrirNovoMbr()">+ Nova especificação</button>
+      </div>
+      <div id="listaMbr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nova ordem -->
+<div class="modal-bg" id="modalOrdem">
+  <div class="modal">
+    <h3>Nova ordem de produção</h3>
+    <div style="margin-bottom:12px"><label class="lbl">Especificação (produto)</label><select class="inp" id="oEsp"></select></div>
+    <div class="grid2">
+      <div><label class="lbl">Número da OP</label><input class="inp" id="oNum" placeholder="OP-2026-001"></div>
+      <div><label class="lbl">Lote de fabricação</label><input class="inp" id="oLote" placeholder="L2608A"></div>
+      <div><label class="lbl">Tamanho do lote</label><input class="inp" id="oTam" type="number" step="any" placeholder="100000"></div>
+      <div><label class="lbl">Responsável</label><input class="inp" id="oResp" placeholder="Nome"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalOrdem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarOrdem()">Abrir ordem</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal assinar -->
+<div class="modal-bg" id="modalSig">
+  <div class="modal">
+    <h3>Assinar etapa</h3>
+    <input type="hidden" id="sigEtapa">
+    <div class="grid2">
+      <div><label class="lbl">Papel</label><select class="inp" id="sigPapel">
+        <option value="operador">Operador — executou</option>
+        <option value="supervisor">Supervisor — conferiu</option>
+        <option value="farmaceutico_qa">Farmacêutico / GQ — liberou</option>
+      </select></div>
+      <div><label class="lbl">Nome do assinante</label><input class="inp" id="sigNome"></div>
+      <div><label class="lbl">CRF / Matrícula</label><input class="inp" id="sigReg"></div>
+      <div><label class="lbl">Senha do certificado (opcional)</label><input class="inp" id="sigSenha" type="password"></div>
+    </div>
+    <p class="mini" style="margin-top:10px">A etapa precisa estar completa e válida para ser assinada. Assinatura ICP-Brasil quando há certificado; senão, hash SHA-256 com carimbo.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalSig')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAssinatura()">Assinar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal MBR -->
+<div class="modal-bg" id="modalMbr">
+  <div class="modal" style="max-width:900px">
+    <h3>Nova especificação-mestre</h3>
+    <div class="grid2">
+      <div><label class="lbl">Código do produto</label><input class="inp" id="mCod" placeholder="PROD-500"></div>
+      <div><label class="lbl">Nome</label><input class="inp" id="mNome" placeholder="Paracetamol 500mg comprimido"></div>
+      <div><label class="lbl">Concentração</label><input class="inp" id="mConc" placeholder="500 mg"></div>
+      <div><label class="lbl">Forma farmacêutica</label><select class="inp" id="mForma">
+        <option value="comprimido">Comprimido</option><option value="capsula">Cápsula</option>
+        <option value="solucao">Solução</option><option value="injetavel">Injetável</option>
+        <option value="pomada">Pomada/Creme</option><option value="xarope">Xarope</option>
+        <option value="granulado">Granulado</option><option value="outro">Outro</option>
+      </select></div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div><label class="lbl">Tamanho do lote padrão</label><input class="inp" id="mLotePad" type="number" step="any" value="100000"></div>
+      <div><label class="lbl">Rendimento teórico (para o lote padrão)</label><input class="inp" id="mRendTeo" type="number" step="any" value="100000"></div>
+      <div><label class="lbl">Rendimento mín. aceitável (%)</label><input class="inp" id="mRendMin" type="number" step="any" value="98"></div>
+      <div><label class="lbl">Rendimento máx. aceitável (%)</label><input class="inp" id="mRendMax" type="number" step="any" value="102"></div>
+    </div>
+
+    <div style="margin-top:18px"><label class="lbl">Etapas da linha (ordem de execução)</label>
+      <div id="mbrEtapas"></div>
+      <button class="btn btn-ghost" onclick="addEtapaBuilder()" style="margin-top:6px">+ Etapa</button>
+    </div>
+
+    <div style="margin-top:18px"><label class="lbl">Campos a preencher (com faixa de aceitação)</label>
+      <div class="row-builder mini"><span>Rótulo</span><span>Etapa</span><span>Tipo</span><span>Mín</span><span>Máx</span><span>Obrig.</span><span></span></div>
+      <div id="mbrCampos"></div>
+      <button class="btn btn-ghost" onclick="addCampoBuilder()" style="margin-top:6px">+ Campo</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMbr')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMbr()">Salvar especificação</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const headers={'Content-Type':'application/json'};
+async function api(url,opts={}){
+  try{const r=await fetch(url,{headers,...opts});const d=await r.json().catch(()=>({}));
+    if(!r.ok&&r.status!==422){alert(d.erro||'Erro na requisição');return null;}
+    return {status:r.status,data:d};
+  }catch(e){alert('Erro de conexão');return null;}
+}
+function v(id){return document.getElementById(id)?.value?.trim()||'';}
+function abrirModal(id){document.getElementById(id).classList.add('open');}
+function fecharModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+let ORDEM=null; // ordem em execução
+
+function setTab(t){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('tb-ordens').classList.toggle('active',t==='ordens');
+  document.getElementById('tb-mbr').classList.toggle('active',t==='mbr');
+  if(t==='ordens')carregarOrdens();
+  if(t==='mbr')carregarMbr();
+}
+
+// ── KPIs ──────────────────────────────────────────────
+async function carregarKpis(){
+  const r=await api('/api/producao/kpis');if(!r)return;const k=r.data;
+  const rft=k.rft_pct==null?'—':k.rft_pct+'%';
+  const rftCls=k.rft_pct==null?'':(k.rft_pct>=95?'ok':(k.rft_pct>=85?'warn':'danger'));
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi ${rftCls}"><div class="kpi-val">${rft}</div><div class="kpi-lbl">RFT — acerto na 1ª vez</div></div>
+    <div class="kpi"><div class="kpi-val">${k.ordens_por_status?.em_producao||0}</div><div class="kpi-lbl">Em produção</div></div>
+    <div class="kpi ${k.desvios_abertos>0?'danger':'ok'}"><div class="kpi-val">${k.desvios_abertos}</div><div class="kpi-lbl">Desvios em aberto</div></div>
+    <div class="kpi ${k.ia?.em_bootstrap?'warn':'ok'}"><div class="kpi-val">${k.ia?.amostras||0}</div><div class="kpi-lbl">IA — amostras aprendidas</div></div>`;
+}
+
+// ── Lista de ordens ───────────────────────────────────
+async function carregarOrdens(){
+  const r=await api('/api/producao/ordens');if(!r)return;
+  const o=r.data.ordens;
+  if(!o.length){document.getElementById('listaOrdens').innerHTML='<div class="empty">Nenhuma ordem ainda. Crie uma especificação e abra a primeira ordem.</div>';return;}
+  document.getElementById('listaOrdens').innerHTML=`<table><thead><tr>
+    <th>OP</th><th>Produto</th><th>Lote</th><th>Status</th><th>Rendimento</th><th>Desvios</th><th></th></tr></thead><tbody>${
+    o.map(x=>`<tr>
+      <td><b>${esc(x.numero_op)}</b></td><td>${esc(x.produto)}</td><td>${esc(x.numero_lote_fabricacao||'—')}</td>
+      <td><span class="pill pill-${x.status}">${esc(x.status_label||x.status)}</span></td>
+      <td>${x.rendimento_pct?x.rendimento_pct+'%':'—'}</td>
+      <td>${x.tem_desvio_aberto?'<span style="color:var(--danger)">●</span>':'<span style="color:var(--ok)">○</span>'}</td>
+      <td><button class="btn btn-primary" onclick="abrirExecucao(${x.id})">Abrir</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ── Execução da ordem ─────────────────────────────────
+async function abrirExecucao(id){
+  const r=await api('/api/producao/ordens/'+id);if(!r)return;
+  ORDEM=r.data;renderExecucao();setTab_exec();
+}
+function setTab_exec(){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-exec').classList.add('active');
+}
+function renderExecucao(){
+  const o=ORDEM;const etapaAtual=o.etapa_atual;
+  const idxAtual=o.etapas.findIndex(e=>e.chave===etapaAtual);
+  const etapa=o.etapas.find(e=>e.chave===etapaAtual)||o.etapas[0];
+  const finalizada=['liberado','rejeitado','cancelado'].includes(o.status);
+  const emProducao=o.status==='em_producao';
+
+  // Stepper
+  const stepper=o.etapas.map((e,i)=>{
+    const cls=e.chave===etapaAtual&&emProducao?'current':(i<idxAtual||!emProducao&&o.status!=='rascunho'?'done':'');
+    const sig=e.assinaturas.length?'✍ '+e.assinaturas.map(a=>a.papel).join(', '):'sem assinatura';
+    return `<div class="step ${cls}"><div class="step-num">ETAPA ${i+1}</div><div class="step-name">${esc(e.rotulo)}</div><div class="step-sig">${esc(sig)}</div></div>`;
+  }).join('');
+
+  // Desvios abertos
+  const abertos=o.desvios.filter(d=>!d.resolvido);
+  const desviosHtml=abertos.length?`<div class="card" style="margin-top:16px"><div class="card-header"><div class="card-title">⚠ Desvios em aberto (${abertos.length})</div></div><div class="card-body">${
+    abertos.map(d=>`<div class="desvio ${d.severidade}"><div class="desvio-top"><span>${esc(d.tipo)} · ${esc(d.severidade)} · ${esc(d.detectado_por)}</span><span>${esc(d.etapa||'')}</span></div><div class="desvio-desc">${esc(d.descricao)}</div>
+      <button class="btn btn-ghost" style="margin-top:8px;padding:6px 12px;font-size:12px" onclick="resolverDesvio(${d.id})">Justificar e resolver</button></div>`).join('')
+  }</div></div>`:'';
+
+  // Campos da etapa atual
+  let camposHtml='';
+  if(emProducao&&etapa){
+    camposHtml=etapa.campos.map(c=>fieldHtml(c)).join('');
+    if(!etapa.campos.length)camposHtml='<div class="empty">Esta etapa não tem campos parametrizados.</div>';
+  }
+
+  // Ações de status
+  let acoes='';
+  if(o.status==='rascunho') acoes=`<button class="btn btn-primary btn-lg" onclick="mudarStatus('em_producao')">▶ Iniciar produção</button>`;
+  else if(emProducao){
+    acoes=`<button class="btn btn-ok btn-lg" id="btnAvancar" onclick="avancarEtapa()">Concluir etapa e avançar →</button>
+           <button class="btn btn-ghost" onclick="abrirAssinar('${esc(etapaAtual)}')">✍ Assinar etapa</button>`;
+  } else if(o.status==='controle_qualidade'){
+    acoes=`<div class="field" style="max-width:280px"><label class="field-label">Rendimento real obtido</label><input class="field-input" id="rendReal" type="number" step="any" placeholder="ex: 99500"></div>
+           <button class="btn btn-primary btn-lg" onclick="enviarRevisao()">Enviar à revisão da GQ →</button>
+           <button class="btn btn-danger" onclick="rejeitar()">Rejeitar lote</button>`;
+  } else if(o.status==='revisao_qualidade'){
+    acoes=`<button class="btn btn-ghost" onclick="abrirAssinar('${esc(o.etapas.at(-1)?.chave||'')}','farmaceutico_qa')">✍ Assinatura da GQ</button>
+           <button class="btn btn-ok btn-lg" onclick="liberar()">✔ Liberar lote</button>
+           <button class="btn btn-danger" onclick="rejeitar()">Rejeitar lote</button>`;
+  }
+
+  const bloqueio=abertos.some(d=>d.severidade==='critica')
+    ?`<div class="banner banner-block show">🔒 Há desvio crítico em aberto. A ordem não avança até ser resolvido.</div>`:'';
+
+  document.getElementById('execArea').innerHTML=`
+    <div class="page-header" style="margin-bottom:16px">
+      <div><div class="page-title">OP ${esc(o.numero_op)} — ${esc(o.produto)}</div>
+      <div class="page-sub">Lote ${esc(o.numero_lote_fabricacao||'—')} · ${esc(o.tamanho_lote)} ${esc(o.unidade)} · <span class="pill pill-${o.status}">${esc(o.status_label)}</span></div></div>
+    </div>
+    ${bloqueio}
+    <div class="stepper">${stepper}</div>
+    ${emProducao?`<div class="card"><div class="card-header"><div class="card-title">Preenchimento — ${esc(etapa?.rotulo||'')}</div><div class="mini">Cada campo é validado ao sair do campo. Vermelho = fora da faixa; amarelo = confira; verde = ok.</div></div><div class="card-body">${camposHtml}</div></div>`:''}
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">${acoes}</div>
+    ${desviosHtml}`;
+}
+function fieldHtml(c){
+  const st=c.status_validacao||'pendente';
+  const cls=st==='ok'?'ok':st==='erro'?'erro':st==='alerta'?'alerta':'';
+  const faixa=(c.min!=null||c.max!=null)?`faixa: ${c.min??'−∞'} a ${c.max??'+∞'} ${esc(c.unidade||'')}`:(c.tipo||'');
+  const req=c.obrigatorio?'<span class="req">*</span>':'';
+  let input;
+  if(c.tipo==='booleano') input=`<select class="field-input" id="f_${esc(c.chave)}" onchange="preencher('${esc(c.chave)}',this.value)"><option value="">—</option><option value="sim"${c.valor==='sim'?' selected':''}>Sim</option><option value="nao"${c.valor==='nao'?' selected':''}>Não</option></select>`;
+  else if(c.tipo==='selecao'&&Array.isArray(c.opcoes)) input=`<select class="field-input" id="f_${esc(c.chave)}" onchange="preencher('${esc(c.chave)}',this.value)"><option value="">—</option>${c.opcoes.map(o=>`<option${c.valor==o?' selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  else input=`<input class="field-input" id="f_${esc(c.chave)}" value="${esc(c.valor||'')}" ${c.tipo==='numero'?'type="number" step="any" inputmode="decimal"':(c.tipo==='data'?'type="date"':'')} onblur="preencher('${esc(c.chave)}',this.value)">`;
+  return `<div class="field ${cls}" id="fld_${esc(c.chave)}">
+    <div class="field-label"><span>${esc(c.rotulo)} ${req}</span><span class="field-range">${faixa}</span></div>
+    ${input}
+    <div class="field-msg" id="msg_${esc(c.chave)}">${esc(c.mensagem_validacao||'')}</div></div>`;
+}
+async function preencher(chave,valor){
+  const r=await api('/api/producao/ordens/'+ORDEM.id+'/campo',{method:'POST',body:JSON.stringify({chave_campo:chave,valor})});
+  if(!r)return;const d=r.data;
+  const fld=document.getElementById('fld_'+chave);const msg=document.getElementById('msg_'+chave);
+  fld.classList.remove('ok','erro','alerta');
+  if(d.status==='ok')fld.classList.add('ok');
+  else if(d.status==='erro')fld.classList.add('erro');
+  else if(d.status==='alerta')fld.classList.add('alerta');
+  msg.textContent=d.mensagem||'';
+  // atualiza cache local
+  const c=ORDEM.etapas.flatMap(e=>e.campos).find(x=>x.chave===chave);
+  if(c){c.valor=valor;c.status_validacao=d.status;c.mensagem_validacao=d.mensagem;}
+}
+async function avancarEtapa(){
+  const r=await api('/api/producao/ordens/'+ORDEM.id+'/avancar',{method:'PATCH',body:JSON.stringify({acao:'proxima_etapa'})});
+  if(!r)return;
+  if(r.status===422){alert('Não é possível avançar:\n\n• '+(r.data.motivos||[]).join('\n• '));abrirExecucao(ORDEM.id);return;}
+  abrirExecucao(ORDEM.id);carregarKpis();
+}
+async function mudarStatus(novo,extra={}){
+  const r=await api('/api/producao/ordens/'+ORDEM.id+'/avancar',{method:'PATCH',body:JSON.stringify({acao:'status',novo,...extra})});
+  if(!r)return;
+  if(r.status===422){alert('Bloqueado:\n\n• '+(r.data.motivos||[]).join('\n• '));return;}
+  abrirExecucao(ORDEM.id);carregarKpis();
+}
+function enviarRevisao(){const rr=v('rendReal');mudarStatus('revisao_qualidade',{rendimento_real:rr});}
+function liberar(){if(confirm('Confirmar liberação do lote? Esta ação conclui a ordem.'))mudarStatus('liberado');}
+function rejeitar(){const m=prompt('Motivo da rejeição do lote (BPF):');if(m)mudarStatus('rejeitado',{motivo:m});}
+async function resolverDesvio(id){
+  const just=prompt('Justificativa / ação corretiva (BPF):');if(!just)return;
+  const r=await api('/api/producao/ordens/'+ORDEM.id+'/desvios',{method:'PATCH',body:JSON.stringify({desvio_id:id,resolucao:just})});
+  if(r){abrirExecucao(ORDEM.id);carregarKpis();}
+}
+
+// ── Assinatura ────────────────────────────────────────
+function abrirAssinar(etapa,papel){document.getElementById('sigEtapa').value=etapa;if(papel)document.getElementById('sigPapel').value=papel;abrirModal('modalSig');}
+async function confirmarAssinatura(){
+  const body={etapa:v('sigEtapa'),papel:v('sigPapel'),assinante_nome:v('sigNome'),assinante_registro:v('sigReg'),senha:v('sigSenha')};
+  if(!body.assinante_nome){alert('Informe o nome do assinante.');return;}
+  const r=await api('/api/producao/ordens/'+ORDEM.id+'/assinar',{method:'POST',body:JSON.stringify(body)});
+  if(!r)return;
+  if(r.status===422){alert('Não é possível assinar:\n\n• '+([...(r.data.faltando||[]),...(r.data.com_erro||[])].join('\n• ')||r.data.erro));return;}
+  if(r.data.ok){fecharModal('modalSig');alert('Etapa assinada ('+r.data.metodo+').');abrirExecucao(ORDEM.id);}
+}
+
+// ── Nova ordem ────────────────────────────────────────
+async function abrirNovaOrdem(){
+  const r=await api('/api/producao/especificacoes');if(!r)return;
+  const esp=r.data.especificacoes;
+  if(!esp.length){alert('Crie uma especificação (MBR) antes de abrir uma ordem.');setTab('mbr');return;}
+  document.getElementById('oEsp').innerHTML=esp.map(e=>`<option value="${e.id}">${esc(e.codigo_produto)} — ${esc(e.nome)} v${e.versao}</option>`).join('');
+  abrirModal('modalOrdem');
+}
+async function salvarOrdem(){
+  const body={especificacao_id:v('oEsp'),numero_op:v('oNum'),numero_lote_fabricacao:v('oLote'),tamanho_lote:v('oTam'),responsavel:v('oResp')};
+  if(!body.numero_op){alert('Informe o número da OP.');return;}
+  const r=await api('/api/producao/ordens',{method:'POST',body:JSON.stringify(body)});
+  if(r&&r.data.ok){fecharModal('modalOrdem');carregarOrdens();carregarKpis();abrirExecucao(r.data.id);}
+}
+
+// ── MBR ───────────────────────────────────────────────
+async function carregarMbr(){
+  const r=await api('/api/producao/especificacoes?todas=1');if(!r)return;
+  const e=r.data.especificacoes;
+  document.getElementById('listaMbr').innerHTML=e.length?`<table><thead><tr><th>Código</th><th>Nome</th><th>Forma</th><th>Etapas</th><th>Campos</th><th>Ativo</th></tr></thead><tbody>${
+    e.map(x=>`<tr><td><b>${esc(x.codigo_produto)}</b> v${x.versao}</td><td>${esc(x.nome)}</td><td>${esc(x.forma_farmaceutica)}</td><td>${x.n_etapas}</td><td>${x.n_campos}</td><td>${x.ativo?'<span style="color:var(--ok)">●</span>':'<span style="color:var(--muted)">○</span>'}</td></tr>`).join('')
+  }</tbody></table>`:'<div class="empty">Nenhuma especificação. Crie a primeira para parametrizar as faixas de aceitação.</div>';
+}
+let ETAPAS_TMP=[],CAMPOS_TMP=[];
+function abrirNovoMbr(){ETAPAS_TMP=[];CAMPOS_TMP=[];document.getElementById('mbrEtapas').innerHTML='';document.getElementById('mbrCampos').innerHTML='';addEtapaBuilder();addCampoBuilder();abrirModal('modalMbr');}
+function addEtapaBuilder(){
+  const i=ETAPAS_TMP.length;ETAPAS_TMP.push({});
+  const div=document.createElement('div');div.className='row-builder';div.style.gridTemplateColumns='1.4fr 1fr auto';
+  div.innerHTML=`<div><input class="inp" placeholder="Rótulo (ex: Pesagem)" oninput="ETAPAS_TMP[${i}].rotulo=this.value"></div>
+    <div><select class="inp" onchange="ETAPAS_TMP[${i}].papel_assina=this.value"><option value="operador">assina: operador</option><option value="supervisor">assina: supervisor</option><option value="farmaceutico_qa">assina: GQ</option></select></div>
+    <button class="btn btn-danger" style="padding:8px 12px" onclick="this.parentNode.remove();ETAPAS_TMP[${i}]=null">✕</button>`;
+  document.getElementById('mbrEtapas').appendChild(div);
+}
+function addCampoBuilder(){
+  const i=CAMPOS_TMP.length;CAMPOS_TMP.push({tipo:'numero'});
+  const etapasOpts=ETAPAS_TMP.filter(Boolean).map((e,idx)=>`<option value="${idx}">${esc(e.rotulo||('Etapa '+(idx+1)))}</option>`).join('');
+  const div=document.createElement('div');div.className='row-builder';
+  div.innerHTML=`<div><input class="inp" placeholder="Rótulo (ex: Peso do núcleo)" oninput="CAMPOS_TMP[${i}].rotulo=this.value"></div>
+    <div><select class="inp" onchange="CAMPOS_TMP[${i}].etapaIdx=this.value">${etapasOpts}</select></div>
+    <div><select class="inp" onchange="CAMPOS_TMP[${i}].tipo=this.value"><option value="numero">número</option><option value="texto">texto</option><option value="booleano">sim/não</option><option value="data">data</option></select></div>
+    <div><input class="inp" type="number" step="any" placeholder="mín" oninput="CAMPOS_TMP[${i}].min=this.value"></div>
+    <div><input class="inp" type="number" step="any" placeholder="máx" oninput="CAMPOS_TMP[${i}].max=this.value"></div>
+    <div><input type="checkbox" onchange="CAMPOS_TMP[${i}].obrigatorio=this.checked" style="width:20px;height:20px"></div>
+    <button class="btn btn-danger" style="padding:8px 12px" onclick="this.parentNode.remove();CAMPOS_TMP[${i}]=null">✕</button>`;
+  document.getElementById('mbrCampos').appendChild(div);
+}
+function slug(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||('c'+Math.random().toString(36).slice(2,6));}
+async function salvarMbr(){
+  const etapas=ETAPAS_TMP.filter(Boolean).filter(e=>e.rotulo).map(e=>({chave:slug(e.rotulo),rotulo:e.rotulo,papel_assina:e.papel_assina||'operador'}));
+  if(!etapas.length){alert('Adicione ao menos uma etapa com rótulo.');return;}
+  const campos=CAMPOS_TMP.filter(Boolean).filter(c=>c.rotulo).map(c=>{
+    const etIdx=parseInt(c.etapaIdx||0);const et=etapas[etIdx]||etapas[0];
+    return {chave:slug(c.rotulo),rotulo:c.rotulo,etapa:et.chave,tipo:c.tipo||'numero',
+      obrigatorio:!!c.obrigatorio,min:c.min===''?null:c.min,max:c.max===''?null:c.max};
+  });
+  const body={codigo_produto:v('mCod'),nome:v('mNome'),concentracao:v('mConc'),forma_farmaceutica:v('mForma'),
+    tamanho_lote_padrao:v('mLotePad'),rendimento_teorico:v('mRendTeo'),
+    faixa_rendimento_min:v('mRendMin'),faixa_rendimento_max:v('mRendMax'),etapas,campos};
+  if(!body.codigo_produto||!body.nome){alert('Informe código e nome.');return;}
+  const r=await api('/api/producao/especificacoes',{method:'POST',body:JSON.stringify(body)});
+  if(r&&r.data.ok){fecharModal('modalMbr');carregarMbr();}
+}
+
+carregarKpis();carregarOrdens();
+</script>
+</body>
+</html>
