@@ -135,7 +135,7 @@ Além disso, automatiza toda a base:
 Plano recomendado pro tamanho desta empresa: {plano_label} — {preco}/mês.
 Teste grátis por 15 dias, sem cartão de crédito: {link}
 Prefere tirar dúvida no WhatsApp antes? {whatsapp}
-Quer ver todos os planos, módulos e valores antes de decidir? {materiais}
+Quer conhecer o produto com calma antes de decidir? {materiais}
 """
 
 _PRODUTO_FARMACIA = """
@@ -164,7 +164,7 @@ Além disso, cobre toda a operação:
 Plano recomendado pro tamanho desta farmácia: {plano_label} — {preco}/mês.
 Teste grátis por 15 dias, sem cartão de crédito: {link}
 Prefere tirar dúvida no WhatsApp antes? {whatsapp}
-Quer ver todos os planos, módulos e valores antes de decidir? {materiais}
+Quer conhecer o produto com calma antes de decidir? {materiais}
 """
 
 
@@ -237,10 +237,14 @@ Website: {lead.website or 'não informado'}
         "SECUNDÁRIO e discreto — algo como '<a href=\"LINK_EXATO\">falar no WhatsApp</a>' — nunca "
         "como opção principal, só pra quem prefere tirar dúvida antes de clicar no teste grátis. "
         "Se vier 'não disponível', simplesmente não mencione WhatsApp. "
-        "Um link de materiais (catálogo completo com todos os planos, módulos e valores) também é "
-        "fornecido — inclua-o como CTA TERCIÁRIO, ainda mais discreto que o WhatsApp, algo como "
-        "'<a href=\"LINK_EXATO\">ver todos os planos e módulos</a>' pra quem quer se aprofundar antes "
-        "de decidir. Nunca deixe esse link competir com o CTA principal do teste grátis. "
+        "Um link de materiais também é fornecido — ele leva pra uma página de apresentação do produto "
+        "(não direto pros planos). Inclua-o como CTA TERCIÁRIO, ainda mais discreto que o WhatsApp, "
+        "algo como '<a href=\"LINK_EXATO\">conhecer o produto</a>' ou '<a href=\"LINK_EXATO\">ver "
+        "como funciona</a>'. IMPORTANTE: NUNCA use a frase 'ver todos os planos' ou 'ver todos os "
+        "módulos' pra esse link — essa promessa é de OUTRA página (o catálogo completo, que fica DENTRO "
+        "da página de apresentação), não da página que esse link abre. Prometer 'todos os planos' e "
+        "abrir uma apresentação resumida confunde quem clicou. Nunca deixe esse link competir com o "
+        "CTA principal do teste grátis. "
         "NUNCA sugira agendar uma reunião, call ou demonstração ao vivo — o teste grátis "
         "self-service substitui isso completamente. "
         "Assine como: Wagner Garcia, CEO | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
