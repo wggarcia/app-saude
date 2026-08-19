@@ -52,7 +52,7 @@ _QUERIES_GOOGLE = {
         "empresa de energia elétrica", "empresa de energia eólica", "empresa de telecomunicações",
         "empresa de saneamento", "operadora portuária", "empresa florestal", "empresa de celulose",
         "siderúrgica", "empresa de manutenção industrial", "rede varejista", "rede hoteleira",
-        "empresa de call center",
+        "empresa de call center", "supermercado", "rede de supermercados", "shopping center",
     ],
 }
 
@@ -74,6 +74,12 @@ def buscar_google_places(tipo: str, cidade: str, estado: str, max_resultados: in
     resultados = []
     seen_ids = set()
 
+    # Distribui o limite entre TODOS os termos de busca em vez de esgotar no
+    # primeiro — sem isso, "construtora" sozinho já enche os 20 resultados em
+    # quase qualquer cidade e os outros ~24 setores (indústria, mercado,
+    # offshore, agro...) nunca chegam a ser buscados de verdade.
+    limite_por_termo = max(1, max_resultados // len(queries)) if queries else max_resultados
+
     for query_term in queries:
         query = f"{query_term} {cidade} {estado}"
 
@@ -94,6 +100,7 @@ def buscar_google_places(tipo: str, cidade: str, estado: str, max_resultados: in
             logger.error("google_places query='%s' erro: %s", query, exc)
             continue
 
+        encontrados_neste_termo = 0
         for place in data.get("results", []):
             place_id = place.get("place_id", "")
             if place_id in seen_ids:
@@ -128,7 +135,8 @@ def buscar_google_places(tipo: str, cidade: str, estado: str, max_resultados: in
                 },
             }
             resultados.append(lead_dict)
-            if len(resultados) >= max_resultados:
+            encontrados_neste_termo += 1
+            if encontrados_neste_termo >= limite_por_termo or len(resultados) >= max_resultados:
                 break
 
         if len(resultados) >= max_resultados:
