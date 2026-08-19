@@ -39,8 +39,11 @@ def _link_trial(codigo: str) -> str:
 
 
 def _link_materiais(segmento: str) -> str:
-    pasta = "sst" if segmento == "sst" else "farmacia"
-    return f"{_base_url()}/materiais/{pasta}/"
+    # Só SST e Farmácia têm páginas de material publicadas hoje. Hospital e
+    # Plano de Saúde ainda não têm — retorna vazio pra não gerar link quebrado.
+    if segmento not in ("sst", "farmacia"):
+        return ""
+    return f"{_base_url()}/materiais/{segmento}/"
 
 
 def _preco_plano(codigo: str) -> str:
@@ -169,6 +172,87 @@ Quer conhecer o produto com calma antes de decidir? {materiais}
 """
 
 
+_PRODUTO_HOSPITAL = """
+O SoloCRT Hospital é um sistema de gestão hospitalar completo — e o DIFERENCIAL
+real dele (o que sistema hospitalar genérico não entrega):
+
+- Gestão de OPME com inteligência: catálogo com validação de registro ANVISA e
+  AFE do fornecedor, motor de melhor custo-benefício (aponta marca alternativa e
+  a economia), detecção de padrão de fraude por médico solicitante e esteira de
+  autorização com junta médica. OPME é onde o hospital perde (ou protege) margem
+  — e é exatamente aí que o sistema atua.
+- TUSS/ANS ao vivo cruzado com ANVISA: busca o código TUSS oficial da ANS e a
+  situação do produto na ANVISA na mesma tela, sem pular entre sistemas.
+- Oncologia de verdade: protocolos de quimioterapia com cálculo de dose por
+  superfície corporal, alerta de dose cumulativa (ex. cardiotoxicidade), ciclos,
+  toxicidade e APAC — a jornada clínica do paciente, não só uma agenda.
+- Gestão de leitos em tempo real (ocupação e giro) e painel epidemiológico
+  regional integrado, que antecipa pressão de demanda sobre o hospital.
+Além disso cobre a operação inteira: custos e DRG (com envio ao Valor Saúde
+Brasil), CME, farmácia, SAME, qualidade/NSP, telemedicina e mais.
+Plano de referência pro porte: {plano_label} — a partir de {preco}/mês.
+É um produto enterprise: a entrada é por uma conversa/demonstração com o cenário
+real do hospital, não por teste self-service.
+Chamar no WhatsApp pra agendar: {whatsapp}
+"""
+
+_PRODUTO_PLANO_SAUDE = """
+O SoloCRT Plano de Saúde é um sistema de gestão para operadoras — e o
+DIFERENCIAL real dele (além do que a ANS já exige):
+
+- IDSS calculado dos seus dados reais: o sistema calcula os componentes do
+  Índice de Desempenho da Saúde Suplementar (IDQS/IDGA/IDSF/IDGR) a partir das
+  suas guias, beneficiários, sinistros e prestadores, com os pesos oficiais da
+  ANS — você acompanha seu IDSS o ano todo, não só quando a ANS divulga.
+- Ressarcimento ao SUS (art. 32): gestão de ABI, competência, prazo de
+  impugnação e valor cobrado/recebido — um dos maiores ralos de dinheiro de
+  operadora, controlado de ponta a ponta.
+- IA de apoio à autorização de guias: analisa e recomenda a decisão (com
+  fallback por regras quando a IA não está disponível), cruzando TUSS, Rol de
+  Procedimentos (RN 465) e diretrizes de utilização — inclui gestão de NIP com
+  prazo em dias úteis.
+- NPS do beneficiário, núcleo familiar (titular/dependentes), rede credenciada,
+  corretores/comissões e portal do beneficiário.
+Pra operadora maior tem ainda sinistralidade com IA e faturamento integrado.
+Plano de referência pro porte: {plano_label} — a partir de {preco}/mês.
+É um produto enterprise: a entrada é por uma conversa/demonstração com o cenário
+real da operadora, não por teste self-service.
+Chamar no WhatsApp pra agendar: {whatsapp}
+"""
+
+# Instruções de sequência para segmentos ENTERPRISE (hospital, plano de saúde):
+# a venda é consultiva e de ticket alto — o CTA é agendar uma conversa/demonstração,
+# NUNCA um teste grátis self-service (um hospital não compra sistema de dezenas de
+# milhares por mês clicando sozinho num "teste grátis").
+_SEQ_INSTRUCAO_ENTERPRISE = {
+    1: (
+        "É o PRIMEIRO contato com um decisor de uma organização de grande porte. "
+        "Tom consultivo, respeitoso e direto. Mostre que você entende a dor específica "
+        "do setor dele e ABRA com o diferencial mais relevante. O CTA é convidar para "
+        "uma CONVERSA/DEMONSTRAÇÃO com o cenário real da organização — via WhatsApp ou "
+        "respondendo o email pra agendar. NÃO prometa teste grátis de 15 dias nem "
+        "cadastro self-service — é enterprise, a entrada é por conversa. "
+        "NÃO use 'Caro'/'Prezado'; use 'Olá [Nome],'."
+    ),
+    2: (
+        "É o PRIMEIRO FOLLOW-UP (3 dias depois). Mencione o email anterior. Traga 2-3 "
+        "benefícios concretos e mensuráveis pro tipo de organização dele. Seja mais "
+        "curto. Reforce o convite pra uma conversa/demonstração — não teste grátis."
+    ),
+    3: (
+        "É o SEGUNDO FOLLOW-UP (7 dias depois). Traga um ângulo de urgência real e "
+        "específico do setor (ciclo de contratação, exigência regulatória, perda "
+        "financeira recorrente que o produto resolve). Ofereça uma conversa curta e "
+        "objetiva. CTA = agendar conversa."
+    ),
+    4: (
+        "É o EMAIL FINAL (14 dias depois). Diga que é o último contato pra não insistir. "
+        "Deixe a porta aberta pra quando fizer sentido, com o convite pra conversa. "
+        "Seja humano e sem ressentimento."
+    ),
+}
+
+
 def gerar_email(lead, numero_sequencia: int = 1) -> dict:
     """
     Gera assunto + corpo HTML + corpo texto para um email de prospecção.
@@ -187,6 +271,10 @@ def gerar_email(lead, numero_sequencia: int = 1) -> dict:
     plano_label = _label_plano(pacote_codigo)
     whatsapp = _link_whatsapp(lead) or "não disponível"
     materiais = _link_materiais(lead.segmento)
+
+    # Segmentos enterprise: venda consultiva de ticket alto (hospital, operadora de
+    # plano de saúde). CTA = conversa/demonstração, nunca teste grátis self-service.
+    is_enterprise = lead.segmento in ("hospital", "plano_saude")
 
     if lead.segmento == "sst":
         produto_desc = _PRODUTO_SST.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp, materiais=materiais)
@@ -223,7 +311,7 @@ Colaboradores estimados: {lead.funcionarios_estimados or 'não informado — con
 Telefone: {lead.telefone or 'não informado'}
 Website: {lead.website or 'não informado'}
 """
-    else:  # farmacia
+    elif lead.segmento == "farmacia":
         produto_desc = _PRODUTO_FARMACIA.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp, materiais=materiais)
         contexto_lead = f"""
 Nome: {lead.nome}
@@ -235,10 +323,39 @@ Unidades/lojas estimadas: {lead.unidades_estimadas or 'não informado — consid
 Telefone: {lead.telefone or 'não informado'}
 Website: {lead.website or 'não informado'}
 """
+    elif lead.segmento == "hospital":
+        produto_desc = _PRODUTO_HOSPITAL.format(preco=preco, plano_label=plano_label, whatsapp=whatsapp)
+        contexto_lead = f"""
+Nome: {lead.nome}
+Hospital/organização: {lead.empresa}
+Cargo: {lead.cargo or 'gestor/diretor'}
+Email: {lead.email}
+Cidade: {lead.cidade}/{lead.estado}
+Tipo: {lead.get_tipo_display()}
+Telefone: {lead.telefone or 'não informado'}
+Website: {lead.website or 'não informado'}
+Perfil: organização hospitalar de grande porte, venda consultiva/enterprise. Se o
+cargo indicar área clínica, priorize OPME/oncologia; se for gestão/diretoria,
+priorize custo/DRG/OPME (margem) e gestão de leitos.
+"""
+    else:  # plano_saude
+        produto_desc = _PRODUTO_PLANO_SAUDE.format(preco=preco, plano_label=plano_label, whatsapp=whatsapp)
+        contexto_lead = f"""
+Nome: {lead.nome}
+Operadora: {lead.empresa}
+Cargo: {lead.cargo or 'gestor/diretor'}
+Email: {lead.email}
+Cidade: {lead.cidade}/{lead.estado}
+Tipo: {lead.get_tipo_display()}
+Telefone: {lead.telefone or 'não informado'}
+Website: {lead.website or 'não informado'}
+Perfil: operadora de plano de saúde, venda consultiva/enterprise. Ganchos mais
+fortes: IDSS calculado dos dados reais e ressarcimento ao SUS (dinheiro direto).
+"""
 
-    instrucao_seq = _SEQ_INSTRUCAO[seq]
+    instrucao_seq = _SEQ_INSTRUCAO_ENTERPRISE[seq] if is_enterprise else _SEQ_INSTRUCAO[seq]
 
-    system = (
+    _base_system = (
         "Você é o fundador de uma startup de saúde brasileira chamada SoloCRT Saúde (site: solocrt.com.br). "
         "Você está escrevendo emails de prospecção para potenciais clientes do seu software. "
         "Escreva em português brasileiro, tom profissional mas próximo e humano. "
@@ -246,32 +363,46 @@ Website: {lead.website or 'não informado'}
         "Use apenas as informações fornecidas sobre o produto e o lead. "
         "IMPORTANTE sobre o que destacar: a descrição do produto abaixo tem alguns itens "
         "marcados como DIFERENCIAL real (coisa que nenhum concorrente genérico de gestão tem). "
-        "Escolha o diferencial mais relevante pro tipo de lead (ex: gestor de RH grande se importa "
-        "mais com o App Ocupacional; um gestor técnico se importa mais com o NTEP ou o assistente de IA) "
-        "e ABRA o email com ele — não com a lista de funcionalidades de compliance/PDV, "
-        "que qualquer sistema de gestão já oferece e não convence ninguém a trocar de fornecedor. "
-        "O gancho tem que ser especificamente o que só o SoloCRT faz. Não tente citar todos os "
-        "diferenciais de uma vez — um email longo demais não é lido; escolha 1 pra abrir, cite os "
-        "outros de passagem se fizer sentido. "
-        "O CTA principal é sempre o link de teste grátis fornecido — no CORPO_HTML ele deve "
-        "aparecer como um botão/link clicável de verdade: <a href=\"LINK_EXATO\">texto</a>, "
-        "usando a URL exatamente como foi fornecida, sem alterar nem inventar outra URL. "
-        "Se um link de WhatsApp for fornecido (e não for 'não disponível'), inclua-o como CTA "
-        "SECUNDÁRIO e discreto — algo como '<a href=\"LINK_EXATO\">falar no WhatsApp</a>' — nunca "
-        "como opção principal, só pra quem prefere tirar dúvida antes de clicar no teste grátis. "
-        "Se vier 'não disponível', simplesmente não mencione WhatsApp. "
-        "Um link de materiais também é fornecido — ele leva pra uma página de apresentação do produto "
-        "(não direto pros planos). Inclua-o como CTA TERCIÁRIO, ainda mais discreto que o WhatsApp, "
-        "algo como '<a href=\"LINK_EXATO\">conhecer o produto</a>' ou '<a href=\"LINK_EXATO\">ver "
-        "como funciona</a>'. IMPORTANTE: NUNCA use a frase 'ver todos os planos' ou 'ver todos os "
-        "módulos' pra esse link — essa promessa é de OUTRA página (o catálogo completo, que fica DENTRO "
-        "da página de apresentação), não da página que esse link abre. Prometer 'todos os planos' e "
-        "abrir uma apresentação resumida confunde quem clicou. Nunca deixe esse link competir com o "
-        "CTA principal do teste grátis. "
-        "NUNCA sugira agendar uma reunião, call ou demonstração ao vivo — o teste grátis "
-        "self-service substitui isso completamente. "
-        "Assine como: Wagner Garcia, CEO | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
+        "Escolha o diferencial mais relevante pro tipo de lead e ABRA o email com ele — não com "
+        "a lista de funcionalidades básicas/compliance, que qualquer sistema já oferece e não "
+        "convence ninguém a trocar de fornecedor. O gancho tem que ser especificamente o que só "
+        "o SoloCRT faz. Não cite todos os diferenciais de uma vez — email longo não é lido; "
+        "escolha 1 pra abrir, cite outros de passagem se fizer sentido. "
     )
+    if is_enterprise:
+        _cta_system = (
+            "Este é um produto ENTERPRISE de ticket alto (dezenas de milhares por mês) vendido a "
+            "hospitais e operadoras — a compra é consultiva, passa por diretoria e processo formal. "
+            "Por isso o CTA NÃO é teste grátis nem cadastro self-service: é convidar para uma "
+            "CONVERSA/DEMONSTRAÇÃO com o cenário real da organização. Se um link de WhatsApp for "
+            "fornecido (e não for 'não disponível'), use-o como forma de agendar: no CORPO_HTML como "
+            "'<a href=\"LINK_EXATO\">agendar uma conversa no WhatsApp</a>', com a URL exatamente como "
+            "foi fornecida. Também convide a pessoa a simplesmente responder o email pra marcar. "
+            "NUNCA prometa teste grátis de 15 dias, 'comece agora' ou cadastro sem falar com ninguém. "
+            "Pode citar o plano de referência e o preço 'a partir de' como âncora, mas deixe claro "
+            "que o desenho final é feito na conversa. "
+            "Assine como: Wagner Garcia, CEO | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
+        )
+    else:
+        _cta_system = (
+            "O CTA principal é sempre o link de teste grátis fornecido — no CORPO_HTML ele deve "
+            "aparecer como um botão/link clicável de verdade: <a href=\"LINK_EXATO\">texto</a>, "
+            "usando a URL exatamente como foi fornecida, sem alterar nem inventar outra URL. "
+            "Se um link de WhatsApp for fornecido (e não for 'não disponível'), inclua-o como CTA "
+            "SECUNDÁRIO e discreto — algo como '<a href=\"LINK_EXATO\">falar no WhatsApp</a>' — nunca "
+            "como opção principal, só pra quem prefere tirar dúvida antes de clicar no teste grátis. "
+            "Se vier 'não disponível', simplesmente não mencione WhatsApp. "
+            "Um link de materiais também pode ser fornecido — ele leva pra uma página de apresentação "
+            "do produto (não direto pros planos). Se e SÓ se ele for fornecido (não vazio), inclua-o "
+            "como CTA TERCIÁRIO, ainda mais discreto, algo como '<a href=\"LINK_EXATO\">conhecer o "
+            "produto</a>' ou '<a href=\"LINK_EXATO\">ver como funciona</a>'. NUNCA use a frase 'ver "
+            "todos os planos' ou 'ver todos os módulos' pra esse link. Se o link de materiais vier "
+            "vazio, simplesmente não mencione materiais. "
+            "NUNCA sugira agendar uma reunião, call ou demonstração ao vivo — o teste grátis "
+            "self-service substitui isso completamente. "
+            "Assine como: Wagner Garcia, CEO | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
+        )
+    system = _base_system + _cta_system
 
     user_msg = f"""
 Produto:

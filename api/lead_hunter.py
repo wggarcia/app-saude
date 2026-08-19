@@ -32,6 +32,16 @@ _QUERIES_GOOGLE = {
     "medico_trabalho":       ["médico do trabalho", "medicina ocupacional"],
     "clinica_ocupacional":   ["clínica de medicina do trabalho", "clínica ocupacional"],
     "engenheiro_sst":        ["engenheiro de segurança do trabalho"],
+    # Hospital (enterprise)
+    "hospital_geral":         ["hospital", "hospital geral"],
+    "hospital_especializado": ["hospital especializado", "hospital oncológico", "hospital cardiológico", "maternidade"],
+    "rede_hospitalar":        ["rede hospitalar", "grupo hospitalar"],
+    "santa_casa":             ["santa casa de misericórdia", "hospital filantrópico"],
+    # Plano de saúde / operadora (enterprise)
+    "operadora_plano":    ["operadora de plano de saúde", "plano de saúde"],
+    "cooperativa_medica": ["cooperativa médica", "cooperativa de saúde"],
+    "autogestao":         ["autogestão em saúde", "caixa de assistência à saúde"],
+    "seguradora_saude":   ["seguradora de saúde", "seguro saúde"],
     # Empresas com força de trabalho em campo (não prestadoras de serviço de
     # medicina do trabalho) — o público certo pro App Ocupacional, que liga
     # gerência/RH/administrativo ao colaborador em campo, de qualquer setor —
@@ -284,7 +294,7 @@ def importar_csv(conteudo: str) -> list[dict]:
             "telefone":      _normalizar_telefone(_get(row, "telefone")),
             "cidade":        cidade or "Não informado",
             "estado":        estado,
-            "segmento":      segmento if segmento in ("sst", "farmacia") else "farmacia",
+            "segmento":      segmento if segmento in ("sst", "farmacia", "hospital", "plano_saude") else "farmacia",
             "tipo":          _get(row, "tipo", "farmacia_dispensacao"),
             "website":       _get(row, "website"),
             "linkedin_url":  _get(row, "linkedin_url") or _get(row, "linkedin"),

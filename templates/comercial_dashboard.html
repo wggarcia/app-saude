@@ -116,6 +116,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <option value="">Todos segmentos</option>
           <option value="sst">SST</option>
           <option value="farmacia">Farmácia</option>
+          <option value="hospital">Hospital</option>
+          <option value="plano_saude">Plano de Saúde</option>
         </select>
         <select class="sel" id="f_status" style="width:auto" onchange="carregarLeads()">
           <option value="">Todos status</option>
@@ -169,6 +171,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <select class="sel" id="l_segmento" onchange="atualizarTipos()">
           <option value="sst">SST / Medicina do Trabalho</option>
           <option value="farmacia">Farmácia</option>
+          <option value="hospital">Hospital</option>
+          <option value="plano_saude">Plano de Saúde</option>
         </select>
       </div>
       <div class="field"><label>Tipo *</label><select class="sel" id="l_tipo"></select></div>
@@ -266,6 +270,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <option value="rede_farmacia">Rede de farmácias</option>
           <option value="clinica_ocupacional">Clínica de medicina do trabalho</option>
           <option value="medico_trabalho">Médico do trabalho</option>
+          <option value="empresa_sesmt">Empresa (SESMT) — todos setores</option>
+          <option value="hospital_geral">Hospital geral</option>
+          <option value="hospital_especializado">Hospital especializado</option>
+          <option value="rede_hospitalar">Rede hospitalar</option>
+          <option value="santa_casa">Santa Casa / filantrópico</option>
+          <option value="operadora_plano">Operadora de plano de saúde</option>
+          <option value="cooperativa_medica">Cooperativa médica</option>
+          <option value="autogestao">Autogestão em saúde</option>
+          <option value="seguradora_saude">Seguradora de saúde</option>
         </select>
       </div>
       <div class="field"><label>Máx. resultados</label><input class="inp" id="g_max" type="number" value="20" min="1" max="60"></div>
@@ -294,6 +307,14 @@ const TIPOS = {
   farmacia: [
     ['farmacia_dispensacao','Farmácia de Dispensação'],['farmacia_manipulacao','Farmácia de Manipulação'],
     ['rede_farmacia','Rede de Farmácias'],
+  ],
+  hospital: [
+    ['hospital_geral','Hospital Geral'],['hospital_especializado','Hospital Especializado'],
+    ['rede_hospitalar','Rede Hospitalar'],['santa_casa','Santa Casa / Filantrópico'],
+  ],
+  plano_saude: [
+    ['operadora_plano','Operadora de Plano de Saúde'],['cooperativa_medica','Cooperativa Médica'],
+    ['autogestao','Autogestão'],['seguradora_saude','Seguradora de Saúde'],
   ],
 };
 const STATUS_OPTS = [
@@ -382,6 +403,8 @@ function atualizarTipos(){
   document.getElementById('l_tipo').innerHTML=TIPOS[seg].map(t=>`<option value="${t[0]}">${t[1]}</option>`).join('');
   document.getElementById('campo_funcionarios').style.display = seg==='sst' ? '' : 'none';
   document.getElementById('campo_unidades').style.display = seg==='farmacia' ? '' : 'none';
+  // Hospital e Plano de Saúde são enterprise: o plano sugerido é fixo (tier com
+  // os diferenciais), não precisa dimensionar por colaboradores/unidades aqui.
 }
 function abrirNovoLead(){
   document.getElementById('m_lead_titulo').textContent='Novo lead';
@@ -534,7 +557,10 @@ async function salvarCandidato(i, c, tipo){
   const email=document.getElementById('cand_email_'+i).value.trim();
   const nome=document.getElementById('cand_nome_'+i).value.trim();
   if(!email){ toast('Preencha o email.','err'); return; }
-  const seg = tipo.startsWith('farmacia') || tipo==='rede_farmacia' ? 'farmacia' : 'sst';
+  const seg = (tipo.startsWith('farmacia') || tipo==='rede_farmacia') ? 'farmacia'
+            : (tipo.startsWith('hospital') || tipo==='rede_hospitalar' || tipo==='santa_casa') ? 'hospital'
+            : (tipo==='operadora_plano' || tipo==='cooperativa_medica' || tipo==='autogestao' || tipo==='seguradora_saude') ? 'plano_saude'
+            : 'sst';
   try{
     await api('/api/comercial/leads/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       nome, empresa:c.empresa, email, telefone:c.telefone||'', cidade:c.cidade, estado:c.estado,

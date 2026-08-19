@@ -13928,8 +13928,10 @@ class LeadProspeccao(models.Model):
     agente de prospecção automática e tem tabela própria (api_leadprospeccao).
     """
     SEGMENTO = [
-        ('sst',      'SST / Medicina do Trabalho'),
-        ('farmacia', 'Farmácia'),
+        ('sst',         'SST / Medicina do Trabalho'),
+        ('farmacia',    'Farmácia'),
+        ('hospital',    'Hospital'),
+        ('plano_saude', 'Plano de Saúde'),
     ]
     TIPO = [
         ('medico_trabalho',     'Médico do Trabalho'),
@@ -13940,6 +13942,16 @@ class LeadProspeccao(models.Model):
         ('farmacia_dispensacao','Farmácia de Dispensação'),
         ('farmacia_manipulacao','Farmácia de Manipulação'),
         ('rede_farmacia',       'Rede de Farmácias'),
+        # Hospital (enterprise — venda consultiva)
+        ('hospital_geral',          'Hospital Geral'),
+        ('hospital_especializado',  'Hospital Especializado'),
+        ('rede_hospitalar',         'Rede Hospitalar'),
+        ('santa_casa',              'Santa Casa / Filantrópico'),
+        # Plano de Saúde / operadora (enterprise — venda consultiva)
+        ('operadora_plano',   'Operadora de Plano de Saúde'),
+        ('cooperativa_medica','Cooperativa Médica'),
+        ('autogestao',        'Autogestão'),
+        ('seguradora_saude',  'Seguradora de Saúde'),
     ]
     STATUS = [
         ('novo',           'Novo'),
@@ -14000,8 +14012,18 @@ class LeadProspeccao(models.Model):
         return f"{self.nome} — {self.empresa} ({self.get_status_display()})"
 
     def pacote_sugerido(self) -> str:
-        """Plano que melhor comporta o tamanho informado do lead (ou o de entrada, se desconhecido)."""
+        """Plano que melhor comporta o tamanho informado do lead (ou o de entrada, se desconhecido).
+
+        Enterprise (hospital/plano de saúde) sugere o tier que CONTÉM os diferenciais
+        que vendemos, nunca o de entrada: OPME/oncologia só existem no hospital_rede+;
+        IDSS/ressarcimento/NPS/IA já vêm no plano_saude_operadora. Isso evita prometer
+        no email um recurso que o plano sugerido não teria.
+        """
         from .planos import sugerir_pacote
+        if self.segmento == "hospital":
+            return "hospital_rede"
+        if self.segmento == "plano_saude":
+            return "plano_saude_operadora"
         setor = "empresa" if self.segmento == "sst" else "farmacia"
         tamanho = self.funcionarios_estimados if self.segmento == "sst" else self.unidades_estimadas
         return sugerir_pacote(setor, tamanho)

@@ -258,8 +258,16 @@ _RODAPE_CLIENTE = (
 def _rodape_prospeccao_com_descadastro(lead) -> str:
     link = _link_descadastro(lead)
     return (
+        '<p><strong>SoloCRT Saúde</strong> — Gestão inteligente para saúde · CNPJ 66.940.015/0001-48</p>'
+        '<p>Site: <a href="https://solocrt.com.br">solocrt.com.br</a> · '
+        'WhatsApp: <a href="https://wa.me/5521988921758">(21) 98892-1758</a> · '
+        'E-mail: contato@solocrt.com.br</p>'
+        '<p>'
+        '<a href="https://www.linkedin.com/company/125743985">LinkedIn</a> · '
+        '<a href="https://instagram.com/solocrtsaude">Instagram</a> · '
+        '<a href="https://x.com/SolocrtSaude">X (Twitter)</a>'
+        '</p>'
         '<p>Você está recebendo este email porque seu contato está em nossa base de prospecção.</p>'
-        '<p>SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com</p>'
         f'<p><a href="{link}">Não quero mais receber esses emails</a></p>'
     )
 
