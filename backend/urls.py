@@ -31,6 +31,8 @@ from api.views_materiais_comerciais import (
     catalogo_farmacia as catalogo_materiais_farmacia,
     portfolio_sst as portfolio_materiais_sst,
     catalogo_sst as catalogo_materiais_sst,
+    portfolio_hospital as portfolio_materiais_hospital,
+    portfolio_plano_saude as portfolio_materiais_plano_saude,
 )
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial, api_login_modulo, verificar_codigo_email, reenviar_codigo_email
@@ -1413,6 +1415,8 @@ urlpatterns = [
     path('materiais/farmacia/completo/', catalogo_materiais_farmacia),
     path('materiais/sst/', portfolio_materiais_sst),
     path('materiais/sst/completo/', catalogo_materiais_sst),
+    path('materiais/hospital/', portfolio_materiais_hospital),
+    path('materiais/plano_saude/', portfolio_materiais_plano_saude),
     path('riw2026/', riw2026_leads),
     path('riw2026/sw.js', riw2026_sw),
     path('privacidade/', documento_publico, {"slug": "privacidade"}),

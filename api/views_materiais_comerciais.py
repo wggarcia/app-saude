@@ -23,3 +23,12 @@ def portfolio_sst(request):
 
 def catalogo_sst(request):
     return render(request, "materiais/catalogo_sst.html")
+
+
+# Enterprise (venda consultiva): só o folder de entregas, sem catálogo de preços.
+def portfolio_hospital(request):
+    return render(request, "materiais/portfolio_hospital.html")
+
+
+def portfolio_plano_saude(request):
+    return render(request, "materiais/portfolio_plano_saude.html")

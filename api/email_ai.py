@@ -39,9 +39,8 @@ def _link_trial(codigo: str) -> str:
 
 
 def _link_materiais(segmento: str) -> str:
-    # Só SST e Farmácia têm páginas de material publicadas hoje. Hospital e
-    # Plano de Saúde ainda não têm — retorna vazio pra não gerar link quebrado.
-    if segmento not in ("sst", "farmacia"):
+    # Cada segmento tem sua página de material ("folder" de entregas).
+    if segmento not in ("sst", "farmacia", "hospital", "plano_saude"):
         return ""
     return f"{_base_url()}/materiais/{segmento}/"
 
@@ -190,9 +189,10 @@ real dele (o que sistema hospitalar genérico não entrega):
   regional integrado, que antecipa pressão de demanda sobre o hospital.
 Além disso cobre a operação inteira: custos e DRG (com envio ao Valor Saúde
 Brasil), CME, farmácia, SAME, qualidade/NSP, telemedicina e mais.
-Plano de referência pro porte: {plano_label} — a partir de {preco}/mês.
+Quer ver tudo que o SoloCRT Hospital entrega, com calma, antes de conversar? {materiais}
 É um produto enterprise: a entrada é por uma conversa/demonstração com o cenário
-real do hospital, não por teste self-service.
+real do hospital, não por teste self-service. O plano é desenhado sob medida pro
+porte na conversa.
 Chamar no WhatsApp pra agendar: {whatsapp}
 """
 
@@ -214,9 +214,9 @@ DIFERENCIAL real dele (além do que a ANS já exige):
 - NPS do beneficiário, núcleo familiar (titular/dependentes), rede credenciada,
   corretores/comissões e portal do beneficiário.
 Pra operadora maior tem ainda sinistralidade com IA e faturamento integrado.
-Plano de referência pro porte: {plano_label} — a partir de {preco}/mês.
+Quer ver tudo que o SoloCRT Plano de Saúde entrega, com calma, antes de conversar? {materiais}
 É um produto enterprise: a entrada é por uma conversa/demonstração com o cenário
-real da operadora, não por teste self-service.
+real da operadora, não por teste self-service. O plano é desenhado sob medida na conversa.
 Chamar no WhatsApp pra agendar: {whatsapp}
 """
 
@@ -324,7 +324,7 @@ Telefone: {lead.telefone or 'não informado'}
 Website: {lead.website or 'não informado'}
 """
     elif lead.segmento == "hospital":
-        produto_desc = _PRODUTO_HOSPITAL.format(preco=preco, plano_label=plano_label, whatsapp=whatsapp)
+        produto_desc = _PRODUTO_HOSPITAL.format(whatsapp=whatsapp, materiais=materiais)
         contexto_lead = f"""
 Nome: {lead.nome}
 Hospital/organização: {lead.empresa}
@@ -339,7 +339,7 @@ cargo indicar área clínica, priorize OPME/oncologia; se for gestão/diretoria,
 priorize custo/DRG/OPME (margem) e gestão de leitos.
 """
     else:  # plano_saude
-        produto_desc = _PRODUTO_PLANO_SAUDE.format(preco=preco, plano_label=plano_label, whatsapp=whatsapp)
+        produto_desc = _PRODUTO_PLANO_SAUDE.format(whatsapp=whatsapp, materiais=materiais)
         contexto_lead = f"""
 Nome: {lead.nome}
 Operadora: {lead.empresa}
@@ -379,8 +379,11 @@ fortes: IDSS calculado dos dados reais e ressarcimento ao SUS (dinheiro direto).
             "'<a href=\"LINK_EXATO\">agendar uma conversa no WhatsApp</a>', com a URL exatamente como "
             "foi fornecida. Também convide a pessoa a simplesmente responder o email pra marcar. "
             "NUNCA prometa teste grátis de 15 dias, 'comece agora' ou cadastro sem falar com ninguém. "
-            "Pode citar o plano de referência e o preço 'a partir de' como âncora, mas deixe claro "
-            "que o desenho final é feito na conversa. "
+            "NÃO cite preço nem valores em reais — o desenho e o valor do plano são tratados na conversa. "
+            "Um link de materiais é fornecido (o 'folder' com tudo que o produto entrega). Se ele não "
+            "for vazio, inclua-o como CTA SECUNDÁRIO e discreto, algo como '<a href=\"LINK_EXATO\">ver "
+            "tudo que o SoloCRT entrega</a>', usando a URL exatamente como fornecida — pra quem quer "
+            "conhecer antes de agendar. Se vier vazio, não mencione. "
             "Assine como: Wagner Garcia, CEO | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
         )
     else:
