@@ -189,6 +189,27 @@ def gerar_email(lead, numero_sequencia: int = 1) -> dict:
 
     if lead.segmento == "sst":
         produto_desc = _PRODUTO_SST.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp, materiais=materiais)
+        if lead.tipo == "empresa_sesmt":
+            perfil_lead = (
+                "Empresa com colaboradores em campo (obra, rua, unidade, planta, embarcação/"
+                "plataforma offshore) — NÃO é prestadora de serviço de medicina do trabalho. "
+                "A dor dela é distância entre gerência/RH/administrativo e o colaborador que "
+                "está em campo — em casos como offshore/embarcados essa distância é extrema "
+                "(colaborador isolado por semanas). O App Ocupacional (conecta gestão ao "
+                "colaborador em campo via celular, sem precisar de pesquisa de clima manual) "
+                "é o encaixe perfeito pra ABRIR o email — não a lista de compliance. Se o nome/"
+                "site da empresa sugerir operação offshore, marítima ou portuária, mencione "
+                "esse cenário especificamente (colaborador embarcado) em vez de um exemplo genérico."
+            )
+        elif lead.tipo == "clinica_ocupacional":
+            perfil_lead = (
+                "Clínica/prestadora de serviço de medicina do trabalho — o cliente dela são "
+                "OUTRAS empresas (ela emite ASO/PCMSO para os clientes dela). A dor é gerenciar "
+                "o compliance de uma carteira de empresas-clientes, não força de trabalho própria "
+                "em campo — foque em NTEP, PCMSO, eSocial ou o assistente de IA pra abrir o email."
+            )
+        else:
+            perfil_lead = "Profissional de SST/medicina do trabalho — escolha o diferencial mais relevante pro cargo dele."
         contexto_lead = f"""
 Nome: {lead.nome}
 Empresa: {lead.empresa}
@@ -196,6 +217,7 @@ Cargo: {lead.cargo or 'profissional de SST'}
 Email: {lead.email}
 Cidade: {lead.cidade}/{lead.estado}
 Tipo: {lead.get_tipo_display()}
+Perfil do lead: {perfil_lead}
 Colaboradores estimados: {lead.funcionarios_estimados or 'não informado — considere uma empresa pequena/média'}
 Telefone: {lead.telefone or 'não informado'}
 Website: {lead.website or 'não informado'}

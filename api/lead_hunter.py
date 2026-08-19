@@ -32,7 +32,28 @@ _QUERIES_GOOGLE = {
     "medico_trabalho":       ["médico do trabalho", "medicina ocupacional"],
     "clinica_ocupacional":   ["clínica de medicina do trabalho", "clínica ocupacional"],
     "engenheiro_sst":        ["engenheiro de segurança do trabalho"],
-    "empresa_sesmt":         ["SESMT empresa"],
+    # Empresas com força de trabalho em campo (não prestadoras de serviço de
+    # medicina do trabalho) — o público certo pro App Ocupacional, que liga
+    # gerência/RH/administrativo ao colaborador em campo, de qualquer setor —
+    # inclusive o caso extremo disso: trabalhador embarcado/offshore, que fica
+    # fisicamente isolado da gestão por semanas. "SESMT empresa" sozinho não
+    # traz nada disso no Google Places; os termos por setor abaixo trazem.
+    "empresa_sesmt": [
+        "construtora", "transportadora", "empresa de logística",
+        "indústria metalúrgica", "indústria alimentícia", "frigorífico",
+        "mineradora", "usina", "distribuidora atacado",
+        "empresa de terceirização de mão de obra", "empresa de segurança patrimonial",
+        "cooperativa agrícola", "agroindústria",
+        # Offshore / embarcados (NR-30, NR-37) — colaborador isolado no mar
+        "empresa offshore", "operadora de petróleo e gás", "plataforma de petróleo",
+        "empresa de navegação", "empresa marítima", "estaleiro", "empresa de cabotagem",
+        "empresa de mergulho industrial",
+        # Setores adicionais com colaborador disperso/em campo
+        "empresa de energia elétrica", "empresa de energia eólica", "empresa de telecomunicações",
+        "empresa de saneamento", "operadora portuária", "empresa florestal", "empresa de celulose",
+        "siderúrgica", "empresa de manutenção industrial", "rede varejista", "rede hoteleira",
+        "empresa de call center",
+    ],
 }
 
 
