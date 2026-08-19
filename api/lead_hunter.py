@@ -143,6 +143,8 @@ _EMAIL_EXCLUIR = (
     # Placeholders de template de site (nunca são caixa real) — inglês e português
     "@example.", "@domain.", "@dominio.", "@exemplo.", "exemplo@", "seuemail@", "seunome@",
     "nome@dominio", "email@email", "test@test", "teste@teste", "@empresa.com.br",
+    "@seusite.com", "@seudominio.com", "voce@seusite", "seusite@", "youremail@",
+    "yourname@", "yourdomain.com", "email@seusite",
     # Endereços de widgets/plugins (WhatsApp, formulário) capturados por engano do HTML
     "@whatsapp.com", "form-whats@", "noreply@", "no-reply@",
 )
