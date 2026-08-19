@@ -649,3 +649,42 @@ def api_social_imagem(request, nome_arquivo: str):
         raise Http404("Imagem não encontrada.")
 
     return FileResponse(open(caminho, "rb"), content_type="image/png")
+
+
+# ─── Descadastro de 1 clique (RFC 8058 List-Unsubscribe) ──────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_prospeccao_descadastro(request, lead_id: int, token: str):
+    """
+    Descadastro público, sem login — link vai direto no header List-Unsubscribe
+    do email (e também aparece no rodapé visível). GET mostra a confirmação,
+    POST (inclusive o clique automático "List-Unsubscribe=One-Click" de
+    Outlook/Gmail) já efetiva o descadastro na hora.
+    """
+    from django.http import HttpResponse
+    from .brevo_service import token_descadastro
+
+    lead = LeadProspeccao.objects.filter(id=lead_id).first()
+    if not lead or token_descadastro(lead.id, lead.email) != token:
+        return HttpResponse(
+            "<p style='font-family:sans-serif;padding:40px;text-align:center'>Link inválido.</p>",
+            status=404,
+        )
+
+    if request.method == "POST" or request.GET.get("confirmar") == "1":
+        lead.status = "unsubscribe"
+        lead.proximo_followup_em = None
+        lead.save(update_fields=["status", "proximo_followup_em"])
+        return HttpResponse(
+            "<p style='font-family:sans-serif;padding:40px;text-align:center'>"
+            "Pronto — você não vai receber mais emails nossos. Sentimos muito o incômodo.</p>"
+        )
+
+    return HttpResponse(
+        "<div style='font-family:sans-serif;max-width:420px;margin:60px auto;text-align:center'>"
+        "<p>Confirma que você não quer mais receber emails da SoloCRT Saúde?</p>"
+        f"<form method='post' action=''>"
+        "<button style='padding:10px 20px;font-size:15px;cursor:pointer' type='submit'>"
+        "Sim, descadastrar</button></form></div>"
+    )

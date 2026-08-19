@@ -23,6 +23,7 @@ depois, não bloqueia o envio funcionar.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -37,6 +38,32 @@ logger = logging.getLogger(__name__)
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 _TAG_PREFIXO = "leadprospeccao_email_"
+
+
+def token_descadastro(lead_id: int, email: str) -> str:
+    """Token não-adivinhável pra link de descadastro de 1 clique — sem exigir login."""
+    base = f"{lead_id}:{email}:{settings.SECRET_KEY}".encode()
+    return hashlib.sha256(base).hexdigest()[:20]
+
+
+def _link_descadastro(lead) -> str:
+    base_url = getattr(settings, "PUBLIC_BASE_URL", "https://app.solocrt.com.br").rstrip("/")
+    token = token_descadastro(lead.id, lead.email)
+    return f"{base_url}/api/comercial/descadastro/{lead.id}/{token}/"
+
+
+def _headers_lista(lead) -> dict:
+    """
+    List-Unsubscribe + List-Unsubscribe-Post (RFC 8058) — o cliente de email
+    (Outlook/Gmail) mostra um botão nativo de descadastro e isso pesa MUITO
+    na decisão de caixa de entrada vs. spam, principalmente na Microsoft.
+    """
+    from_email = getattr(settings, "EMAIL_COMERCIAL_FROM", "comercial@solocrt.com")
+    link = _link_descadastro(lead)
+    return {
+        "List-Unsubscribe": f"<mailto:{from_email}?subject=descadastrar>, <{link}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    }
 
 
 def _get_config() -> dict:
@@ -69,9 +96,10 @@ def enviar_email(email_comercial) -> bool:
         "to": [{"email": lead.email, "name": lead.nome}],
         "replyTo": {"email": cfg["from_email"], "name": cfg["from_name"]},
         "subject": email_comercial.assunto,
-        "htmlContent": _wrap_html(email_comercial.corpo_html, lead.nome),
+        "htmlContent": _wrap_html(email_comercial.corpo_html, lead.nome, rodape=_rodape_prospeccao_com_descadastro(lead)),
         "textContent": email_comercial.corpo_texto or _html_to_plain(email_comercial.corpo_html),
         "tags": [f"{_TAG_PREFIXO}{email_comercial.id}"],
+        "headers": _headers_lista(lead),
     }
 
     try:
@@ -225,6 +253,15 @@ _RODAPE_CLIENTE = (
     '<p>Você está recebendo este email porque sua empresa tem uma conta no SoloCRT Saúde.</p>'
     '<p>SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com</p>'
 )
+
+
+def _rodape_prospeccao_com_descadastro(lead) -> str:
+    link = _link_descadastro(lead)
+    return (
+        '<p>Você está recebendo este email porque seu contato está em nossa base de prospecção.</p>'
+        '<p>SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com</p>'
+        f'<p><a href="{link}">Não quero mais receber esses emails</a></p>'
+    )
 
 
 def _wrap_html(corpo: str, nome_lead: str, rodape: str = _RODAPE_PROSPECCAO) -> str:

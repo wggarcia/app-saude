@@ -1395,6 +1395,7 @@ from api.views_comercial import (
     api_brevo_webhook,
     api_brevo_inbound,
     api_social_imagem,
+    api_prospeccao_descadastro,
 )
 
 
@@ -3666,4 +3667,5 @@ urlpatterns = [
     path('api/comercial/webhook/eventos/', api_brevo_webhook),
     path('api/comercial/webhook/inbound/', api_brevo_inbound),
     path('api/comercial/social/imagem/<str:nome_arquivo>/', api_social_imagem),
+    path('api/comercial/descadastro/<int:lead_id>/<str:token>/', api_prospeccao_descadastro),
 ]

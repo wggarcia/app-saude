@@ -227,6 +227,7 @@ class EmpresaMiddleware:
             "/api/farmacia/ifood/webhook/",      # webhook do iFood (auth própria via assinatura por farmácia)
             "/api/comercial/webhook/",           # webhooks do Brevo (eventos + inbound) — auth própria via secret
             "/api/comercial/social/imagem/",     # imagens de post — a Meta busca sem cookie/token nosso
+            "/api/comercial/descadastro/",       # descadastro de 1 clique (List-Unsubscribe) — auth própria via token
             "/api/v1/dados",        # dados via API Key (BI/ERP externo)
             "/api/v1/plano-saude/dados",  # dados via API Key (Plano de Saúde — Enterprise)
             "/api/planos-publicos",
