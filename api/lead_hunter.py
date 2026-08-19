@@ -120,7 +120,7 @@ _EMAIL_REGEX = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 _EMAIL_EXCLUIR = (
     "sentry.io", "wixpress.com", "png", "jpg", "jpeg", "gif", "webp", "svg",
     # Placeholders de template de site (nunca são caixa real) — inglês e português
-    "@example.", "@domain.", "@dominio.", "exemplo@", "seuemail@", "seunome@",
+    "@example.", "@domain.", "@dominio.", "@exemplo.", "exemplo@", "seuemail@", "seunome@",
     "nome@dominio", "email@email", "test@test", "teste@teste",
     # Endereços de widgets/plugins (WhatsApp, formulário) capturados por engano do HTML
     "@whatsapp.com", "form-whats@", "noreply@", "no-reply@",

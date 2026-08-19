@@ -26,6 +26,12 @@ from api.views import (
     apagar_meus_dados_lgpd,
     site_principal, apresentacao_comercial, documento_publico, riw2026_leads, riw2026_sw
 )
+from api.views_materiais_comerciais import (
+    portfolio_farmacia as portfolio_materiais_farmacia,
+    catalogo_farmacia as catalogo_materiais_farmacia,
+    portfolio_sst as portfolio_materiais_sst,
+    catalogo_sst as catalogo_materiais_sst,
+)
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial, api_login_modulo, verificar_codigo_email, reenviar_codigo_email
 from api.access_control import api_meus_modulos
@@ -1402,6 +1408,10 @@ urlpatterns = [
     # 🔐 LOGIN
     path('', site_principal),
     path('apresentacao/', apresentacao_comercial),
+    path('materiais/farmacia/', portfolio_materiais_farmacia),
+    path('materiais/farmacia/completo/', catalogo_materiais_farmacia),
+    path('materiais/sst/', portfolio_materiais_sst),
+    path('materiais/sst/completo/', catalogo_materiais_sst),
     path('riw2026/', riw2026_leads),
     path('riw2026/sw.js', riw2026_sw),
     path('privacidade/', documento_publico, {"slug": "privacidade"}),

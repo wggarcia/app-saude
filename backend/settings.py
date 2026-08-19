@@ -390,7 +390,7 @@ GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 EMAIL_WEBHOOK_SECRET = os.environ.get("EMAIL_WEBHOOK_SECRET", "")
 EMAIL_COMERCIAL_FROM = os.environ.get("EMAIL_COMERCIAL_FROM", "comercial@solocrt.com")
-EMAIL_COMERCIAL_NOME = os.environ.get("EMAIL_COMERCIAL_NOME", "Wagner Garcia — SoloCRT Saúde")
+EMAIL_COMERCIAL_NOME = os.environ.get("EMAIL_COMERCIAL_NOME", "Wagner Garcia, CEO — SoloCRT Saúde")
 # Notificação por WhatsApp quando um lead responde (via CallMeBot, grátis).
 # Cadastre em https://www.callmebot.com/blog/free-api-whatsapp-messages/
 WHATSAPP_NOTIFY_PHONE = os.environ.get("WHATSAPP_NOTIFY_PHONE", "5521988921758")

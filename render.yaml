@@ -357,7 +357,7 @@ services:
       - key: EMAIL_COMERCIAL_FROM
         value: comercial@solocrt.com
       - key: EMAIL_COMERCIAL_NOME
-        value: "Wagner Garcia — SoloCRT Saúde"
+        value: "Wagner Garcia, CEO — SoloCRT Saúde"
       - key: PUBLIC_BASE_URL
         value: https://app.solocrt.com.br
 
@@ -402,7 +402,7 @@ services:
       - key: EMAIL_COMERCIAL_FROM
         value: comercial@solocrt.com
       - key: EMAIL_COMERCIAL_NOME
-        value: "Wagner Garcia — SoloCRT Saúde"
+        value: "Wagner Garcia, CEO — SoloCRT Saúde"
       - key: PUBLIC_BASE_URL
         value: https://app.solocrt.com.br
 

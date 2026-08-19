@@ -239,6 +239,7 @@ class EmpresaMiddleware:
             "/media/",
             "/curso-interno/",       # acesso do funcionário ao curso interno via token — sem login
             "/certificado/verificar/",  # verificação pública do certificado via QR code
+            "/materiais/",           # portfólio e catálogo comercial (SST/Farmácia) linkado nos emails de prospecção
         )
 
         # Rate limiting apenas nas rotas de login

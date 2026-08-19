@@ -53,12 +53,16 @@ _FARMACIA_LOCAL = [
     "farmacia.lotes",               # Alertas de vencimento de lotes
     "farmacia.pedidos",             # Pedidos de compra integrados
     "farmacia.epidemiologia",       # Alertas epidemiológicos regionais (App Cidadão)
-    "farmacia.pdv",                 # PDV / Caixa com TEF, Pix, Convênio
+    "farmacia.pdv",                 # PDV / Caixa com controle de sessão e forma de pagamento
     "farmacia.pbm",                 # PBM (convênios de medicamentos)
-    "farmacia.farmacia_popular",    # Farmácia Popular (convênio governo)
+    "farmacia.farmacia_popular",    # Farmácia Popular (registro interno de repasse)
     "farmacia.dre",                 # DRE / DFC / Conciliação financeira
-    "farmacia.delivery",            # E-commerce / Delivery integrado
+    "farmacia.delivery",            # E-commerce / Delivery integrado (iFood)
     "farmacia.relatorio_ia",        # Relatório executivo gerado por IA
+    "farmacia.avancado",            # Prontuário/receitas, inventário periódico, descarte controlado, ABC/CMM/giro
+    "farmacia.ia",                  # Interações medicamentosas + resumo executivo (motor de regras)
+    "farmacia.analytics",           # Previsão de demanda (EOQ/CMM) e curva ABC por consumo real
+    "farmacia.fidelidade",          # Programa de fidelidade (pontos por compra)
 ]
 _FARMACIA_REDE = _FARMACIA_LOCAL + [
     "farmacia.multi_unidade",       # Visão consolidada multi-unidade (EXCLUSIVO REDE)
@@ -266,7 +270,7 @@ PACOTES_SAAS = {
     "farmacia_local": {
         "label": "Farmacia Local",
         "setor": "farmacia",
-        "descricao": "Estoque, dispensacoes, PDV/TEF, PBM, Farmacia Popular, DRE e delivery integrado para farmacia local.",
+        "descricao": "Estoque, dispensacoes, PDV, PBM, Farmacia Popular, DRE, delivery, fidelidade e analytics de estoque para farmacia local.",
         "usuarios": 5,
         "dispositivos": 5,
         "mensal": 799.00,

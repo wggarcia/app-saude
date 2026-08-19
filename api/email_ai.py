@@ -103,27 +103,56 @@ _SEQ_INSTRUCAO = {
 }
 
 _PRODUTO_SST = """
-O SoloCRT SST é um sistema completo de Saúde e Segurança do Trabalho que automatiza:
+O SoloCRT SST é um sistema completo de Saúde e Segurança do Trabalho — e o
+DIFERENCIAL real dele (não é só "mais um sistema de compliance"):
+
+- Assistente de IA (Claude) integrado ao painel: o gestor pergunta em
+  linguagem natural coisas como "quantos ASOs vencem esse mês?" ou "quem
+  está afastado há mais de 15 dias?" e a IA responde na hora, já gerando
+  gráfico ou PDF pronto — sem precisar rodar relatório manual.
+- Detecção automática de Nexo Técnico Epidemiológico (NTEP): o sistema
+  cruza CID-10 com CNAE (conforme o Decreto 6.042/2007) e avisa o gestor
+  ANTES de o INSS questionar um afastamento como ocupacional — antecipa o
+  risco jurídico em vez de só reagir depois do fato.
+- App Ocupacional (check-in de bem-estar): o colaborador faz um check-in
+  diário e semanal (humor, energia, estresse, sono) direto pelo celular; o
+  sistema calcula um índice de bem-estar por setor, detecta risco de
+  burnout e permite denúncia anônima de conflito — o gestor vê tudo isso
+  num painel, sem precisar de pesquisa de clima manual. Já incluso em
+  todos os planos, não é um módulo à parte.
+Além disso, automatiza toda a base:
 - PCMSO completo (Programa de Controle Médico de Saúde Ocupacional)
-- PPP digital com assinatura eletrônica ICP-Brasil (exporta em 1 clique)
-- eSocial SST: envio automático de S-2210 (CAT), S-2220 (ASO), S-2240 (FMA)
+- PPP digital com assinatura eletrônica e trilha de auditoria completa (exporta em 1 clique)
+- eSocial SST: geração automática do XML (S-2210 CAT, S-2220 ASO, S-2240 FMA) pronto pra transmissão
 - PGR / GRO com mapeamento de riscos e inventário automático
 - CAT eletrônica vinculada automaticamente ao INSS
 - Laudos técnicos NR-01 a NR-36, LTCAT, LIPE
-- Dashboard de indicadores de saúde ocupacional por empresa
 Plano recomendado pro tamanho desta empresa: {plano_label} — {preco}/mês.
 Teste grátis por 15 dias, sem cartão de crédito: {link}
 Prefere tirar dúvida no WhatsApp antes? {whatsapp}
 """
 
 _PRODUTO_FARMACIA = """
-O SoloCRT Farmácia é um sistema de gestão completo para farmácias que cobre:
+O SoloCRT Farmácia é um sistema de gestão completo — e o DIFERENCIAL real
+dele (nenhum concorrente de PDV/gestão de farmácia tem isso hoje):
+
+- Alerta epidemiológico regional com IA: um modelo de machine learning
+  (RandomForest + Gradient Boosting) treinado com dados oficiais do
+  DATASUS/SINAN calcula, região por região, a probabilidade de surto
+  (dengue, gripe, etc.) e projeta essa curva 7, 14 e 30 dias à frente.
+- Isso vira sinal direto de reabastecimento: o painel mostra algo como
+  "reforçar hidratação, analgesia e repelente — janela de 24-48h" ANTES da
+  procura explodir na loja, cruzando o sinal epidemiológico com o estoque
+  real da farmácia — não é estimativa genérica, é a prateleira dela.
+- Relatório executivo gerado por IA (Claude) analisando os últimos 30 dias
+  de vendas e estoque de verdade: tendências, alerta de ruptura e
+  recomendação — pronto, sem o gestor precisar montar planilha.
+Além disso, cobre toda a operação:
 - PDV inteligente com controle de estoque em tempo real (método FEFO automático)
 - SNGPC — envio automático para ANVISA sem erros manuais
 - Manipulação magistral com rastreabilidade completa (lote, fornecedor, validade)
 - Programa de fidelidade integrado ao PDV
 - DRE e relatórios financeiros em tempo real
-- IA que identifica produtos com risco de vencimento e oportunidades de venda cruzada
 - Integração com distribuidores para pedido eletrônico
 - e-commerce / vitrine digital
 Plano recomendado pro tamanho desta farmácia: {plano_label} — {preco}/mês.
@@ -184,6 +213,15 @@ Website: {lead.website or 'não informado'}
         "Escreva em português brasileiro, tom profissional mas próximo e humano. "
         "NUNCA invente dados ou casos de sucesso específicos que não foram fornecidos. "
         "Use apenas as informações fornecidas sobre o produto e o lead. "
+        "IMPORTANTE sobre o que destacar: a descrição do produto abaixo tem alguns itens "
+        "marcados como DIFERENCIAL real (coisa que nenhum concorrente genérico de gestão tem). "
+        "Escolha o diferencial mais relevante pro tipo de lead (ex: gestor de RH grande se importa "
+        "mais com o App Ocupacional; um gestor técnico se importa mais com o NTEP ou o assistente de IA) "
+        "e ABRA o email com ele — não com a lista de funcionalidades de compliance/PDV, "
+        "que qualquer sistema de gestão já oferece e não convence ninguém a trocar de fornecedor. "
+        "O gancho tem que ser especificamente o que só o SoloCRT faz. Não tente citar todos os "
+        "diferenciais de uma vez — um email longo demais não é lido; escolha 1 pra abrir, cite os "
+        "outros de passagem se fizer sentido. "
         "O CTA principal é sempre o link de teste grátis fornecido — no CORPO_HTML ele deve "
         "aparecer como um botão/link clicável de verdade: <a href=\"LINK_EXATO\">texto</a>, "
         "usando a URL exatamente como foi fornecida, sem alterar nem inventar outra URL. "
@@ -193,7 +231,7 @@ Website: {lead.website or 'não informado'}
         "Se vier 'não disponível', simplesmente não mencione WhatsApp. "
         "NUNCA sugira agendar uma reunião, call ou demonstração ao vivo — o teste grátis "
         "self-service substitui isso completamente. "
-        "Assine como: Wagner Garcia | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
+        "Assine como: Wagner Garcia, CEO | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
     )
 
     user_msg = f"""
