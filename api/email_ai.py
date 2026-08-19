@@ -145,11 +145,12 @@ dele (nenhum concorrente de PDV/gestão de farmácia tem isso hoje):
 - Alerta epidemiológico regional com IA: um modelo de machine learning
   (RandomForest + Gradient Boosting) treinado com dados oficiais do
   DATASUS/SINAN calcula, região por região, a probabilidade de surto
-  (dengue, gripe, etc.) e projeta essa curva 7, 14 e 30 dias à frente.
-- Isso vira sinal direto de reabastecimento: o painel mostra algo como
-  "reforçar hidratação, analgesia e repelente — janela de 24-48h" ANTES da
-  procura explodir na loja, cruzando o sinal epidemiológico com o estoque
-  real da farmácia — não é estimativa genérica, é a prateleira dela.
+  (dengue, gripe, etc.) na área da farmácia.
+- Isso vira sinal direto de reabastecimento: o painel cruza esse risco
+  epidemiológico com o estoque real da farmácia e projeta a demanda dos
+  próximos 7 dias, mostrando algo como "reforçar hidratação, analgesia e
+  repelente" ANTES da procura explodir na loja — não é estimativa genérica,
+  é a prateleira dela.
 - Relatório executivo gerado por IA (Claude) analisando os últimos 30 dias
   de vendas e estoque de verdade: tendências, alerta de ruptura e
   recomendação — pronto, sem o gestor precisar montar planilha.
