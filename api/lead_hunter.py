@@ -121,10 +121,13 @@ _EMAIL_EXCLUIR = (
     "sentry.io", "wixpress.com", "png", "jpg", "jpeg", "gif", "webp", "svg",
     # Placeholders de template de site (nunca são caixa real) — inglês e português
     "@example.", "@domain.", "@dominio.", "@exemplo.", "exemplo@", "seuemail@", "seunome@",
-    "nome@dominio", "email@email", "test@test", "teste@teste",
+    "nome@dominio", "email@email", "test@test", "teste@teste", "@empresa.com.br",
     # Endereços de widgets/plugins (WhatsApp, formulário) capturados por engano do HTML
     "@whatsapp.com", "form-whats@", "noreply@", "no-reply@",
 )
+# Domínios reservados pra documentação/teste (RFC 2606) — pega "qualquercoisa@algo.example",
+# não só "@example.com" exato. Site comprometido/scraper às vezes injeta isso no HTML.
+_TLD_RESERVADO_SUFIXO = (".example", ".test", ".invalid", ".localhost")
 _PREFERENCIA_PREFIXO = ("contato", "comercial", "vendas", "atendimento", "sac", "info")
 
 
@@ -150,6 +153,7 @@ def _extrair_email_do_site(website: str) -> str:
     candidatos = {
         e.lower() for e in candidatos
         if not any(lixo in e.lower() for lixo in _EMAIL_EXCLUIR)
+        and not e.lower().split("@")[-1].endswith(_TLD_RESERVADO_SUFIXO)
     }
     if not candidatos:
         return ""
