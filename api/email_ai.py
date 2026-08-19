@@ -38,6 +38,11 @@ def _link_trial(codigo: str) -> str:
     return f"{_base_url()}/cadastro/?pacote={codigo}"
 
 
+def _link_materiais(segmento: str) -> str:
+    pasta = "sst" if segmento == "sst" else "farmacia"
+    return f"{_base_url()}/materiais/{pasta}/"
+
+
 def _preco_plano(codigo: str) -> str:
     pacote = PACOTES_SAAS.get(codigo, {})
     valor = pacote.get("mensal", 0)
@@ -130,6 +135,7 @@ Além disso, automatiza toda a base:
 Plano recomendado pro tamanho desta empresa: {plano_label} — {preco}/mês.
 Teste grátis por 15 dias, sem cartão de crédito: {link}
 Prefere tirar dúvida no WhatsApp antes? {whatsapp}
+Quer ver todos os planos, módulos e valores antes de decidir? {materiais}
 """
 
 _PRODUTO_FARMACIA = """
@@ -158,6 +164,7 @@ Além disso, cobre toda a operação:
 Plano recomendado pro tamanho desta farmácia: {plano_label} — {preco}/mês.
 Teste grátis por 15 dias, sem cartão de crédito: {link}
 Prefere tirar dúvida no WhatsApp antes? {whatsapp}
+Quer ver todos os planos, módulos e valores antes de decidir? {materiais}
 """
 
 
@@ -178,9 +185,10 @@ def gerar_email(lead, numero_sequencia: int = 1) -> dict:
     preco = _preco_plano(pacote_codigo)
     plano_label = _label_plano(pacote_codigo)
     whatsapp = _link_whatsapp(lead) or "não disponível"
+    materiais = _link_materiais(lead.segmento)
 
     if lead.segmento == "sst":
-        produto_desc = _PRODUTO_SST.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp)
+        produto_desc = _PRODUTO_SST.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp, materiais=materiais)
         contexto_lead = f"""
 Nome: {lead.nome}
 Empresa: {lead.empresa}
@@ -193,7 +201,7 @@ Telefone: {lead.telefone or 'não informado'}
 Website: {lead.website or 'não informado'}
 """
     else:  # farmacia
-        produto_desc = _PRODUTO_FARMACIA.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp)
+        produto_desc = _PRODUTO_FARMACIA.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp, materiais=materiais)
         contexto_lead = f"""
 Nome: {lead.nome}
 Farmácia: {lead.empresa}
@@ -229,6 +237,10 @@ Website: {lead.website or 'não informado'}
         "SECUNDÁRIO e discreto — algo como '<a href=\"LINK_EXATO\">falar no WhatsApp</a>' — nunca "
         "como opção principal, só pra quem prefere tirar dúvida antes de clicar no teste grátis. "
         "Se vier 'não disponível', simplesmente não mencione WhatsApp. "
+        "Um link de materiais (catálogo completo com todos os planos, módulos e valores) também é "
+        "fornecido — inclua-o como CTA TERCIÁRIO, ainda mais discreto que o WhatsApp, algo como "
+        "'<a href=\"LINK_EXATO\">ver todos os planos e módulos</a>' pra quem quer se aprofundar antes "
+        "de decidir. Nunca deixe esse link competir com o CTA principal do teste grátis. "
         "NUNCA sugira agendar uma reunião, call ou demonstração ao vivo — o teste grátis "
         "self-service substitui isso completamente. "
         "Assine como: Wagner Garcia, CEO | SoloCRT Saúde | solocrt.com.br | comercial@solocrt.com"
