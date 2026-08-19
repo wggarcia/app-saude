@@ -156,6 +156,8 @@ _EMAIL_EXCLUIR = (
     # Escape JSON vazado no HTML da página (ex: / = "/") — regex casa a forma
     # de email mas não é um endereço real, é lixo de script embutido na página
     "u002f", "u0026", "u003d",
+    # Domínio genérico de construtor de site (nunca é o domínio próprio da empresa)
+    "@sitevip.com",
     # Endereços de widgets/plugins (WhatsApp, formulário) capturados por engano do HTML
     "@whatsapp.com", "form-whats@", "noreply@", "no-reply@",
 )
