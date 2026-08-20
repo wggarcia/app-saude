@@ -23,6 +23,7 @@ from datetime import datetime, date, timedelta
 
 import requests
 from django.core.management.base import BaseCommand
+from django.utils import timezone as djtz
 
 from api.models import LicitacaoOportunidade
 
@@ -44,20 +45,53 @@ _DOMINIO_ASSIST = [
     "acolhimento", "proteção social", "protecao social",
 ]
 _TECH = [
-    "sistema", "software", "solução", "solucao", "licença", "licenca", "aplicativo",
-    "plataforma", "prontuário eletrônico", "prontuario eletronico",
-    "tecnologia da informação", "tecnologia da informacao", "informatiz", "pec ",
-    "licenciamento", "sistema de gestão", "sistema de gestao", "gestão em saúde",
-    "gestao em saude", "sgs ", "erp", "digitaliz",
+    "software", "prontuário eletrônico", "prontuario eletronico", "aplicativo",
+    "plataforma digital", "tecnologia da informação", "tecnologia da informacao",
+    "informatiz", "digitaliz", "pec ", "licenciamento de software", "licença de uso",
+    "licenca de uso", "sistema de gestão", "sistema de gestao", "sistema de informação",
+    "sistema de informacao", "sistema informatizado", "sistema de prontuário",
+    "sistema de prontuario", "sistema de regulação", "sistema de regulacao",
+    "sistema de gerenciamento", "gestão informatiz", "gestao informatiz",
+    "solução de software", "solucao de software", "erp", "sistema web",
+]
+
+# Frases-armadilha: contêm "sistema"/"saúde" mas são DOMÍNIO, não tecnologia.
+# Removidas do texto antes de checar TECH pra não dar falso positivo.
+_ARMADILHAS = [
+    "sistema único de saúde", "sistema unico de saude", "por meio do sistema",
+    "sistema de saúde", "sistema de saude", "sistema prisional", "sistema viário",
+    "sistema viario", "sistema de abastecimento", "sistema de esgoto",
+]
+
+# Se qualquer um destes aparecer, é compra de commodity/serviço não-software: veta.
+_EXCLUSAO = [
+    "buffet", "refeiç", "refeic", "coffee", "gênero aliment", "genero aliment",
+    "gêneros aliment", "generos aliment", "merenda", "alimentíc", "alimentic",
+    "oxigên", "oxigen", "medicament", "material de limpeza", "material de consumo",
+    "material hospitalar", "materiais hospitalar", "combustív", "combustiv",
+    "veículo", "veiculo", "pavimenta", "obra ", "reforma", "construção de",
+    "construcao de", "uniforme", "mobiliár", "mobiliar", "insumo", "reagente",
+    "órtese", "ortese", "prótese", "protese", "registrador eletrônico",
+    "registradores eletrôn", "ponto eletrôn", "ponto eletron", "material médico",
+    "material medico", "locação de veícul", "locacao de veicul", "gases medicinais",
 ]
 
 
 def _classificar(obj_lower: str):
-    """Retorna (casa?, area, termos_que_casaram) para um objeto de licitação."""
+    """Retorna (casa?, area, termos) — cruza domínio (saúde/SUAS) com tecnologia
+    (software de verdade), vetando commodities e frases-armadilha."""
+    if any(x in obj_lower for x in _EXCLUSAO):
+        return False, None, ""
     dom_saude = [k for k in _DOMINIO_SAUDE if k in obj_lower]
     dom_assist = [k for k in _DOMINIO_ASSIST if k in obj_lower]
-    tech = [k for k in _TECH if k in obj_lower]
-    if not tech or not (dom_saude or dom_assist):
+    if not (dom_saude or dom_assist):
+        return False, None, ""
+    # remove frases-armadilha antes de procurar tecnologia
+    obj_tech = obj_lower
+    for arm in _ARMADILHAS:
+        obj_tech = obj_tech.replace(arm, " ")
+    tech = [k for k in _TECH if k in obj_tech]
+    if not tech:
         return False, None, ""
     if dom_saude and dom_assist:
         area = "ambos"
@@ -73,9 +107,12 @@ def _parse_data(valor):
     if not valor:
         return None
     try:
-        return datetime.fromisoformat(valor.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(valor.replace("Z", "+00:00"))
     except (ValueError, AttributeError):
         return None
+    if dt.tzinfo is None:
+        dt = djtz.make_aware(dt)
+    return dt
 
 
 class Command(BaseCommand):
@@ -86,7 +123,8 @@ class Command(BaseCommand):
                             help="Quantos dias pra trás varrer (default 3, sobrepõe pro cron diário)")
         parser.add_argument("--paginas-max", type=int, default=40,
                             help="Máx. de páginas por modalidade (trava de segurança)")
-        parser.add_argument("--pausa", type=float, default=0.4)
+        parser.add_argument("--pausa", type=float, default=1.2,
+                            help="Segundos entre chamadas (PNCP tem rate limit; 1.2 evita 429)")
 
     def handle(self, *args, **options):
         dias = options["dias"]
@@ -102,18 +140,31 @@ class Command(BaseCommand):
 
         for modalidade in _MODALIDADES:
             for pagina in range(1, pag_max + 1):
-                try:
-                    resp = requests.get(PNCP_URL, params={
-                        "dataInicial": di, "dataFinal": df,
-                        "codigoModalidadeContratacao": modalidade,
-                        "pagina": pagina, "tamanhoPagina": 50,
-                    }, headers={"Accept": "application/json"}, timeout=30)
-                    if resp.status_code == 204:
+                # tenta a página com backoff em caso de 429 (rate limit do PNCP)
+                payload = None
+                for tentativa in range(5):
+                    try:
+                        resp = requests.get(PNCP_URL, params={
+                            "dataInicial": di, "dataFinal": df,
+                            "codigoModalidadeContratacao": modalidade,
+                            "pagina": pagina, "tamanhoPagina": 50,
+                        }, headers={"Accept": "application/json"}, timeout=30)
+                        if resp.status_code == 204:
+                            payload = {"data": []}
+                            break
+                        if resp.status_code == 429:
+                            espera = 5 * (tentativa + 1)
+                            self.stdout.write(f"  429 (rate limit) modalidade={modalidade} pag={pagina} — aguardando {espera}s")
+                            time.sleep(espera)
+                            continue
+                        resp.raise_for_status()
+                        payload = resp.json()
                         break
-                    resp.raise_for_status()
-                    payload = resp.json()
-                except Exception as exc:
-                    self.stdout.write(f"  erro modalidade={modalidade} pag={pagina}: {exc}")
+                    except Exception as exc:
+                        self.stdout.write(f"  erro modalidade={modalidade} pag={pagina}: {exc}")
+                        time.sleep(3)
+                if payload is None:
+                    self.stdout.write(f"  desistindo de modalidade={modalidade} na pag={pagina}")
                     break
 
                 itens = payload.get("data") or []
