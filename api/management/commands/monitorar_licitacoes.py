@@ -75,6 +75,11 @@ _EXCLUSAO = [
     "órtese", "ortese", "prótese", "protese", "registrador eletrônico",
     "registradores eletrôn", "ponto eletrôn", "ponto eletron", "material médico",
     "material medico", "locação de veícul", "locacao de veicul", "gases medicinais",
+    # Hardware/equipamento (mesmo quando cita 'sistema'/TI) — não é software:
+    "ar condicionado", "ultrassonogr", "ultrassom", "multissensorial",
+    "materiais de tecnologia", "material de tecnologia", "aparelho de ar",
+    "raio-x", "raio x", "tomógrafo", "tomografo", "mamógrafo", "mamografo",
+    "equipamentos de informática", "equipamentos de informatica",
 ]
 
 
