@@ -18,6 +18,7 @@ pra não pegar comprinha de oxigênio/comida/limpeza.
 """
 from __future__ import annotations
 
+import re
 import time
 from datetime import datetime, date, timedelta
 
@@ -47,7 +48,7 @@ _DOMINIO_ASSIST = [
 _TECH = [
     "software", "prontuário eletrônico", "prontuario eletronico", "aplicativo",
     "plataforma digital", "tecnologia da informação", "tecnologia da informacao",
-    "informatiz", "digitaliz", "pec ", "licenciamento de software", "licença de uso",
+    "informatiz", "digitaliz", "pec", "licenciamento de software", "licença de uso",
     "licenca de uso", "sistema de gestão", "sistema de gestao", "sistema de informação",
     "sistema de informacao", "sistema informatizado", "sistema de prontuário",
     "sistema de prontuario", "sistema de regulação", "sistema de regulacao",
@@ -77,20 +78,36 @@ _EXCLUSAO = [
 ]
 
 
+# Siglas curtas: precisam casar como PALAVRA INTEIRA (senão 'sus' bate dentro de
+# 'sustentável', 'ubs' dentro de outra palavra, etc.).
+_ACRONIMOS = {"sus", "ubs", "cras", "creas", "samu", "suas", "esus", "e-sus",
+              "pec", "erp", "sgs"}
+
+
+def _m(kw: str, texto: str) -> bool:
+    """Casa keyword no texto respeitando limite de palavra no INÍCIO. Para siglas
+    curtas exige palavra inteira (início e fim); para o resto basta o início, o
+    que deixa radicais funcionarem ('epidemiol' → 'epidemiologia', 'informatiz'
+    → 'informatização') sem casar no meio de outra palavra."""
+    if kw in _ACRONIMOS:
+        return re.search(r"\b" + re.escape(kw) + r"\b", texto) is not None
+    return re.search(r"\b" + re.escape(kw), texto) is not None
+
+
 def _classificar(obj_lower: str):
     """Retorna (casa?, area, termos) — cruza domínio (saúde/SUAS) com tecnologia
     (software de verdade), vetando commodities e frases-armadilha."""
     if any(x in obj_lower for x in _EXCLUSAO):
         return False, None, ""
-    dom_saude = [k for k in _DOMINIO_SAUDE if k in obj_lower]
-    dom_assist = [k for k in _DOMINIO_ASSIST if k in obj_lower]
+    dom_saude = [k for k in _DOMINIO_SAUDE if _m(k, obj_lower)]
+    dom_assist = [k for k in _DOMINIO_ASSIST if _m(k, obj_lower)]
     if not (dom_saude or dom_assist):
         return False, None, ""
     # remove frases-armadilha antes de procurar tecnologia
     obj_tech = obj_lower
     for arm in _ARMADILHAS:
         obj_tech = obj_tech.replace(arm, " ")
-    tech = [k for k in _TECH if k in obj_tech]
+    tech = [k for k in _TECH if _m(k, obj_tech)]
     if not tech:
         return False, None, ""
     if dom_saude and dom_assist:
