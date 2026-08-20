@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitor de Licitações — SoloCRT Saúde</title>
+<style>
+  :root{
+    --bg:#0b1220; --card:#131c2e; --card2:#0f1826; --border:#233047; --txt:#e6edf7;
+    --muted:#8ba0bd; --accent:#39d0c4; --accent2:#5b8cff; --ok:#2ecc71; --warn:#f5a623; --danger:#ff5c6c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:'Manrope',system-ui,Arial,sans-serif;font-size:14px}
+  .wrap{max-width:1400px;margin:0 auto;padding:24px}
+  h1{font-size:24px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  a{color:var(--accent2);text-decoration:none}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+  .navlinks a{margin-left:14px;font-size:13px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .kpi .n{font-size:26px;font-weight:800}
+  .kpi .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .kpi.saude{border-top:3px solid var(--accent)}
+  .kpi.assist{border-top:3px solid var(--accent2)}
+  .kpi.novas{border-top:3px solid var(--warn)}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:8px}
+  .filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  select,input{background:var(--card2);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px}
+  input.q{min-width:220px}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--border)}
+  td{padding:12px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  tr:hover td{background:var(--card2)}
+  .obj{max-width:520px}
+  .obj b{display:block;font-weight:600;margin-bottom:3px;line-height:1.35}
+  .meta{color:var(--muted);font-size:12px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+  .tag.saude{background:rgba(57,208,196,.15);color:var(--accent)}
+  .tag.assistencia{background:rgba(91,140,255,.15);color:var(--accent2)}
+  .tag.ambos{background:rgba(245,166,35,.15);color:var(--warn)}
+  .uf{font-weight:700;color:var(--muted)}
+  .val{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stsel{font-size:12px;padding:5px 8px}
+  .empty{text-align:center;color:var(--muted);padding:40px}
+  .btn{background:var(--accent);color:#04121a;border:none;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:12px}
+  .muted{color:var(--muted)}
+  .foot{color:var(--muted);font-size:12px;margin-top:16px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>📋 Monitor de Licitações <span style="color:var(--accent)">SoloCRT</span></h1>
+      <div class="sub">Editais públicos (PNCP) de software para Saúde e Assistência Social — o canal certo pro setor público</div>
+    </div>
+    <div class="navlinks">
+      <a href="/comercial/">← Agente Comercial</a>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="panel">
+    <div class="filtros">
+      <input class="q" id="f_q" placeholder="🔍 Buscar no objeto…" oninput="deb()">
+      <select id="f_area" onchange="carregar()">
+        <option value="">Todas as áreas</option>
+        <option value="saude">Saúde / Governo</option>
+        <option value="assistencia">Assistência / SUAS</option>
+        <option value="ambos">Saúde + Assistência</option>
+      </select>
+      <select id="f_status" onchange="carregar()">
+        <option value="">Todos status</option>
+        <option value="nova">Novas</option>
+        <option value="analisando">Analisando</option>
+        <option value="respondendo">Preparando proposta</option>
+        <option value="enviada">Proposta enviada</option>
+        <option value="ganha">Ganhamos</option>
+        <option value="perdida">Perdida</option>
+        <option value="descartada">Descartada</option>
+      </select>
+      <input id="f_uf" maxlength="2" placeholder="UF" style="width:70px" oninput="deb()">
+      <span class="muted" id="cont"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Objeto / Órgão</th><th>UF</th><th>Valor estimado</th><th>Abertura</th>
+          <th>Área</th><th>Status</th><th>Edital</th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot">Fonte: PNCP — Portal Nacional de Contratações Públicas · atualizado 1x/dia pelo monitor automático</div>
+</div>
+
+<script>
+const STATUS = [['nova','Nova'],['analisando','Analisando'],['respondendo','Preparando proposta'],['enviada','Proposta enviada'],['ganha','Ganhamos!'],['perdida','Perdida'],['descartada','Descartada']];
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function moeda(v){return v==null?'—':'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function dataBR(s){if(!s)return '—';const d=new Date(s);return isNaN(d)?'—':d.toLocaleDateString('pt-BR')}
+let t=null; function deb(){clearTimeout(t);t=setTimeout(carregar,350)}
+
+async function carregar(){
+  const p=new URLSearchParams();
+  const q=f_q.value.trim(), area=f_area.value, status=f_status.value, uf=f_uf.value.trim();
+  if(q)p.set('q',q); if(area)p.set('area',area); if(status)p.set('status',status); if(uf)p.set('uf',uf);
+  p.set('por_pagina','100');
+  const d=await (await fetch('/api/comercial/licitacoes/?'+p.toString())).json();
+  const s=d.stats||{};
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="n">${s.total||0}</div><div class="l">Total captadas</div></div>
+    <div class="kpi novas"><div class="n">${s.novas||0}</div><div class="l">Aguardando análise</div></div>
+    <div class="kpi saude"><div class="n">${(s.por_area&&s.por_area.saude)||0}</div><div class="l">Saúde / Governo</div></div>
+    <div class="kpi assist"><div class="n">${(s.por_area&&s.por_area.assistencia)||0}</div><div class="l">Assistência / SUAS</div></div>
+    <div class="kpi"><div class="n">${(s.por_area&&s.por_area.ambos)||0}</div><div class="l">Saúde + Assistência</div></div>`;
+  document.getElementById('cont').textContent=(d.total_filtrado||0)+' resultado(s)';
+  const tb=document.getElementById('tbody');
+  if(!d.licitacoes||!d.licitacoes.length){tb.innerHTML='<tr><td colspan="7" class="empty">Nenhuma licitação com esses filtros ainda.</td></tr>';return}
+  tb.innerHTML=d.licitacoes.map(l=>`
+    <tr>
+      <td class="obj">
+        <b>${esc(l.objeto.slice(0,180))}${l.objeto.length>180?'…':''}</b>
+        <span class="meta">${esc(l.orgao)}${l.municipio?' · '+esc(l.municipio):''} · ${esc(l.modalidade)}</span>
+        ${l.palavras_match?'<div class="meta" style="margin-top:3px">🔎 '+esc(l.palavras_match)+'</div>':''}
+      </td>
+      <td class="uf">${esc(l.uf)}</td>
+      <td class="val">${moeda(l.valor_estimado)}</td>
+      <td class="val">${dataBR(l.data_abertura)}</td>
+      <td><span class="tag ${l.area}">${esc(l.area_display)}</span></td>
+      <td>
+        <select class="stsel" onchange="mudarStatus(${l.id},this.value)">
+          ${STATUS.map(([v,t])=>`<option value="${v}" ${v===l.status?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </td>
+      <td>${l.link_origem?`<a href="${esc(l.link_origem)}" target="_blank" rel="noopener">abrir ↗</a>`:'<span class="muted">—</span>'}</td>
+    </tr>`).join('');
+}
+async function mudarStatus(id,status){
+  await fetch(`/api/comercial/licitacoes/${id}/status/`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+  carregar();
+}
+carregar();
+setInterval(carregar, 120000);
+</script>
+</body>
+</html>

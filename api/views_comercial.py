@@ -37,7 +37,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .models import EmailProspeccao, LeadProspeccao
+from .models import EmailProspeccao, LeadProspeccao, LicitacaoOportunidade
 from .services.auth_session import dono_autenticado_from_request
 
 logger = logging.getLogger(__name__)
@@ -688,3 +688,87 @@ def api_prospeccao_descadastro(request, lead_id: int, token: str):
         "<button style='padding:10px 20px;font-size:15px;cursor:pointer' type='submit'>"
         "Sim, descadastrar</button></form></div>"
     )
+
+
+# ─── Monitor de Licitações (setor público: Governo/saúde + Assistência/SUAS) ──
+
+def _licitacao_to_dict(lc: LicitacaoOportunidade) -> dict:
+    return {
+        "id":              lc.id,
+        "objeto":          lc.objeto,
+        "orgao":           lc.orgao,
+        "municipio":       lc.municipio,
+        "uf":              lc.uf,
+        "modalidade":      lc.modalidade,
+        "valor_estimado":  float(lc.valor_estimado) if lc.valor_estimado is not None else None,
+        "data_publicacao": lc.data_publicacao.isoformat() if lc.data_publicacao else None,
+        "data_abertura":   lc.data_abertura.isoformat() if lc.data_abertura else None,
+        "link_origem":     lc.link_origem,
+        "area":            lc.area,
+        "area_display":    lc.get_area_display(),
+        "palavras_match":  lc.palavras_match,
+        "status":          lc.status,
+        "status_display":  lc.get_status_display(),
+        "notas":           lc.notas,
+        "criado_em":       lc.criado_em.isoformat(),
+    }
+
+
+@_owner_required
+def licitacoes_dashboard(request):
+    return render(request, "licitacoes_dashboard.html")
+
+
+@csrf_exempt
+@_owner_required
+def api_licitacoes_lista(request):
+    qs = LicitacaoOportunidade.objects.all()
+    area = request.GET.get("area")
+    status = request.GET.get("status")
+    uf = request.GET.get("uf")
+    q = request.GET.get("q")
+    if area:
+        qs = qs.filter(area=area)
+    if status:
+        qs = qs.filter(status=status)
+    if uf:
+        qs = qs.filter(uf=uf.upper())
+    if q:
+        qs = qs.filter(objeto__icontains=q)
+
+    from django.db.models import Count
+    stats = {
+        "total":        LicitacaoOportunidade.objects.count(),
+        "novas":        LicitacaoOportunidade.objects.filter(status="nova").count(),
+        "por_area":     dict(LicitacaoOportunidade.objects.values_list("area").annotate(n=Count("id"))),
+        "por_status":   dict(LicitacaoOportunidade.objects.values_list("status").annotate(n=Count("id"))),
+    }
+
+    try:
+        pagina = max(1, int(request.GET.get("pagina", 1)))
+        por_pagina = min(100, max(1, int(request.GET.get("por_pagina", 50))))
+    except (TypeError, ValueError):
+        pagina, por_pagina = 1, 50
+    ini = (pagina - 1) * por_pagina
+    itens = [_licitacao_to_dict(lc) for lc in qs[ini:ini + por_pagina]]
+    return JsonResponse({"licitacoes": itens, "total_filtrado": qs.count(), "stats": stats})
+
+
+@csrf_exempt
+@_owner_required
+def api_licitacao_status(request, licitacao_id: int):
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
+    try:
+        lc = LicitacaoOportunidade.objects.get(pk=licitacao_id)
+    except LicitacaoOportunidade.DoesNotExist:
+        return JsonResponse({"erro": "Licitação não encontrada."}, status=404)
+    data = _json_body(request)
+    novo_status = data.get("status")
+    validos = {c[0] for c in LicitacaoOportunidade.STATUS}
+    if novo_status and novo_status in validos:
+        lc.status = novo_status
+    if "notas" in data:
+        lc.notas = data["notas"]
+    lc.save(update_fields=["status", "notas", "atualizado_em"])
+    return JsonResponse(_licitacao_to_dict(lc))

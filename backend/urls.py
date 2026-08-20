@@ -1398,6 +1398,9 @@ from api.views_comercial import (
     api_brevo_inbound,
     api_social_imagem,
     api_prospeccao_descadastro,
+    licitacoes_dashboard,
+    api_licitacoes_lista,
+    api_licitacao_status,
 )
 
 
@@ -3660,6 +3663,9 @@ urlpatterns = [
 
     # ── Comercial / Agente de Outreach ───────────────────────────────────────
     path('comercial/', comercial_dashboard),
+    path('comercial/licitacoes/', licitacoes_dashboard),
+    path('api/comercial/licitacoes/', api_licitacoes_lista),
+    path('api/comercial/licitacoes/<int:licitacao_id>/status/', api_licitacao_status),
     path('api/comercial/stats/', api_comercial_stats),
     path('api/comercial/leads/', api_leads_lista),
     path('api/comercial/leads/importar/', api_leads_importar_csv),

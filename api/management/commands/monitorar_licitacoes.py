@@ -1,0 +1,176 @@
+"""
+monitorar_licitacoes.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Monitor de licitações públicas (PNCP — Portal Nacional de Contratações
+Públicas, oficial da Lei 14.133/2021). Varre os editais publicados nos
+últimos dias, filtra os que casam com o produto SoloCRT (SOFTWARE/SISTEMA
+para SAÚDE ou ASSISTÊNCIA SOCIAL/SUAS) e salva como LicitacaoOportunidade.
+
+É o canal certo de venda pro setor público — que compra por licitação, não
+por email frio. Roda 1x/dia via cron.
+
+Filtro = cruza DOMÍNIO (saúde/SUAS) com TECNOLOGIA (sistema/software/etc),
+pra não pegar comprinha de oxigênio/comida/limpeza.
+
+  cd /opt/soluscrt && set -a && . ./.env && set +a && \
+    venv/bin/python -u manage.py monitorar_licitacoes >> /var/log/soluscrt/licitacoes.log 2>&1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+from __future__ import annotations
+
+import time
+from datetime import datetime, date, timedelta
+
+import requests
+from django.core.management.base import BaseCommand
+
+from api.models import LicitacaoOportunidade
+
+PNCP_URL = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+
+# Modalidades eletrônicas onde software/serviço aparece (código PNCP):
+# 6=Pregão Eletrônico, 4=Concorrência Eletrônica, 8=Dispensa
+_MODALIDADES = [6, 4, 8]
+
+_DOMINIO_SAUDE = [
+    "saúde", "saude", "hospital", "prontuário", "prontuario", "ubs", "atenção básica",
+    "atencao basica", "e-sus", "esus", "vigilância", "vigilancia", "epidemiol",
+    "regulação", "regulacao", "samu", "farmácia", "farmacia", "ambulatorial",
+    "atenção primária", "atencao primaria", "sus",
+]
+_DOMINIO_ASSIST = [
+    "assistência social", "assistencia social", "suas", "cras", "creas",
+    "socioassistencial", "bolsa família", "bolsa familia", "cadúnico", "cadunico",
+    "acolhimento", "proteção social", "protecao social",
+]
+_TECH = [
+    "sistema", "software", "solução", "solucao", "licença", "licenca", "aplicativo",
+    "plataforma", "prontuário eletrônico", "prontuario eletronico",
+    "tecnologia da informação", "tecnologia da informacao", "informatiz", "pec ",
+    "licenciamento", "sistema de gestão", "sistema de gestao", "gestão em saúde",
+    "gestao em saude", "sgs ", "erp", "digitaliz",
+]
+
+
+def _classificar(obj_lower: str):
+    """Retorna (casa?, area, termos_que_casaram) para um objeto de licitação."""
+    dom_saude = [k for k in _DOMINIO_SAUDE if k in obj_lower]
+    dom_assist = [k for k in _DOMINIO_ASSIST if k in obj_lower]
+    tech = [k for k in _TECH if k in obj_lower]
+    if not tech or not (dom_saude or dom_assist):
+        return False, None, ""
+    if dom_saude and dom_assist:
+        area = "ambos"
+    elif dom_assist:
+        area = "assistencia"
+    else:
+        area = "saude"
+    termos = (dom_saude + dom_assist + tech)[:6]
+    return True, area, ", ".join(termos)
+
+
+def _parse_data(valor):
+    if not valor:
+        return None
+    try:
+        return datetime.fromisoformat(valor.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
+
+
+class Command(BaseCommand):
+    help = "Varre o PNCP e salva licitações de software para saúde/assistência social."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--dias", type=int, default=3,
+                            help="Quantos dias pra trás varrer (default 3, sobrepõe pro cron diário)")
+        parser.add_argument("--paginas-max", type=int, default=40,
+                            help="Máx. de páginas por modalidade (trava de segurança)")
+        parser.add_argument("--pausa", type=float, default=0.4)
+
+    def handle(self, *args, **options):
+        dias = options["dias"]
+        pag_max = options["paginas_max"]
+        pausa = options["pausa"]
+
+        hoje = date.today()
+        inicio = hoje - timedelta(days=dias)
+        di, df = inicio.strftime("%Y%m%d"), hoje.strftime("%Y%m%d")
+
+        analisados = matches = novos = 0
+        por_area = {"saude": 0, "assistencia": 0, "ambos": 0}
+
+        for modalidade in _MODALIDADES:
+            for pagina in range(1, pag_max + 1):
+                try:
+                    resp = requests.get(PNCP_URL, params={
+                        "dataInicial": di, "dataFinal": df,
+                        "codigoModalidadeContratacao": modalidade,
+                        "pagina": pagina, "tamanhoPagina": 50,
+                    }, headers={"Accept": "application/json"}, timeout=30)
+                    if resp.status_code == 204:
+                        break
+                    resp.raise_for_status()
+                    payload = resp.json()
+                except Exception as exc:
+                    self.stdout.write(f"  erro modalidade={modalidade} pag={pagina}: {exc}")
+                    break
+
+                itens = payload.get("data") or []
+                if not itens:
+                    break
+
+                for it in itens:
+                    analisados += 1
+                    obj = it.get("objetoCompra") or ""
+                    casa, area, termos = _classificar(obj.lower())
+                    if not casa:
+                        continue
+                    matches += 1
+
+                    ncp = it.get("numeroControlePNCP") or ""
+                    if not ncp:
+                        continue
+
+                    unidade = it.get("unidadeOrgao") or {}
+                    orgao_ent = it.get("orgaoEntidade") or {}
+                    dt_abertura = _parse_data(it.get("dataAberturaProposta"))
+                    dt_pub = _parse_data(it.get("dataPublicacaoPncp") or it.get("dataInclusao"))
+
+                    _, criado = LicitacaoOportunidade.objects.get_or_create(
+                        numero_controle_pncp=ncp,
+                        defaults={
+                            "objeto": obj[:5000],
+                            "orgao": (orgao_ent.get("razaoSocial") or "")[:300],
+                            "municipio": (unidade.get("municipioNome") or "")[:150],
+                            "uf": (unidade.get("ufSigla") or "")[:2],
+                            "modalidade": (it.get("modalidadeNome") or "")[:80],
+                            "valor_estimado": it.get("valorTotalEstimado") or None,
+                            "data_publicacao": dt_pub.date() if dt_pub else None,
+                            "data_abertura": dt_abertura,
+                            "link_origem": (it.get("linkSistemaOrigem") or "")[:600],
+                            "area": area,
+                            "palavras_match": termos[:300],
+                            "dados_adicionais": {
+                                "numeroCompra": it.get("numeroCompra"),
+                                "anoCompra": it.get("anoCompra"),
+                                "modalidadeId": modalidade,
+                            },
+                        },
+                    )
+                    if criado:
+                        novos += 1
+                        por_area[area] = por_area.get(area, 0) + 1
+                        self.stdout.write(f"  NOVA [{area}] {unidade.get('ufSigla','')} "
+                                          f"{(orgao_ent.get('razaoSocial') or '')[:35]} :: {obj[:80]}")
+
+                time.sleep(pausa)
+
+        self.stdout.write("\n=== RESUMO ===")
+        self.stdout.write(f"Período: {di} a {df} | itens analisados: {analisados}")
+        self.stdout.write(f"Casaram com o filtro: {matches} | Novos salvos: {novos}")
+        self.stdout.write(f"Novos por área — saúde: {por_area['saude']} | "
+                          f"assistência: {por_area['assistencia']} | ambos: {por_area['ambos']}")
+        total = LicitacaoOportunidade.objects.count()
+        abertas = LicitacaoOportunidade.objects.filter(status="nova").count()
+        self.stdout.write(f"Total no banco: {total} | aguardando análise (nova): {abertas}")

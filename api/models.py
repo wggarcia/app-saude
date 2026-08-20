@@ -14064,3 +14064,59 @@ class EmailProspeccao(models.Model):
 
     def __str__(self):
         return f"Seq{self.numero_sequencia} → {self.lead.email} [{self.get_status_display()}]"
+
+
+class LicitacaoOportunidade(models.Model):
+    """Oportunidade de licitação pública captada do PNCP (Portal Nacional de
+    Contratações Públicas) que casa com o produto SoloCRT — o canal certo de
+    venda para os segmentos públicos (Governo/saúde e Assistência Social/SUAS),
+    onde a compra é por licitação (Lei 14.133/2021), não por email frio.
+    """
+    AREA = [
+        ('saude',       'Saúde / Governo'),
+        ('assistencia', 'Assistência Social / SUAS'),
+        ('ambos',       'Saúde + Assistência'),
+    ]
+    STATUS = [
+        ('nova',        'Nova'),
+        ('analisando',  'Analisando'),
+        ('respondendo', 'Preparando proposta'),
+        ('enviada',     'Proposta enviada'),
+        ('ganha',       'Ganhamos!'),
+        ('perdida',     'Perdida'),
+        ('descartada',  'Descartada (fora de escopo)'),
+    ]
+
+    numero_controle_pncp = models.CharField(max_length=60, unique=True,
+                                            help_text='ID único da contratação no PNCP')
+    objeto               = models.TextField()
+    orgao                = models.CharField(max_length=300, blank=True, default='')
+    municipio            = models.CharField(max_length=150, blank=True, default='')
+    uf                   = models.CharField(max_length=2, blank=True, default='')
+    modalidade           = models.CharField(max_length=80, blank=True, default='')
+    valor_estimado       = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
+    data_publicacao      = models.DateField(null=True, blank=True)
+    data_abertura        = models.DateTimeField(null=True, blank=True,
+                                                help_text='Abertura das propostas / fim do prazo')
+    link_origem          = models.URLField(max_length=600, blank=True, default='')
+    area                 = models.CharField(max_length=20, choices=AREA, default='saude')
+    palavras_match       = models.CharField(max_length=300, blank=True, default='',
+                                            help_text='Termos que casaram no filtro')
+    status               = models.CharField(max_length=20, choices=STATUS, default='nova')
+    notas                = models.TextField(blank=True, default='')
+    dados_adicionais     = models.JSONField(default=dict, blank=True)
+    criado_em            = models.DateTimeField(auto_now_add=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ['-data_publicacao', '-criado_em']
+        verbose_name        = 'Oportunidade de Licitação'
+        verbose_name_plural = 'Oportunidades de Licitação'
+        indexes             = [
+            models.Index(fields=['status']),
+            models.Index(fields=['area', 'status']),
+            models.Index(fields=['data_abertura']),
+        ]
+
+    def __str__(self):
+        return f"[{self.uf}] {self.orgao[:40]} — {self.objeto[:50]}"
