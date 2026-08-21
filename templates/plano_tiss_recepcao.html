@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recepção TISS · Contas Médicas — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.form-card-title{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--accent)}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text);font-family:ui-monospace,Menlo,monospace;outline:none;transition:.15s;min-height:120px;resize:vertical}
+.form-group textarea:focus{border-color:var(--accent)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.score-wrap{display:flex;align-items:center;gap:8px;min-width:110px}
+.score-track{flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.score-fill{height:100%;border-radius:99px}
+.score-num{font-size:12px;font-weight:700;min-width:26px;text-align:right}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.hint{font-size:11px;color:var(--muted);margin-top:6px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.4);display:none;z-index:60;max-width:360px}
+.toast.show{display:block}
+.toast.ok{border-color:rgba(0,229,176,.4);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.4);color:var(--danger)}
+.drawer-bg{position:fixed;inset:0;background:rgba(0,8,15,.7);backdrop-filter:blur(3px);display:none;z-index:50}
+.drawer-bg.show{display:block}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(680px,94vw);background:var(--surface);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .28s ease;z-index:51;overflow-y:auto;padding:24px 26px}
+.drawer.show{transform:translateX(0)}
+.drawer h2{font-size:18px;font-weight:800;margin-bottom:2px}
+.drawer .close{position:absolute;top:20px;right:22px;cursor:pointer;color:var(--muted);font-size:22px;background:none;border:none}
+.parecer{background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.2);border-radius:10px;padding:14px 16px;margin:16px 0;font-size:13px;line-height:1.5}
+.parecer b{color:var(--accent)}
+.tot-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+.tot{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.tot-v{font-size:18px;font-weight:800}
+.tot-l{font-size:11px;color:var(--muted)}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.kpi-row{grid-template-columns:1fr}.tot-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+{% include "_plano_saude_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Recepção TISS &middot; Contas Médicas</div>
+      <div class="page-sub">Lotes de guias enviados pela rede (padrão ANS TISS 3.05.00) &mdash; análise automática de glosa com IA de risco e Demonstrativo de Análise de Conta.</div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirImport()"><span>&#128229;</span> Importar lote TISS</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="k-lotes">—</div><div class="kpi-lbl">Lotes recebidos</div></div>
+    <div class="kpi"><div class="kpi-val" id="k-apres">—</div><div class="kpi-lbl">Valor apresentado</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="k-glosa">—</div><div class="kpi-lbl">Valor glosado</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="k-risco">—</div><div class="kpi-lbl">Risco IA médio</div></div>
+  </div>
+
+  <!-- import -->
+  <div class="form-card" id="import-card" style="display:none">
+    <div class="form-card-title">Importar lote TISS (XML)</div>
+    <div class="form-group">
+      <label>Cole o XML do lote de guias (mensagemTISS) enviado pelo prestador — ou selecione um arquivo .xml</label>
+      <textarea id="xml-in" placeholder="&lt;ans:mensagemTISS ...&gt;"></textarea>
+      <div class="hint">O mesmo XML que a rede gera no módulo de faturamento é lido aqui. Nada sai da operadora: o processamento é local ao seu tenant.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <input type="file" id="xml-file" accept=".xml,text/xml" class="mono" style="font-size:12px;color:var(--muted)">
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="fecharImport()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-import" onclick="importar()">Importar &amp; analisar</button>
+    </div>
+  </div>
+
+  <!-- lista -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Lotes recebidos</div>
+      <button class="btn btn-ghost btn-sm" onclick="carregar()">&#8635; Atualizar</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Lote</th><th>Prestador</th><th>Beneficiário</th>
+          <th>Apresentado</th><th>Glosado</th><th>Liberado</th>
+          <th>Risco IA</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="tb"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- drawer detalhe -->
+<div class="drawer-bg" id="drawer-bg" onclick="fecharDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="close" onclick="fecharDrawer()">&times;</button>
+  <div id="drawer-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function getCookie(name){const v=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+function money(n){return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(msg,ok){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(ok?'ok':'err');setTimeout(()=>t.className='toast',4200);}
+function riscoCor(s){return s>=60?'var(--danger)':s>=30?'var(--warn)':'var(--ok)';}
+
+function abrirImport(){document.getElementById('import-card').style.display='block';document.getElementById('xml-in').focus();}
+function fecharImport(){document.getElementById('import-card').style.display='none';document.getElementById('xml-in').value='';}
+
+document.getElementById('xml-file').addEventListener('change',function(e){
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{document.getElementById('xml-in').value=r.result;};r.readAsText(f);
+});
+
+async function importar(){
+  const xml=document.getElementById('xml-in').value.trim();
+  if(!xml){toast('Cole o XML do lote primeiro.',false);return;}
+  const btn=document.getElementById('btn-import');btn.disabled=true;btn.textContent='Analisando…';
+  try{
+    const r=await fetch('/api/plano-saude/tiss/recepcao/importar/',{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/xml','X-CSRFToken':getCookie('csrftoken')},
+      body:xml
+    });
+    const d=await r.json();
+    if(!r.ok){toast(d.erro||'Falha ao importar',false);}
+    else{toast('Lote '+(d.lote.numero_lote||'')+' analisado — glosa '+money(d.lote.valor_glosado),true);fecharImport();carregar();}
+  }catch(e){toast('Erro de rede: '+e,false);}
+  btn.disabled=false;btn.textContent='Importar & analisar';
+}
+
+async function carregar(){
+  try{
+    const r=await fetch('/api/plano-saude/tiss/recepcao/',{credentials:'include'});
+    const d=await r.json();
+    const lotes=d.lotes||[];
+    renderKpis(lotes);renderTabela(lotes);
+  }catch(e){document.getElementById('tb').innerHTML='<tr><td colspan="9" class="empty">Erro ao carregar.</td></tr>';}
+}
+
+function renderKpis(lotes){
+  const apres=lotes.reduce((a,l)=>a+l.valor_apresentado,0);
+  const glosa=lotes.reduce((a,l)=>a+l.valor_glosado,0);
+  const risco=lotes.length?Math.round(lotes.reduce((a,l)=>a+l.ia_score_glosa,0)/lotes.length):0;
+  document.getElementById('k-lotes').textContent=lotes.length;
+  document.getElementById('k-apres').textContent=money(apres);
+  document.getElementById('k-glosa').textContent=money(glosa);
+  document.getElementById('k-risco').textContent=risco+'/100';
+}
+
+function statusBadge(s){
+  const m={recebido:'badge-gray',processado:'badge-info',retornado:'badge-ok',erro:'badge-danger'};
+  return '<span class="badge '+(m[s]||'badge-gray')+'">'+s+'</span>';
+}
+
+function renderTabela(lotes){
+  const tb=document.getElementById('tb');
+  if(!lotes.length){tb.innerHTML='<tr><td colspan="9" class="empty">Nenhum lote recebido ainda. Clique em “Importar lote TISS”.</td></tr>';return;}
+  tb.innerHTML=lotes.map(l=>`<tr>
+    <td class="mono">${esc(l.numero_lote)||'—'}</td>
+    <td>${esc(l.prestador)||'<span class="badge badge-warn">não cadastrado</span>'}</td>
+    <td>${esc(l.beneficiario)||'—'}</td>
+    <td class="mono">${money(l.valor_apresentado)}</td>
+    <td class="mono" style="color:var(--danger)">${money(l.valor_glosado)}</td>
+    <td class="mono" style="color:var(--ok)">${money(l.valor_liberado)}</td>
+    <td><div class="score-wrap"><div class="score-track"><div class="score-fill" style="width:${l.ia_score_glosa}%;background:${riscoCor(l.ia_score_glosa)}"></div></div><span class="score-num" style="color:${riscoCor(l.ia_score_glosa)}">${l.ia_score_glosa}</span></div></td>
+    <td>${statusBadge(l.status)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-ghost btn-sm" onclick="detalhe(${l.id})">Detalhe</button>
+      <a class="btn btn-ghost btn-sm" href="/api/plano-saude/tiss/recepcao/${l.id}/retorno/" target="_blank">Retorno XML</a>
+    </td>
+  </tr>`).join('');
+}
+
+async function detalhe(id){
+  const bg=document.getElementById('drawer-bg'),dr=document.getElementById('drawer');
+  document.getElementById('drawer-body').innerHTML='<div class="empty">Carregando…</div>';
+  bg.classList.add('show');dr.classList.add('show');
+  try{
+    const r=await fetch('/api/plano-saude/tiss/recepcao/'+id+'/',{credentials:'include'});
+    const d=await r.json();const l=d.lote;
+    const itens=(d.itens||[]).map(i=>`<tr>
+      <td class="mono">${i.sequencial}</td>
+      <td class="mono">${esc(i.codigo)}</td>
+      <td>${esc(i.descricao)||'—'}</td>
+      <td class="mono">${money(i.valor_apresentado)}</td>
+      <td class="mono" style="color:${i.glosado?'var(--danger)':'var(--muted)'}">${money(i.valor_glosado)}</td>
+      <td>${i.glosado?'<span class="badge badge-danger">'+esc(i.codigo_glosa)+'</span><div class="hint">'+esc(i.motivo_glosa)+'</div>':'<span class="badge badge-ok">ok</span>'}</td>
+    </tr>`).join('');
+    document.getElementById('drawer-body').innerHTML=`
+      <h2>Lote ${esc(l.numero_lote)||l.id}</h2>
+      <div class="page-sub">${esc(l.prestador)||'prestador não cadastrado'} &middot; ${esc(l.beneficiario)||'—'} &middot; guia ${esc(l.guia)||'—'}</div>
+      <div class="parecer"><b>Parecer IA (risco ${l.ia_score_glosa}/100):</b> ${esc(l.ia_parecer)}</div>
+      <div class="tot-row">
+        <div class="tot"><div class="tot-v">${money(l.valor_apresentado)}</div><div class="tot-l">Apresentado</div></div>
+        <div class="tot"><div class="tot-v" style="color:var(--danger)">${money(l.valor_glosado)}</div><div class="tot-l">Glosado</div></div>
+        <div class="tot"><div class="tot-v" style="color:var(--ok)">${money(l.valor_liberado)}</div><div class="tot-l">Liberado</div></div>
+      </div>
+      <div class="card"><div class="card-header"><div class="card-title">Itens da conta</div></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Código</th><th>Descrição</th><th>Apres.</th><th>Glosa</th><th>Situação</th></tr></thead>
+      <tbody>${itens||'<tr><td colspan="6" class="empty">Sem itens.</td></tr>'}</tbody></table></div></div>
+      <div style="margin-top:18px;display:flex;gap:10px">
+        <a class="btn btn-primary" href="/api/plano-saude/tiss/recepcao/${l.id}/retorno/" target="_blank"><span>&#128190;</span> Baixar Demonstrativo (retorno XML)</a>
+      </div>`;
+  }catch(e){document.getElementById('drawer-body').innerHTML='<div class="empty">Erro ao carregar detalhe.</div>';}
+}
+function fecharDrawer(){document.getElementById('drawer-bg').classList.remove('show');document.getElementById('drawer').classList.remove('show');}
+
+window.addEventListener('DOMContentLoaded',carregar);
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mensalidade · Boleto/PIX — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:22px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}
+.kpi-val{font-size:24px;font-weight:800;color:var(--accent)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:12px;color:var(--muted);margin-top:4px;font-weight:600}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;background:rgba(255,255,255,.02)}
+td{padding:10px 14px;font-size:13px;border-top:1px solid var(--border)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}
+label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px}
+input,select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;display:none;z-index:60;max-width:420px}
+.toast.show{display:block}.toast.ok{border-color:rgba(0,229,176,.4);color:var(--ok)}.toast.err{border-color:rgba(255,77,109,.4);color:var(--danger)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,8,15,.75);display:none;z-index:70;align-items:center;justify-content:center;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;padding:24px}
+.modal h3{font-size:16px;font-weight:800;margin-bottom:12px}
+.pixbox{background:rgba(0,229,176,.06);border:1px dashed rgba(0,229,176,.3);border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;color:var(--ok);margin:8px 0}
+.linbox{background:rgba(0,194,255,.06);border:1px dashed var(--border);border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.5px;margin:8px 0}
+@media(max-width:1000px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+{% include "_plano_saude_sidebar.html" %}
+<main class="main">
+  <div>
+    <div class="page-title">Mensalidade &middot; Boleto / PIX</div>
+    <div class="page-sub">Gera a fatura do núcleo familiar (mensalidade + coparticipação), emite PIX e boleto, exporta remessa CNAB 240 e concilia o retorno com baixa automática.</div>
+  </div>
+
+  <div class="toolbar">
+    <div><label>Competência</label><input type="month" id="comp"></div>
+    <div><label>Dia vencimento</label><input type="number" id="dia" value="10" min="1" max="28" style="width:80px"></div>
+    <button class="btn btn-primary" onclick="gerarFaturas()">Gerar faturas</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-ghost" onclick="gerarRemessa()">Exportar remessa CNAB</button>
+    <label class="btn btn-ghost" style="cursor:pointer">Conciliar retorno<input type="file" id="ret-file" accept=".ret,.txt,text/plain" style="display:none"></label>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="k-qtd">—</div><div class="kpi-lbl">Faturas</div></div>
+    <div class="kpi"><div class="kpi-val" id="k-total">—</div><div class="kpi-lbl">Total faturado</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="k-pago">—</div><div class="kpi-lbl">Recebido</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="k-pend">—</div><div class="kpi-lbl">Pendentes</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Faturas da competência</div>
+      <button class="btn btn-ghost btn-sm" onclick="carregar()">&#8635; Atualizar</button></div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Beneficiário</th><th>Mensalidade</th><th>Coparticip.</th><th>Total</th><th>Vencimento</th><th>Status</th><th>Cobrança</th></tr></thead>
+      <tbody id="tb"><tr><td colspan="7" class="empty">Gere as faturas de uma competência.</td></tr></tbody>
+    </table></div>
+  </div>
+</main>
+
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+function money(n){return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m,ok){const t=document.getElementById('toast');t.textContent=m;t.className='toast show '+(ok?'ok':'err');setTimeout(()=>t.className='toast',5200);}
+async function post(url,body,raw){return fetch(url,{method:'POST',credentials:'include',headers:raw?{'Content-Type':'text/plain','X-CSRFToken':getCookie('csrftoken')}:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:raw?body:JSON.stringify(body)});}
+let FATURAS=[],LAST_REMESSA=null;
+
+async function gerarFaturas(){
+  const comp=document.getElementById('comp').value;if(!comp)return;
+  const r=await post('/api/plano-saude/cobranca/gerar-faturas/',{competencia:comp,dia_vencimento:document.getElementById('dia').value});
+  const d=await r.json();if(!r.ok){toast(d.erro||'Falha',false);return;}
+  toast(d.geradas+' fatura(s) gerada(s) — '+money(d.total),true);carregar();
+}
+async function carregar(){
+  const comp=document.getElementById('comp').value;if(!comp)return;
+  const d=await (await fetch('/api/plano-saude/cobranca/faturas/?competencia='+comp,{credentials:'include'})).json();
+  FATURAS=d.faturas||[];const r=d.resumo||{};
+  document.getElementById('k-qtd').textContent=r.qtd||0;
+  document.getElementById('k-total').textContent=money(r.total);
+  document.getElementById('k-pago').textContent=money(r.pago);
+  document.getElementById('k-pend').textContent=r.pendente||0;
+  const st={pendente:'badge-warn',pago:'badge-ok',vencido:'badge-danger',cancelado:'badge-gray'};
+  document.getElementById('tb').innerHTML=FATURAS.length?FATURAS.map(f=>`<tr>
+    <td><b>${esc(f.beneficiario)}</b></td><td class="mono">${money(f.mensalidade)}</td>
+    <td class="mono">${money(f.coparticipacao)}</td><td class="mono"><b>${money(f.total)}</b></td>
+    <td class="mono">${f.vencimento||'—'}</td><td><span class="badge ${st[f.status]||'badge-gray'}">${f.status}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="emitir(${f.id})">${f.linha_digitavel||f.pix_copia_cola?'Ver cobrança':'Emitir'}</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Nenhuma fatura nesta competência.</td></tr>';
+}
+
+async function emitir(id){
+  const f=FATURAS.find(x=>x.id===id);
+  if(f.pix_copia_cola||f.linha_digitavel){mostrarCobranca(f);return;}
+  const m=document.getElementById('modal');
+  m.innerHTML=`<h3>Emitir cobrança — ${esc(f.beneficiario)}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label>Forma</label><select id="c-forma" style="width:100%"><option value="ambos">PIX + Boleto</option><option value="pix">Só PIX</option><option value="boleto">Só Boleto</option></select></div>
+      <div><label>Chave PIX</label><input id="c-chave" style="width:100%" placeholder="chave@operadora"></div>
+      <div><label>Banco (cód.)</label><input id="c-banco" style="width:100%" value="341"></div>
+      <div><label>Cidade</label><input id="c-cidade" style="width:100%" placeholder="São Paulo"></div>
+    </div>
+    <div style="text-align:right;margin-top:16px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarEmitir(${id})">Emitir</button></div>`;
+  document.getElementById('modal-bg').classList.add('show');
+}
+async function confirmarEmitir(id){
+  const body={forma:document.getElementById('c-forma').value,chave_pix:document.getElementById('c-chave').value,
+    codigo_banco:document.getElementById('c-banco').value,cidade:document.getElementById('c-cidade').value};
+  const r=await post('/api/plano-saude/cobranca/faturas/'+id+'/emitir/',body);
+  const d=await r.json();if(!r.ok){toast(d.erro||'Falha',false);return;}
+  toast('Cobrança emitida.',true);await carregar();mostrarCobranca(d.fatura);
+}
+function mostrarCobranca(f){
+  const m=document.getElementById('modal');
+  m.innerHTML=`<h3>Cobrança — ${esc(f.beneficiario)}</h3>
+    <div class="page-sub">Total ${money(f.total)} · venc. ${f.vencimento||'—'} · nosso nº ${esc(f.nosso_numero)}</div>
+    ${f.linha_digitavel?`<label style="margin-top:12px">Boleto — linha digitável</label><div class="linbox">${esc(f.linha_digitavel)}</div>`:''}
+    ${f.pix_copia_cola?`<label>PIX — copia e cola</label><div class="pixbox">${esc(f.pix_copia_cola)}</div>`:''}
+    <div style="text-align:right;margin-top:14px"><button class="btn btn-primary" onclick="fecharModal()">Fechar</button></div>`;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function fecharModal(){document.getElementById('modal-bg').classList.remove('show');}
+
+async function gerarRemessa(){
+  const comp=document.getElementById('comp').value;if(!comp){toast('Escolha a competência.',false);return;}
+  const r=await post('/api/plano-saude/cobranca/remessa/',{competencia:comp,banco:'341'});
+  const d=await r.json();if(!r.ok){toast(d.erro||'Falha',false);return;}
+  LAST_REMESSA=d.remessa_id;
+  toast(d.qtd_titulos+' título(s) na remessa — '+money(d.valor_total)+'. Baixando arquivo…',true);
+  window.open('/api/plano-saude/cobranca/remessa/'+d.remessa_id+'/download/','_blank');
+}
+
+document.getElementById('ret-file').addEventListener('change',function(e){
+  const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=async()=>{
+    const comp=document.getElementById('comp').value;
+    const r=await post('/api/plano-saude/cobranca/conciliar/?competencia='+comp,rd.result,true);
+    const d=await r.json();if(!r.ok){toast(d.erro||'Falha',false);return;}
+    toast(d.conciliados+' fatura(s) baixada(s) pela conciliação.',true);carregar();
+  };rd.readAsText(f);
+});
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const now=new Date();document.getElementById('comp').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  carregar();
+});
+</script>
+</body>
+</html>

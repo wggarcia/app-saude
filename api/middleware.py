@@ -223,6 +223,7 @@ class EmpresaMiddleware:
             "/sst/aso/portal/",    # portal público de visualização de ASO (LGPD — link por e-mail)
             "/plano-saude/portal-rh/",        # Portal RH B2B — página pública via token (sem login)
             "/api/plano-saude/rh/portal/",    # Portal RH B2B — APIs públicas via token (dados/solicitar)
+            "/portal-prestador/",             # Portal do Prestador — página + APIs públicas via token (envio de lote, glosa, recurso)
             "/api/gestao/integracoes/webhook/",  # webhook de sistemas de RH (auth própria via HMAC)
             "/api/farmacia/ifood/webhook/",      # webhook do iFood (auth própria via assinatura por farmácia)
             "/api/comercial/webhook/",           # webhooks do Brevo (eventos + inbound) — auth própria via secret

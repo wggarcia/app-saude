@@ -3792,6 +3792,10 @@ class BeneficiarioPlano(models.Model):
         max_length=12, choices=PARENTESCO_CHOICES, blank=True, default="",
         help_text="Grau de parentesco do dependente em relação ao titular",
     )
+    valor_mensalidade = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0"),
+        help_text="Mensalidade desta vida (por faixa etária); somada no titular para a fatura",
+    )
     contrato_grupo = models.ForeignKey(
         "ContratoGrupo", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="vidas",
@@ -4223,6 +4227,13 @@ class FaturamentoBeneficiario(models.Model):
     vencimento = models.DateField(null=True, blank=True)
     pago_em = models.DateField(null=True, blank=True)
     observacao = models.TextField(blank=True, default="")
+    # cobrança (boleto CNAB / PIX)
+    forma_cobranca = models.CharField(max_length=10, blank=True, default="")  # boleto/pix/ambos
+    nosso_numero = models.CharField(max_length=20, blank=True, default="")
+    linha_digitavel = models.CharField(max_length=60, blank=True, default="")
+    codigo_barras = models.CharField(max_length=48, blank=True, default="")
+    pix_txid = models.CharField(max_length=40, blank=True, default="")
+    pix_copia_cola = models.TextField(blank=True, default="")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
@@ -14120,3 +14131,195 @@ class LicitacaoOportunidade(models.Model):
 
     def __str__(self):
         return f"[{self.uf}] {self.orgao[:40]} — {self.objeto[:50]}"
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# TISS OPERADORA — recepção de lote de guias do prestador, análise de conta
+# médica com glosa automática + IA, e geração do Demonstrativo de retorno.
+# (Lado OPERADORA: recebe o que o prestador/hospital envia no padrão ANS TISS.)
+# ════════════════════════════════════════════════════════════════════════════
+class LoteTISSRecebido(models.Model):
+    STATUS = [("recebido", "Recebido"), ("processado", "Processado"),
+              ("retornado", "Retornado"), ("erro", "Erro")]
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="lotes_tiss_recebidos")
+    prestador = models.ForeignKey("PrestadorPlanoSaude", on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="lotes_tiss")
+    numero_lote = models.CharField(max_length=40, blank=True, default="")
+    prestador_codigo = models.CharField(max_length=40, blank=True, default="")
+    prestador_nome = models.CharField(max_length=200, blank=True, default="")
+    prestador_cnes = models.CharField(max_length=20, blank=True, default="")
+    beneficiario_carteirinha = models.CharField(max_length=40, blank=True, default="")
+    beneficiario_nome = models.CharField(max_length=120, blank=True, default="")
+    guia_numero = models.CharField(max_length=40, blank=True, default="")
+    cid10 = models.CharField(max_length=10, blank=True, default="")
+    versao_tiss = models.CharField(max_length=12, default="3.05.00")
+    hash_tiss = models.CharField(max_length=64, blank=True, default="")
+    hash_confere = models.BooleanField(default=True)
+    valor_apresentado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_glosado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_liberado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    ia_score_glosa = models.PositiveSmallIntegerField(default=0)   # 0-100 risco de glosa
+    ia_parecer = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=15, choices=STATUS, default="recebido")
+    pagamento = models.ForeignKey("LotePagamentoPrestador", on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="lotes_incluidos")
+    xml_original = models.TextField(blank=True, default="")
+    xml_retorno = models.TextField(blank=True, default="")
+    recebido_em = models.DateTimeField(auto_now_add=True)
+    processado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-recebido_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"Lote TISS {self.numero_lote} — {self.prestador_nome[:30]}"
+
+
+class ItemContaTISS(models.Model):
+    lote = models.ForeignKey(LoteTISSRecebido, on_delete=models.CASCADE, related_name="itens")
+    sequencial = models.PositiveIntegerField(default=1)
+    codigo_tabela = models.CharField(max_length=6, blank=True, default="")
+    codigo_procedimento = models.CharField(max_length=20, blank=True, default="")
+    descricao = models.CharField(max_length=250, blank=True, default="")
+    quantidade = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("1"))
+    valor_unitario = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_apresentado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_glosado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_liberado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    glosado = models.BooleanField(default=False)
+    codigo_glosa = models.CharField(max_length=10, blank=True, default="")
+    motivo_glosa = models.CharField(max_length=250, blank=True, default="")
+
+    class Meta:
+        ordering = ["lote", "sequencial"]
+
+    def __str__(self):
+        return f"{self.codigo_procedimento} — {self.descricao[:30]}"
+
+
+class LotePagamentoPrestador(models.Model):
+    """Fechamento de contas médicas por prestador/competência → lote de repasse.
+    Agrega os LoteTISSRecebido processados e gera o valor líquido a pagar."""
+    STATUS = [("fechado", "Fechado"), ("aprovado", "Aprovado"),
+              ("pago", "Pago"), ("cancelado", "Cancelado")]
+    FORMA = [("pix", "PIX"), ("ted", "TED"), ("boleto", "Boleto")]
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="pagamentos_prestador")
+    prestador = models.ForeignKey("PrestadorPlanoSaude", on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="pagamentos")
+    prestador_nome = models.CharField(max_length=200, blank=True, default="")
+    competencia = models.CharField(max_length=7, default="")  # YYYY-MM
+    qtd_lotes = models.PositiveIntegerField(default=0)
+    valor_bruto = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_glosa = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_liquido = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    ia_anomalia_score = models.PositiveSmallIntegerField(default=0)  # 0-100 risco de anomalia no faturamento
+    ia_anomalia_parecer = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=12, choices=STATUS, default="fechado")
+    forma_pagamento = models.CharField(max_length=8, choices=FORMA, blank=True, default="")
+    data_pagamento = models.DateTimeField(null=True, blank=True)
+    comprovante = models.CharField(max_length=120, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-competencia", "prestador_nome"]
+        indexes = [models.Index(fields=["empresa", "competencia", "status"])]
+
+    def __str__(self):
+        return f"Repasse {self.prestador_nome[:30]} — {self.competencia} — {self.valor_liquido}"
+
+
+class PortalPrestadorToken(models.Model):
+    """Token de acesso do prestador ao portal self-service (sem login/senha)."""
+    prestador = models.OneToOneField("PrestadorPlanoSaude", on_delete=models.CASCADE,
+                                     related_name="portal_token")
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    expira_em = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"Token portal prestador — {self.prestador.nome_fantasia}"
+
+
+class RecursoGlosa(models.Model):
+    """Recurso de glosa aberto pelo prestador contra um lote/item (self-service)."""
+    STATUS = [("aberto", "Aberto"), ("em_analise", "Em análise"),
+              ("deferido", "Deferido"), ("parcial", "Deferido parcial"),
+              ("indeferido", "Indeferido")]
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="recursos_glosa")
+    lote = models.ForeignKey(LoteTISSRecebido, on_delete=models.CASCADE, related_name="recursos")
+    item = models.ForeignKey(ItemContaTISS, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="recursos")
+    prestador = models.ForeignKey("PrestadorPlanoSaude", on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="recursos_glosa")
+    codigo_glosa = models.CharField(max_length=10, blank=True, default="")
+    valor_contestado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    valor_deferido = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    justificativa = models.TextField(blank=True, default="")
+    ia_merito_score = models.PositiveSmallIntegerField(default=0)  # 0-100 chance de a glosa estar errada
+    ia_merito_parecer = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=12, choices=STATUS, default="aberto")
+    resposta_operadora = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    respondido_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"Recurso glosa {self.codigo_glosa} — lote {self.lote_id} — {self.status}"
+
+
+class EventoCoparticipacao(models.Model):
+    """Ledger de coparticipação: cada procedimento consumido gera um evento com o
+    fator moderador calculado (com teto ANS RN 507 = 40%, isenção preventiva e
+    teto mensal do plano). A soma da competência alimenta a fatura do beneficiário."""
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="eventos_coparticipacao")
+    beneficiario = models.ForeignKey("BeneficiarioPlano", on_delete=models.CASCADE,
+                                     related_name="eventos_coparticipacao")
+    plano = models.ForeignKey("PlanoSaude", on_delete=models.CASCADE, related_name="eventos_coparticipacao")
+    regra = models.ForeignKey("CoparticipacaoRegra", on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name="eventos")
+    competencia = models.CharField(max_length=7, default="")  # YYYY-MM
+    tipo_atendimento = models.CharField(max_length=20, default="")
+    descricao = models.CharField(max_length=200, blank=True, default="")
+    data_evento = models.DateField(null=True, blank=True)
+    valor_procedimento = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    percentual_aplicado = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0"))
+    valor_base = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    valor_coparticipacao = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    isento = models.BooleanField(default=False)
+    motivo = models.CharField(max_length=200, blank=True, default="")  # isenção / teto / cap ANS
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-competencia", "beneficiario"]
+        indexes = [models.Index(fields=["empresa", "beneficiario", "competencia"])]
+
+    def __str__(self):
+        return f"Copart {self.tipo_atendimento} — {self.valor_coparticipacao} ({self.competencia})"
+
+
+class RemessaCNAB(models.Model):
+    """Lote de remessa/retorno bancário (CNAB 240) das mensalidades."""
+    TIPO = [("remessa", "Remessa"), ("retorno", "Retorno")]
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="remessas_cnab")
+    tipo = models.CharField(max_length=8, choices=TIPO, default="remessa")
+    competencia = models.CharField(max_length=7, default="")
+    banco = models.CharField(max_length=5, blank=True, default="")
+    qtd_titulos = models.PositiveIntegerField(default=0)
+    valor_total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    conciliados = models.PositiveIntegerField(default=0)
+    arquivo = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"CNAB {self.tipo} {self.competencia} — {self.qtd_titulos} títulos"

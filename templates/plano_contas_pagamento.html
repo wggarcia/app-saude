@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contas Médicas · Repasse — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.hint{font-size:11px;color:var(--muted);margin-top:4px}
+.empty{padding:36px;text-align:center;color:var(--muted);font-size:14px}
+.score-wrap{display:flex;align-items:center;gap:8px;min-width:110px}
+.score-track{flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.score-fill{height:100%;border-radius:99px}
+.score-num{font-size:12px;font-weight:700;min-width:26px;text-align:right}
+.filter-sel,.filter-in{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+.tabs{display:flex;gap:8px}
+.tab{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border)}
+.tab.active{color:var(--accent);border-color:var(--accent);background:rgba(0,194,255,.08)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.4);display:none;z-index:60;max-width:380px}
+.toast.show{display:block}
+.toast.ok{border-color:rgba(0,229,176,.4);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.4);color:var(--danger)}
+.drawer-bg{position:fixed;inset:0;background:rgba(0,8,15,.7);backdrop-filter:blur(3px);display:none;z-index:50}
+.drawer-bg.show{display:block}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(680px,94vw);background:var(--surface);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .28s ease;z-index:51;overflow-y:auto;padding:24px 26px}
+.drawer.show{transform:translateX(0)}
+.drawer .close{position:absolute;top:20px;right:22px;cursor:pointer;color:var(--muted);font-size:22px;background:none;border:none}
+.parecer{border-radius:10px;padding:14px 16px;margin:16px 0;font-size:13px;line-height:1.5}
+.parecer.ok{background:rgba(0,229,176,.06);border:1px solid rgba(0,229,176,.2)}
+.parecer.alerta{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.3)}
+.parecer.perigo{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3)}
+.parecer b{color:var(--text)}
+.tot-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+.tot{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.tot-v{font-size:18px;font-weight:800}
+.tot-l{font-size:11px;color:var(--muted)}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.kpi-row{grid-template-columns:1fr}.tot-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+{% include "_plano_saude_sidebar.html" %}
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Contas Médicas &middot; Repasse a Prestadores</div>
+      <div class="page-sub">Fecha as contas por prestador/competência a partir dos lotes TISS processados e gera o repasse — com IA de anomalia de faturamento antes de liberar o pagamento.</div>
+    </div>
+    <input type="month" id="comp" class="filter-in" style="font-size:13px;padding:9px 12px">
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="k-abertas">—</div><div class="kpi-lbl">Prestadores com conta aberta</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="k-apagar">—</div><div class="kpi-lbl">Líquido a repassar</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="k-pago">—</div><div class="kpi-lbl">Já pago na competência</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="k-anom">—</div><div class="kpi-lbl">Repasses com anomalia IA</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-abertas" onclick="switchTab('abertas')">Contas em aberto</div>
+    <div class="tab" id="tab-repasses" onclick="switchTab('repasses')">Repasses gerados</div>
+  </div>
+
+  <!-- abertas -->
+  <div class="card" id="pane-abertas">
+    <div class="card-header"><div class="card-title">Contas em aberto na competência</div>
+      <button class="btn btn-ghost btn-sm" onclick="carregar()">&#8635; Atualizar</button></div>
+    <div id="alert-naocred"></div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Prestador</th><th>Lotes</th><th>Bruto</th><th>Glosa</th><th>Líquido a pagar</th><th></th></tr></thead>
+      <tbody id="tb-abertas"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table></div>
+  </div>
+
+  <!-- repasses -->
+  <div class="card" id="pane-repasses" style="display:none">
+    <div class="card-header"><div class="card-title">Repasses gerados</div></div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Prestador</th><th>Comp.</th><th>Líquido</th><th>Anomalia IA</th><th>Status</th><th></th></tr></thead>
+      <tbody id="tb-repasses"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table></div>
+  </div>
+</main>
+
+<div class="drawer-bg" id="drawer-bg" onclick="fecharDrawer()"></div>
+<div class="drawer" id="drawer"><button class="close" onclick="fecharDrawer()">&times;</button><div id="drawer-body"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+function money(n){return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m,ok){const t=document.getElementById('toast');t.textContent=m;t.className='toast show '+(ok?'ok':'err');setTimeout(()=>t.className='toast',4600);}
+function anomCor(s){return s>=60?'var(--danger)':s>=30?'var(--warn)':'var(--ok)';}
+function parecerClasse(s){return s>=60?'perigo':s>=30?'alerta':'ok';}
+
+let COMP='';
+function switchTab(t){
+  document.getElementById('tab-abertas').classList.toggle('active',t==='abertas');
+  document.getElementById('tab-repasses').classList.toggle('active',t==='repasses');
+  document.getElementById('pane-abertas').style.display=t==='abertas'?'block':'none';
+  document.getElementById('pane-repasses').style.display=t==='repasses'?'block':'none';
+}
+
+async function carregar(){
+  COMP=document.getElementById('comp').value;if(!COMP)return;
+  let abertas={abertas:[],nao_credenciados_lotes:0},reps={pagamentos:[]};
+  try{abertas=await (await fetch('/api/plano-saude/contas/abertas/?competencia='+COMP,{credentials:'include'})).json();}catch(e){}
+  try{reps=await (await fetch('/api/plano-saude/contas/pagamentos/?competencia='+COMP,{credentials:'include'})).json();}catch(e){}
+  renderAbertas(abertas);renderRepasses(reps.pagamentos||[]);
+  const aPagar=(abertas.abertas||[]).reduce((a,x)=>a+x.valor_liquido,0);
+  const pago=(reps.pagamentos||[]).filter(p=>p.status==='pago').reduce((a,p)=>a+p.valor_liquido,0);
+  const anom=(reps.pagamentos||[]).filter(p=>p.ia_anomalia_score>=60&&p.status!=='pago').length;
+  document.getElementById('k-abertas').textContent=(abertas.abertas||[]).length;
+  document.getElementById('k-apagar').textContent=money(aPagar);
+  document.getElementById('k-pago').textContent=money(pago);
+  document.getElementById('k-anom').textContent=anom;
+}
+
+function renderAbertas(d){
+  const box=document.getElementById('alert-naocred');
+  box.innerHTML=d.nao_credenciados_lotes?`<div style="padding:12px 20px;color:var(--warn);font-size:12px;border-bottom:1px solid var(--border)">&#9888; ${d.nao_credenciados_lotes} lote(s) de prestadores NÃO cadastrados nesta competência — não entram em repasse até resolver o credenciamento.</div>`:'';
+  const tb=document.getElementById('tb-abertas');const a=d.abertas||[];
+  if(!a.length){tb.innerHTML='<tr><td colspan="6" class="empty">Sem contas em aberto nesta competência.</td></tr>';return;}
+  tb.innerHTML=a.map(x=>`<tr>
+    <td><b>${esc(x.prestador)||'—'}</b></td>
+    <td class="mono">${x.qtd_lotes}</td>
+    <td class="mono">${money(x.valor_bruto)}</td>
+    <td class="mono" style="color:var(--danger)">${money(x.valor_glosa)}</td>
+    <td class="mono" style="color:var(--ok)"><b>${money(x.valor_liquido)}</b></td>
+    <td><button class="btn btn-primary btn-sm" onclick="fechar(${x.prestador_id},'${esc(x.prestador)}')">Fechar conta</button></td>
+  </tr>`).join('');
+}
+
+function renderRepasses(reps){
+  const tb=document.getElementById('tb-repasses');
+  if(!reps.length){tb.innerHTML='<tr><td colspan="6" class="empty">Nenhum repasse gerado nesta competência.</td></tr>';return;}
+  const st={fechado:'badge-info',aprovado:'badge-warn',pago:'badge-ok',cancelado:'badge-gray'};
+  tb.innerHTML=reps.map(p=>`<tr>
+    <td><b>${esc(p.prestador)}</b></td>
+    <td class="mono">${p.competencia}</td>
+    <td class="mono"><b>${money(p.valor_liquido)}</b></td>
+    <td><div class="score-wrap"><div class="score-track"><div class="score-fill" style="width:${p.ia_anomalia_score}%;background:${anomCor(p.ia_anomalia_score)}"></div></div><span class="score-num" style="color:${anomCor(p.ia_anomalia_score)}">${p.ia_anomalia_score}</span></div></td>
+    <td><span class="badge ${st[p.status]||'badge-gray'}">${p.status}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="detalhe(${p.id})">Abrir</button></td>
+  </tr>`).join('');
+}
+
+async function fechar(id,nome){
+  if(!confirm('Fechar a conta de '+nome+' na competência '+COMP+'? Isso gera um repasse com os lotes processados em aberto.'))return;
+  const r=await fetch('/api/plano-saude/contas/fechar/',{method:'POST',credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body:JSON.stringify({prestador_id:id,competencia:COMP})});
+  const d=await r.json();
+  if(!r.ok){toast(d.erro||'Falha ao fechar',false);}
+  else{toast('Repasse gerado: '+money(d.pagamento.valor_liquido)+(d.pagamento.ia_anomalia_score>=60?' — ATENÇÃO: anomalia IA':''),true);switchTab('repasses');carregar();}
+}
+
+async function detalhe(id){
+  const bg=document.getElementById('drawer-bg'),dr=document.getElementById('drawer');
+  document.getElementById('drawer-body').innerHTML='<div class="empty">Carregando…</div>';
+  bg.classList.add('show');dr.classList.add('show');
+  const d=await (await fetch('/api/plano-saude/contas/pagamentos/'+id+'/',{credentials:'include'})).json();
+  const p=d.pagamento;
+  const lotes=(d.lotes||[]).map(l=>`<tr><td class="mono">${esc(l.numero_lote)}</td><td>${esc(l.beneficiario)||'—'}</td><td class="mono">${money(l.valor_apresentado)}</td><td class="mono" style="color:var(--danger)">${money(l.valor_glosado)}</td><td class="mono" style="color:var(--ok)">${money(l.valor_liberado)}</td></tr>`).join('');
+  const pc=parecerClasse(p.ia_anomalia_score);
+  let acoes='';
+  if(p.status==='fechado')acoes=`<button class="btn btn-ok" onclick="acao(${p.id},'aprovar')">Aprovar</button><button class="btn btn-primary" onclick="pagar(${p.id})">Registrar pagamento</button>`;
+  else if(p.status==='aprovado')acoes=`<button class="btn btn-primary" onclick="pagar(${p.id})">Registrar pagamento</button>`;
+  if(p.status!=='pago'&&p.status!=='cancelado')acoes+=`<button class="btn btn-ghost" onclick="acao(${p.id},'cancelar')">Cancelar</button>`;
+  document.getElementById('drawer-body').innerHTML=`
+    <h2 style="font-size:18px;font-weight:800">${esc(p.prestador)}</h2>
+    <div class="page-sub">Competência ${p.competencia} &middot; ${p.qtd_lotes} lote(s) &middot; ${p.status}${p.data_pagamento?' em '+p.data_pagamento:''}</div>
+    <div class="parecer ${pc}"><b>IA anomalia de faturamento (${p.ia_anomalia_score}/100):</b> ${esc(p.ia_anomalia_parecer)}</div>
+    <div class="tot-row">
+      <div class="tot"><div class="tot-v">${money(p.valor_bruto)}</div><div class="tot-l">Bruto apresentado</div></div>
+      <div class="tot"><div class="tot-v" style="color:var(--danger)">${money(p.valor_glosa)}</div><div class="tot-l">Glosa</div></div>
+      <div class="tot"><div class="tot-v" style="color:var(--ok)">${money(p.valor_liquido)}</div><div class="tot-l">Líquido a pagar</div></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0">${acoes}</div>
+    <div class="card"><div class="card-header"><div class="card-title">Lotes incluídos</div></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Lote</th><th>Beneficiário</th><th>Apres.</th><th>Glosa</th><th>Líquido</th></tr></thead>
+    <tbody>${lotes||'<tr><td colspan="5" class="empty">—</td></tr>'}</tbody></table></div></div>`;
+}
+function fecharDrawer(){document.getElementById('drawer-bg').classList.remove('show');document.getElementById('drawer').classList.remove('show');}
+
+async function acao(id,ac){
+  if(ac==='cancelar'&&!confirm('Cancelar o repasse? Os lotes voltam para "em aberto".'))return;
+  const r=await fetch('/api/plano-saude/contas/pagamentos/'+id+'/acao/',{method:'POST',credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({acao:ac})});
+  const d=await r.json();if(!r.ok){toast(d.erro,false);return;}
+  toast('Repasse '+d.pagamento.status,true);detalhe(id);carregar();
+}
+async function pagar(id){
+  const forma=prompt('Forma de pagamento (pix / ted / boleto):','pix');
+  if(!forma)return;
+  const r=await fetch('/api/plano-saude/contas/pagamentos/'+id+'/acao/',{method:'POST',credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body:JSON.stringify({acao:'pagar',forma_pagamento:forma.trim().toLowerCase()})});
+  const d=await r.json();if(!r.ok){toast(d.erro,false);return;}
+  toast('Pagamento registrado ('+d.pagamento.forma_pagamento+')',true);detalhe(id);carregar();
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const now=new Date();document.getElementById('comp').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('comp').addEventListener('change',carregar);
+  carregar();
+});
+</script>
+</body>
+</html>

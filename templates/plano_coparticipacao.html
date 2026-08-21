@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coparticipação — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:22px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.ans-banner{border-radius:12px;padding:14px 18px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px}
+.ans-ok{background:rgba(0,229,176,.08);border:1px solid rgba(0,229,176,.25);color:var(--ok)}
+.ans-bad{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3);color:var(--danger)}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:16px 18px}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;background:rgba(255,255,255,.02)}
+td{padding:10px 14px;font-size:13px;border-top:1px solid var(--border)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
+select,input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;margin-bottom:12px}
+select option{background:#0a1a28}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sim-line{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.big{font-size:26px;font-weight:800;color:var(--accent)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;display:none;z-index:60;max-width:400px}
+.toast.show{display:block}.toast.ok{border-color:rgba(0,229,176,.4);color:var(--ok)}.toast.err{border-color:rgba(255,77,109,.4);color:var(--danger)}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+{% include "_plano_saude_sidebar.html" %}
+<main class="main">
+  <div>
+    <div class="page-title">Coparticipação &middot; Fator Moderador</div>
+    <div class="page-sub">Regras por plano/tipo com conformidade ANS nativa (RN 507 — teto de 40%), auditor de regras e simulador de gasto mensal do beneficiário.</div>
+  </div>
+
+  <div class="ans-banner ans-ok" id="ans-banner">Verificando conformidade ANS…</div>
+
+  <div class="grid2">
+    <!-- regras -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">Regras de coparticipação</div></div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Plano</th><th>Tipo</th><th>%</th><th>Fixo</th><th>Teto mês</th><th>ANS</th></tr></thead>
+        <tbody id="tb-regras"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table></div>
+      <div class="card-body" style="border-top:1px solid var(--border)">
+        <div class="card-title" style="margin-bottom:10px">Nova regra / editar</div>
+        <div class="row2">
+          <div><label>Plano</label><select id="r-plano">
+            {% for p in planos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
+          </select></div>
+          <div><label>Tipo de atendimento</label><select id="r-tipo">
+            <option value="consulta">Consulta</option><option value="exame">Exame / Diagnóstico</option>
+            <option value="internacao">Internação</option><option value="cirurgia">Cirurgia</option>
+            <option value="terapia">Terapia / Reabilitação</option><option value="urgencia">Urgência / Emergência</option>
+          </select></div>
+        </div>
+        <div class="row2">
+          <div><label>Percentual (%) — máx. 40 (ANS)</label><input id="r-perc" type="number" min="0" max="40" step="0.5" value="0"></div>
+          <div><label>Valor fixo (R$) — alternativa ao %</label><input id="r-fixo" type="number" min="0" step="0.01" value="0"></div>
+        </div>
+        <div><label>Teto mensal (R$) — opcional</label><input id="r-teto" type="number" min="0" step="0.01" placeholder="sem teto"></div>
+        <button class="btn btn-primary" onclick="salvarRegra()">Salvar regra</button>
+      </div>
+    </div>
+
+    <!-- simulador -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">Simulador de gasto mensal</div></div>
+      <div class="card-body">
+        <label>Beneficiário (ID)</label><input id="s-benef" type="number" placeholder="ID do beneficiário">
+        <div class="card-title" style="margin:10px 0 8px;font-size:12px;color:var(--muted)">Cesta de uso no mês</div>
+        <div id="cesta"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addLinha()">+ Adicionar procedimento</button>
+        <div style="margin-top:14px"><button class="btn btn-primary" onclick="simular()">Simular</button></div>
+        <div id="sim-res" style="margin-top:16px;display:none">
+          <div id="sim-linhas"></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:12px">
+            <div class="page-sub">Coparticipação mensal projetada</div>
+            <div class="big" id="sim-total">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- extrato -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">Extrato de coparticipação do beneficiário</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="e-benef" type="number" placeholder="ID benef." style="width:110px;margin:0">
+        <input id="e-comp" type="month" style="width:150px;margin:0">
+        <button class="btn btn-ghost btn-sm" onclick="extrato()">Ver</button>
+      </div></div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor proc.</th><th>%</th><th>Coparticipação</th><th>Obs.</th></tr></thead>
+      <tbody id="tb-extrato"><tr><td colspan="7" class="empty">Informe um beneficiário e a competência.</td></tr></tbody>
+    </table></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+function money(n){return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m,ok){const t=document.getElementById('toast');t.textContent=m;t.className='toast show '+(ok?'ok':'err');setTimeout(()=>t.className='toast',4600);}
+const TIPOS={consulta:'Consulta',exame:'Exame',internacao:'Internação',cirurgia:'Cirurgia',terapia:'Terapia',urgencia:'Urgência'};
+async function post(url,body){return fetch(url,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify(body)});}
+
+async function carregarRegras(){
+  const d=await (await fetch('/api/plano-saude/coparticipacao/regras/',{credentials:'include'})).json();
+  const rs=d.regras||[];
+  document.getElementById('tb-regras').innerHTML=rs.length?rs.map(r=>`<tr>
+    <td>${esc(r.plano)}</td><td>${TIPOS[r.tipo]||r.tipo}</td>
+    <td class="mono">${r.percentual}%</td><td class="mono">${r.valor_fixo?money(r.valor_fixo):'—'}</td>
+    <td class="mono">${r.teto_mensal!=null?money(r.teto_mensal):'—'}</td>
+    <td>${r.conforme_ans?'<span class="badge badge-ok">ok</span>':'<span class="badge badge-danger">&gt;40%</span>'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Nenhuma regra. Cadastre abaixo.</td></tr>';
+}
+async function carregarAuditoria(){
+  const d=await (await fetch('/api/plano-saude/coparticipacao/auditoria-ans/',{credentials:'include'})).json();
+  const b=document.getElementById('ans-banner');
+  if(d.conforme){b.className='ans-banner ans-ok';b.innerHTML='&#10003; Todas as regras estão em conformidade com a ANS (RN 507 — teto de 40%).';}
+  else{b.className='ans-banner ans-bad';b.innerHTML='&#9888; '+d.achados.length+' regra(s) fora de conformidade ANS: '+d.achados.map(a=>esc(a.plano)+'/'+esc(a.tipo)).join(', ')+'. Corrija para evitar exposição regulatória.';}
+}
+async function salvarRegra(){
+  const body={plano_id:document.getElementById('r-plano').value,tipo:document.getElementById('r-tipo').value,
+    percentual:document.getElementById('r-perc').value,valor_fixo:document.getElementById('r-fixo').value,
+    teto_mensal:document.getElementById('r-teto').value};
+  const r=await post('/api/plano-saude/coparticipacao/regras/salvar/',body);const d=await r.json();
+  if(!r.ok){toast(d.erro||'Falha',false);return;}
+  toast('Regra salva.',true);carregarRegras();carregarAuditoria();
+}
+
+function addLinha(tipo,valor){
+  const div=document.createElement('div');div.className='row2';div.style.alignItems='center';
+  div.innerHTML=`<select class="c-tipo" style="margin-bottom:8px">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+    <input class="c-valor" type="number" placeholder="valor R$" step="0.01" style="margin-bottom:8px">`;
+  document.getElementById('cesta').appendChild(div);
+}
+async function simular(){
+  const benef=document.getElementById('s-benef').value;if(!benef){toast('Informe o beneficiário.',false);return;}
+  const cesta=[...document.querySelectorAll('#cesta .row2')].map(r=>({tipo:r.querySelector('.c-tipo').value,valor:r.querySelector('.c-valor').value||0}));
+  if(!cesta.length){toast('Adicione ao menos um procedimento.',false);return;}
+  const r=await post('/api/plano-saude/coparticipacao/simular/',{beneficiario_id:benef,cesta});
+  const d=await r.json();if(!r.ok){toast(d.erro||'Falha',false);return;}
+  document.getElementById('sim-res').style.display='block';
+  document.getElementById('sim-linhas').innerHTML=d.linhas.map(l=>`<div class="sim-line"><span>${TIPOS[l.tipo]||l.tipo} <span class="mono" style="color:var(--muted)">(${money(l.valor_procedimento)})</span>${l.motivo?' · <span style="color:var(--warn);font-size:11px">'+esc(l.motivo)+'</span>':''}</span><b>${money(l.coparticipacao)}</b></div>`).join('');
+  document.getElementById('sim-total').textContent=money(d.total_mensal);
+}
+
+async function extrato(){
+  const benef=document.getElementById('e-benef').value,comp=document.getElementById('e-comp').value;
+  if(!benef||!comp){toast('Informe beneficiário e competência.',false);return;}
+  const d=await (await fetch('/api/plano-saude/coparticipacao/extrato/?beneficiario_id='+benef+'&competencia='+comp,{credentials:'include'})).json();
+  const evs=d.eventos||[];
+  document.getElementById('tb-extrato').innerHTML=evs.length?evs.map(e=>`<tr>
+    <td class="mono">${e.data||'—'}</td><td>${TIPOS[e.tipo]||e.tipo}</td><td>${esc(e.descricao)||'—'}</td>
+    <td class="mono">${money(e.valor_procedimento)}</td><td class="mono">${e.percentual}%</td>
+    <td class="mono"><b>${money(e.valor)}</b></td>
+    <td style="font-size:11px;color:var(--muted)">${e.isento?'<span class="badge badge-gray">isento</span> ':''}${esc(e.motivo)||''}</td></tr>`).join('')+`<tr><td colspan="5" style="text-align:right"><b>Total</b></td><td class="mono"><b style="color:var(--accent)">${money(d.total)}</b></td><td></td></tr>`:'<tr><td colspan="7" class="empty">Sem eventos nessa competência.</td></tr>';
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const now=new Date();document.getElementById('e-comp').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  carregarRegras();carregarAuditoria();addLinha();addLinha();
+});
+</script>
+</body>
+</html>

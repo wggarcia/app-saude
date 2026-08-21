@@ -9,6 +9,9 @@
   {% if ps_ver_rede_credenciada %}
   <div class="nav-section">Rede</div>
   <a class="nav-link{% if request.path == '/plano-saude/rede/' %} active{% endif %}" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+  <a class="nav-link{% if request.path == '/plano-saude/tiss-recepcao/' %} active{% endif %}" href="/plano-saude/tiss-recepcao/"><span>&#128229;</span> Recepção TISS</a>
+  <a class="nav-link{% if request.path == '/plano-saude/contas/' %} active{% endif %}" href="/plano-saude/contas/"><span>&#128176;</span> Contas &middot; Repasse</a>
+  <a class="nav-link{% if request.path == '/plano-saude/portal-prestador/' %} active{% endif %}" href="/plano-saude/portal-prestador/"><span>&#128100;</span> Portal do Prestador</a>
   {% endif %}
   {% if ps_ver_compliance_ans %}
   <div class="nav-section">Regulatório</div>
@@ -18,6 +21,8 @@
   {% if ps_ver_autorizacao %}
   <div class="nav-section">IA</div>
   <a class="nav-link{% if request.path == '/plano-saude/ia/' %} active{% endif %}" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorização</a>
+  <a class="nav-link{% if request.path == '/plano-saude/coparticipacao/' %} active{% endif %}" href="/plano-saude/coparticipacao/"><span>&#129534;</span> Coparticipação</a>
+  <a class="nav-link{% if request.path == '/plano-saude/cobranca/' %} active{% endif %}" href="/plano-saude/cobranca/"><span>&#129534;</span> Mensalidade &middot; Boleto/PIX</a>
   <div class="nav-section">Beneficiários</div>
   <a class="nav-link{% if request.path == '/plano-saude/portal-admin/' %} active{% endif %}" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiário</a>
   {% endif %}
