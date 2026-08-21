@@ -1,0 +1,440 @@
+{% verbatim %}
+<title>SoloCRT Governo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --ground:#0a1120; --ground-2:#0d1526; --surface:#111c31; --surface-2:#16243c;
+  --line:rgba(150,170,205,.14); --line-2:rgba(150,170,205,.28);
+  --ink:#eef3fc; --muted:#93a6c6; --dim:#6a7c9d;
+  --live:#31d4c2; --live-dim:rgba(49,212,194,.14);
+  --alert:#ff6a56; --warn:#ffb84d; --ok:#5fd08a;
+  --accent:#4f8cff;
+  --maxw:1120px;
+  --mono:"SF Mono","SFMono-Regular",ui-monospace,"Cascadia Mono","Consolas","Roboto Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(1100px 620px at 78% -8%, rgba(49,212,194,.09), transparent 60%),
+    radial-gradient(900px 520px at 6% 4%, rgba(79,140,255,.10), transparent 55%);
+  background-attachment:fixed;
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+h1,h2,h3{text-wrap:balance; margin:0; letter-spacing:-.02em; font-weight:800}
+p{margin:0}
+a{color:inherit}
+.mono{font-family:var(--mono)}
+.eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--live); font-weight:600}
+.muted{color:var(--muted)}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ── top bar ── */
+.top{position:sticky; top:0; z-index:20; backdrop-filter:blur(10px);
+  background:rgba(10,17,32,.72); border-bottom:1px solid var(--line)}
+.top .wrap{display:flex; align-items:center; justify-content:space-between; height:60px; gap:16px}
+.brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.02em}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--live);box-shadow:0 0 0 0 rgba(49,212,194,.6); animation:pulse 2.4s infinite}
+.brand small{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;font-weight:600}
+.live{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--live)}
+.live .dot{width:7px;height:7px;border-radius:50%;background:var(--live);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(49,212,194,.55)}70%{box-shadow:0 0 0 9px rgba(49,212,194,0)}100%{box-shadow:0 0 0 0 rgba(49,212,194,0)}}
+
+/* ── hero ── */
+.hero{position:relative; padding:76px 0 40px; overflow:hidden}
+.hero-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:44px; align-items:center}
+.hero h1{font-size:clamp(34px,5.4vw,62px); line-height:1.02}
+.hero h1 .hl{color:var(--live)}
+.hero .lede{margin-top:20px; font-size:clamp(17px,2vw,20px); color:var(--muted); max-width:34ch}
+.canvas-shell{position:relative; aspect-ratio:1/1; width:100%; border:1px solid var(--line-2); border-radius:18px;
+  background:linear-gradient(180deg,var(--ground-2),#0a1322); overflow:hidden; box-shadow:0 30px 80px -40px rgba(0,0,0,.8)}
+.canvas-shell canvas{display:block;width:100%;height:100%}
+.canvas-tag{position:absolute; font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+.canvas-tag.tl{top:12px;left:14px;color:var(--live)}
+.canvas-tag.br{bottom:12px;right:14px}
+.hlegend{position:absolute;bottom:12px;left:14px;display:flex;gap:14px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.hlegend i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+.kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:44px}
+.kpi{border:1px solid var(--line); border-radius:12px; padding:16px 16px 14px; background:var(--surface)}
+.kpi b{display:block; font-size:30px; font-weight:800; letter-spacing:-.03em; line-height:1}
+.kpi span{display:block; margin-top:8px; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+
+/* ── sections ── */
+section{padding:60px 0; border-top:1px solid var(--line)}
+.sec-head{max-width:64ch; margin-bottom:34px}
+.sec-head h2{font-size:clamp(26px,3.4vw,38px); line-height:1.08; margin-top:12px}
+.sec-head p{margin-top:14px; color:var(--muted); font-size:18px}
+
+/* pains */
+.pains{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+.pain{border:1px solid var(--line); border-left:2px solid var(--alert); border-radius:10px; padding:20px; background:var(--ground-2)}
+.pain .q{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--alert); margin-bottom:10px}
+.pain p{color:var(--ink); font-weight:600; font-size:16.5px}
+.pain small{display:block;margin-top:10px;color:var(--muted);font-weight:400;font-size:14.5px;line-height:1.5}
+
+/* realtime feature panels */
+.panels{display:grid; grid-template-columns:1.3fr 1fr; gap:16px}
+.panel{border:1px solid var(--line); border-radius:14px; background:var(--surface); padding:24px; display:flex; flex-direction:column; gap:12px}
+.panel.big{grid-row:span 2}
+.panel h3{font-size:20px}
+.panel .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--live)}
+.panel p{color:var(--muted); font-size:15.5px; line-height:1.55}
+.chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:auto}
+.chip{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--muted); border:1px solid var(--line-2); border-radius:999px; padding:4px 10px; background:var(--ground-2)}
+.chip.live{color:var(--live); border-color:rgba(49,212,194,.4)}
+.mapmock{border:1px solid var(--line-2); border-radius:10px; height:150px; position:relative; overflow:hidden; background:linear-gradient(180deg,#0b1526,#0a1120)}
+.mapmock canvas{width:100%;height:100%;display:block}
+
+/* IA grid */
+.ia-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+.ia{border:1px solid var(--line); border-radius:12px; padding:18px; background:var(--surface); position:relative; overflow:hidden}
+.ia::before{content:""; position:absolute; inset:0 auto 0 0; width:2px; background:linear-gradient(var(--live),var(--accent))}
+.ia .n{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--live); font-weight:600}
+.ia h3{font-size:16.5px; margin:8px 0 8px}
+.ia p{color:var(--muted); font-size:14px; line-height:1.5}
+
+/* two-column gestao */
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+.stack{border:1px solid var(--line); border-radius:14px; background:var(--surface); padding:24px}
+.stack .tag{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.stack h3{font-size:21px; margin:10px 0 16px}
+.rows{display:flex; flex-direction:column; gap:0}
+.row{display:flex; gap:12px; padding:13px 0; border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .k{font-weight:700; min-width:150px; font-size:15px}
+.row .v{color:var(--muted); font-size:14.5px; line-height:1.5}
+
+/* module grid */
+.mods{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+.mod{border:1px solid var(--line); border-radius:9px; padding:13px 14px; background:var(--ground-2); font-size:14px; font-weight:600; display:flex; flex-direction:column; gap:3px}
+.mod span{font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:500}
+.mod.on{border-color:rgba(49,212,194,.35)}
+.mod.on span{color:var(--live)}
+
+/* diff / numbers */
+.diffs{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+.diff{border:1px solid var(--line); border-radius:12px; padding:22px; background:var(--surface)}
+.diff b{font-size:15px}
+.diff p{color:var(--muted); font-size:14.5px; margin-top:8px; line-height:1.55}
+.diff .big{font-size:34px; font-weight:800; letter-spacing:-.03em; color:var(--live); display:block; margin-bottom:6px}
+
+/* contratação */
+.contrato{border:1px solid var(--line-2); border-radius:16px; padding:28px; background:linear-gradient(180deg,var(--surface),var(--ground-2)); display:grid; grid-template-columns:1.2fr 1fr; gap:28px; align-items:center}
+.contrato ul{margin:14px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px}
+.contrato li{display:flex; gap:10px; color:var(--muted); font-size:15px}
+.contrato li b{color:var(--ink)}
+.contrato li::before{content:"→"; color:var(--live)}
+
+/* CTA */
+.cta{text-align:center; padding:70px 0 40px}
+.cta h2{font-size:clamp(28px,4vw,44px); line-height:1.05}
+.cta p{color:var(--muted); font-size:19px; margin-top:16px; max-width:52ch; margin-left:auto; margin-right:auto}
+.btns{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:30px}
+.btn{display:inline-flex; align-items:center; gap:9px; padding:15px 26px; border-radius:11px; font-weight:700; font-size:16px; text-decoration:none; border:1px solid transparent}
+.btn.primary{background:var(--live); color:#052; box-shadow:0 16px 40px -18px rgba(49,212,194,.7)}
+.btn.ghost{border-color:var(--line-2); color:var(--ink)}
+.btn:focus-visible,a:focus-visible{outline:2px solid var(--live); outline-offset:3px}
+
+footer{border-top:1px solid var(--line); padding:32px 0 60px; color:var(--muted); font-size:13.5px}
+footer .wrap{display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; align-items:center}
+footer .mono{font-size:12px; letter-spacing:.06em}
+
+@media(max-width:860px){
+  .hero-grid{grid-template-columns:1fr; gap:30px}
+  .canvas-shell{max-width:420px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .pains,.ia-grid,.diffs{grid-template-columns:1fr}
+  .panels,.cols,.contrato{grid-template-columns:1fr}
+  .mods{grid-template-columns:repeat(2,1fr)}
+  .panel.big{grid-row:auto}
+}
+@media(prefers-reduced-motion:reduce){
+  .brand .dot,.live .dot{animation:none}
+}
+</style>
+
+<div class="top"><div class="wrap">
+  <div class="brand"><span class="dot" aria-hidden="true"></span>SoloCRT&nbsp;<small>Saúde&nbsp;·&nbsp;Governo</small></div>
+  <span class="live"><span class="dot" aria-hidden="true"></span>Vigilância ao vivo</span>
+</div></div>
+
+<header class="hero"><div class="wrap"><div class="hero-grid">
+  <div>
+    <span class="eyebrow">Secretarias de Saúde · Municipal e Estadual</span>
+    <h1>A secretaria vê o surto chegar <span class="hl">antes dele chegar.</span></h1>
+    <p class="lede">Vigilância epidemiológica em tempo real, 9 sistemas de inteligência artificial e a gestão clínica e operacional do SUS — em um ambiente só.</p>
+  </div>
+  <div class="canvas-shell">
+    <canvas id="disp" width="640" height="640" aria-label="Projeção de dispersão de surto entre municípios"></canvas>
+    <span class="canvas-tag tl">● Projeção IA · dispersão de surto</span>
+    <span class="canvas-tag br mono">SEIR + mobilidade</span>
+    <div class="hlegend"><span><i style="background:var(--alert)"></i>foco</span><span><i style="background:var(--warn)"></i>7–14 dias</span><span><i style="background:var(--live)"></i>rota provável</span></div>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><b class="tnum">9</b><span>sistemas de IA</span></div>
+  <div class="kpi"><b class="tnum">7·14·30</b><span>dias de projeção</span></div>
+  <div class="kpi"><b class="tnum">6</b><span>continentes vigiados</span></div>
+  <div class="kpi"><b>SUS</b><span>faturamento + RNDS reais</span></div>
+</div>
+</div></header>
+
+<main>
+<section id="dores"><div class="wrap">
+  <div class="sec-head">
+    <span class="eyebrow">O problema de hoje</span>
+    <h2>A secretaria decide no escuro — e paga a conta depois.</h2>
+    <p>O dado epidemiológico existe, mas está espalhado em sistemas soltos, chega atrasado e ninguém consegue enxergar o todo a tempo de agir.</p>
+  </div>
+  <div class="pains">
+    <div class="pain"><div class="q">Descoberta tardia</div><p>Você descobre o surto pelo jornal, não pelo seu sistema.</p><small>Quando o caso oficial aparece no SINAN, o vírus já circulou semanas.</small></div>
+    <div class="pain"><div class="q">Dado fragmentado</div><p>SINAN aqui, e-SUS ali, planilha no WhatsApp da equipe.</p><small>Ninguém tem um painel único que mostre onde a epidemia está e para onde vai.</small></div>
+    <div class="pain"><div class="q">Repasse perdido</div><p>Faturamento SUS feito à mão, no prazo estourado.</p><small>BPA/APAC/AIH atrasados = recurso que a secretaria deixa na mesa todo mês.</small></div>
+    <div class="pain"><div class="q">Metas no papel</div><p>O Plano de Saúde tem metas — mas ninguém acompanha o resultado.</p><small>RAG e RDQA viram correria de última hora, sem dado consolidado.</small></div>
+    <div class="pain"><div class="q">Fila sem critério</div><p>Regulação de consultas e exames sem transparência nem priorização.</p><small>Cidadão espera sem saber a posição; gestor não enxerga o gargalo.</small></div>
+    <div class="pain"><div class="q">Sem voz ao cidadão</div><p>Nenhum canal direto para alertar a população por território.</p><small>Campanha e alerta de surto não chegam a quem precisa, onde precisa.</small></div>
+  </div>
+</div></section>
+
+<section id="tempo-real"><div class="wrap">
+  <div class="sec-head">
+    <span class="eyebrow">O que muda · Vigilância em tempo real</span>
+    <h2>Uma Sala de Situação que enxerga o presente — e projeta o futuro.</h2>
+    <p>Todos os sinais epidemiológicos num painel só, cruzados com as fontes oficiais e com a IA projetando para onde cada surto caminha.</p>
+  </div>
+  <div class="panels">
+    <div class="panel big">
+      <span class="tag">● Ao vivo · mapa territorial</span>
+      <h3>“Para onde o surto vai” — no mapa, em 7, 14 e 30 dias</h3>
+      <p>O modelo de dispersão (SEIR metapopulacional com matriz de mobilidade do IBGE e malha aérea) projeta a chegada do surto por município e por rota. O gestor vê o arco de propagação antes do primeiro caso confirmado no destino — e age no lugar certo, na hora certa.</p>
+      <div class="mapmock"><canvas id="mini" width="720" height="300"></canvas></div>
+      <div class="chips">
+        <span class="chip live">modo Risco</span><span class="chip live">modo “Para onde vai”</span>
+        <span class="chip">foco por bairro/UF</span><span class="chip">recomendação de ação</span>
+      </div>
+    </div>
+    <div class="panel">
+      <span class="tag">● Monitor de notícias</span>
+      <h3>O mundo inteiro, vigiado por você</h3>
+      <p>Varredura contínua do GDELT e de fontes oficiais em 6 continentes (Fiocruz, OPAS/WHO, CDC, ECDC, NICD, entre outras). Cada notícia é lida por IA, que extrai doença, CID-10, local, casos estimados e um score de risco.</p>
+      <div class="chips"><span class="chip">20 doenças</span><span class="chip">15+ fontes</span><span class="chip">score 0–10</span></div>
+    </div>
+    <div class="panel">
+      <span class="tag">● Alertas à população</span>
+      <h3>App Cidadão, por microárea</h3>
+      <p>Alertas e campanhas segmentados por território e unidade, com fluxo de aprovação (rascunho → revisão → publicado). E os sintomas relatados pelo cidadão voltam como sinal precoce para a Sala de Situação.</p>
+      <div class="chips"><span class="chip">envio territorializado</span><span class="chip">sinal precoce</span></div>
+    </div>
+  </div>
+  <p class="muted mono" style="margin-top:18px;font-size:12.5px;letter-spacing:.04em">FONTES CRUZADAS · InfoDengue/Fiocruz · InfoGripe · SIVEP-Gripe · SINAN · SIM · SIH · OpenDataSUS · IBGE/SIDRA · One Health (epizootias MS) · mobilidade OpenSky</p>
+</div></section>
+
+<section id="ias"><div class="wrap">
+  <div class="sec-head">
+    <span class="eyebrow">O motor · 9 sistemas de IA proprietários</span>
+    <h2>Não é um dashboard com gráfico. É inteligência que decide junto com você.</h2>
+    <p>Nove sistemas trabalhando em cadeia — do diagnóstico diferencial ao alerta oficial — treinados em dado público real, não em suposição.</p>
+  </div>
+  <div class="ia-grid">
+    <div class="ia"><div class="n">IA · diagnóstico</div><h3>Diagnóstico diferencial</h3><p>Distingue doenças de sintomas parecidos (dengue ≠ zika ≠ chikungunya) com ~26 doenças modeladas, sazonalidade brasileira e sinais de urgência.</p></div>
+    <div class="ia"><div class="n">IA · tendência</div><h3>Canal endêmico</h3><p>Detecta se a curva sobe, estabiliza ou cai, calcula limiar epidêmico e incidência/100 mil, e aponta o foco dominante por bairro e município.</p></div>
+    <div class="ia"><div class="n">IA · detecção</div><h3>Detector de surto (ML)</h3><p>Aprende o canal endêmico em dado oficial (SINAN/DATASUS) e substitui o limiar fixo por um modelo treinado — se recusa a treinar sem amostra suficiente.</p></div>
+    <div class="ia"><div class="n">IA · one health</div><h3>O aviso vem do ambiente</h3><p>Muitas doenças passam de animais para pessoas. O sistema fica de olho nesses sinais na natureza e avisa a secretaria antes do primeiro caso chegar na unidade de saúde.</p></div>
+    <div class="ia"><div class="n">IA · monitor</div><h3>Monitor global de notícias</h3><p>Varre GDELT + fontes oficiais de 6 continentes por 20 doenças de interesse em vigilância.</p></div>
+    <div class="ia"><div class="n">IA · leitura</div><h3>Analisador de notícias</h3><p>Lê cada matéria e extrai doença, CID-10, local, casos, tendência e risco — transformando texto solto em sinal estruturado.</p></div>
+    <div class="ia"><div class="n">IA · alerta</div><h3>Gerador de alertas</h3><p>Classifica o nível (alerta/crítico) e publica no painel e no App Cidadão — exclusivo do ambiente Governo.</p></div>
+    <div class="ia"><div class="n">IA · decisão</div><h3>Sala de Decisão IA</h3><p>Traduz o panorama epidemiológico em plano de ação: o que priorizar, onde e por quê.</p></div>
+    <div class="ia"><div class="n">IA · dispersão</div><h3>Dispersão SEIR</h3><p>Responde “para onde vai”: projeta a chegada do surto em 7, 14 e 30 dias por município e por rota de mobilidade.</p></div>
+  </div>
+</div></section>
+
+<section id="gestao"><div class="wrap">
+  <div class="sec-head">
+    <span class="eyebrow">Além da vigilância · Gestão do SUS</span>
+    <h2>A mesma plataforma cuida da assistência e do dinheiro.</h2>
+    <p>Não é só enxergar a epidemia. É operar a rede de saúde inteira — do prontuário ao repasse federal.</p>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <span class="tag">Gestão clínica</span>
+      <h3>Do prontuário à teleconsulta</h3>
+      <div class="rows">
+        <div class="row"><div class="k">PEC</div><div class="v">Prontuário Eletrônico do Cidadão no modelo e-SUS Atenção Básica, com controle de acesso por perfil.</div></div>
+        <div class="row"><div class="k">e-SUS / RNDS</div><div class="v">Integração real: certificado ICP-Brasil, OAuth2 mTLS e envio FHIR R4 (atendimento, vacinação, atividade coletiva).</div></div>
+        <div class="row"><div class="k">Teleconsulta</div><div class="v">Agendamento + sala de vídeo do médico e do paciente (com TCLE) — resolve vazio assistencial e área remota.</div></div>
+        <div class="row"><div class="k">Regulação / SISREG</div><div class="v">Fila de consultas e exames com priorização e busca do cidadão por CNS.</div></div>
+      </div>
+    </div>
+    <div class="stack">
+      <span class="tag">Gestão operacional</span>
+      <h3>Do repasse SUS ao painel de senha</h3>
+      <div class="rows">
+        <div class="row"><div class="k">Faturamento SUS</div><div class="v">BPA / APAC / AIH com transmissão real ao DATASUS/SISAB via credenciais SCNES — para de deixar repasse na mesa.</div></div>
+        <div class="row"><div class="k">Farmácia Básica</div><div class="v">Estoque RENAME nas UBS e dispensação por CNS — fim do desabastecimento no escuro.</div></div>
+        <div class="row"><div class="k">Metas & orçamento</div><div class="v">Indicadores meta × resultado e orçamento previsto × executado, vinculados aos programas de saúde.</div></div>
+        <div class="row"><div class="k">RAG · RDQA · PAS</div><div class="v">Relatórios de gestão DigiSUS gerados a partir do dado que já está no sistema.</div></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section id="tudo"><div class="wrap">
+  <div class="sec-head">
+    <span class="eyebrow">O ambiente completo</span>
+    <h2>Uma secretaria inteira, num login só.</h2>
+    <p>Módulos que hoje moram em sistemas diferentes (ou em planilha) — reunidos e conversando entre si. A Assistência Social (SUAS) já vem incluída no contrato.</p>
+  </div>
+  <div class="mods">
+    <div class="mod on">Sala de Situação<span>vigilância</span></div>
+    <div class="mod on">Dispersão de surtos<span>IA</span></div>
+    <div class="mod on">Monitor de notícias<span>IA global</span></div>
+    <div class="mod on">App Cidadão<span>alertas</span></div>
+    <div class="mod">PEC / Prontuário<span>clínica</span></div>
+    <div class="mod">e-SUS / RNDS<span>FHIR R4</span></div>
+    <div class="mod">Teleconsulta<span>clínica</span></div>
+    <div class="mod">Regulação / SISREG<span>acesso</span></div>
+    <div class="mod">Faturamento SUS<span>BPA/APAC/AIH</span></div>
+    <div class="mod">Farmácia Básica<span>RENAME</span></div>
+    <div class="mod">CEAF<span>alto custo</span></div>
+    <div class="mod">SIPNI / Vacinação<span>imunização</span></div>
+    <div class="mod">SIM / Mortalidade<span>vigilância</span></div>
+    <div class="mod">CNES<span>estabelecimentos</span></div>
+    <div class="mod">CAPS<span>saúde mental</span></div>
+    <div class="mod">Vigilância Sanitária<span>fiscalização</span></div>
+    <div class="mod">Odontologia<span>saúde bucal</span></div>
+    <div class="mod">Laboratório (LIS)<span>exames</span></div>
+    <div class="mod">Almoxarifado<span>insumos FEFO</span></div>
+    <div class="mod">TFD<span>tratamento fora</span></div>
+    <div class="mod">ACS<span>agentes</span></div>
+    <div class="mod">Ouvidoria<span>cidadão</span></div>
+    <div class="mod">Conselho de Saúde<span>controle social</span></div>
+    <div class="mod">SIGTAP / SIA-SUS<span>procedimentos</span></div>
+    <div class="mod">PPI<span>pactuação</span></div>
+    <div class="mod">GED<span>documentos</span></div>
+    <div class="mod">BI / Painéis<span>indicadores</span></div>
+    <div class="mod">Endemias<span>infestação</span></div>
+    <div class="mod">Escala da rede<span>equipes</span></div>
+    <div class="mod">Programas de Saúde<span>gestão</span></div>
+    <div class="mod">RAG · RDQA · PAS<span>DigiSUS</span></div>
+    <div class="mod on">SUAS · Assistência<span>incluído</span></div>
+  </div>
+</div></section>
+
+<section id="diferenciais"><div class="wrap">
+  <div class="sec-head">
+    <span class="eyebrow">Por que é diferente</span>
+    <h2>Enquanto o mercado entrega relatório, o SoloCRT entrega antecipação.</h2>
+  </div>
+  <div class="diffs">
+    <div class="diff"><b><span class="big tnum">9</span>Inteligências, não gráficos</b><p>Um motor de IA que projeta, prioriza e alerta — treinado em SINAN, SIVEP-Gripe e InfoDengue reais, não em número inventado.</p></div>
+    <div class="diff"><b><span class="big">RNDS real</span>Integração de verdade</b><p>Envio FHIR R4 à RNDS com certificado ICP-Brasil e faturamento SUS transmitido ao SISAB — sem “simular” integração.</p></div>
+    <div class="diff"><b><span class="big tnum">7·14·30</span>Dias de antecedência</b><p>A projeção de dispersão dá à secretaria a única coisa que o SINAN nunca deu: tempo para agir antes do surto chegar.</p></div>
+    <div class="diff"><b><span class="big">Tudo junto</span>Vigilância + assistência + gestão</b><p>Da Sala de Situação ao faturamento, da teleconsulta ao SUAS — um ambiente só, sem integração cara entre fornecedores.</p></div>
+    <div class="diff"><b><span class="big">One Health</span>O aviso vem antes do primeiro paciente</b><p>Boa parte das epidemias começa nos animais e no ambiente, antes de chegar às pessoas. O sistema vigia esses sinais e alerta a secretaria enquanto ainda dá tempo de agir.</p></div>
+    <div class="diff"><b><span class="big">6</span>Continentes vigiados</b><p>Monitor internacional de notícias que enxerga a ameaça sanitária global antes dela desembarcar no município.</p></div>
+  </div>
+</div></section>
+
+<section id="contratacao"><div class="wrap">
+  <div class="contrato">
+    <div>
+      <span class="eyebrow">Contratação</span>
+      <h2 style="font-size:clamp(24px,3vw,32px);margin-top:12px">Feito para o setor público.</h2>
+      <p class="muted" style="margin-top:14px;font-size:16px">Contrato anual, com escala do município pequeno ao estado (até 999 municípios). O valor é definido em reunião, conforme o porte da rede.</p>
+      <ul>
+        <li><b>Contrato anual</b>, não assinatura mensal — no modelo que a administração pública usa.</li>
+        <li>Para municípios menores, a contratação pode ser viabilizada por <b>dispensa de licitação</b>, dentro dos limites da Lei 14.133/2021.</li>
+        <li>Implantação, capacitação da equipe e suporte durante toda a vigência.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="kpi" style="background:var(--ground-2)"><b class="tnum">999</b><span>municípios no plano estadual</span></div>
+      <div class="kpi" style="background:var(--ground-2);margin-top:12px"><b class="tnum">1.000</b><span>usuários no plano estadual</span></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="cta"><div class="wrap">
+  <span class="eyebrow">Próximo passo</span>
+  <h2>Veja a Sala de Situação da sua rede — ao vivo.</h2>
+  <p>Uma apresentação de 30 minutos, com os dados da sua região no mapa. Sem compromisso.</p>
+  <div class="btns">
+    <a class="btn primary" href="https://wa.me/5521988921758?text=Quero%20agendar%20uma%20apresenta%C3%A7%C3%A3o%20do%20SoloCRT%20para%20a%20Secretaria%20de%20Sa%C3%BAde">Agendar apresentação no WhatsApp</a>
+    <a class="btn ghost" href="mailto:contato@solocrt.com.br?subject=Apresenta%C3%A7%C3%A3o%20SoloCRT%20Governo">contato@solocrt.com.br</a>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <div class="brand"><span class="dot" aria-hidden="true"></span>SoloCRT&nbsp;<small>Saúde Pública</small></div>
+  <span class="mono muted">solocrt.com.br · contato@solocrt.com.br · (21) 98892-1758</span>
+</div></footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  // ── hero dispersion map ──
+  var c=document.getElementById('disp'); if(!c) return; var x=c.getContext('2d');
+  var W=c.width,H=c.height;
+  function rnd(s){return function(){s=(s*1664525+1013904223)%4294967296;return s/4294967296}}
+  var r=rnd(42);
+  var nodes=[]; for(var i=0;i<26;i++){nodes.push({x:60+r()*(W-120),y:70+r()*(H-140)});}
+  var origin=nodes[3];
+  // sort by distance to origin for wave effect
+  nodes.forEach(function(n){n.d=Math.hypot(n.x-origin.x,n.y-origin.y);});
+  var t=0;
+  function draw(){
+    x.clearRect(0,0,W,H);
+    // faint grid
+    x.strokeStyle='rgba(150,170,205,.06)'; x.lineWidth=1;
+    for(var g=0;g<=W;g+=40){x.beginPath();x.moveTo(g,0);x.lineTo(g,H);x.stroke();x.beginPath();x.moveTo(0,g);x.lineTo(W,g);x.stroke();}
+    // rings 7/14/30
+    var rings=[{r:150,c:'rgba(255,184,77,.5)'},{r:250,c:'rgba(255,184,77,.28)'},{r:340,c:'rgba(49,212,194,.22)'}];
+    rings.forEach(function(rg){x.beginPath();x.arc(origin.x,origin.y,rg.r,0,7);x.strokeStyle=rg.c;x.setLineDash([4,7]);x.lineWidth=1.2;x.stroke();x.setLineDash([]);});
+    // arcs
+    var prog=reduce?1:(Math.sin(t/60)*0.5+0.5);
+    nodes.forEach(function(n){
+      if(n===origin)return;
+      var reach=n.d<180?1:(n.d<300?prog*1.3:prog*0.9);
+      reach=Math.min(1,reach);
+      var mx=(origin.x+n.x)/2, my=(origin.y+n.y)/2 - n.d*0.35;
+      x.beginPath(); x.moveTo(origin.x,origin.y);
+      var col=n.d<180?'rgba(255,106,86,':(n.d<300?'rgba(255,184,77,':'rgba(49,212,194,');
+      x.strokeStyle=col+(0.15+0.5*reach)+')'; x.lineWidth=1.3;
+      // quadratic partial
+      var steps=Math.max(2,Math.floor(20*reach));
+      for(var s=1;s<=steps;s++){var u=s/20; var px=(1-u)*(1-u)*origin.x+2*(1-u)*u*mx+u*u*n.x; var py=(1-u)*(1-u)*origin.y+2*(1-u)*u*my+u*u*n.y; x.lineTo(px,py);}
+      x.stroke();
+    });
+    // nodes
+    nodes.forEach(function(n){
+      var isO=n===origin;
+      x.beginPath();x.arc(n.x,n.y,isO?6:3,0,7);
+      x.fillStyle=isO?'#ff6a56':(n.d<300?'#ffb84d':'#31d4c2'); x.fill();
+      if(isO){var pr=reduce?4:(8+6*Math.sin(t/22));x.beginPath();x.arc(n.x,n.y,pr,0,7);x.strokeStyle='rgba(255,106,86,.5)';x.lineWidth=2;x.stroke();}
+    });
+    if(!reduce){t++;requestAnimationFrame(draw);}
+  }
+  draw();
+
+  // ── mini map in panel (moving front) ──
+  var m=document.getElementById('mini'); if(m){var mx2=m.getContext('2d'),MW=m.width,MH=m.height,mt=0;
+    var pts=[]; var r2=rnd(7); for(var j=0;j<40;j++)pts.push({x:r2()*MW,y:r2()*MH});
+    function md(){mx2.clearRect(0,0,MW,MH);
+      pts.forEach(function(p){var d=Math.abs(p.x-(mt%(MW+140)-70)); var a=Math.max(0,1-d/90);
+        mx2.beginPath();mx2.arc(p.x,p.y,2.2,0,7);mx2.fillStyle='rgba(49,212,194,'+(0.15+0.7*a)+')';mx2.fill();});
+      // sweep line
+      var sx=mt%(MW+140)-70; mx2.beginPath();mx2.moveTo(sx,0);mx2.lineTo(sx,MH);
+      mx2.strokeStyle='rgba(255,184,77,.5)';mx2.lineWidth=1.5;mx2.stroke();
+      if(!reduce){mt+=1.4;requestAnimationFrame(md);} }
+    md();
+  }
+})();
+</script>
+{% endverbatim %}

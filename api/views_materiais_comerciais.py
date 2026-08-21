@@ -32,3 +32,7 @@ def portfolio_hospital(request):
 
 def portfolio_plano_saude(request):
     return render(request, "materiais/portfolio_plano_saude.html")
+
+
+def portfolio_governo(request):
+    return render(request, "materiais/portfolio_governo.html")
