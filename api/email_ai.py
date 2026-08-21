@@ -40,7 +40,7 @@ def _link_trial(codigo: str) -> str:
 
 def _link_materiais(segmento: str) -> str:
     # Cada segmento tem sua página de material ("folder" de entregas).
-    if segmento not in ("sst", "farmacia", "hospital", "plano_saude"):
+    if segmento not in ("sst", "farmacia", "hospital", "plano_saude", "governo"):
         return ""
     return f"{_base_url()}/materiais/{segmento}/"
 
@@ -253,6 +253,25 @@ _SEQ_INSTRUCAO_ENTERPRISE = {
 }
 
 
+_PRODUTO_GOVERNO = (
+    "PRODUTO: SoloCRT Governo — plataforma para secretarias municipais/estaduais de SAÚDE e de "
+    "ASSISTÊNCIA SOCIAL. DIFERENCIAIS reais (o que nenhum sistema de gestão comum tem):\n"
+    "- Vigilância epidemiológica EM TEMPO REAL: Sala de Situação com os surtos no mapa e 9 sistemas "
+    "de IA que projetam PARA ONDE o surto vai em 7, 14 e 30 dias — a secretaria age ANTES do primeiro "
+    "caso chegar.\n"
+    "- Monitor global de notícias de saúde + alerta precoce; App Cidadão pra alertar a população por bairro.\n"
+    "Também roda a gestão inteira: SUS (PEC, e-SUS/RNDS real via FHIR, Faturamento SUS BPA/APAC/AIH, "
+    "Regulação/SISREG, Farmácia Básica) e SUAS/Assistência Social (CRAS/PAIF, CREAS/PAEFI, CadÚnico "
+    "integrado ao Gov.br/MDS, BPC, benefícios eventuais, IA de inconsistência cadastral, relatório MDS).\n"
+    "COMO VENDER PRA GOVERNO: é CONTRATO ANUAL (não assinatura mensal), com valor definido em reunião — "
+    "NUNCA cite preço nem valores. O objetivo do email é conseguir uma APRESENTAÇÃO de ~30 min. Para "
+    "municípios PEQUENOS, mencione de passagem (sem número) que a contratação pode ser viabilizada por "
+    "DISPENSA de licitação (Lei 14.133) — não afirme isso para cidade grande/estado.\n"
+    "Folder com tudo que entrega (CTA secundário): {materiais}\n"
+    "WhatsApp para agendar a apresentação (CTA principal): {whatsapp}"
+)
+
+
 def gerar_email(lead, numero_sequencia: int = 1) -> dict:
     """
     Gera assunto + corpo HTML + corpo texto para um email de prospecção.
@@ -274,7 +293,7 @@ def gerar_email(lead, numero_sequencia: int = 1) -> dict:
 
     # Segmentos enterprise: venda consultiva de ticket alto (hospital, operadora de
     # plano de saúde). CTA = conversa/demonstração, nunca teste grátis self-service.
-    is_enterprise = lead.segmento in ("hospital", "plano_saude")
+    is_enterprise = lead.segmento in ("hospital", "plano_saude", "governo")
 
     if lead.segmento == "sst":
         produto_desc = _PRODUTO_SST.format(preco=preco, link=link, plano_label=plano_label, whatsapp=whatsapp, materiais=materiais)
@@ -337,6 +356,27 @@ Website: {lead.website or 'não informado'}
 Perfil: organização hospitalar de grande porte, venda consultiva/enterprise. Se o
 cargo indicar área clínica, priorize OPME/oncologia; se for gestão/diretoria,
 priorize custo/DRG/OPME (margem) e gestão de leitos.
+"""
+    elif lead.segmento == "governo":
+        produto_desc = _PRODUTO_GOVERNO.format(whatsapp=whatsapp, materiais=materiais)
+        if lead.tipo == "assistencia_social":
+            perfil_gov = ("Órgão de ASSISTÊNCIA SOCIAL (SUAS). Abra o email pelo SUAS: CadÚnico "
+                "integrado ao Gov.br/MDS, a IA que aponta inconsistência no cadastro, e o relatório "
+                "mensal pronto para prestação de contas ao MDS. NÃO abra por vigilância epidemiológica.")
+        elif lead.tipo == "secretaria_saude":
+            perfil_gov = ("Secretaria/Fundo de SAÚDE. Abra pelo diferencial mais forte: vigilância "
+                "epidemiológica em tempo real e a IA que projeta 'para onde o surto vai' em 7/14/30 dias.")
+        else:  # prefeitura / município (gabinete)
+            perfil_gov = ("Prefeitura/Município — o email chega no gabinete. Enderece-o 'à Secretaria "
+                "de Saúde e de Assistência Social do município' e destaque que UMA plataforma cuida "
+                "das duas áreas (saúde + SUAS).")
+        contexto_lead = f"""
+Nome: {lead.nome}
+Órgão público: {lead.empresa}
+Email: {lead.email}
+Cidade: {lead.cidade}/{lead.estado}
+Tipo: {lead.get_tipo_display()}
+Perfil do lead: {perfil_gov}
 """
     else:  # plano_saude
         produto_desc = _PRODUTO_PLANO_SAUDE.format(whatsapp=whatsapp, materiais=materiais)

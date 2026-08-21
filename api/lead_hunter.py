@@ -294,7 +294,7 @@ def importar_csv(conteudo: str) -> list[dict]:
             "telefone":      _normalizar_telefone(_get(row, "telefone")),
             "cidade":        cidade or "Não informado",
             "estado":        estado,
-            "segmento":      segmento if segmento in ("sst", "farmacia", "hospital", "plano_saude") else "farmacia",
+            "segmento":      segmento if segmento in ("sst", "farmacia", "hospital", "plano_saude", "governo") else "farmacia",
             "tipo":          _get(row, "tipo", "farmacia_dispensacao"),
             "website":       _get(row, "website"),
             "linkedin_url":  _get(row, "linkedin_url") or _get(row, "linkedin"),
