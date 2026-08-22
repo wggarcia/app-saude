@@ -39,7 +39,7 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 /* ── LAYOUT ── */
 .layout{display:flex;flex:1;overflow:hidden}
 /* ── SIDEBAR ── */
-.sidebar{width:220px;min-height:calc(100vh - 56px);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto}
+.sidebar{width:220px;height:calc(100vh - 56px);min-height:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto;overscroll-behavior:contain}
 .nav-section{padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
 .nav-link{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:1px 8px;transition:.15s;cursor:pointer;border:none;background:none;width:calc(100% - 16px);font-family:Manrope,sans-serif}
 .nav-link-inner{display:flex;align-items:center;gap:9px}
