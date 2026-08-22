@@ -1139,6 +1139,7 @@ from api.views_hospital_qualidade import (
     api_qualidade_incidente_encerrar,
     api_qualidade_indicadores,
     api_qualidade_kpis,
+    api_qualidade_ia_analise,
 )
 from api.views_hospital_radioterapia import (
     hospital_radioterapia_page,
@@ -3320,6 +3321,8 @@ urlpatterns = [
     path('api/hospital/qualidade/incidentes/<int:pk>/',         api_qualidade_incidente_detalhe),
     path('api/hospital/qualidade/incidentes/<int:pk>/encerrar', api_qualidade_incidente_encerrar),
     path('api/hospital/qualidade/incidentes/<int:pk>/encerrar/',api_qualidade_incidente_encerrar),
+    path('api/hospital/qualidade/incidentes/<int:pk>/ia-analise', api_qualidade_ia_analise),
+    path('api/hospital/qualidade/incidentes/<int:pk>/ia-analise/',api_qualidade_ia_analise),
     path('api/hospital/qualidade/indicadores',                  api_qualidade_indicadores),
     path('api/hospital/qualidade/indicadores/',                 api_qualidade_indicadores),
     path('api/hospital/qualidade/kpis',                         api_qualidade_kpis),

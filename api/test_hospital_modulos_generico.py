@@ -3,6 +3,7 @@ Smoke dos módulos hospitalares que antes mostravam "em construção" e agora
 renderizam o template genérico (hospital_modulo_generico.html) consumindo as
 APIs já existentes. Garante 200 + template certo + config injetada.
 """
+import json
 from datetime import timedelta
 
 import jwt
@@ -33,19 +34,45 @@ def _empresa_hospital(email, pacote="hospital_grupo"):
 
 
 class HospitalModuloGenericoTests(TestCase):
-    def test_qualidade_renderiza_template_generico(self):
+    def test_qualidade_renderiza_cockpit_nsp(self):
+        # Qualidade foi promovida do template genérico para o cockpit NSP real.
         empresa = _empresa_hospital("hq@example.com")
         client = _client_for(empresa)
         r = client.get("/hospital/qualidade/", secure=True)
         self.assertEqual(r.status_code, 200)
         html = r.content.decode()
-        self.assertIn("Qualidade (NSP)", html)
-        # não é mais a tela "em construção"
+        self.assertIn("Segurança do Paciente", html)
         self.assertNotIn("em construção", html)
-        # config data-driven injetada
+        # wired aos endpoints reais + ação de notificar (o fluxo em 3 cliques)
         self.assertIn("/api/hospital/qualidade/kpis", html)
         self.assertIn("/api/hospital/qualidade/incidentes", html)
+        self.assertIn("Notificar incidente", html)
         self.assertIn('id="kpis"', html)
+
+    def test_qualidade_ia_analise_causa_raiz(self):
+        # O diferencial NSP: análise de causa-raiz. Sem ANTHROPIC_API_KEY nos
+        # testes, cai no fallback determinístico — que nunca falha e traz Ishikawa,
+        # 5 porquês e risco de recorrência.
+        empresa = _empresa_hospital("hia@example.com")
+        client = _client_for(empresa)
+        r = client.post(
+            "/api/hospital/qualidade/incidentes",
+            data=json.dumps({"tipo": "queda", "gravidade": "dano_grave",
+                             "setor": "UTI Adulto",
+                             "descricao": "Paciente caiu da maca durante o transporte."}),
+            content_type="application/json", secure=True)
+        self.assertEqual(r.status_code, 201)
+        pk = r.json()["id"]
+
+        r2 = client.post(f"/api/hospital/qualidade/incidentes/{pk}/ia-analise",
+                         data="{}", content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 200)
+        a = r2.json()["analise"]
+        self.assertIn("classificacao", a)
+        self.assertEqual(len(a["ishikawa"]), 4)
+        self.assertEqual(len(a["cinco_porques"]), 5)
+        self.assertEqual(a["risco_recorrencia"], "alto")  # dano_grave → alto
+        self.assertTrue(a["acoes_preventivas"])
 
     def test_nutricao_renderiza_template_generico(self):
         empresa = _empresa_hospital("hn@example.com")

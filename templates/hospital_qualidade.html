@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Qualidade & Segurança do Paciente — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--surface3:#103049;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#6d9cb5;--faint:#3f6377;--border:rgba(0,194,255,.12);--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding:0 0 60px}
+h1{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+/* topbar */
+.q-top{position:sticky;top:0;z-index:30;background:rgba(4,16,24,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.q-top .sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.q-actions{display:flex;gap:10px;align-items:center}
+.btn{border:none;border-radius:10px;padding:11px 16px;font-size:.85rem;font-weight:700;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#02121b}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);text-decoration:none}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+
+/* KPIs */
+.q-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}
+@media(max-width:720px){.q-kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.kpi.danger::before{background:var(--danger)} .kpi.warn::before{background:var(--warn)} .kpi.ok::before{background:var(--ok)}
+.kpi .v{font-size:2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:.76rem;color:var(--muted);margin-top:6px}
+.kpi.danger .v{color:var(--danger)} .kpi.warn .v{color:var(--warn)} .kpi.ok .v{color:var(--ok)}
+
+/* grid painéis */
+.q-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:820px){.q-grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+
+/* indicadores */
+.ind{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)}
+.ind:last-child{border-bottom:none}
+.ind .nm{font-size:.86rem;color:var(--text)}
+.ind .nm small{display:block;color:var(--faint);font-size:.7rem;font-weight:600}
+.ind .val{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums}
+.ind .val.hi{color:var(--danger)} .ind .val.mid{color:var(--warn)} .ind .val.lo{color:var(--ok)}
+
+/* barras de gravidade */
+.grav-row{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:.8rem}
+.grav-row .gl{width:96px;color:var(--muted);flex-shrink:0}
+.grav-row .bar{flex:1;height:9px;border-radius:6px;background:var(--surface2);overflow:hidden}
+.grav-row .bar>span{display:block;height:100%;border-radius:6px}
+.grav-row .gn{width:26px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* tabela */
+.filtros{display:flex;gap:8px}
+select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 11px;font-family:inherit;font-size:.8rem}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:640px}
+th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:rgba(0,194,255,.05)}
+.chip{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.g-near_miss{background:rgba(0,229,176,.14);color:var(--ok)}
+.g-sem_dano{background:rgba(0,194,255,.14);color:var(--accent)}
+.g-dano_leve{background:rgba(255,179,71,.14);color:var(--warn)}
+.g-dano_moderado{background:rgba(255,179,71,.2);color:var(--warn)}
+.g-dano_grave{background:rgba(255,77,109,.16);color:var(--danger)}
+.g-obito{background:rgba(255,77,109,.28);color:#ffd0d8}
+.st-aberto{background:rgba(255,179,71,.14);color:var(--warn)}
+.st-encerrado{background:rgba(0,229,176,.14);color:var(--ok)}
+.empty{text-align:center;color:var(--muted);padding:34px;font-size:.85rem}
+
+/* modal + drawer */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;opacity:0;pointer-events:none;transition:.2s}
+.backdrop.on{opacity:1;pointer-events:all}
+.modal{position:fixed;z-index:100;top:50%;left:50%;transform:translate(-50%,-46%);width:min(560px,94vw);max-height:90vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;opacity:0;pointer-events:none;transition:.22s}
+.modal.on{opacity:1;pointer-events:all;transform:translate(-50%,-50%)}
+.drawer{position:fixed;z-index:100;top:0;right:0;bottom:0;width:min(560px,96vw);background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;transform:translateX(100%);transition:transform .25s cubic-bezier(.22,.61,.36,1);padding:24px}
+.drawer.on{transform:translateX(0)}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.mh h3{font-size:1.1rem;font-weight:800}
+.x{background:none;border:none;color:var(--muted);font-size:1.3rem;line-height:1}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.field input[type=text],.field input[type=date],.field textarea,.field select{width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:.9rem}
+.field textarea{min-height:80px;resize:vertical}
+.tipo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+@media(max-width:520px){.tipo-grid{grid-template-columns:repeat(3,1fr)}}
+.tipo-btn{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 6px;font-size:.72rem;font-weight:700;color:var(--muted);text-align:center;transition:.12s}
+.tipo-btn .e{display:block;font-size:1.2rem;margin-bottom:3px}
+.tipo-btn.sel{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,.1)}
+.grav-grid{display:flex;flex-wrap:wrap;gap:6px}
+.grav-btn{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:7px 13px;font-size:.75rem;font-weight:700;color:var(--muted)}
+.grav-btn.sel{border-color:var(--accent);color:var(--text);background:rgba(0,194,255,.12)}
+.check{display:flex;align-items:center;gap:9px;font-size:.84rem;color:var(--text);cursor:pointer}
+.check input{width:17px;height:17px;accent-color:var(--accent)}
+.det-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.86rem}
+.det-row .k{color:var(--muted)}
+.det-row .v{text-align:right;font-weight:600}
+
+/* bloco IA */
+.ia-box{background:linear-gradient(180deg,rgba(0,194,255,.08),transparent);border:1px solid rgba(0,194,255,.28);border-radius:var(--radius);padding:16px;margin-top:16px}
+.ia-box .ia-h{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:800;color:var(--accent);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.ia-fonte{font-size:.68rem;color:var(--faint);font-weight:600;margin-left:auto;text-transform:none;letter-spacing:0}
+.ia-sub{font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
+.risco{display:inline-block;padding:4px 12px;border-radius:8px;font-weight:800;font-size:.82rem}
+.risco.baixo{background:rgba(0,229,176,.16);color:var(--ok)}
+.risco.medio{background:rgba(255,179,71,.16);color:var(--warn)}
+.risco.alto{background:rgba(255,77,109,.18);color:var(--danger)}
+.ishikawa{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:520px){.ishikawa{grid-template-columns:1fr}}
+.fish{background:var(--surface2);border-radius:9px;padding:10px 12px;font-size:.8rem}
+.fish b{display:block;color:var(--accent2);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+ol.porques{margin:0;padding-left:18px;font-size:.83rem} ol.porques li{margin:4px 0}
+ol.porques li:last-child{color:var(--accent2);font-weight:700}
+ul.acoes{list-style:none;padding:0;font-size:.83rem}
+ul.acoes li{padding:6px 0 6px 22px;position:relative}
+ul.acoes li::before{content:"→";position:absolute;left:0;color:var(--accent2);font-weight:800}
+.loading{color:var(--muted);font-size:.84rem;padding:10px 0}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid var(--accent);color:var(--text);padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:600;z-index:200;opacity:0;transition:.25s}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header class="q-top">
+  <div>
+    <h1>✅ Qualidade &amp; Segurança do Paciente</h1>
+    <div class="sub">Núcleo de Segurança do Paciente · RDC 36/2013 · indicadores ONA/JCI</div>
+  </div>
+  <div class="q-actions">
+    <button class="btn btn-primary" onclick="abrirNotificar()">⚡ Notificar incidente</button>
+    <a class="btn btn-ghost" href="/hospital/gestao/">← Gestão</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="q-kpis" id="kpis"></div>
+
+  <div class="q-grid">
+    <section class="panel">
+      <div class="panel-h"><h2>Indicadores do mês (ONA/JCI)</h2><span id="compet" style="font-size:.72rem;color:var(--faint);font-weight:700"></span></div>
+      <div id="indicadores"><div class="loading">Carregando…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-h"><h2>Distribuição por gravidade</h2></div>
+      <div id="gravidade"><div class="loading">Carregando…</div></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-h">
+      <h2>Incidentes notificados</h2>
+      <div class="filtros">
+        <select id="fGrav" onchange="carregarLista()">
+          <option value="">Toda gravidade</option>
+          <option value="near_miss">Near Miss</option>
+          <option value="sem_dano">Sem Dano</option>
+          <option value="dano_leve">Dano Leve</option>
+          <option value="dano_moderado">Dano Moderado</option>
+          <option value="dano_grave">Dano Grave</option>
+          <option value="obito">Óbito</option>
+        </select>
+        <select id="fStatus" onchange="carregarLista()">
+          <option value="">Todos os status</option>
+          <option value="false">Em aberto</option>
+          <option value="true">Encerrados</option>
+        </select>
+      </div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Setor</th><th>Gravidade</th><th>Status</th><th>ANVISA</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table></div>
+  </section>
+</div>
+
+<!-- MODAL NOTIFICAR -->
+<div class="backdrop" id="bd" onclick="fecharTudo()"></div>
+<div class="modal" id="mNot">
+  <div class="mh"><h3>⚡ Notificar incidente</h3><button class="x" onclick="fecharTudo()">✕</button></div>
+  <div class="field">
+    <label>Tipo do incidente</label>
+    <div class="tipo-grid" id="tipoGrid"></div>
+  </div>
+  <div class="field">
+    <label>Gravidade (dano ao paciente)</label>
+    <div class="grav-grid" id="gravGrid"></div>
+  </div>
+  <div class="field"><label>Setor onde ocorreu</label><input type="text" id="fSetor" placeholder="Ex.: UTI Adulto, Clínica Médica…"></div>
+  <div class="field"><label>O que aconteceu?</label><textarea id="fDesc" placeholder="Descreva o fato de forma objetiva. Foco no processo, não na pessoa."></textarea></div>
+  <div class="field"><label>Data da ocorrência</label><input type="date" id="fData"></div>
+  <div class="field"><label>Paciente (opcional)</label><input type="text" id="fPac" placeholder="Nome ou prontuário — deixe vazio se não se aplica"></div>
+  <div class="field"><label class="check"><input type="checkbox" id="fAnon"> Notificação anônima (cultura justa — sem identificar quem notificou)</label></div>
+  <div class="field" id="wrapResp"><label>Seu nome (se não anônimo)</label><input type="text" id="fResp" placeholder="Quem está notificando"></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="salvarIncidente()">Registrar notificação</button>
+</div>
+
+<!-- DRAWER DETALHE -->
+<div class="drawer" id="dInc">
+  <div class="mh"><h3 id="dTit">Incidente</h3><button class="x" onclick="fecharTudo()">✕</button></div>
+  <div id="dBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TIPOS=[["queda","🤕","Queda"],["medicamento","💊","Medicamento"],["procedimento","🔪","Procedimento"],["identificacao","🪪","Identificação"],["comunicacao","💬","Comunicação"],["infeccao","🦠","Infecção"],["outro","📋","Outro"]];
+var GRAVS=[["near_miss","Near Miss"],["sem_dano","Sem Dano"],["dano_leve","Dano Leve"],["dano_moderado","Dano Moderado"],["dano_grave","Dano Grave"],["obito","Óbito"]];
+var GRAV_LABEL={}; GRAVS.forEach(function(g){GRAV_LABEL[g[0]]=g[1];});
+var TIPO_LABEL={}; TIPOS.forEach(function(t){TIPO_LABEL[t[0]]=t[2];});
+var _selTipo="queda", _selGrav="near_miss", _atual=null;
+
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},2600);}
+async function jget(u){try{var r=await fetch(u,{credentials:'same-origin'});if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+async function jsend(u,method,body){try{var r=await fetch(u,{method:method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null});return r.ok?(await r.json().catch(function(){return{};})):null;}catch(e){return null;}}
+function fmtData(iso){if(!iso)return '—';var m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:iso;}
+
+async function carregarKpis(){
+  var d=await jget('/api/hospital/qualidade/kpis')||{};
+  var kpis=[
+    {v:d.near_miss_mes||0,l:'Near miss no mês',c:'ok'},
+    {v:d.dano_grave_mes||0,l:'Dano grave / óbito no mês',c:'danger'},
+    {v:d.aguardando_anvisa||0,l:'Aguardando notificação ANVISA',c:'warn'},
+    {v:d.encerrados_mes||0,l:'Encerrados no mês',c:''}
+  ];
+  document.getElementById('kpis').innerHTML=kpis.map(function(k){return '<div class="kpi '+k.c+'"><div class="v">'+k.v+'</div><div class="l">'+k.l+'</div></div>';}).join('');
+}
+
+async function carregarIndicadores(){
+  var d=await jget('/api/hospital/qualidade/indicadores')||{};
+  document.getElementById('compet').textContent=d.competencia?('competência '+d.competencia):'';
+  function cls(v){return v>=15?'hi':v>=5?'mid':'lo';}
+  var inds=[
+    {n:'Taxa de quedas',s:'quedas / total de incidentes',v:d.taxa_queda||0},
+    {n:'Erro de medicação',s:'eventos com medicamento / total',v:d.taxa_evento_adverso_medicamento||0},
+    {n:'Identificação incorreta',s:'erros de identificação / total',v:d.taxa_identificacao_incorreta||0}
+  ];
+  document.getElementById('indicadores').innerHTML=inds.map(function(i){
+    return '<div class="ind"><div class="nm">'+i.n+'<small>'+i.s+'</small></div><div class="val '+cls(i.v)+'">'+i.v.toFixed(1)+'%</div></div>';
+  }).join('') + '<div class="ind"><div class="nm">Total de incidentes no mês</div><div class="val">'+(d.total_incidentes_mes||0)+'</div></div>';
+
+  // distribuição por gravidade
+  var pg=d.por_gravidade||{}; var tot=0; Object.keys(pg).forEach(function(k){tot+=pg[k];});
+  var cores={near_miss:'var(--ok)',sem_dano:'var(--accent)',dano_leve:'var(--warn)',dano_moderado:'var(--warn)',dano_grave:'var(--danger)',obito:'#ffd0d8'};
+  var html=GRAVS.map(function(g){
+    var n=pg[g[0]]||0; var pct=tot?Math.round(n/tot*100):0;
+    return '<div class="grav-row"><span class="gl">'+g[1]+'</span><span class="bar"><span style="width:'+pct+'%;background:'+cores[g[0]]+'"></span></span><span class="gn">'+n+'</span></div>';
+  }).join('');
+  document.getElementById('gravidade').innerHTML = tot? html : '<div class="empty">Sem incidentes registrados no mês.</div>';
+}
+
+async function carregarLista(){
+  var g=document.getElementById('fGrav').value, s=document.getElementById('fStatus').value;
+  var q=[]; if(g)q.push('gravidade='+g); if(s)q.push('encerrado='+s);
+  var d=await jget('/api/hospital/qualidade/incidentes'+(q.length?'?'+q.join('&'):''))||{};
+  var tb=document.getElementById('tbody'); var arr=d.incidentes||[];
+  if(!arr.length){tb.innerHTML='<tr><td colspan="6" class="empty">Nenhum incidente com esses filtros. Clique em “Notificar incidente” para registrar o primeiro.</td></tr>';return;}
+  tb.innerHTML=arr.map(function(i){
+    return '<tr onclick="abrirDetalhe('+i.id+')">'+
+      '<td>'+fmtData(i.data_ocorrencia)+'</td>'+
+      '<td>'+(TIPO_LABEL[i.tipo]||i.tipo_display||i.tipo)+'</td>'+
+      '<td>'+(i.setor||'—')+'</td>'+
+      '<td><span class="chip g-'+i.gravidade+'">'+(GRAV_LABEL[i.gravidade]||i.gravidade_display||i.gravidade)+'</span></td>'+
+      '<td><span class="chip '+(i.encerrado?'st-encerrado':'st-aberto')+'">'+(i.encerrado?'Encerrado':'Em aberto')+'</span></td>'+
+      '<td>'+(i.notificado_anvisa?'✔':(['dano_grave','obito'].indexOf(i.gravidade)>=0?'<span style="color:var(--warn)">pendente</span>':'—'))+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+/* ---- modal notificar ---- */
+function abrirNotificar(){
+  document.getElementById('tipoGrid').innerHTML=TIPOS.map(function(t){return '<div class="tipo-btn'+(t[0]==_selTipo?' sel':'')+'" data-t="'+t[0]+'" onclick="selTipo(this)"><span class="e">'+t[1]+'</span>'+t[2]+'</div>';}).join('');
+  document.getElementById('gravGrid').innerHTML=GRAVS.map(function(g){return '<div class="grav-btn'+(g[0]==_selGrav?' sel':'')+'" data-g="'+g[0]+'" onclick="selGrav(this)">'+g[1]+'</div>';}).join('');
+  document.getElementById('fData').value=new Date().toISOString().slice(0,10);
+  document.getElementById('bd').classList.add('on');document.getElementById('mNot').classList.add('on');
+}
+function selTipo(el){_selTipo=el.getAttribute('data-t');document.querySelectorAll('#tipoGrid .tipo-btn').forEach(function(b){b.classList.toggle('sel',b===el);});}
+function selGrav(el){_selGrav=el.getAttribute('data-g');document.querySelectorAll('#gravGrid .grav-btn').forEach(function(b){b.classList.toggle('sel',b===el);});}
+document.addEventListener('change',function(e){if(e.target&&e.target.id==='fAnon'){document.getElementById('wrapResp').style.display=e.target.checked?'none':'block';}});
+
+async function salvarIncidente(){
+  var desc=document.getElementById('fDesc').value.trim(), setor=document.getElementById('fSetor').value.trim();
+  if(!desc||!setor){toast('Preencha o setor e o que aconteceu.');return;}
+  var anon=document.getElementById('fAnon').checked;
+  var body={tipo:_selTipo,gravidade:_selGrav,setor:setor,descricao:desc,
+    data_ocorrencia:document.getElementById('fData').value||new Date().toISOString().slice(0,10),
+    paciente:document.getElementById('fPac').value.trim(),
+    registrado_por:anon?'Anônimo':(document.getElementById('fResp').value.trim()||'—')};
+  var r=await jsend('/api/hospital/qualidade/incidentes','POST',body);
+  if(!r){toast('Não foi possível registrar. Tente de novo.');return;}
+  fecharTudo();toast('Incidente notificado. Obrigado por tornar o cuidado mais seguro.');
+  document.getElementById('fDesc').value='';document.getElementById('fSetor').value='';document.getElementById('fPac').value='';
+  carregarKpis();carregarIndicadores();carregarLista();
+}
+
+/* ---- drawer detalhe + IA ---- */
+async function abrirDetalhe(id){
+  var i=await jget('/api/hospital/qualidade/incidentes/'+id); if(!i)return;
+  _atual=i;
+  document.getElementById('dTit').textContent=(TIPO_LABEL[i.tipo]||i.tipo)+' · '+(i.setor||'');
+  document.getElementById('dBody').innerHTML=
+    '<div class="det-row"><span class="k">Gravidade</span><span class="v"><span class="chip g-'+i.gravidade+'">'+(GRAV_LABEL[i.gravidade]||i.gravidade_display)+'</span></span></div>'+
+    '<div class="det-row"><span class="k">Data</span><span class="v">'+fmtData(i.data_ocorrencia)+'</span></div>'+
+    '<div class="det-row"><span class="k">Paciente</span><span class="v">'+(i.paciente||'—')+'</span></div>'+
+    '<div class="det-row"><span class="k">Notificado por</span><span class="v">'+(i.registrado_por||'—')+'</span></div>'+
+    '<div class="det-row"><span class="k">Status</span><span class="v"><span class="chip '+(i.encerrado?'st-encerrado':'st-aberto')+'">'+(i.encerrado?'Encerrado':'Em aberto')+'</span></span></div>'+
+    '<div style="margin:14px 0"><div class="ia-sub">Descrição</div><div style="font-size:.88rem;color:var(--text)">'+(i.descricao||'—')+'</div></div>'+
+    (i.acao_tomada?'<div style="margin:14px 0"><div class="ia-sub">Ação tomada</div><div style="font-size:.88rem">'+i.acao_tomada+'</div></div>':'')+
+    '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px" onclick="analisarIA('+i.id+')">🧠 Analisar causa-raiz com IA</button>'+
+    '<div id="iaWrap"></div>'+
+    (i.encerrado?'':(
+      '<div class="ia-sub" style="margin-top:20px">Encerrar tratativa</div>'+
+      '<div class="field"><textarea id="dAcao" placeholder="Ação corretiva/preventiva implementada…">'+(i.acao_tomada||'')+'</textarea></div>'+
+      (['dano_grave','obito'].indexOf(i.gravidade)>=0&&!i.notificado_anvisa?'<div class="field"><label class="check"><input type="checkbox" id="dAnvisa"> Notificado ao NOTIVISA/ANVISA</label></div>':'')+
+      '<button class="btn btn-primary" style="width:100%;justify-content:center" onclick="encerrar('+i.id+')">Registrar ação e encerrar</button>'
+    ));
+  document.getElementById('bd').classList.add('on');document.getElementById('dInc').classList.add('on');
+}
+
+async function analisarIA(id){
+  var w=document.getElementById('iaWrap');
+  w.innerHTML='<div class="ia-box"><div class="ia-h">🧠 Análise de causa-raiz</div><div class="loading">Analisando o incidente… classificando, montando Ishikawa e 5 porquês.</div></div>';
+  var r=await jsend('/api/hospital/qualidade/incidentes/'+id+'/ia-analise','POST',{});
+  var a=r&&r.analise; if(!a){w.innerHTML='<div class="ia-box"><div class="loading">Não foi possível analisar agora.</div></div>';return;}
+  var fish=Object.keys(a.ishikawa||{}).map(function(k){return '<div class="fish"><b>'+k+'</b>'+a.ishikawa[k]+'</div>';}).join('');
+  var pq=(a.cinco_porques||[]).map(function(p){return '<li>'+p+'</li>';}).join('');
+  var ac=(a.acoes_preventivas||[]).map(function(p){return '<li>'+p+'</li>';}).join('');
+  var rr=(a.risco_recorrencia||'baixo').toLowerCase();
+  w.innerHTML='<div class="ia-box">'+
+    '<div class="ia-h">🧠 Análise de causa-raiz<span class="ia-fonte">'+(a.fonte==='ia'?'gerado por IA':'análise por regras')+'</span></div>'+
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 4px">'+
+      '<span style="font-size:.86rem"><b style="color:var(--accent2)">'+(a.classificacao||'—')+'</b></span>'+
+      '<span class="risco '+rr+'">risco de recorrência: '+rr+'</span></div>'+
+    '<div class="ia-sub">Espinha de peixe (Ishikawa)</div><div class="ishikawa">'+fish+'</div>'+
+    '<div class="ia-sub">5 Porquês</div><ol class="porques">'+pq+'</ol>'+
+    '<div class="ia-sub">Ações preventivas sugeridas</div><ul class="acoes">'+ac+'</ul>'+
+  '</div>';
+}
+
+async function encerrar(id){
+  var acao=(document.getElementById('dAcao')||{}).value||'';
+  if(!acao.trim()){toast('Descreva a ação antes de encerrar.');return;}
+  var anv=document.getElementById('dAnvisa');
+  if(anv&&anv.checked){await jsend('/api/hospital/qualidade/incidentes/'+id,'PATCH',{notificado_anvisa:true});}
+  var r=await jsend('/api/hospital/qualidade/incidentes/'+id+'/encerrar','POST',{acao_tomada:acao});
+  if(!r){toast('Não foi possível encerrar.');return;}
+  fecharTudo();toast('Incidente encerrado com ação registrada.');
+  carregarKpis();carregarIndicadores();carregarLista();
+}
+
+function fecharTudo(){['bd','mNot','dInc'].forEach(function(id){document.getElementById(id).classList.remove('on');});}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharTudo();});
+
+carregarKpis();carregarIndicadores();carregarLista();
+</script>
+</body>
+</html>

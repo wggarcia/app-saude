@@ -45,10 +45,7 @@ def _get_qualidade_models():
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_qualidade_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "Qualidade (NSP)", "modulo_icon": "✅",
-        "kpis_url": "/api/hospital/qualidade/kpis", "lista_url": "/api/hospital/qualidade/incidentes", "lista_titulo": "Incidentes de seguranca",
-    })
+    return render(request, "hospital_qualidade.html")
 # ── Incidentes de Segurança do Paciente ───────────────────────────────────────
 
 @csrf_exempt
@@ -311,3 +308,103 @@ def api_qualidade_kpis(request):
     except Exception:
         logger.exception("Erro ao calcular KPIs NSP")
         return JsonResponse({"erro": "Erro interno"}, status=500)
+
+
+# ── IA de causa-raiz (o diferencial vs. Tasy) ──────────────────────────────────
+
+_TAXONOMIA_OMS = {
+    "queda": "Quedas", "medicamento": "Erro de medicação",
+    "procedimento": "Procedimento clínico/cirúrgico", "identificacao": "Identificação do paciente",
+    "comunicacao": "Falha de comunicação", "infeccao": "Infecção associada à assistência (IRAS)",
+    "outro": "Outros",
+}
+
+
+def _analise_causa_raiz_fallback(inc):
+    """Análise determinística por regras — usada quando a IA não está disponível.
+    Garante que o recurso sempre entrega algo útil (nunca tela vazia)."""
+    risco = ("alto" if inc.gravidade in ("dano_grave", "obito")
+             else "medio" if inc.gravidade in ("dano_leve", "dano_moderado")
+             else "baixo")
+    return {
+        "classificacao": _TAXONOMIA_OMS.get(inc.tipo, "Outros"),
+        "risco_recorrencia": risco,
+        "ishikawa": {
+            "Pessoas": f"Avaliar dimensionamento e treinamento da equipe de {inc.setor or 'do setor'}.",
+            "Processo": f"Revisar o protocolo assistencial de {_TAXONOMIA_OMS.get(inc.tipo, inc.tipo)}.",
+            "Ambiente": "Verificar condições físicas, sinalização e fluxo do setor.",
+            "Equipamento/Material": "Checar disponibilidade e conformidade de insumos e dispositivos.",
+        },
+        "cinco_porques": [
+            "Por que o incidente ocorreu? — mapear o fato relatado.",
+            "Por que a barreira de segurança falhou? — identificar a barreira ausente.",
+            "Por que essa barreira não existia ou estava fraca? — revisar o processo.",
+            "Por que o processo permitiu o erro? — checar padronização e dupla checagem.",
+            "Causa-raiz provável: falha sistêmica de processo (não culpa individual).",
+        ],
+        "acoes_preventivas": [
+            "Implantar dupla checagem no ponto exato da falha.",
+            "Capacitação dirigida da equipe do setor envolvido.",
+            "Alerta/checklist no sistema para este tipo de incidente.",
+        ],
+        "fonte": "regras",
+    }
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.qualidade")
+@api_requer_permissao_modulo("hospital.administrativo")
+def api_qualidade_ia_analise(request, pk):
+    """POST /api/hospital/qualidade/incidentes/<pk>/ia-analise
+    Classifica o incidente (taxonomia OMS), monta Ishikawa + 5 Porquês e estima
+    risco de recorrência. Usa Anthropic quando há chave; cai em análise por
+    regras se não houver/der erro — nunca falha."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    IncidenteSegurancaPaciente = _get_qualidade_models()
+    try:
+        inc = IncidenteSegurancaPaciente.objects.get(id=pk, empresa=empresa)
+    except IncidenteSegurancaPaciente.DoesNotExist:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    from django.conf import settings
+    api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JsonResponse({"analise": _analise_causa_raiz_fallback(inc)})
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        system = (
+            "Você é especialista em segurança do paciente (RDC 36/2013 ANVISA, "
+            "taxonomia OMS/WHO ICPS, acreditação ONA/JCI). Analise o incidente e "
+            "responda SOMENTE com um JSON válido (sem markdown, sem texto fora do JSON) "
+            'no formato: {"classificacao":"<categoria OMS>","risco_recorrencia":"baixo|medio|alto",'
+            '"ishikawa":{"Pessoas":"...","Processo":"...","Ambiente":"...","Equipamento/Material":"..."},'
+            '"cinco_porques":["...","...","...","...","<causa-raiz>"],'
+            '"acoes_preventivas":["...","...","..."]}. Escreva em português, objetivo e acionável.'
+        )
+        user_msg = (
+            f"Tipo: {inc.get_tipo_display()}\nGravidade: {inc.get_gravidade_display()}\n"
+            f"Setor: {inc.setor}\nDescrição: {inc.descricao}\n"
+            f"Ação já tomada: {inc.acao_tomada or '—'}"
+        )
+        resp = client.messages.create(
+            model="claude-sonnet-4-6", max_tokens=1200,
+            system=system, messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = (resp.content[0].text or "").strip()
+        if raw.startswith("```"):
+            raw = raw.strip("`")
+            if raw[:4].lower() == "json":
+                raw = raw[4:]
+            raw = raw.strip()
+        analise = json.loads(raw)
+        analise["fonte"] = "ia"
+        return JsonResponse({"analise": analise})
+    except Exception:
+        logger.exception("IA análise NSP pk=%s — caindo em fallback por regras", pk)
+        return JsonResponse({"analise": _analise_causa_raiz_fallback(inc)})
