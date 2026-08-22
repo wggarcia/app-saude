@@ -74,6 +74,59 @@ class HospitalModuloGenericoTests(TestCase):
         self.assertEqual(a["risco_recorrencia"], "alto")  # dano_grave → alto
         self.assertTrue(a["acoes_preventivas"])
 
+    def test_custos_renderiza_cockpit_margem_drg(self):
+        # Custos Hospitalares foi promovido do template genérico para o cockpit
+        # com apuração por categoria e margem por DRG (custo real x reembolso estimado).
+        empresa = _empresa_hospital("hc@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/custos/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("Margem por DRG", html)
+        self.assertNotIn("em construção", html)
+        self.assertIn("/api/hospital/custos/margem", html)
+        self.assertIn("/api/hospital/custos/lancamentos", html)
+        self.assertIn("Novo lançamento", html)
+
+    def test_custos_margem_ia_analise_causa_raiz(self):
+        # O diferencial de Custos: cruzar custo real lançado com o peso relativo
+        # do DRG para estimar margem, e a IA explica a causa da margem negativa.
+        # Sem ANTHROPIC_API_KEY nos testes, cai no fallback determinístico.
+        empresa = _empresa_hospital("hcm@example.com")
+        client = _client_for(empresa)
+        comp = timezone.now().strftime("%Y-%m")
+
+        r = client.post(
+            "/api/hospital/custos/lancamentos",
+            data=json.dumps({"competencia": comp, "categoria": "material",
+                             "descricao": "OPME prótese", "valor": 50000,
+                             "drg_codigo": "004"}),
+            content_type="application/json", secure=True)
+        self.assertEqual(r.status_code, 201)
+
+        r2 = client.post(
+            "/api/hospital/custos/drg",
+            data=json.dumps({"codigo_drg": "004", "descricao_drg": "Cirurgia ortopédica",
+                             "peso_relativo": 1.5, "competencia": comp}),
+            content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+
+        r3 = client.get(f"/api/hospital/custos/margem?competencia={comp}", secure=True)
+        self.assertEqual(r3.status_code, 200)
+        margem = r3.json()
+        linha = next(x for x in margem["drgs"] if x["drg_codigo"] == "004")
+        self.assertLess(linha["margem"], 0)  # custo de 50k >> reembolso estimado
+
+        r4 = client.post(
+            "/api/hospital/custos/margem/ia-analise",
+            data=json.dumps({"drg_codigo": "004", "competencia": comp}),
+            content_type="application/json", secure=True)
+        self.assertEqual(r4.status_code, 200)
+        a = r4.json()["analise"]
+        self.assertIn("diagnostico", a)
+        self.assertTrue(a["causas_provaveis"])
+        self.assertTrue(a["acoes_recomendadas"])
+
     def test_nutricao_renderiza_template_generico(self):
         empresa = _empresa_hospital("hn@example.com")
         client = _client_for(empresa)

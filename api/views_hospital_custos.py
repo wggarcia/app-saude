@@ -1,5 +1,6 @@
 """
-Custos Hospitalares — Centros de Responsabilidade, DRG, custo por paciente.
+Custos Hospitalares — Centros de Responsabilidade, custo por competência e
+margem por DRG (custo real vs. reembolso esperado), com causa-raiz por IA.
 """
 import json
 import logging
@@ -21,6 +22,19 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Valor de referência por ponto de peso relativo DRG, usado só para estimar o
+# reembolso esperado e calcular margem. É um parâmetro de configuração local
+# (não é tabela oficial ANS/SUS) — por isso é sempre exibido de forma
+# transparente na tela, nunca apresentado como valor oficial.
+_DRG_VALOR_BASE_PADRAO = 3000.0
+
+
+def _drg_valor_base():
+    try:
+        return float(os.environ.get("DRG_VALOR_BASE", _DRG_VALOR_BASE_PADRAO))
+    except (TypeError, ValueError):
+        return _DRG_VALOR_BASE_PADRAO
+
 
 # ─── Auth helper ──────────────────────────────────────────────────────────────
 
@@ -39,10 +53,7 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_custos_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "Custos Hospitalares", "modulo_icon": "💰",
-        "kpis_url": "/api/hospital/custos/kpis", "lista_url": "/api/hospital/custos/lancamentos", "lista_titulo": "Lancamentos de custo",
-    })
+    return render(request, "hospital_custos.html")
 # ─── Centros de Responsabilidade ─────────────────────────────────────────────
 
 @csrf_exempt
@@ -330,3 +341,196 @@ def api_custos_kpis(request):
         "pendentes_envio": pendentes_envio,
         "competencia": comp_atual,
     })
+
+
+# ─── Margem por DRG (o diferencial vs. Tasy) ─────────────────────────────────
+# Cruza o custo real lançado (CustoAssistencial.drg_codigo) com o peso relativo
+# classificado (ClassificacaoDRG.codigo_drg) para estimar, por código DRG, se a
+# internação está dando margem positiva ou prejuízo — e por quê.
+
+def _margem_por_drg(emp, competencia):
+    valor_base = _drg_valor_base()
+
+    custos_por_drg = {}
+    if CustoAssistencial is not None:
+        qs = (CustoAssistencial.objects
+              .filter(empresa=emp, competencia=competencia)
+              .exclude(drg_codigo="")
+              .values("drg_codigo")
+              .annotate(custo_total=Sum("valor"), qtd_lancamentos=Count("id")))
+        for r in qs:
+            custos_por_drg[r["drg_codigo"]] = {
+                "custo_total": float(r["custo_total"] or 0),
+                "qtd_lancamentos": r["qtd_lancamentos"],
+            }
+
+    pesos_por_drg = {}
+    if ClassificacaoDRG is not None:
+        qs = (ClassificacaoDRG.objects
+              .filter(empresa=emp, competencia=competencia)
+              .exclude(codigo_drg="")
+              .values("codigo_drg")
+              .annotate(peso_medio=Avg("peso_relativo"), qtd_casos=Count("id")))
+        for r in qs:
+            pesos_por_drg[r["codigo_drg"]] = {
+                "peso_medio": float(r["peso_medio"] or 0),
+                "qtd_casos": r["qtd_casos"],
+            }
+
+    codigos = set(custos_por_drg) | set(pesos_por_drg)
+    linhas = []
+    for codigo in codigos:
+        c = custos_por_drg.get(codigo, {"custo_total": 0.0, "qtd_lancamentos": 0})
+        p = pesos_por_drg.get(codigo, {"peso_medio": 0.0, "qtd_casos": 0})
+        valor_esperado = round(p["peso_medio"] * valor_base * max(p["qtd_casos"], 1), 2) if p["qtd_casos"] else None
+        margem = round(valor_esperado - c["custo_total"], 2) if valor_esperado is not None else None
+        margem_pct = round(margem / valor_esperado * 100, 1) if valor_esperado else None
+        linhas.append({
+            "drg_codigo": codigo,
+            "custo_total": c["custo_total"],
+            "qtd_lancamentos": c["qtd_lancamentos"],
+            "peso_medio": p["peso_medio"],
+            "qtd_casos": p["qtd_casos"],
+            "valor_esperado": valor_esperado,
+            "margem": margem,
+            "margem_pct": margem_pct,
+        })
+    linhas.sort(key=lambda r: (r["margem"] is None, r["margem"]))
+    return linhas, valor_base
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
+def api_custos_margem(request):
+    emp = _hosp(request)
+    if not emp:
+        return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
+
+    competencia = request.GET.get("competencia") or timezone.now().strftime("%Y-%m")
+    linhas, valor_base = _margem_por_drg(emp, competencia)
+    return JsonResponse({
+        "competencia": competencia,
+        "valor_base_ponto_drg": valor_base,
+        "drgs": linhas,
+        "total_drgs_prejuizo": sum(1 for r in linhas if r["margem"] is not None and r["margem"] < 0),
+    })
+
+
+_CATEGORIA_LABEL = dict(CustoAssistencial.CATEGORIA_CHOICES) if CustoAssistencial else {}
+
+
+def _margem_causa_fallback(codigo, competencia, linha, por_categoria):
+    """Explicação determinística por regras — sempre entrega algo útil."""
+    if not por_categoria:
+        return {
+            "diagnostico": "Sem lançamentos de custo detalhados para este DRG na competência.",
+            "causas_provaveis": ["Registrar os lançamentos de custo vinculados a este código DRG "
+                                  "para permitir a análise de margem."],
+            "acoes_recomendadas": ["Vincular os lançamentos de custo ao campo drg_codigo no momento do apontamento."],
+            "fonte": "regras",
+        }
+    maior = max(por_categoria, key=lambda c: c["total"])
+    label = _CATEGORIA_LABEL.get(maior["categoria"], maior["categoria"])
+    dicas = {
+        "material": "Negociar preços com fornecedores/OPME e revisar consumo por procedimento.",
+        "pessoal": "Revisar dimensionamento de equipe e produtividade no setor envolvido.",
+        "servico": "Renegociar contratos de serviços terceirizados vinculados a este DRG.",
+        "depreciacao": "Avaliar taxa de ocupação dos equipamentos alocados a este procedimento.",
+        "overhead": "Revisar rateio de custos indiretos aplicado a este centro de custo.",
+    }
+    margem = linha.get("margem")
+    diagnostico = (
+        f"Margem negativa de R$ {abs(margem):,.2f} — categoria '{label}' concentra "
+        f"{maior['total']/sum(c['total'] for c in por_categoria)*100:.0f}% do custo lançado."
+        if margem is not None and margem < 0 else
+        "Margem dentro do esperado para o valor de referência configurado."
+    )
+    return {
+        "diagnostico": diagnostico,
+        "causas_provaveis": [f"Concentração de custo em '{label}' acima do peso relativo médio do DRG."],
+        "acoes_recomendadas": [dicas.get(maior["categoria"], "Revisar composição de custo deste DRG.")],
+        "fonte": "regras",
+    }
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.faturamento_avancado")
+@api_requer_permissao_modulo("hospital.administrativo")
+def api_custos_margem_ia_analise(request):
+    """POST /api/hospital/custos/margem/ia-analise  {drg_codigo, competencia}
+    Explica por que um DRG está dando prejuízo (ou não) cruzando custo real x
+    reembolso esperado. Usa Anthropic quando há chave; cai em regras determinísticas
+    caso contrário — nunca falha."""
+    emp = _hosp(request)
+    if not emp:
+        return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
+    if CustoAssistencial is None:
+        return JsonResponse({"erro": "Módulo indisponível"}, status=503)
+
+    try:
+        body = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        body = {}
+    codigo = body.get("drg_codigo", "")
+    competencia = body.get("competencia") or timezone.now().strftime("%Y-%m")
+    if not codigo:
+        return JsonResponse({"erro": "drg_codigo obrigatório"}, status=400)
+
+    linhas, _ = _margem_por_drg(emp, competencia)
+    linha = next((r for r in linhas if r["drg_codigo"] == codigo), None)
+    if linha is None:
+        return JsonResponse({"erro": "DRG não encontrado nesta competência"}, status=404)
+
+    por_categoria = list(
+        CustoAssistencial.objects
+        .filter(empresa=emp, competencia=competencia, drg_codigo=codigo)
+        .values("categoria")
+        .annotate(total=Sum("valor"))
+        .order_by("-total")
+    )
+    por_categoria = [{"categoria": r["categoria"], "total": float(r["total"] or 0)} for r in por_categoria]
+
+    from django.conf import settings
+    api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JsonResponse({"analise": _margem_causa_fallback(codigo, competencia, linha, por_categoria)})
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        system = (
+            "Você é controller hospitalar especialista em custeio por DRG. Analise a "
+            "margem de um código DRG (custo real lançado vs. reembolso esperado estimado "
+            "pelo peso relativo) e responda SOMENTE com um JSON válido (sem markdown) no "
+            'formato: {"diagnostico":"...","causas_provaveis":["...","..."],'
+            '"acoes_recomendadas":["...","...","..."]}. Português, objetivo, acionável, '
+            "sem inventar valores que não foram informados."
+        )
+        user_msg = (
+            f"DRG: {codigo}\nCompetência: {competencia}\n"
+            f"Custo total lançado: R$ {linha['custo_total']:.2f} ({linha['qtd_lancamentos']} lançamentos)\n"
+            f"Peso relativo médio: {linha['peso_medio']}\nCasos classificados: {linha['qtd_casos']}\n"
+            f"Valor esperado de reembolso (estimado): "
+            f"{'R$ %.2f' % linha['valor_esperado'] if linha['valor_esperado'] is not None else 'não estimável'}\n"
+            f"Margem: {'R$ %.2f' % linha['margem'] if linha['margem'] is not None else '—'}"
+            f" ({linha['margem_pct']}%)\n"
+            f"Custo por categoria: {por_categoria}"
+        )
+        resp = client.messages.create(
+            model="claude-sonnet-4-6", max_tokens=900,
+            system=system, messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = (resp.content[0].text or "").strip()
+        if raw.startswith("```"):
+            raw = raw.strip("`")
+            if raw[:4].lower() == "json":
+                raw = raw[4:]
+            raw = raw.strip()
+        analise = json.loads(raw)
+        analise["fonte"] = "ia"
+        return JsonResponse({"analise": analise})
+    except Exception:
+        logger.exception("IA de margem DRG %s/%s — caindo em fallback por regras", codigo, competencia)
+        return JsonResponse({"analise": _margem_causa_fallback(codigo, competencia, linha, por_categoria)})

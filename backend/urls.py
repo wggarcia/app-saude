@@ -1364,7 +1364,7 @@ from api.views_assinatura_sst import (
 )
 
 
-from api.views_hospital_custos import (hospital_custos_page, api_custos_centros, api_custos_lancamentos, api_custos_apuracao, api_custos_drg, api_custos_drg_enviar, api_custos_kpis)
+from api.views_hospital_custos import (hospital_custos_page, api_custos_centros, api_custos_lancamentos, api_custos_apuracao, api_custos_drg, api_custos_drg_enviar, api_custos_kpis, api_custos_margem, api_custos_margem_ia_analise)
 from api.views_hospital_drg import (hospital_drg_page, api_drg_status, api_drg_enviar_internacao, api_drg_historico, api_drg_reenviar, api_drg_kpis)
 from api.views_hospital_epimed import (hospital_epimed_page, api_epimed_status, api_epimed_gerar, api_epimed_transmitir, api_epimed_historico, api_epimed_kpis)
 from api.views_hospital_betha import (hospital_betha_page, api_betha_status, api_betha_sincronizar_almoxarifado, api_betha_sincronizar_compras, api_betha_webhook, api_betha_fila, api_betha_kpis)
@@ -3450,6 +3450,10 @@ urlpatterns = [
     path('api/hospital/custos/drg/<int:pk>/enviar/',            api_custos_drg_enviar),
     path('api/hospital/custos/kpis',                            api_custos_kpis),
     path('api/hospital/custos/kpis/',                           api_custos_kpis),
+    path('api/hospital/custos/margem',                          api_custos_margem),
+    path('api/hospital/custos/margem/',                         api_custos_margem),
+    path('api/hospital/custos/margem/ia-analise',               api_custos_margem_ia_analise),
+    path('api/hospital/custos/margem/ia-analise/',              api_custos_margem_ia_analise),
 
     # ── DRG / Valor Saúde Brasil ──────────────────────────────────────────────
     path('hospital/drg/',                                       hospital_drg_page),

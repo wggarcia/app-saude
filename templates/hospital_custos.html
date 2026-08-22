@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Custos Hospitalares — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--surface3:#103049;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#6d9cb5;--faint:#3f6377;--border:rgba(0,194,255,.12);--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding:0 0 60px}
+h1{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+/* topbar */
+.q-top{position:sticky;top:0;z-index:30;background:rgba(4,16,24,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.q-top .sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.q-actions{display:flex;gap:10px;align-items:center}
+.btn{border:none;border-radius:10px;padding:11px 16px;font-size:.85rem;font-weight:700;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#02121b}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);text-decoration:none}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+.btn-sm{padding:8px 12px;font-size:.78rem}
+
+/* KPIs */
+.q-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}
+@media(max-width:720px){.q-kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.kpi.danger::before{background:var(--danger)} .kpi.warn::before{background:var(--warn)} .kpi.ok::before{background:var(--ok)}
+.kpi .v{font-size:2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:.76rem;color:var(--muted);margin-top:6px}
+.kpi.danger .v{color:var(--danger)} .kpi.warn .v{color:var(--warn)} .kpi.ok .v{color:var(--ok)}
+
+/* grid painéis */
+.q-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:820px){.q-grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+
+/* barras categoria */
+.cat-row{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:.8rem}
+.cat-row .gl{width:96px;color:var(--muted);flex-shrink:0}
+.cat-row .bar{flex:1;height:9px;border-radius:6px;background:var(--surface2);overflow:hidden}
+.cat-row .bar>span{display:block;height:100%;border-radius:6px;background:var(--accent)}
+.cat-row .gn{width:88px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:.76rem}
+
+/* margem list */
+.marg-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.marg-row:last-child{border-bottom:none}
+.marg-row:hover{background:rgba(0,194,255,.05)}
+.marg-row .nm{font-size:.86rem;color:var(--text);font-weight:700}
+.marg-row .nm small{display:block;color:var(--faint);font-size:.7rem;font-weight:600}
+.marg-row .val{font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.marg-row .val small{display:block;font-size:.68rem;color:var(--faint);font-weight:600}
+.val.pos{color:var(--ok)} .val.neg{color:var(--danger)}
+
+/* tabela */
+.filtros{display:flex;gap:8px;flex-wrap:wrap}
+select,input[type=month],input[type=text]{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 11px;font-family:inherit;font-size:.8rem}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:640px}
+th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.empty{text-align:center;color:var(--muted);padding:34px;font-size:.85rem}
+.chip{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.c-material{background:rgba(0,194,255,.14);color:var(--accent)}
+.c-pessoal{background:rgba(0,229,176,.14);color:var(--ok)}
+.c-servico{background:rgba(255,179,71,.14);color:var(--warn)}
+.c-depreciacao{background:rgba(255,77,109,.14);color:var(--danger)}
+.c-overhead{background:rgba(109,156,181,.2);color:var(--muted)}
+
+/* modal + drawer */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;opacity:0;pointer-events:none;transition:.2s}
+.backdrop.on{opacity:1;pointer-events:all}
+.modal{position:fixed;z-index:100;top:50%;left:50%;transform:translate(-50%,-46%);width:min(520px,94vw);max-height:90vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;opacity:0;pointer-events:none;transition:.22s}
+.modal.on{opacity:1;pointer-events:all;transform:translate(-50%,-50%)}
+.drawer{position:fixed;z-index:100;top:0;right:0;bottom:0;width:min(560px,96vw);background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;transform:translateX(100%);transition:transform .25s cubic-bezier(.22,.61,.36,1);padding:24px}
+.drawer.on{transform:translateX(0)}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.mh h3{font-size:1.1rem;font-weight:800}
+.x{background:none;border:none;color:var(--muted);font-size:1.3rem;line-height:1}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:.9rem}
+.field textarea{min-height:70px;resize:vertical}
+.det-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.86rem}
+.det-row .k{color:var(--muted)}
+.det-row .v{text-align:right;font-weight:600}
+
+/* bloco IA */
+.ia-box{background:linear-gradient(180deg,rgba(0,194,255,.08),transparent);border:1px solid rgba(0,194,255,.28);border-radius:var(--radius);padding:16px;margin-top:16px}
+.ia-box .ia-h{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:800;color:var(--accent);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.ia-fonte{font-size:.68rem;color:var(--faint);font-weight:600;margin-left:auto;text-transform:none;letter-spacing:0}
+.ia-sub{font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
+ul.acoes{list-style:none;padding:0;font-size:.83rem}
+ul.acoes li{padding:6px 0 6px 22px;position:relative}
+ul.acoes li::before{content:"→";position:absolute;left:0;color:var(--accent2);font-weight:800}
+.loading{color:var(--muted);font-size:.84rem;padding:10px 0}
+.hint{font-size:.7rem;color:var(--faint);margin-top:8px;line-height:1.5}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid var(--accent);color:var(--text);padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:600;z-index:200;opacity:0;transition:.25s}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header class="q-top">
+  <div>
+    <h1>💰 Custos Hospitalares</h1>
+    <div class="sub">Centros de Responsabilidade · custeio por competência · margem por DRG</div>
+  </div>
+  <div class="q-actions">
+    <button class="btn btn-ghost" onclick="abrirCentro()">+ Centro</button>
+    <button class="btn btn-primary" onclick="abrirLancamento()">+ Novo lançamento</button>
+    <a class="btn btn-ghost" href="/hospital/gestao/">← Gestão</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="q-kpis" id="kpis"></div>
+
+  <div class="q-grid">
+    <section class="panel">
+      <div class="panel-h"><h2>Apuração por categoria</h2><span id="compet" style="font-size:.72rem;color:var(--faint);font-weight:700"></span></div>
+      <div id="apuracao"><div class="loading">Carregando…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-h"><h2>Margem por DRG</h2><span style="font-size:.68rem;color:var(--faint)">custo real × reembolso estimado</span></div>
+      <div id="margem"><div class="loading">Carregando…</div></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-h">
+      <h2>Lançamentos de custo</h2>
+      <div class="filtros">
+        <input type="month" id="fComp" onchange="mudarCompetencia()">
+        <select id="fCat" onchange="carregarLista()">
+          <option value="">Toda categoria</option>
+          <option value="pessoal">Pessoal</option>
+          <option value="material">Material</option>
+          <option value="servico">Serviço</option>
+          <option value="depreciacao">Depreciação</option>
+          <option value="overhead">Overhead</option>
+        </select>
+      </div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Descrição</th><th>Categoria</th><th>Centro</th><th>DRG</th><th>Valor</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+    </table></div>
+  </section>
+</div>
+
+<!-- MODAL NOVO LANÇAMENTO -->
+<div class="backdrop" id="bd" onclick="fecharTudo()"></div>
+<div class="modal" id="mLanc">
+  <div class="mh"><h3>Novo lançamento de custo</h3><button class="x" onclick="fecharTudo()">✕</button></div>
+  <div class="field"><label>Categoria</label>
+    <select id="lCat"><option value="material">Material</option><option value="pessoal">Pessoal</option><option value="servico">Serviço</option><option value="depreciacao">Depreciação</option><option value="overhead">Overhead</option></select>
+  </div>
+  <div class="field"><label>Descrição</label><input type="text" id="lDesc" placeholder="Ex.: OPME prótese quadril, plantão extra UTI…"></div>
+  <div class="field"><label>Valor (R$)</label><input type="text" id="lValor" placeholder="0,00" inputmode="decimal"></div>
+  <div class="field"><label>Centro de responsabilidade (opcional)</label><select id="lCentro"><option value="">—</option></select></div>
+  <div class="field"><label>Código DRG (opcional — habilita a análise de margem)</label><input type="text" id="lDrg" placeholder="Ex.: 004"></div>
+  <div class="field"><label>Procedimento SIGTAP (opcional)</label><input type="text" id="lSigtap" placeholder="Código SIGTAP"></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="salvarLancamento()">Registrar lançamento</button>
+</div>
+
+<!-- MODAL NOVO CENTRO -->
+<div class="modal" id="mCentro">
+  <div class="mh"><h3>Novo centro de responsabilidade</h3><button class="x" onclick="fecharTudo()">✕</button></div>
+  <div class="field"><label>Código</label><input type="text" id="cCod" placeholder="Ex.: UTI-01"></div>
+  <div class="field"><label>Nome</label><input type="text" id="cNome" placeholder="Ex.: UTI Adulto"></div>
+  <div class="field"><label>Tipo</label><select id="cTipo"><option value="direto">Direto</option><option value="indireto">Indireto</option><option value="apoio">Apoio</option></select></div>
+  <div class="field"><label>Responsável (opcional)</label><input type="text" id="cResp" placeholder="Nome do responsável"></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="salvarCentro()">Criar centro</button>
+</div>
+
+<!-- DRAWER DRG -->
+<div class="drawer" id="dDrg">
+  <div class="mh"><h3 id="dTit">DRG</h3><button class="x" onclick="fecharTudo()">✕</button></div>
+  <div id="dBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var CAT_LABEL={pessoal:'Pessoal',material:'Material',servico:'Serviço',depreciacao:'Depreciação',overhead:'Overhead'};
+var _comp = new Date().toISOString().slice(0,7);
+var _centros = [];
+
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},2600);}
+async function jget(u){try{var r=await fetch(u,{credentials:'same-origin'});if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+async function jsend(u,method,body){try{var r=await fetch(u,{method:method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null});return r.ok?(await r.json().catch(function(){return{};})):null;}catch(e){return null;}}
+function fmtR$(v){return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+async function carregarKpis(){
+  var d=await jget('/api/hospital/custos/kpis')||{};
+  var m=await jget('/api/hospital/custos/margem?competencia='+_comp)||{};
+  var kpis=[
+    {v:fmtR$(d.custo_mes),l:'Custo total no mês',c:''},
+    {v:d.drg_classificados_mes||0,l:'DRGs classificados no mês',c:''},
+    {v:d.pendentes_envio||0,l:'Pendentes de envio ao DRG Brasil',c:'warn'},
+    {v:m.total_drgs_prejuizo||0,l:'DRGs em prejuízo estimado',c:(m.total_drgs_prejuizo?'danger':'ok')}
+  ];
+  document.getElementById('kpis').innerHTML=kpis.map(function(k){return '<div class="kpi '+k.c+'"><div class="v">'+k.v+'</div><div class="l">'+k.l+'</div></div>';}).join('');
+}
+
+async function carregarApuracao(){
+  document.getElementById('compet').textContent='competência '+_comp;
+  var d=await jget('/api/hospital/custos/apuracao/'+_comp)||{};
+  var cats=d.por_categoria||[];
+  if(!cats.length){document.getElementById('apuracao').innerHTML='<div class="empty">Sem lançamentos nesta competência.</div>';return;}
+  var max=Math.max.apply(null,cats.map(function(c){return c.total;}));
+  document.getElementById('apuracao').innerHTML=cats.map(function(c){
+    var pct=max?Math.round(c.total/max*100):0;
+    return '<div class="cat-row"><span class="gl">'+(CAT_LABEL[c.categoria]||c.categoria)+'</span><span class="bar"><span style="width:'+pct+'%"></span></span><span class="gn">'+fmtR$(c.total)+'</span></div>';
+  }).join('') + (d.custo_medio_leito?'<div class="hint">Custo médio por leito ativo: '+fmtR$(d.custo_medio_leito)+'</div>':'');
+}
+
+async function carregarMargem(){
+  var d=await jget('/api/hospital/custos/margem?competencia='+_comp)||{};
+  var linhas=d.drgs||[];
+  if(!linhas.length){document.getElementById('margem').innerHTML='<div class="empty">Sem custo e DRG vinculados nesta competência ainda.</div>';return;}
+  document.getElementById('margem').innerHTML=linhas.slice(0,8).map(function(r){
+    var pos = r.margem===null ? '' : (r.margem<0?'neg':'pos');
+    var valTxt = r.margem===null ? 'sem estimativa' : fmtR$(r.margem);
+    return '<div class="marg-row" onclick="abrirDrg(\''+r.drg_codigo+'\')">'+
+      '<div class="nm">DRG '+r.drg_codigo+'<small>'+r.qtd_casos+' caso(s) · custo '+fmtR$(r.custo_total)+'</small></div>'+
+      '<div class="val '+pos+'">'+valTxt+(r.margem_pct!==null?'<small>'+r.margem_pct+'%</small>':'')+'</div>'+
+    '</div>';
+  }).join('') + '<div class="hint">Reembolso estimado usa valor de referência de R$ '+(d.valor_base_ponto_drg||0).toLocaleString('pt-BR')+' por ponto de peso relativo (parâmetro local, não é tabela oficial ANS/SUS).</div>';
+}
+
+async function carregarLista(){
+  var cat=document.getElementById('fCat').value;
+  var q=['competencia='+_comp]; if(cat)q.push('categoria='+cat);
+  var d=await jget('/api/hospital/custos/lancamentos?'+q.join('&'))||{};
+  var tb=document.getElementById('tbody'); var arr=d.lancamentos||[];
+  if(!arr.length){tb.innerHTML='<tr><td colspan="5" class="empty">Nenhum lançamento nesta competência. Clique em "+ Novo lançamento" para registrar o primeiro.</td></tr>';return;}
+  var centroNome={}; _centros.forEach(function(c){centroNome[c.id]=c.nome;});
+  tb.innerHTML=arr.map(function(l){
+    return '<tr>'+
+      '<td>'+l.descricao+'</td>'+
+      '<td><span class="chip c-'+l.categoria+'">'+(CAT_LABEL[l.categoria]||l.categoria)+'</span></td>'+
+      '<td>'+(centroNome[l.centro_id]||'—')+'</td>'+
+      '<td>'+(l.drg_codigo||'—')+'</td>'+
+      '<td style="text-align:right;font-weight:700">'+fmtR$(l.valor)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+async function carregarCentros(){
+  var d=await jget('/api/hospital/custos/centros')||{};
+  _centros=d.centros||[];
+  document.getElementById('lCentro').innerHTML='<option value="">—</option>'+_centros.map(function(c){return '<option value="'+c.id+'">'+c.codigo+' — '+c.nome+'</option>';}).join('');
+}
+
+function mudarCompetencia(){
+  var v=document.getElementById('fComp').value;
+  if(v){_comp=v;carregarApuracao();carregarMargem();carregarLista();}
+}
+
+/* ---- modal lançamento ---- */
+function abrirLancamento(){
+  document.getElementById('bd').classList.add('on');document.getElementById('mLanc').classList.add('on');
+}
+async function salvarLancamento(){
+  var desc=document.getElementById('lDesc').value.trim();
+  var valor=parseFloat(document.getElementById('lValor').value.replace(',','.'));
+  if(!desc||!valor){toast('Preencha a descrição e o valor.');return;}
+  var body={competencia:_comp,categoria:document.getElementById('lCat').value,descricao:desc,valor:valor,
+    centro_id:document.getElementById('lCentro').value||null,
+    drg_codigo:document.getElementById('lDrg').value.trim(),
+    procedimento_sigtap:document.getElementById('lSigtap').value.trim()};
+  var r=await jsend('/api/hospital/custos/lancamentos','POST',body);
+  if(!r){toast('Não foi possível registrar. Tente de novo.');return;}
+  fecharTudo();toast('Lançamento registrado.');
+  document.getElementById('lDesc').value='';document.getElementById('lValor').value='';document.getElementById('lDrg').value='';document.getElementById('lSigtap').value='';
+  carregarKpis();carregarApuracao();carregarMargem();carregarLista();
+}
+
+/* ---- modal centro ---- */
+function abrirCentro(){
+  document.getElementById('bd').classList.add('on');document.getElementById('mCentro').classList.add('on');
+}
+async function salvarCentro(){
+  var cod=document.getElementById('cCod').value.trim(), nome=document.getElementById('cNome').value.trim();
+  if(!cod||!nome){toast('Preencha código e nome.');return;}
+  var body={codigo:cod,nome:nome,tipo:document.getElementById('cTipo').value,responsavel:document.getElementById('cResp').value.trim()};
+  var r=await jsend('/api/hospital/custos/centros','POST',body);
+  if(!r){toast('Não foi possível criar o centro.');return;}
+  fecharTudo();toast('Centro de responsabilidade criado.');
+  document.getElementById('cCod').value='';document.getElementById('cNome').value='';document.getElementById('cResp').value='';
+  carregarCentros();
+}
+
+/* ---- drawer DRG + IA de margem ---- */
+async function abrirDrg(codigo){
+  var d=await jget('/api/hospital/custos/margem?competencia='+_comp)||{};
+  var r=(d.drgs||[]).find(function(x){return x.drg_codigo===codigo;});
+  if(!r)return;
+  document.getElementById('dTit').textContent='DRG '+codigo;
+  var pos = r.margem===null ? '' : (r.margem<0?'neg':'pos');
+  document.getElementById('dBody').innerHTML=
+    '<div class="det-row"><span class="k">Custo real lançado</span><span class="v">'+fmtR$(r.custo_total)+' ('+r.qtd_lancamentos+' lanç.)</span></div>'+
+    '<div class="det-row"><span class="k">Peso relativo médio</span><span class="v">'+r.peso_medio+' ('+r.qtd_casos+' caso(s))</span></div>'+
+    '<div class="det-row"><span class="k">Reembolso esperado (estimado)</span><span class="v">'+(r.valor_esperado!==null?fmtR$(r.valor_esperado):'—')+'</span></div>'+
+    '<div class="det-row"><span class="k">Margem</span><span class="v val '+pos+'">'+(r.margem!==null?fmtR$(r.margem)+' ('+r.margem_pct+'%)':'—')+'</span></div>'+
+    '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:16px" onclick="analisarIA(\''+codigo+'\')">🧠 Analisar causa da margem com IA</button>'+
+    '<div id="iaWrap"></div>';
+  document.getElementById('bd').classList.add('on');document.getElementById('dDrg').classList.add('on');
+}
+
+async function analisarIA(codigo){
+  var w=document.getElementById('iaWrap');
+  w.innerHTML='<div class="ia-box"><div class="ia-h">🧠 Análise de margem</div><div class="loading">Cruzando custo real, peso relativo e composição por categoria…</div></div>';
+  var r=await jsend('/api/hospital/custos/margem/ia-analise','POST',{drg_codigo:codigo,competencia:_comp});
+  var a=r&&r.analise; if(!a){w.innerHTML='<div class="ia-box"><div class="loading">Não foi possível analisar agora.</div></div>';return;}
+  var causas=(a.causas_provaveis||[]).map(function(p){return '<li>'+p+'</li>';}).join('');
+  var acoes=(a.acoes_recomendadas||[]).map(function(p){return '<li>'+p+'</li>';}).join('');
+  w.innerHTML='<div class="ia-box">'+
+    '<div class="ia-h">🧠 Análise de margem<span class="ia-fonte">'+(a.fonte==='ia'?'gerado por IA':'análise por regras')+'</span></div>'+
+    '<div style="font-size:.86rem;margin:6px 0 4px">'+(a.diagnostico||'—')+'</div>'+
+    '<div class="ia-sub">Causas prováveis</div><ul class="acoes">'+causas+'</ul>'+
+    '<div class="ia-sub">Ações recomendadas</div><ul class="acoes">'+acoes+'</ul>'+
+  '</div>';
+}
+
+function fecharTudo(){['bd','mLanc','mCentro','dDrg'].forEach(function(id){document.getElementById(id).classList.remove('on');});}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharTudo();});
+
+document.getElementById('fComp').value=_comp;
+carregarKpis();carregarApuracao();carregarMargem();carregarLista();carregarCentros();
+</script>
+</body>
+</html>
