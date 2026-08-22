@@ -2954,6 +2954,7 @@ function setTab(tab) {
 }
 var _setTabOrig = setTab;
 setTab = function(tab) {
+  if (typeof closeModulePanel === 'function') closeModulePanel();
   _setTabOrig(tab);
   openOpsPanel(tab);
 };
@@ -4021,7 +4022,7 @@ async function assinarLoteSelecionados() {
 <style>
 .mod-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease}
 .mod-backdrop.open{opacity:1;pointer-events:all}
-.mod-panel{position:fixed;top:0;right:0;bottom:0;left:0;z-index:301;background:#071c28;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);box-shadow:-8px 0 48px rgba(0,0,0,.6)}
+.mod-panel{position:fixed;top:0;right:0;bottom:0;left:220px;z-index:301;background:#071c28;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);box-shadow:-8px 0 48px rgba(0,0,0,.6)}
 .mod-panel.open{transform:translateX(0)}
 .mod-header{display:flex;align-items:center;gap:12px;height:52px;padding:0 18px;border-bottom:1px solid rgba(126,225,195,.14);flex-shrink:0;background:rgba(4,16,24,.95);backdrop-filter:blur(14px)}
 .mod-header-logo{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#00c9a7}
@@ -4065,8 +4066,10 @@ function openModulePanel(url, title) {
     } catch (e) { /* cross-doc bloqueado — mostra o módulo inteiro, sem quebrar */ }
   };
   iframe.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'embed=1';
+  // Abre igual ao painel de Operação: desliza do lado do menu (left:220px),
+  // sem o fundo escuro cobrindo tudo. Fecha o painel de operação se estiver aberto.
+  if (window.closeOpsPanel) window.closeOpsPanel();
   panel.classList.add('open');
-  backdrop.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 function closeModulePanel() {
