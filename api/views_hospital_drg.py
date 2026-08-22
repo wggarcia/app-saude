@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature, api_requer_permissao_modulo
+from .services.modulo_operavel import render_modulo_operavel
 
 try:
     from .models import ClassificacaoDRG, PacienteInternado, CredenciaisIntegracoes
@@ -40,9 +41,47 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_drg_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "DRG", "modulo_icon": "🏷️",
-        "kpis_url": "/api/hospital/drg/kpis", "lista_url": "/api/hospital/drg/historico", "lista_titulo": "Historico de envios DRG",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "DRG — Valor Saúde Brasil", "modulo_icon": "🏷️",
+        "modulo_sub": "Classificação e transmissão de DRG ao Sigquali/Valor Saúde Brasil. Custeio e margem por DRG ficam em Custos Hospitalares.",
+        "kpis": {"url": "/api/hospital/drg/kpis", "campos": [
+            {"key": "enviados_mes", "label": "Enviados no mês", "cor": "ok"},
+            {"key": "com_erro", "label": "Pendentes/com erro", "cor": "warn"},
+            {"key": "peso_medio_mes", "label": "Peso relativo médio"},
+        ]},
+        "status": {"url": "/api/hospital/drg/status", "titulo": "Status da integração Sigquali", "campos": [
+            {"key": "credencial_configurada", "label": "Credencial", "tipo": "bool"},
+            {"key": "ultima_transmissao", "label": "Última transmissão", "tipo": "data"},
+            {"key": "endpoint", "label": "Endpoint"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/drg/historico", "envelope": "classificacoes", "id_field": "id",
+            "titulo": "Classificações DRG",
+            "filtros": [{"key": "enviado", "label": "Todo status", "tipo": "select", "options": [
+                ["true", "Enviados"], ["false", "Pendentes"]]}],
+            "colunas": [
+                {"key": "codigo_drg", "label": "DRG"},
+                {"key": "descricao_drg", "label": "Descrição"},
+                {"key": "aih_numero", "label": "AIH"},
+                {"key": "peso_relativo", "label": "Peso relativo"},
+                {"key": "competencia", "label": "Competência"},
+                {"key": "enviado", "label": "Enviado", "tipo": "bool", "true_label": "Enviado", "false_label": "Pendente"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/drg/enviar-internacao", "titulo_botao": "+ Classificar internação", "titulo_modal": "Classificar DRG de internação",
+            "campos": [
+                {"key": "paciente_internado_id", "label": "ID do paciente internado", "tipo": "number"},
+                {"key": "codigo_drg", "label": "Código DRG"},
+                {"key": "descricao_drg", "label": "Descrição"},
+                {"key": "peso_relativo", "label": "Peso relativo", "tipo": "number"},
+                {"key": "aih_numero", "label": "Número AIH"},
+            ],
+        },
+        "acoes": [
+            {"key": "reenviar", "label": "Reenviar", "url_tpl": "/api/hospital/drg/reenviar/{id}", "metodo": "POST",
+             "confirm": "Reenviar esta classificação ao Sigquali?", "so_se": {"campo": "enviado", "valor": "false"}},
+        ],
     })
 # ─── Status ──────────────────────────────────────────────────────────────────
 
@@ -57,9 +96,11 @@ def api_drg_status(request):
     credencial_ok = False
     ultima_transmissao = None
 
-    if CredenciaisIntegracoes:
-        cred = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="drg").first()
-        credencial_ok = bool(cred)
+    # CredenciaisIntegracoes não tem um campo genérico "tipo" nem armazenamento
+    # dedicado para o Sigquali/DRG (é um OneToOne por empresa com sub-campos
+    # fixos por integração). Até existir um campo drg_*, não há credencial
+    # configurável por aqui — o envio real usa SIGQUALI_API_URL/TOKEN via env.
+    credencial_ok = False
 
     if ClassificacaoDRG:
         ultimo = ClassificacaoDRG.objects.filter(
@@ -109,10 +150,8 @@ def api_drg_enviar_internacao(request):
         competencia=comp,
     )
 
-    # Verifica credencial Sigquali
+    # Verifica credencial Sigquali — ver nota em api_drg_status.
     credencial = None
-    if CredenciaisIntegracoes:
-        credencial = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="drg").first()
 
     if not credencial:
         return JsonResponse({

@@ -31,6 +31,7 @@ from .access_control import (
     requer_setor,
 )
 from .services.auth_session import empresa_autenticada_from_request
+from .services.modulo_operavel import render_modulo_operavel
 
 logger = logging.getLogger(__name__)
 
@@ -161,9 +162,58 @@ def _sessao_to_dict(s) -> dict:
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_radioterapia_page(request):
-    return render(request, "hospital_modulo_generico.html", {
+    return render_modulo_operavel(request, {
         "modulo_nome": "Radioterapia", "modulo_icon": "☢️",
-        "kpis_url": "/api/hospital/radioterapia/kpis", "lista_url": "/api/hospital/radioterapia/sessoes", "lista_titulo": "Sessoes de radioterapia",
+        "modulo_sub": "Sessões e integração HL7 com Varian Aria/Halcyon",
+        "kpis": {"url": "/api/hospital/radioterapia/kpis", "campos": [
+            {"key": "em_andamento", "label": "Em andamento"},
+            {"key": "concluidos_mes", "label": "Concluídos no mês", "cor": "ok"},
+            {"key": "fracoes_hoje", "label": "Frações hoje"},
+            {"key": "sincronizados_hl7", "label": "Sincronizados via HL7", "cor": "accent"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/radioterapia/sessoes", "envelope": "sessoes", "id_field": "id",
+            "titulo": "Sessões de radioterapia",
+            "filtros": [{"key": "status", "label": "Todo status", "tipo": "select", "options": [
+                ["planejado", "Planejado"], ["em_andamento", "Em Andamento"], ["concluido", "Concluído"], ["suspenso", "Suspenso"]]},
+                {"key": "q", "label": "Buscar paciente", "tipo": "text"}],
+            "colunas": [
+                {"key": "paciente", "label": "Paciente"},
+                {"key": "sistema_radioterapia", "label": "Sistema", "tipo": "chip",
+                 "labels": {"aria": "Aria (Varian)", "halcyon": "Halcyon (Varian)", "outro": "Outro"},
+                 "chip_cores": {"aria": "accent", "halcyon": "accent", "outro": "muted"}},
+                {"key": "numero_fracoes_realizadas", "label": "Frações"},
+                {"key": "dose_prescrita_gy", "label": "Dose (Gy)"},
+                {"key": "status", "label": "Status", "tipo": "chip",
+                 "labels": {"planejado": "Planejado", "em_andamento": "Em Andamento", "concluido": "Concluído", "suspenso": "Suspenso"},
+                 "chip_cores": {"planejado": "muted", "em_andamento": "accent", "concluido": "ok", "suspenso": "danger"}},
+                {"key": "sincronizado_hl7", "label": "HL7", "tipo": "bool", "true_label": "Sincronizado", "false_label": "Manual"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/radioterapia/sessoes", "titulo_botao": "+ Nova sessão", "titulo_modal": "Registrar sessão manualmente",
+            "campos": [
+                {"key": "paciente", "label": "Paciente"},
+                {"key": "cid", "label": "CID"},
+                {"key": "sistema_radioterapia", "label": "Sistema", "tipo": "select", "options": [
+                    ["aria", "Aria (Varian)"], ["halcyon", "Halcyon (Varian)"], ["outro", "Outro"]]},
+                {"key": "numero_plano", "label": "Número do plano"},
+                {"key": "dose_prescrita_gy", "label": "Dose prescrita (Gy)", "tipo": "number"},
+                {"key": "numero_fracoes_total", "label": "Total de frações", "tipo": "number"},
+                {"key": "data_inicio", "label": "Data de início", "tipo": "date"},
+            ],
+        },
+        "acoes": [
+            {"key": "fracao", "label": "+1 fração realizada", "url_tpl": "/api/hospital/radioterapia/sessoes/{id}", "metodo": "PATCH",
+             "campos": [{"key": "numero_fracoes_realizadas", "label": "Frações realizadas (total)", "tipo": "number"}],
+             "so_se": {"campo": "status", "valor": "em_andamento"}},
+            {"key": "concluir", "label": "Concluir", "url_tpl": "/api/hospital/radioterapia/sessoes/{id}", "metodo": "PATCH",
+             "body": {"status": "concluido"}, "confirm": "Marcar sessão como concluída?",
+             "so_se": {"campo": "status", "valor": "em_andamento"}},
+            {"key": "suspender", "label": "Suspender", "url_tpl": "/api/hospital/radioterapia/sessoes/{id}", "metodo": "PATCH",
+             "body": {"status": "suspenso"}, "confirm": "Suspender esta sessão?",
+             "so_se": {"campo": "status", "valor": "em_andamento"}},
+        ],
     })
 # ─── POST /api/hospital/radioterapia/hl7/receber ─────────────────────────────
 

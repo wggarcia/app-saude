@@ -21,6 +21,7 @@ from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
+from .services.modulo_operavel import render_modulo_operavel
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,50 @@ def _get_nhve_model():
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_nhve_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "NHVE (Notificacao Compulsoria)", "modulo_icon": "📢",
-        "kpis_url": "/api/hospital/nhve/kpis", "lista_url": "/api/hospital/nhve/notificacoes", "lista_titulo": "Notificacoes",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "NHVE — Vigilância Epidemiológica Hospitalar", "modulo_icon": "📢",
+        "modulo_sub": "Notificação compulsória e integração SINAN",
+        "kpis": {"url": "/api/hospital/nhve/kpis", "campos": [
+            {"key": "suspeitos", "label": "Casos suspeitos", "cor": "warn"},
+            {"key": "confirmados_mes", "label": "Confirmados no mês", "cor": "danger"},
+            {"key": "aguardando_sinan", "label": "Aguardando SINAN", "cor": "warn"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/nhve/notificacoes", "envelope": "notificacoes", "id_field": "id",
+            "titulo": "Notificações",
+            "filtros": [{"key": "status", "label": "Todo status", "tipo": "select", "options": [
+                ["suspeito", "Suspeito"], ["confirmado", "Confirmado"], ["descartado", "Descartado"]]}],
+            "colunas": [
+                {"key": "doenca_cid", "label": "Doença/CID"},
+                {"key": "nome_paciente", "label": "Paciente"},
+                {"key": "unidade", "label": "Unidade"},
+                {"key": "status", "label": "Status", "tipo": "chip",
+                 "labels": {"suspeito": "Suspeito", "confirmado": "Confirmado", "descartado": "Descartado"},
+                 "chip_cores": {"suspeito": "warn", "confirmado": "danger", "descartado": "muted"}},
+                {"key": "notificado_sinan", "label": "SINAN", "tipo": "bool", "true_label": "Notificado", "false_label": "Pendente"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/nhve/notificacoes", "titulo_botao": "+ Notificar caso", "titulo_modal": "Nova notificação compulsória",
+            "campos": [
+                {"key": "doenca_cid", "label": "Doença / CID"},
+                {"key": "nome_paciente", "label": "Nome do paciente"},
+                {"key": "data_nascimento", "label": "Data de nascimento", "tipo": "date"},
+                {"key": "sexo", "label": "Sexo", "tipo": "select", "options": [["M", "Masculino"], ["F", "Feminino"], ["I", "Ignorado"]]},
+                {"key": "data_notificacao", "label": "Data da notificação", "tipo": "date"},
+                {"key": "data_inicio_sintomas", "label": "Início dos sintomas", "tipo": "date"},
+                {"key": "unidade", "label": "Unidade"},
+                {"key": "notificado_por", "label": "Notificado por"},
+            ],
+        },
+        "acoes": [
+            {"key": "confirmar", "label": "Confirmar", "url_tpl": "/api/hospital/nhve/notificacoes/{id}/confirmar", "metodo": "POST",
+             "confirm": "Confirmar este caso?", "so_se": {"campo": "status", "valor": "suspeito"}},
+            {"key": "descartar", "label": "Descartar", "url_tpl": "/api/hospital/nhve/notificacoes/{id}/descartar", "metodo": "POST",
+             "confirm": "Descartar este caso?", "so_se": {"campo": "status", "valor": "suspeito"}},
+            {"key": "sinan", "label": "Notificar SINAN", "url_tpl": "/api/hospital/nhve/notificacoes/{id}/notificar-sinan", "metodo": "POST",
+             "confirm": "Gerar ficha SINAN e marcar como notificado?", "so_se": {"campo": "notificado_sinan", "valor": "false"}},
+        ],
     })
 # ── helpers ───────────────────────────────────────────────────────────────────
 

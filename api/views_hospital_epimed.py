@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature, api_requer_permissao_modulo
+from .services.modulo_operavel import render_modulo_operavel
 
 try:
     from .models import TransmissaoEpimed, PacienteInternado, LeitoHospitalar
@@ -40,9 +41,40 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_epimed_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "Epimed", "modulo_icon": "📊",
-        "kpis_url": "/api/hospital/epimed/kpis", "lista_url": "/api/hospital/epimed/historico", "lista_titulo": "Historico de envios",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "Epimed Monitor", "modulo_icon": "📊",
+        "modulo_sub": "Estatística de UTI — geração e transmissão de dados",
+        "kpis": {"url": "/api/hospital/epimed/kpis", "campos": [
+            {"key": "pendentes", "label": "Transmissões pendentes", "cor": "warn"},
+            {"key": "registros_uti_mes", "label": "Registros UTI no mês"},
+            {"key": "ultima_competencia", "label": "Última competência"},
+        ]},
+        "status": {"url": "/api/hospital/epimed/status", "titulo": "Status da integração", "campos": [
+            {"key": "credencial_configurada", "label": "Credencial", "tipo": "bool",
+             "true_label": "Configurada", "false_label": "Não configurada (envio manual/CSV)"},
+            {"key": "ultima_transmissao", "label": "Última transmissão", "tipo": "data"},
+            {"key": "total_transmissoes", "label": "Total já transmitido"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/epimed/historico", "envelope": "transmissoes", "id_field": "id",
+            "titulo": "Histórico de transmissões",
+            "colunas": [
+                {"key": "competencia", "label": "Competência"},
+                {"key": "total_registros", "label": "Registros"},
+                {"key": "status", "label": "Status", "tipo": "chip",
+                 "labels": {"pendente": "Pendente", "enviado": "Enviado", "erro": "Erro"},
+                 "chip_cores": {"pendente": "warn", "enviado": "ok", "erro": "danger"}},
+                {"key": "erro_msg", "label": "Detalhe do erro"},
+            ],
+        },
+        "acoes": [
+            {"key": "transmitir", "label": "Transmitir", "url_tpl": "/api/hospital/epimed/transmitir/{id}", "metodo": "POST",
+             "confirm": "Transmitir este lote ao Epimed?", "so_se": {"campo": "status", "valor": "pendente"}},
+        ],
+        "acoes_modulo": [
+            {"key": "gerar", "label": "+ Gerar lote do mês", "url": "/api/hospital/epimed/gerar", "metodo": "POST",
+             "confirm": "Gerar CSV Epimed com os pacientes de UTI/CTI internados neste mês?"},
+        ],
     })
 # ─── Status ──────────────────────────────────────────────────────────────────
 
@@ -54,16 +86,12 @@ def api_epimed_status(request):
     if not emp:
         return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
 
+    # CredenciaisIntegracoes não tem campo dedicado para Epimed ainda (é um
+    # OneToOne por empresa com sub-campos fixos por integração), então não há
+    # credencial configurável por aqui — o envio real usa EPIMED_API_URL/TOKEN.
     credencial_ok = False
     ultima_transmissao = None
     total_transmissoes = 0
-
-    try:
-        from .models import CredenciaisIntegracoes
-        cred = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="epimed").first()
-        credencial_ok = bool(cred)
-    except Exception:
-        pass
 
     if TransmissaoEpimed:
         total_transmissoes = TransmissaoEpimed.objects.filter(empresa=emp).count()
@@ -162,13 +190,9 @@ def api_epimed_transmitir(request, id):
     except TransmissaoEpimed.DoesNotExist:
         return JsonResponse({"erro": "Transmissão não encontrada"}, status=404)
 
-    # Verifica credenciais
+    # Verifica credenciais — ver nota em api_epimed_status: CredenciaisIntegracoes
+    # não tem campo dedicado para Epimed ainda, então nunca há credencial aqui.
     credencial = None
-    try:
-        from .models import CredenciaisIntegracoes
-        credencial = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="epimed").first()
-    except Exception:
-        pass
 
     if not credencial:
         # Sem credencial cadastrada — retorna CSV para download manual

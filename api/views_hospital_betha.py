@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature, api_requer_permissao_modulo
+from .services.modulo_operavel import render_modulo_operavel
 
 try:
     from .models import IntegracaoBetha, CredenciaisIntegracoes
@@ -41,9 +42,36 @@ def _hosp(request):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_betha_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "Betha (Integracao ERP)", "modulo_icon": "🔗",
-        "kpis_url": "/api/hospital/betha/kpis", "lista_url": "/api/hospital/betha/fila", "lista_titulo": "Fila de sincronizacao",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "Betha — Integração ERP", "modulo_icon": "🔗",
+        "modulo_sub": "Sincronização de almoxarifado e compras públicas",
+        "kpis": {"url": "/api/hospital/betha/kpis", "campos": [
+            {"key": "pendentes", "label": "Pendentes", "cor": "warn"},
+            {"key": "sincronizados_hoje", "label": "Sincronizados hoje", "cor": "ok"},
+            {"key": "erros", "label": "Com erro", "cor": "danger"},
+        ]},
+        "status": {"url": "/api/hospital/betha/status", "titulo": "Status da integração", "campos": [
+            {"key": "credencial_configurada", "label": "Credencial", "tipo": "bool"},
+            {"key": "ultima_sync", "label": "Última sincronização", "tipo": "data"},
+            {"key": "endpoint_base", "label": "Endpoint"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/betha/fila", "envelope": "integracoes", "id_field": "id",
+            "titulo": "Fila de sincronização (pendentes/erro)",
+            "colunas": [
+                {"key": "tipo", "label": "Tipo"},
+                {"key": "status", "label": "Status", "tipo": "chip",
+                 "labels": {"pendente": "Pendente", "sincronizado": "Sincronizado", "erro": "Erro"},
+                 "chip_cores": {"pendente": "warn", "sincronizado": "ok", "erro": "danger"}},
+                {"key": "criado_em", "label": "Criado em", "tipo": "data"},
+            ],
+        },
+        "acoes_modulo": [
+            {"key": "sync_almox", "label": "🔄 Sincronizar Almoxarifado", "url": "/api/hospital/betha/sincronizar-almoxarifado", "metodo": "POST",
+             "confirm": "Disparar sincronização de almoxarifado com o Betha?"},
+            {"key": "sync_compras", "label": "🔄 Sincronizar Compras", "url": "/api/hospital/betha/sincronizar-compras", "metodo": "POST",
+             "confirm": "Disparar sincronização de compras com o Betha?"},
+        ],
     })
 # ─── Status ──────────────────────────────────────────────────────────────────
 
@@ -58,9 +86,11 @@ def api_betha_status(request):
     credencial_ok = False
     ultima_sync = None
 
-    if CredenciaisIntegracoes:
-        cred = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="betha").first()
-        credencial_ok = bool(cred)
+    # CredenciaisIntegracoes não tem um campo genérico "tipo" nem armazenamento
+    # dedicado para Betha (é um OneToOne por empresa com sub-campos fixos por
+    # integração: sngpc_*, ans_*, nfe_*, rnds_*, sisreg_*, sus_*, tiss_*).
+    # Até existir um campo betha_* nesse model, não há credencial configurável.
+    credencial_ok = False
 
     if IntegracaoBetha:
         ultimo = IntegracaoBetha.objects.filter(
@@ -90,11 +120,9 @@ def _sincronizar(emp, tipo):
         status="pendente",
     )
 
+    # Ver nota em api_betha_status: sem campo dedicado em CredenciaisIntegracoes
+    # para Betha ainda, então o token nunca existe hoje — cai sempre em "pendente".
     token = None
-    if CredenciaisIntegracoes:
-        cred = CredenciaisIntegracoes.objects.filter(empresa=emp, tipo="betha").first()
-        if cred:
-            token = getattr(cred, "token", None)
 
     if not token:
         return JsonResponse({

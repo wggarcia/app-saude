@@ -21,6 +21,7 @@ from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
+from .services.modulo_operavel import render_modulo_operavel
 
 logger = logging.getLogger(__name__)
 
@@ -72,9 +73,67 @@ def _registro_to_dict(r, detalhe=False):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_rhc_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "RHC (Registro Hospitalar de Cancer)", "modulo_icon": "🎗️",
-        "kpis_url": "/api/hospital/rhc/kpis", "lista_url": "/api/hospital/rhc/registros", "lista_titulo": "Registros oncologicos",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "RHC — Registro Hospitalar do Câncer", "modulo_icon": "🎗️",
+        "modulo_sub": "Portaria SAS/MS 741/2005 · exportação RHCNET para o INCA",
+        "kpis": {"url": "/api/hospital/rhc/kpis", "campos": [
+            {"key": "total_pacientes", "label": "Total de registros"},
+            {"key": "em_tratamento", "label": "Em tratamento", "cor": "accent"},
+            {"key": "novos_mes", "label": "Novos no mês"},
+            {"key": "pendente_inca", "label": "Pendentes de notificar ao INCA", "cor": "warn"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/rhc/registros", "envelope": "registros", "id_field": "id",
+            "titulo": "Registros oncológicos",
+            "filtros": [
+                {"key": "status_paciente", "label": "Todo status", "tipo": "select", "options": [
+                    ["em_tratamento", "Em Tratamento"], ["remissao", "Remissão"], ["obito", "Óbito"],
+                    ["transferido", "Transferido"], ["perdido_seguimento", "Perdido de Seguimento"]]},
+                {"key": "q", "label": "Buscar paciente", "tipo": "text"},
+            ],
+            "colunas": [
+                {"key": "nome_paciente", "label": "Paciente"},
+                {"key": "cid_topografia", "label": "CID topografia"},
+                {"key": "estadiamento", "label": "Estádio", "tipo": "chip", "labels": {
+                    "0": "Estádio 0", "I": "Estádio I", "II": "Estádio II", "III": "Estádio III", "IV": "Estádio IV", "X": "Não Classif."},
+                 "chip_cores": {"III": "warn", "IV": "danger"}},
+                {"key": "status_paciente", "label": "Status", "tipo": "chip", "labels": {
+                    "em_tratamento": "Em Tratamento", "remissao": "Remissão", "obito": "Óbito",
+                    "transferido": "Transferido", "perdido_seguimento": "Perdido de Seguimento"},
+                 "chip_cores": {"em_tratamento": "accent", "remissao": "ok", "obito": "danger", "perdido_seguimento": "warn"}},
+                {"key": "medico_responsavel", "label": "Médico"},
+                {"key": "notificado_inca", "label": "INCA", "tipo": "bool", "true_label": "Notificado", "false_label": "Pendente"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/rhc/registros", "titulo_botao": "+ Novo registro", "titulo_modal": "Novo registro oncológico",
+            "campos": [
+                {"key": "nome_paciente", "label": "Nome do paciente"},
+                {"key": "data_nascimento", "label": "Data de nascimento", "tipo": "date"},
+                {"key": "sexo", "label": "Sexo", "tipo": "select", "options": [["M", "Masculino"], ["F", "Feminino"]]},
+                {"key": "cid_topografia", "label": "CID topografia"},
+                {"key": "cid_morfologia", "label": "CID morfologia (opcional)"},
+                {"key": "estadiamento", "label": "Estadiamento", "tipo": "select", "options": [
+                    ["0", "Estádio 0"], ["I", "Estádio I"], ["II", "Estádio II"], ["III", "Estádio III"],
+                    ["IV", "Estádio IV"], ["X", "Não Classificado"]]},
+                {"key": "data_primeiro_atendimento", "label": "Data do primeiro atendimento", "tipo": "date"},
+                {"key": "medico_responsavel", "label": "Médico responsável"},
+            ],
+        },
+        "acoes": [
+            {"key": "tratar", "label": "+ Tratamento", "url_tpl": "/api/hospital/rhc/registros/{id}/tratar", "metodo": "POST",
+             "campos": [{"key": "tratamento", "label": "Tratamento realizado", "tipo": "select", "options": [
+                 ["quimio", "Quimioterapia"], ["radio", "Radioterapia"], ["cirurgia", "Cirurgia"],
+                 ["hormonio", "Hormonioterapia"], ["imunoterapia", "Imunoterapia"]]}]},
+            {"key": "status", "label": "Atualizar status", "url_tpl": "/api/hospital/rhc/registros/{id}", "metodo": "PATCH",
+             "campos": [{"key": "status_paciente", "label": "Novo status", "tipo": "select", "options": [
+                 ["em_tratamento", "Em Tratamento"], ["remissao", "Remissão"], ["obito", "Óbito"],
+                 ["transferido", "Transferido"], ["perdido_seguimento", "Perdido de Seguimento"]]}]},
+        ],
+        "acoes_modulo": [
+            {"key": "exportar", "label": "📤 Exportar RHCNET (INCA)", "url": "/api/hospital/rhc/exportar", "metodo": "POST",
+             "body": {"formato": "json", "apenas_pendentes": True}, "confirm": "Gerar exportação RHCNET e marcar registros como notificados ao INCA?"},
+        ],
     })
 # ── Registros — lista / criação ────────────────────────────────────────────────
 

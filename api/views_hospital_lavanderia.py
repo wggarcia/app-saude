@@ -21,6 +21,7 @@ from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
+from .services.modulo_operavel import render_modulo_operavel
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,57 @@ def _get_lavanderia_models():
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_lavanderia_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "Lavanderia", "modulo_icon": "🧺",
-        "kpis_url": "/api/hospital/lavanderia/kpis", "lista_url": "/api/hospital/lavanderia/itens", "lista_titulo": "Itens de rouparia",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "Lavanderia e Rouparia", "modulo_icon": "🧺",
+        "modulo_sub": "Itens de rouparia, ciclos de entrada/saída e saldo por setor",
+        "kpis": {"url": "/api/hospital/lavanderia/kpis", "campos": [
+            {"key": "total_pecas", "label": "Total de peças"},
+            {"key": "disponivel", "label": "Disponível", "cor": "ok"},
+            {"key": "em_lavagem", "label": "Em lavagem", "cor": "warn"},
+            {"key": "ciclos_hoje", "label": "Ciclos hoje"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/lavanderia/itens", "envelope": "itens", "id_field": "id",
+            "titulo": "Itens de rouparia",
+            "filtros": [{"key": "setor", "label": "Buscar setor", "tipo": "text"}],
+            "colunas": [
+                {"key": "descricao", "label": "Item"},
+                {"key": "setor", "label": "Setor"},
+                {"key": "quantidade_total", "label": "Total"},
+                {"key": "quantidade_disponivel", "label": "Disponível"},
+                {"key": "ativo", "label": "Ativo", "tipo": "bool"},
+            ],
+        },
+        "lista_secundaria": {
+            "url": "/api/hospital/lavanderia/saldo", "envelope": "saldo", "titulo": "Saldo por setor",
+            "colunas": [
+                {"key": "setor", "label": "Setor"}, {"key": "total", "label": "Total"},
+                {"key": "disponivel", "label": "Disponível"}, {"key": "em_uso", "label": "Em uso"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/lavanderia/itens", "titulo_botao": "+ Cadastrar item", "titulo_modal": "Novo item de rouparia",
+            "campos": [
+                {"key": "descricao", "label": "Descrição"},
+                {"key": "quantidade_total", "label": "Quantidade total", "tipo": "number"},
+                {"key": "setor", "label": "Setor"},
+            ],
+        },
+        "acoes": [
+            {"key": "inativar", "label": "Inativar", "url_tpl": "/api/hospital/lavanderia/itens/{id}", "metodo": "PATCH",
+             "body": {"ativo": False}, "confirm": "Inativar este item de rouparia?", "so_se": {"campo": "ativo", "valor": "true"}},
+        ],
+        "acoes_modulo": [
+            {"key": "ciclo", "label": "+ Registrar ciclo", "url": "/api/hospital/lavanderia/ciclos", "metodo": "POST",
+             "campos": [
+                {"key": "item_id", "label": "ID do item", "tipo": "number"},
+                {"key": "quantidade", "label": "Quantidade", "tipo": "number"},
+                {"key": "tipo", "label": "Tipo", "tipo": "select", "options": [
+                    ["entrada_sujo", "Entrada Sujo"], ["saida_limpo", "Saída Limpo"]]},
+                {"key": "setor_origem", "label": "Setor de origem"},
+                {"key": "responsavel", "label": "Responsável"},
+             ]},
+        ],
     })
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

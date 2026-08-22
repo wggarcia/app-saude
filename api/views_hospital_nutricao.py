@@ -20,6 +20,7 @@ from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
+from .services.modulo_operavel import render_modulo_operavel
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +105,70 @@ def _triagem_to_dict(a):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_nutricao_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "Nutricao", "modulo_icon": "🍽️",
-        "kpis_url": "/api/hospital/nutricao/kpis", "lista_url": "/api/hospital/nutricao/dietas", "lista_titulo": "Dietas prescritas",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "Nutrição e Dietética", "modulo_icon": "🍽️",
+        "modulo_sub": "Prescrição de dietas, triagem e avaliação nutricional",
+        "kpis": {"url": "/api/hospital/nutricao/kpis", "campos": [
+            {"key": "dietas_ativas", "label": "Dietas ativas"},
+            {"key": "dietas_enteral", "label": "Em via enteral", "cor": "warn"},
+            {"key": "dietas_parenteral", "label": "Em via parenteral", "cor": "danger"},
+            {"key": "triagens_mes", "label": "Triagens no mês"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/nutricao/dietas", "envelope": "dietas", "id_field": "id",
+            "titulo": "Dietas prescritas (ativas)",
+            "colunas": [
+                {"key": "nome_paciente", "label": "Paciente"},
+                {"key": "tipo_dieta", "label": "Tipo", "tipo": "chip", "labels": {
+                    "livre": "Livre", "hipossodica": "Hipossódica", "hipoglicidica": "Hipoglicídica",
+                    "hipolipidica": "Hipolipídica", "liquida": "Líquida", "pastosa": "Pastosa",
+                    "enteral": "Enteral", "parenteral": "Parenteral", "jejum": "Jejum"},
+                 "chip_cores": {"enteral": "warn", "parenteral": "danger", "jejum": "danger"}},
+                {"key": "via_administracao", "label": "Via", "tipo": "chip", "labels": {
+                    "oral": "Oral", "sonda_nasoenteral": "Sonda Nasoenteral", "sonda_gastrostomia": "Sonda Gastrostomia",
+                    "parenteral_central": "Parenteral Central", "parenteral_periferica": "Parenteral Periférica"},
+                 "chip_cores": {"oral": "ok"}},
+                {"key": "calorias_kcal", "label": "Kcal/dia"},
+                {"key": "restricoes", "label": "Restrições"},
+                {"key": "prescrito_por", "label": "Prescrito por"},
+                {"key": "ativa", "label": "Ativa", "tipo": "bool", "true_label": "Sim", "false_label": "Encerrada"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/nutricao/dietas", "titulo_botao": "+ Nova dieta", "titulo_modal": "Prescrever dieta",
+            "campos": [
+                {"key": "paciente_internado_id", "label": "ID do paciente internado", "tipo": "number"},
+                {"key": "tipo_dieta", "label": "Tipo de dieta", "tipo": "select", "options": [
+                    ["livre", "Livre"], ["hipossodica", "Hipossódica"], ["hipoglicidica", "Hipoglicídica"],
+                    ["hipolipidica", "Hipolipídica"], ["liquida", "Líquida"], ["pastosa", "Pastosa"],
+                    ["enteral", "Enteral"], ["parenteral", "Parenteral"], ["jejum", "Jejum"]]},
+                {"key": "via_administracao", "label": "Via de administração", "tipo": "select", "options": [
+                    ["oral", "Oral"], ["sonda_nasoenteral", "Sonda Nasoenteral"], ["sonda_gastrostomia", "Sonda Gastrostomia"],
+                    ["parenteral_central", "Parenteral Central"], ["parenteral_periferica", "Parenteral Periférica"]]},
+                {"key": "calorias_kcal", "label": "Calorias (kcal/dia)", "tipo": "number"},
+                {"key": "proteinas_g", "label": "Proteínas (g/dia)", "tipo": "number"},
+                {"key": "restricoes", "label": "Restrições"},
+                {"key": "data_inicio", "label": "Início", "tipo": "date"},
+                {"key": "prescrito_por", "label": "Prescrito por"},
+            ],
+        },
+        "acoes": [
+            {"key": "encerrar", "label": "Encerrar dieta", "url_tpl": "/api/hospital/nutricao/dietas/{id}", "metodo": "PATCH",
+             "body": {"ativa": False}, "confirm": "Encerrar esta dieta?", "so_se": {"campo": "ativa", "valor": "true"}},
+        ],
+        "acoes_modulo": [
+            {"key": "nova_triagem", "label": "+ Nova triagem nutricional", "url": "/api/hospital/nutricao/triagens", "metodo": "POST",
+             "campos": [
+                {"key": "paciente_id", "label": "ID do paciente", "tipo": "number"},
+                {"key": "peso_kg", "label": "Peso (kg)", "tipo": "number"},
+                {"key": "altura_cm", "label": "Altura (cm)", "tipo": "number"},
+                {"key": "diagnostico_nutricional", "label": "Diagnóstico nutricional"},
+                {"key": "via_alimentacao", "label": "Via de alimentação", "tipo": "select", "options": [
+                    ["oral", "Via oral"], ["enteral", "Via enteral (sonda)"], ["parenteral", "Via parenteral"],
+                    ["oral_enteral", "Oral + enteral"]]},
+                {"key": "responsavel", "label": "Nutricionista responsável"},
+             ]},
+        ],
     })
 # ── Dietas ───────────────────────────────────────────────────────────────────
 

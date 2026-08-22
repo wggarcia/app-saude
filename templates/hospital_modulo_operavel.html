@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ config.modulo_nome }} — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--surface3:#103049;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#6d9cb5;--faint:#3f6377;--border:rgba(0,194,255,.12);--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding:0 0 60px}
+h1{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.q-top{position:sticky;top:0;z-index:30;background:rgba(4,16,24,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.q-top .sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.q-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:none;border-radius:10px;padding:11px 16px;font-size:.85rem;font-weight:700;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#02121b}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);text-decoration:none}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+.btn-sm{padding:7px 11px;font-size:.74rem;border-radius:8px}
+.q-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}
+@media(max-width:720px){.q-kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.kpi.danger::before{background:var(--danger)} .kpi.warn::before{background:var(--warn)} .kpi.ok::before{background:var(--ok)}
+.kpi .v{font-size:1.9rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:.76rem;color:var(--muted);margin-top:6px}
+.kpi.danger .v{color:var(--danger)} .kpi.warn .v{color:var(--warn)} .kpi.ok .v{color:var(--ok)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.status-row{background:var(--surface2);border-radius:9px;padding:10px 12px}
+.status-row .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.status-row .v{font-size:.95rem;font-weight:700;margin-top:3px}
+.filtros{display:flex;gap:8px;flex-wrap:wrap}
+select,input[type=text],input[type=date],input[type=number],input[type=month]{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 11px;font-family:inherit;font-size:.8rem}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:640px}
+th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.empty{text-align:center;color:var(--muted);padding:34px;font-size:.85rem}
+.chip{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.ch-ok{background:rgba(0,229,176,.14);color:var(--ok)}
+.ch-warn{background:rgba(255,179,71,.14);color:var(--warn)}
+.ch-danger{background:rgba(255,77,109,.16);color:var(--danger)}
+.ch-accent{background:rgba(0,194,255,.14);color:var(--accent)}
+.ch-muted{background:rgba(109,156,181,.16);color:var(--muted)}
+.acoes-cell{display:flex;gap:6px;flex-wrap:wrap}
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;opacity:0;pointer-events:none;transition:.2s}
+.backdrop.on{opacity:1;pointer-events:all}
+.modal{position:fixed;z-index:100;top:50%;left:50%;transform:translate(-50%,-46%);width:min(500px,94vw);max-height:90vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;opacity:0;pointer-events:none;transition:.22s}
+.modal.on{opacity:1;pointer-events:all;transform:translate(-50%,-50%)}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.mh h3{font-size:1.1rem;font-weight:800}
+.x{background:none;border:none;color:var(--muted);font-size:1.3rem;line-height:1}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:.9rem}
+.field textarea{min-height:70px;resize:vertical}
+.loading{color:var(--muted);font-size:.84rem;padding:10px 0}
+.hint{font-size:.7rem;color:var(--faint);margin-top:8px;line-height:1.5}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid var(--accent);color:var(--text);padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:600;z-index:200;opacity:0;transition:.25s}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header class="q-top">
+  <div>
+    <h1>{{ config.modulo_icon }} {{ config.modulo_nome }}</h1>
+    <div class="sub">{{ config.modulo_sub }}</div>
+  </div>
+  <div class="q-actions" id="acoesModulo"></div>
+</header>
+
+<div class="wrap">
+  <div class="q-kpis" id="kpis"></div>
+
+  <section class="panel" id="painelStatus" style="display:none">
+    <div class="panel-h"><h2 id="statusTitulo">Status</h2></div>
+    <div class="status-grid" id="statusBody"></div>
+  </section>
+
+  <section class="panel" id="painelSecundario" style="display:none">
+    <div class="panel-h"><h2 id="secTitulo"></h2></div>
+    <div id="secBody"><div class="loading">Carregando…</div></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h">
+      <h2 id="listaTitulo">Registros</h2>
+      <div class="filtros" id="filtrosWrap"></div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"><tr><td class="empty">Carregando…</td></tr></tbody>
+    </table></div>
+  </section>
+</div>
+
+<div class="backdrop" id="bd" onclick="fecharTudo()"></div>
+
+<!-- MODAL CRIAR -->
+<div class="modal" id="mCriar">
+  <div class="mh"><h3 id="criarTitulo">Novo registro</h3><button class="x" onclick="fecharTudo()">✕</button></div>
+  <div id="criarCampos"></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="salvarCriar()">Salvar</button>
+</div>
+
+<!-- MODAL AÇÃO (com campos) -->
+<div class="modal" id="mAcao">
+  <div class="mh"><h3 id="acaoTitulo">Ação</h3><button class="x" onclick="fecharTudo()">✕</button></div>
+  <div id="acaoCampos"></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="confirmarAcao()">Confirmar</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var CFG = {{ config_json|safe }};
+var _cache = {};
+
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},2600);}
+async function jget(u){try{var r=await fetch(u,{credentials:'same-origin'});if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+async function jsend(u,method,body){try{var r=await fetch(u,{method:method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:body!==undefined?JSON.stringify(body):null});return r.ok?(await r.json().catch(function(){return{};})):null;}catch(e){return null;}}
+function fmtData(iso){if(!iso)return '—';var m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:iso;}
+function fmtR$(v){return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+/* ---- KPIs ---- */
+async function carregarKpis(){
+  if(!CFG.kpis){document.getElementById('kpis').style.display='none';return;}
+  var d=await jget(CFG.kpis.url)||{};
+  document.getElementById('kpis').innerHTML=(CFG.kpis.campos||[]).map(function(k){
+    var v=d[k.key]; if(v===undefined||v===null)v= (k.tipo==='moeda'?0:0);
+    var vt = k.tipo==='moeda'?fmtR$(v):v;
+    return '<div class="kpi '+(k.cor||'')+'"><div class="v">'+vt+'</div><div class="l">'+k.label+'</div></div>';
+  }).join('');
+}
+
+/* ---- status (módulos de integração) ---- */
+async function carregarStatus(){
+  if(!CFG.status)return;
+  var d=await jget(CFG.status.url)||{};
+  document.getElementById('painelStatus').style.display='';
+  document.getElementById('statusTitulo').textContent=CFG.status.titulo||'Status da integração';
+  document.getElementById('statusBody').innerHTML=(CFG.status.campos||[]).map(function(c){
+    var v=d[c.key];
+    if(c.tipo==='bool')v = v? (c.true_label||'Conectado') : (c.false_label||'Não configurado');
+    if(c.tipo==='data')v = fmtData(v);
+    return '<div class="status-row"><div class="k">'+c.label+'</div><div class="v">'+(v===undefined||v===null||v===''?'—':v)+'</div></div>';
+  }).join('');
+}
+
+/* ---- painel secundário (read-only, ex: vencimentos, saldo) ---- */
+async function carregarSecundario(){
+  if(!CFG.lista_secundaria)return;
+  document.getElementById('painelSecundario').style.display='';
+  document.getElementById('secTitulo').textContent=CFG.lista_secundaria.titulo||'Detalhes';
+  var d=await jget(CFG.lista_secundaria.url)||{};
+  var arr=d[CFG.lista_secundaria.envelope]||[];
+  if(!arr.length){document.getElementById('secBody').innerHTML='<div class="empty">Sem registros.</div>';return;}
+  var cols=CFG.lista_secundaria.colunas;
+  document.getElementById('secBody').innerHTML='<div class="tw"><table><thead><tr>'+
+    cols.map(function(c){return '<th>'+c.label+'</th>';}).join('')+'</tr></thead><tbody>'+
+    arr.map(function(item){return '<tr>'+cols.map(function(c){return '<td>'+renderCelula(item,c)+'</td>';}).join('')+'</tr>';}).join('')+
+    '</tbody></table></div>';
+}
+
+/* ---- filtros ---- */
+function montarFiltros(){
+  var wrap=document.getElementById('filtrosWrap');
+  wrap.innerHTML=(CFG.lista.filtros||[]).map(function(f){
+    if(f.tipo==='select'){
+      return '<select id="f_'+f.key+'" onchange="carregarLista()"><option value="">'+f.label+'</option>'+
+        (f.options||[]).map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('')+'</select>';
+    }
+    return '<input type="'+(f.tipo||'text')+'" id="f_'+f.key+'" placeholder="'+f.label+'" onchange="carregarLista()">';
+  }).join('');
+}
+function buildQuery(){
+  var q=[];
+  (CFG.lista.filtros||[]).forEach(function(f){
+    var el=document.getElementById('f_'+f.key); if(el&&el.value)q.push(f.key+'='+encodeURIComponent(el.value));
+  });
+  return q.join('&');
+}
+
+/* ---- tabela principal ---- */
+function renderCelula(item,c){
+  var v=item[c.key];
+  if(c.tipo==='chip'){
+    var cor=(c.chip_cores&&c.chip_cores[v])||'muted';
+    var label=(c.labels&&c.labels[v])||v||'—';
+    return '<span class="chip ch-'+cor+'">'+label+'</span>';
+  }
+  if(c.tipo==='moeda')return fmtR$(v);
+  if(c.tipo==='data')return fmtData(v);
+  if(c.tipo==='bool')return v?(c.true_label||'Sim'):(c.false_label||'Não');
+  return (v===null||v===undefined||v==='')?'—':v;
+}
+function acaoAplicavel(a,item){
+  if(!a.so_se)return true;
+  return String(item[a.so_se.campo])===String(a.so_se.valor);
+}
+async function carregarLista(){
+  var q=buildQuery();
+  var d=await jget(CFG.lista.url+(q?('?'+q):''))||{};
+  var arr=d[CFG.lista.envelope]||[];
+  _cache={}; arr.forEach(function(item){_cache[item[CFG.lista.id_field||'id']]=item;});
+  var ncols=(CFG.lista.colunas||[]).length + ((CFG.acoes&&CFG.acoes.length)?1:0);
+  document.getElementById('thead').innerHTML=(CFG.lista.colunas||[]).map(function(c){return '<th>'+c.label+'</th>';}).join('')+((CFG.acoes&&CFG.acoes.length)?'<th>Ações</th>':'');
+  var tb=document.getElementById('tbody');
+  if(!arr.length){tb.innerHTML='<tr><td colspan="'+ncols+'" class="empty">Nenhum registro com esses filtros.</td></tr>';return;}
+  tb.innerHTML=arr.map(function(item){
+    var id=item[CFG.lista.id_field||'id'];
+    var tds=(CFG.lista.colunas||[]).map(function(c){return '<td>'+renderCelula(item,c)+'</td>';}).join('');
+    var acoesTd='';
+    if(CFG.acoes&&CFG.acoes.length){
+      var botoes=(CFG.acoes||[]).filter(function(a){return acaoAplicavel(a,item);}).map(function(a){
+        return '<button class="btn btn-ghost btn-sm" onclick="executarAcao(\''+a.key+'\','+JSON.stringify(id)+')">'+a.label+'</button>';
+      }).join('');
+      acoesTd='<td><div class="acoes-cell">'+(botoes||'—')+'</div></td>';
+    }
+    return '<tr>'+tds+acoesTd+'</tr>';
+  }).join('');
+}
+
+/* ---- criar ---- */
+function campoHtml(prefix,c){
+  if(c.tipo==='select'){
+    return '<div class="field"><label>'+c.label+'</label><select id="'+prefix+c.key+'">'+(c.options||[]).map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('')+'</select></div>';
+  }
+  if(c.tipo==='textarea'){
+    return '<div class="field"><label>'+c.label+'</label><textarea id="'+prefix+c.key+'" placeholder="'+(c.placeholder||'')+'"></textarea></div>';
+  }
+  return '<div class="field"><label>'+c.label+'</label><input type="'+(c.tipo||'text')+'" id="'+prefix+c.key+'" placeholder="'+(c.placeholder||'')+'"></div>';
+}
+function abrirCriar(){
+  if(!CFG.criar)return;
+  document.getElementById('criarTitulo').textContent=CFG.criar.titulo_modal||'Novo registro';
+  document.getElementById('criarCampos').innerHTML=(CFG.criar.campos||[]).map(function(c){return campoHtml('cr_',c);}).join('');
+  document.getElementById('bd').classList.add('on');document.getElementById('mCriar').classList.add('on');
+}
+async function salvarCriar(){
+  var body={};
+  (CFG.criar.campos||[]).forEach(function(c){
+    var el=document.getElementById('cr_'+c.key); if(!el)return;
+    body[c.key]=c.tipo==='number'?parseFloat(el.value||0):el.value;
+  });
+  var r=await jsend(CFG.criar.url,'POST',body);
+  if(!r){toast('Não foi possível salvar.');return;}
+  fecharTudo();toast('Registro criado.');
+  carregarKpis();carregarLista();carregarSecundario();
+}
+
+/* ---- ações (de linha ou de módulo) ---- */
+var _acaoAtual=null,_acaoItemId=null;
+function executarAcao(key,id){
+  var a=(CFG.acoes||[]).concat(CFG.acoes_modulo||[]).find(function(x){return x.key===key;});
+  if(!a)return;
+  _acaoAtual=a;_acaoItemId=id;
+  if(a.campos&&a.campos.length){
+    document.getElementById('acaoTitulo').textContent=a.label;
+    document.getElementById('acaoCampos').innerHTML=a.campos.map(function(c){return campoHtml('ac_',c);}).join('');
+    document.getElementById('bd').classList.add('on');document.getElementById('mAcao').classList.add('on');
+  }else{
+    if(a.confirm&&!confirm(a.confirm))return;
+    enviarAcao(a,id,a.body||{});
+  }
+}
+function confirmarAcao(){
+  var body={};
+  (_acaoAtual.campos||[]).forEach(function(c){var el=document.getElementById('ac_'+c.key);if(el)body[c.key]=el.value;});
+  enviarAcao(_acaoAtual,_acaoItemId,body);
+}
+async function enviarAcao(a,id,body){
+  var url=a.url_tpl?a.url_tpl.replace('{id}',id):a.url;
+  var r=await jsend(url,a.metodo||'POST',body);
+  if(!r){toast('Não foi possível executar: '+a.label);return;}
+  fecharTudo();toast(a.label+' concluído.');
+  carregarKpis();carregarStatus();carregarLista();carregarSecundario();
+}
+
+function montarAcoesModulo(){
+  var wrap=document.getElementById('acoesModulo');
+  var botoes=(CFG.acoes_modulo||[]).map(function(a){
+    return '<button class="btn btn-primary" onclick="executarAcao(\''+a.key+'\',null)">'+a.label+'</button>';
+  }).join('');
+  if(CFG.criar)botoes+='<button class="btn btn-primary" onclick="abrirCriar()">'+(CFG.criar.titulo_botao||'+ Novo')+'</button>';
+  botoes+='<a class="btn btn-ghost" href="/hospital/gestao/">← Gestão</a>';
+  wrap.innerHTML=botoes;
+}
+
+function fecharTudo(){['bd','mCriar','mAcao'].forEach(function(id){document.getElementById(id).classList.remove('on');});}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharTudo();});
+
+document.getElementById('listaTitulo').textContent=CFG.lista.titulo||'Registros';
+montarAcoesModulo();
+montarFiltros();
+carregarKpis();carregarStatus();carregarSecundario();carregarLista();
+</script>
+</body>
+</html>

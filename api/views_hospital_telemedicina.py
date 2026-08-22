@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Count, Q
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
 from .access_control import get_setor, requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo, api_requer_feature, api_requer_permissao_modulo
+from .services.modulo_operavel import render_modulo_operavel
 
 try:
     from .models import TeleconsultaGoverno
@@ -49,9 +50,45 @@ def _consulta_to_dict(c):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_telemedicina_page(request):
-    return render(request, "hospital_modulo_generico.html", {
+    return render_modulo_operavel(request, {
         "modulo_nome": "Telemedicina", "modulo_icon": "📹",
-        "kpis_url": "/api/hospital/telemedicina/kpis", "lista_url": "/api/hospital/telemedicina/consultas", "lista_titulo": "Consultas",
+        "modulo_sub": "Teleconsultas hospitalares — agendamento, atendimento e encerramento",
+        "kpis": {"url": "/api/hospital/telemedicina/kpis", "campos": [
+            {"key": "agendadas", "label": "Agendadas"},
+            {"key": "realizadas_mes", "label": "Realizadas no mês", "cor": "ok"},
+            {"key": "canceladas", "label": "Canceladas", "cor": "danger"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/telemedicina/consultas", "envelope": "consultas", "id_field": "id",
+            "titulo": "Consultas",
+            "filtros": [{"key": "status", "label": "Todo status", "tipo": "select", "options": [
+                ["agendada", "Agendada"], ["em_curso", "Em Curso"], ["concluida", "Concluída"], ["cancelada", "Cancelada"]]}],
+            "colunas": [
+                {"key": "paciente_nome", "label": "Paciente"},
+                {"key": "especialidade", "label": "Especialidade"},
+                {"key": "medico", "label": "Médico"},
+                {"key": "data_hora", "label": "Data/hora", "tipo": "data"},
+                {"key": "status", "label": "Status", "tipo": "chip",
+                 "labels": {"agendada": "Agendada", "em_curso": "Em Curso", "concluida": "Concluída", "cancelada": "Cancelada"},
+                 "chip_cores": {"agendada": "muted", "em_curso": "accent", "concluida": "ok", "cancelada": "danger"}},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/telemedicina/consultas", "titulo_botao": "+ Agendar consulta", "titulo_modal": "Agendar teleconsulta",
+            "campos": [
+                {"key": "paciente_nome", "label": "Paciente"},
+                {"key": "especialidade", "label": "Especialidade"},
+                {"key": "medico", "label": "Médico"},
+                {"key": "data_hora", "label": "Data/hora", "tipo": "datetime-local"},
+                {"key": "link_sala", "label": "Link da sala (opcional)"},
+            ],
+        },
+        "acoes": [
+            {"key": "iniciar", "label": "Iniciar", "url_tpl": "/api/hospital/telemedicina/consultas/{id}/iniciar", "metodo": "POST",
+             "so_se": {"campo": "status", "valor": "agendada"}},
+            {"key": "encerrar", "label": "Encerrar", "url_tpl": "/api/hospital/telemedicina/consultas/{id}/encerrar", "metodo": "POST",
+             "confirm": "Encerrar esta consulta?", "so_se": {"campo": "status", "valor": "em_curso"}},
+        ],
     })
 # ─── Consultas ────────────────────────────────────────────────────────────────
 

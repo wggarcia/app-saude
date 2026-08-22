@@ -5,7 +5,7 @@ Hospital — Manutenção Predial / Infraestrutura
 """
 import json
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.db.models import Avg, Q
 from django.http import JsonResponse
@@ -20,6 +20,7 @@ from .access_control import (
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
     requer_operacao_page, requer_permissao_modulo,
 )
+from .services.modulo_operavel import render_modulo_operavel
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +65,59 @@ def _os_to_dict(o):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_manutencao_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "Manutencao Predial", "modulo_icon": "🔧",
-        "kpis_url": "/api/hospital/manutencao/kpis", "lista_url": "/api/hospital/manutencao/ordens", "lista_titulo": "Ordens de servico",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "Manutenção Predial", "modulo_icon": "🔧",
+        "modulo_sub": "Ordens de serviço prediais — preventiva, corretiva e emergencial",
+        "kpis": {"url": "/api/hospital/manutencao/kpis", "campos": [
+            {"key": "abertas", "label": "Abertas"},
+            {"key": "em_andamento", "label": "Em andamento", "cor": "accent"},
+            {"key": "criticas", "label": "Prioridade crítica", "cor": "danger"},
+            {"key": "concluidas_mes", "label": "Concluídas no mês", "cor": "ok"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/manutencao/ordens", "envelope": "ordens", "id_field": "id",
+            "titulo": "Ordens de serviço",
+            "filtros": [
+                {"key": "status", "label": "Todo status", "tipo": "select", "options": [
+                    ["aberta", "Aberta"], ["em_andamento", "Em Andamento"], ["aguardando_peca", "Aguardando Peça"],
+                    ["concluida", "Concluída"], ["cancelada", "Cancelada"]]},
+                {"key": "prioridade", "label": "Toda prioridade", "tipo": "select", "options": [
+                    ["baixa", "Baixa"], ["media", "Média"], ["alta", "Alta"], ["critica", "Crítica"]]},
+            ],
+            "colunas": [
+                {"key": "numero_os", "label": "OS"},
+                {"key": "descricao", "label": "Descrição"},
+                {"key": "setor", "label": "Setor"},
+                {"key": "prioridade", "label": "Prioridade", "tipo": "chip",
+                 "labels": {"baixa": "Baixa", "media": "Média", "alta": "Alta", "critica": "Crítica"},
+                 "chip_cores": {"baixa": "muted", "media": "accent", "alta": "warn", "critica": "danger"}},
+                {"key": "status", "label": "Status", "tipo": "chip",
+                 "labels": {"aberta": "Aberta", "em_andamento": "Em Andamento", "aguardando_peca": "Aguardando Peça",
+                            "concluida": "Concluída", "cancelada": "Cancelada"},
+                 "chip_cores": {"aberta": "warn", "em_andamento": "accent", "aguardando_peca": "warn",
+                                "concluida": "ok", "cancelada": "muted"}},
+                {"key": "responsavel", "label": "Responsável"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/manutencao/ordens", "titulo_botao": "+ Abrir OS", "titulo_modal": "Nova ordem de serviço",
+            "campos": [
+                {"key": "descricao", "label": "Descrição do problema", "tipo": "textarea"},
+                {"key": "setor", "label": "Setor"},
+                {"key": "tipo", "label": "Tipo", "tipo": "select", "options": [
+                    ["preventiva", "Preventiva"], ["corretiva", "Corretiva"], ["emergencial", "Emergencial"]]},
+                {"key": "prioridade", "label": "Prioridade", "tipo": "select", "options": [
+                    ["baixa", "Baixa"], ["media", "Média"], ["alta", "Alta"], ["critica", "Crítica"]]},
+                {"key": "solicitante", "label": "Solicitante"},
+                {"key": "data_previsao", "label": "Previsão", "tipo": "date"},
+            ],
+        },
+        "acoes": [
+            {"key": "concluir", "label": "Concluir", "url_tpl": "/api/hospital/manutencao/ordens/{id}/concluir", "metodo": "POST",
+             "campos": [{"key": "custo_real", "label": "Custo real (R$, opcional)", "tipo": "number"}]},
+            {"key": "cancelar", "label": "Cancelar", "url_tpl": "/api/hospital/manutencao/ordens/{id}/cancelar", "metodo": "POST",
+             "confirm": "Cancelar esta OS?"},
+        ],
     })
 # ── Ordens de Serviço ─────────────────────────────────────────────────────────
 
@@ -119,6 +170,15 @@ def api_manutencao_ordens(request):
     if not descricao or not setor:
         return JsonResponse({"erro": "descricao e setor são obrigatórios"}, status=400)
 
+    # data_previsao é DateField — parseia explicitamente (o serializer chama
+    # .isoformat() logo depois e quebra se receber a string crua).
+    data_previsao = data.get("data_previsao") or None
+    if data_previsao:
+        try:
+            data_previsao = date.fromisoformat(str(data_previsao))
+        except ValueError:
+            return JsonResponse({"erro": "data_previsao inválida (use YYYY-MM-DD)"}, status=400)
+
     try:
         os_obj = OrdemServicoPredial.objects.create(
             empresa=empresa,
@@ -127,7 +187,7 @@ def api_manutencao_ordens(request):
             setor=setor,
             prioridade=data.get("prioridade", "media"),
             solicitante=(data.get("solicitante") or "").strip(),
-            data_previsao=data.get("data_previsao") or None,
+            data_previsao=data_previsao,
         )
         return JsonResponse({"ok": True, "ordem": _os_to_dict(os_obj)}, status=201)
     except Exception as exc:

@@ -14,6 +14,7 @@ Página:
   hospital_same_page — renderiza hospital_same.html
 """
 import json
+from datetime import date
 
 from django.db.models import Q
 from django.http import JsonResponse
@@ -32,6 +33,7 @@ from .access_control import (
     requer_permissao_modulo,
     requer_setor,
 )
+from .services.modulo_operavel import render_modulo_operavel
 
 try:
     from .models import CodigoSAME, EmprestimoSAME
@@ -124,6 +126,14 @@ def api_same_pacientes(request):
     if not prontuario or not nome_paciente:
         return JsonResponse({"erro": "prontuario e nome_paciente são obrigatórios."}, status=400)
 
+    # data_nascimento é DateField — parseia explicitamente (o serializer chama
+    # .strftime() logo depois e quebra se receber a string crua).
+    if data_nascimento:
+        try:
+            data_nascimento = date.fromisoformat(str(data_nascimento))
+        except ValueError:
+            return JsonResponse({"erro": "data_nascimento inválida (use YYYY-MM-DD)."}, status=400)
+
     if CodigoSAME.objects.filter(empresa=empresa, prontuario=prontuario).exists():
         return JsonResponse({"erro": "Já existe um código SAME com este prontuário."}, status=409)
 
@@ -205,6 +215,13 @@ def api_same_emprestimos(request):
             {"erro": "codigo_same_id, solicitante, setor e data_prevista_devolucao são obrigatórios."},
             status=400,
         )
+
+    # data_prevista_devolucao é DateField — parseia explicitamente (o ORM não
+    # converte a string na instância em memória, e o serializer chama .strftime()).
+    try:
+        data_prevista_devolucao = date.fromisoformat(str(data_prevista_devolucao))
+    except ValueError:
+        return JsonResponse({"erro": "data_prevista_devolucao inválida (use YYYY-MM-DD)."}, status=400)
 
     try:
         codigo_same = CodigoSAME.objects.get(pk=codigo_same_id, empresa=empresa)
@@ -306,7 +323,53 @@ def api_same_kpis(request):
 @requer_permissao_modulo("hospital.administrativo")
 def hospital_same_page(request):
     """Renderiza a interface do SAME hospitalar."""
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "SAME (Arquivo de Prontuarios)", "modulo_icon": "🗄️",
-        "kpis_url": "/api/hospital/same/kpis", "lista_url": "/api/hospital/same/pacientes", "lista_titulo": "Prontuarios arquivados",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "SAME — Arquivo Médico e Estatístico", "modulo_icon": "🗄️",
+        "modulo_sub": "Empréstimo e devolução de prontuários físicos",
+        "kpis": {"url": "/api/hospital/same/kpis", "campos": [
+            {"key": "total_prontuarios", "label": "Prontuários arquivados"},
+            {"key": "emprestados", "label": "Emprestados agora", "cor": "accent"},
+            {"key": "vencidos", "label": "Devolução vencida", "cor": "danger"},
+            {"key": "extraviados", "label": "Extraviados", "cor": "danger"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/same/emprestimos", "envelope": "emprestimos", "id_field": "id",
+            "titulo": "Empréstimos em aberto",
+            "colunas": [
+                {"key": "prontuario", "label": "Prontuário"},
+                {"key": "paciente", "label": "Paciente"},
+                {"key": "solicitante", "label": "Solicitante"},
+                {"key": "setor", "label": "Setor"},
+                {"key": "data_prevista_devolucao", "label": "Devolução prevista", "tipo": "data"},
+                {"key": "status", "label": "Status", "tipo": "chip",
+                 "labels": {"emprestado": "Emprestado", "devolvido": "Devolvido", "extraviado": "Extraviado"},
+                 "chip_cores": {"emprestado": "accent", "devolvido": "ok", "extraviado": "danger"}},
+            ],
+        },
+        "lista_secundaria": {
+            "url": "/api/hospital/same/pacientes", "envelope": "resultados", "titulo": "Prontuários cadastrados",
+            "colunas": [
+                {"key": "prontuario", "label": "Prontuário"}, {"key": "paciente", "label": "Paciente"},
+                {"key": "data_abertura", "label": "Aberto em", "tipo": "data"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/same/emprestimos", "titulo_botao": "+ Registrar empréstimo", "titulo_modal": "Registrar empréstimo de prontuário",
+            "campos": [
+                {"key": "codigo_same_id", "label": "ID do prontuário (código SAME)", "tipo": "number"},
+                {"key": "solicitante", "label": "Solicitante"},
+                {"key": "setor", "label": "Setor"},
+                {"key": "data_prevista_devolucao", "label": "Devolução prevista", "tipo": "date"},
+                {"key": "observacoes", "label": "Observações", "tipo": "textarea"},
+            ],
+        },
+        "acoes": [
+            {"key": "devolver", "label": "Devolver", "url_tpl": "/api/hospital/same/emprestimos/{id}/devolver", "metodo": "POST",
+             "confirm": "Confirmar devolução deste prontuário?", "so_se": {"campo": "status", "valor": "emprestado"}},
+        ],
+        "acoes_modulo": [
+            {"key": "novo_prontuario", "label": "+ Cadastrar prontuário", "url": "/api/hospital/same/pacientes", "metodo": "POST",
+             "campos": [{"key": "prontuario", "label": "Número do prontuário"}, {"key": "nome_paciente", "label": "Nome do paciente"},
+                        {"key": "data_nascimento", "label": "Data de nascimento", "tipo": "date"}]},
+        ],
     })

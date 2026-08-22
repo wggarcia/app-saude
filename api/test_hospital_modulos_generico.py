@@ -127,12 +127,240 @@ class HospitalModuloGenericoTests(TestCase):
         self.assertTrue(a["causas_provaveis"])
         self.assertTrue(a["acoes_recomendadas"])
 
-    def test_nutricao_renderiza_template_generico(self):
+    def test_nutricao_cockpit_e_encerrar_dieta(self):
         empresa = _empresa_hospital("hn@example.com")
         client = _client_for(empresa)
         r = client.get("/hospital/nutricao/", secure=True)
         self.assertEqual(r.status_code, 200)
         html = r.content.decode()
-        self.assertIn("Nutricao", html)
+        self.assertIn("Nutrição", html)
         self.assertIn("/api/hospital/nutricao/dietas", html)
+        self.assertIn("Nova dieta", html)
         self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/nutricao/dietas",
+                          data=json.dumps({"tipo_dieta": "enteral", "via_administracao": "sonda_nasoenteral",
+                                            "data_inicio": timezone.now().strftime("%Y-%m-%d")}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        pk = r2.json()["dieta"]["id"]
+        r3 = client.patch(f"/api/hospital/nutricao/dietas/{pk}",
+                           data=json.dumps({"ativa": False}), content_type="application/json", secure=True)
+        self.assertEqual(r3.status_code, 200)
+
+    def test_cme_cockpit_e_registrar_uso(self):
+        empresa = _empresa_hospital("hcme@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/cme/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("CME", html)
+        self.assertIn("Registrar uso", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/cme/instrumentais",
+                          data=json.dumps({"nome": "Caixa de laparotomia"}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        inst_id = r2.json()["id"]
+
+        r3 = client.post("/api/hospital/cme/ciclos",
+                          data=json.dumps({"instrumental_id": inst_id, "numero_ciclo": "C-001",
+                                            "data_esterilizacao": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+                                            "validade_ate": (timezone.now() + timedelta(days=30)).strftime("%Y-%m-%d")}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r3.status_code, 201)
+        ciclo_id = r3.json()["id"]
+
+        r4 = client.post(f"/api/hospital/cme/ciclos/{ciclo_id}/uso",
+                          data=json.dumps({"paciente_uso": "Paciente Teste"}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r4.status_code, 200)
+
+    def test_radioterapia_cockpit_e_progresso(self):
+        empresa = _empresa_hospital("hrt@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/radioterapia/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("em construção", r.content.decode())
+
+        r2 = client.post("/api/hospital/radioterapia/sessoes",
+                          data=json.dumps({"paciente": "Paciente RT", "dose_prescrita_gy": 60,
+                                            "numero_fracoes_total": 30}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        pk = r2.json()["sessao"]["id"]
+
+        r3 = client.patch(f"/api/hospital/radioterapia/sessoes/{pk}",
+                           data=json.dumps({"status": "em_andamento", "numero_fracoes_realizadas": 1}),
+                           content_type="application/json", secure=True)
+        self.assertEqual(r3.status_code, 200)
+
+    def test_rhc_cockpit_e_adicionar_tratamento(self):
+        empresa = _empresa_hospital("hrhc@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/rhc/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("RHC", html)
+        self.assertIn("Exportar RHCNET", html)
+        self.assertNotIn("em construção", html)
+
+        hoje = timezone.now().strftime("%Y-%m-%d")
+        r2 = client.post("/api/hospital/rhc/registros",
+                          data=json.dumps({"nome_paciente": "Paciente Onco", "data_nascimento": "1970-01-01",
+                                            "sexo": "F", "cid_topografia": "C50", "estadiamento": "II",
+                                            "data_primeiro_atendimento": hoje}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        pk = r2.json()["id"]
+        r3 = client.post(f"/api/hospital/rhc/registros/{pk}/tratar",
+                          data=json.dumps({"tratamento": "quimio"}), content_type="application/json", secure=True)
+        self.assertEqual(r3.status_code, 200)
+
+    def test_nhve_cockpit_e_confirmar(self):
+        empresa = _empresa_hospital("hnhve@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/nhve/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("NHVE", html)
+        self.assertIn("Notificar SINAN", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/nhve/notificacoes",
+                          data=json.dumps({"doenca_cid": "A90", "data_notificacao": timezone.now().strftime("%Y-%m-%d")}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        pk = r2.json()["id"]
+        r3 = client.post(f"/api/hospital/nhve/notificacoes/{pk}/confirmar", secure=True)
+        self.assertEqual(r3.status_code, 200)
+        r4 = client.post(f"/api/hospital/nhve/notificacoes/{pk}/notificar-sinan", secure=True)
+        self.assertEqual(r4.status_code, 200)
+
+    def test_same_cockpit_e_devolver_emprestimo(self):
+        empresa = _empresa_hospital("hsame@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/same/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("SAME", html)
+        self.assertIn("Devolver", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/same/pacientes",
+                          data=json.dumps({"prontuario": "PRT-001", "nome_paciente": "Paciente SAME"}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        codigo_id = r2.json()["codigo_same"]["id"]
+
+        r3 = client.post("/api/hospital/same/emprestimos",
+                          data=json.dumps({"codigo_same_id": codigo_id, "solicitante": "Dr. Fulano",
+                                            "setor": "Ambulatório",
+                                            "data_prevista_devolucao": (timezone.now() + timedelta(days=3)).strftime("%Y-%m-%d")}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r3.status_code, 201)
+        emprestimo_id = r3.json()["emprestimo"]["id"]
+
+        r4 = client.post(f"/api/hospital/same/emprestimos/{emprestimo_id}/devolver", secure=True)
+        self.assertEqual(r4.status_code, 200)
+
+    def test_telemedicina_cockpit_e_iniciar_encerrar(self):
+        empresa = _empresa_hospital("htele@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/telemedicina/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("Telemedicina", html)
+        self.assertIn("Agendar consulta", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/telemedicina/consultas",
+                          data=json.dumps({"paciente_nome": "Paciente Tele", "especialidade": "Clínica Geral",
+                                            "medico": "Dra. Teste"}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        pk = r2.json()["id"]
+        r3 = client.post(f"/api/hospital/telemedicina/consultas/{pk}/iniciar", secure=True)
+        self.assertEqual(r3.status_code, 200)
+        r4 = client.post(f"/api/hospital/telemedicina/consultas/{pk}/encerrar", secure=True)
+        self.assertEqual(r4.status_code, 200)
+
+    def test_manutencao_cockpit_e_concluir_os(self):
+        empresa = _empresa_hospital("hman@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/manutencao/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("Manutenção", html)
+        self.assertIn("Abrir OS", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/manutencao/ordens",
+                          data=json.dumps({"descricao": "Ar-condicionado com vazamento", "setor": "UTI"}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        pk = r2.json()["ordem"]["id"]
+        r3 = client.post(f"/api/hospital/manutencao/ordens/{pk}/concluir",
+                          data=json.dumps({"custo_real": 350.0}), content_type="application/json", secure=True)
+        self.assertEqual(r3.status_code, 200)
+
+    def test_lavanderia_cockpit_e_registrar_ciclo(self):
+        empresa = _empresa_hospital("hlav@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/lavanderia/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("Lavanderia", html)
+        self.assertIn("Registrar ciclo", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/lavanderia/itens",
+                          data=json.dumps({"descricao": "Lençol", "quantidade_total": 100, "setor": "Central"}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+        item_id = r2.json()["item"]["id"]
+        r3 = client.post("/api/hospital/lavanderia/ciclos",
+                          data=json.dumps({"item_id": item_id, "quantidade": 20, "tipo": "entrada_sujo"}),
+                          content_type="application/json", secure=True)
+        self.assertEqual(r3.status_code, 201)
+
+    def test_epimed_cockpit_e_gerar_lote(self):
+        empresa = _empresa_hospital("hepi@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/epimed/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("Epimed", html)
+        self.assertIn("Gerar lote", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.post("/api/hospital/epimed/gerar", data="{}", content_type="application/json", secure=True)
+        self.assertEqual(r2.status_code, 201)
+
+    def test_betha_cockpit_e_status(self):
+        empresa = _empresa_hospital("hbetha@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/betha/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("Betha", html)
+        self.assertIn("Sincronizar Almoxarifado", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.get("/api/hospital/betha/status", secure=True)
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn("credencial_configurada", r2.json())
+
+    def test_drg_cockpit_e_classificar(self):
+        empresa = _empresa_hospital("hdrg@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/drg/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("DRG", html)
+        self.assertIn("Classificar internação", html)
+        self.assertNotIn("em construção", html)
+
+        r2 = client.get("/api/hospital/drg/status", secure=True)
+        self.assertEqual(r2.status_code, 200)

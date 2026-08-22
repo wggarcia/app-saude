@@ -5,9 +5,10 @@ Hospital — CME (Central de Materiais e Esterilização)
   • KPIs e alertas de vencimento
 """
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.db.models import Count, Q
+from django.utils.dateparse import parse_datetime
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -25,6 +26,7 @@ from .access_control import (
     requer_permissao_modulo,
 )
 from .views_dashboard import contexto_navegacao_setorial
+from .services.modulo_operavel import render_modulo_operavel
 
 
 # ─── Auth helper ──────────────────────────────────────────────────────────────
@@ -86,9 +88,71 @@ def _ciclo_to_dict(c):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_cme_page(request):
-    return render(request, "hospital_modulo_generico.html", {
-        "modulo_nome": "CME (Central de Materiais)", "modulo_icon": "🧼",
-        "kpis_url": "/api/hospital/cme/kpis", "lista_url": "/api/hospital/cme/instrumentais", "lista_titulo": "Instrumentais",
+    return render_modulo_operavel(request, {
+        "modulo_nome": "CME — Central de Materiais e Esterilização", "modulo_icon": "🧼",
+        "modulo_sub": "Rastreabilidade de instrumentais, ciclos de esterilização e validade",
+        "kpis": {"url": "/api/hospital/cme/kpis", "campos": [
+            {"key": "total_instrumentais", "label": "Instrumentais cadastrados"},
+            {"key": "ciclos_mes", "label": "Ciclos no mês"},
+            {"key": "reprovados_mes", "label": "Reprovados no mês", "cor": "warn"},
+            {"key": "pct_aprovados", "label": "% aprovados no mês", "cor": "ok"},
+        ]},
+        "lista": {
+            "url": "/api/hospital/cme/ciclos", "envelope": "ciclos", "id_field": "id",
+            "titulo": "Ciclos de esterilização",
+            "filtros": [{"key": "resultado", "label": "Todo resultado", "tipo": "select", "options": [
+                ["aprovado", "Aprovado"], ["reprovado", "Reprovado"], ["quarentena", "Quarentena"]]}],
+            "colunas": [
+                {"key": "numero_ciclo", "label": "Ciclo"},
+                {"key": "instrumental_nome", "label": "Instrumental"},
+                {"key": "metodo", "label": "Método", "tipo": "chip",
+                 "labels": {"autoclave_134": "Autoclave 134°C", "autoclave_121": "Autoclave 121°C",
+                            "quimico": "Química", "plasma": "Plasma H₂O₂"},
+                 "chip_cores": {"autoclave_134": "accent", "autoclave_121": "accent", "quimico": "warn", "plasma": "ok"}},
+                {"key": "data_esterilizacao", "label": "Esterilizado em"},
+                {"key": "validade_ate", "label": "Válido até", "tipo": "data"},
+                {"key": "resultado", "label": "Resultado", "tipo": "chip",
+                 "labels": {"aprovado": "Aprovado", "reprovado": "Reprovado", "quarentena": "Quarentena"},
+                 "chip_cores": {"aprovado": "ok", "reprovado": "danger", "quarentena": "warn"}},
+                {"key": "paciente_uso", "label": "Usado em"},
+            ],
+        },
+        "lista_secundaria": {
+            "url": "/api/hospital/cme/vencimentos", "envelope": "alertas", "titulo": "Vencendo em até 7 dias",
+            "colunas": [
+                {"key": "numero_ciclo", "label": "Ciclo"}, {"key": "instrumental_nome", "label": "Instrumental"},
+                {"key": "validade_ate", "label": "Vence em", "tipo": "data"},
+                {"key": "dias_para_vencer", "label": "Dias"},
+            ],
+        },
+        "criar": {
+            "url": "/api/hospital/cme/ciclos", "titulo_botao": "+ Novo ciclo", "titulo_modal": "Registrar ciclo de esterilização",
+            "campos": [
+                {"key": "instrumental_id", "label": "ID do instrumental", "tipo": "number", "placeholder": "Cadastre o instrumental antes se ainda não existir"},
+                {"key": "numero_ciclo", "label": "Número do ciclo"},
+                {"key": "metodo", "label": "Método", "tipo": "select", "options": [
+                    ["autoclave_134", "Autoclave 134°C"], ["autoclave_121", "Autoclave 121°C"],
+                    ["quimico", "Esterilização Química"], ["plasma", "Plasma de H₂O₂"]]},
+                {"key": "data_esterilizacao", "label": "Data/hora da esterilização", "tipo": "datetime-local"},
+                {"key": "validade_ate", "label": "Válido até", "tipo": "date"},
+                {"key": "responsavel", "label": "Responsável"},
+                {"key": "lote_produto", "label": "Lote do produto"},
+                {"key": "resultado", "label": "Resultado", "tipo": "select", "options": [
+                    ["aprovado", "Aprovado"], ["reprovado", "Reprovado"], ["quarentena", "Quarentena"]]},
+            ],
+        },
+        "acoes": [
+            {"key": "uso", "label": "Registrar uso", "url_tpl": "/api/hospital/cme/ciclos/{id}/uso", "metodo": "POST",
+             "campos": [{"key": "paciente_uso", "label": "Paciente em que foi utilizado"}],
+             "so_se": {"campo": "resultado", "valor": "aprovado"}},
+        ],
+        "acoes_modulo": [
+            {"key": "novo_instrumental", "label": "+ Cadastrar instrumental", "url": "/api/hospital/cme/instrumentais", "metodo": "POST",
+             "campos": [{"key": "nome", "label": "Nome do instrumental"}, {"key": "codigo", "label": "Código"},
+                        {"key": "tipo", "label": "Tipo", "tipo": "select", "options": [
+                            ["caixa", "Caixa Cirúrgica"], ["avulso", "Item Avulso"], ["textil", "Têxtil / Roupa Cirúrgica"]]},
+                        {"key": "setor_origem", "label": "Setor de origem"}]},
+        ],
     })
 # ─── API: Instrumentais ───────────────────────────────────────────────────────
 
@@ -204,13 +268,28 @@ def api_cme_ciclos(request):
         except InstrumentalCirurgico.DoesNotExist:
             return JsonResponse({"erro": "Instrumental não encontrado."}, status=404)
 
+        # data_esterilizacao é DateTimeField e validade_ate é DateField — parseia
+        # explicitamente em vez de passar a string crua (o ORM não converte na
+        # instância em memória, só ao ler de volta do banco; sem isso, o
+        # serializer quebra em .strftime() logo em seguida).
+        data_esterilizacao_raw = str(data["data_esterilizacao"])
+        data_esterilizacao = parse_datetime(data_esterilizacao_raw)
+        if data_esterilizacao is None:
+            return JsonResponse({"erro": "data_esterilizacao inválida (use YYYY-MM-DDTHH:MM)"}, status=400)
+        if timezone.is_naive(data_esterilizacao):
+            data_esterilizacao = timezone.make_aware(data_esterilizacao)
+        try:
+            validade_ate = date.fromisoformat(str(data["validade_ate"]))
+        except ValueError:
+            return JsonResponse({"erro": "validade_ate inválida (use YYYY-MM-DD)"}, status=400)
+
         ciclo = CicloCME.objects.create(
             empresa=empresa,
             instrumental=instrumental,
             metodo=data.get("metodo", "autoclave_134"),
             numero_ciclo=data["numero_ciclo"],
-            data_esterilizacao=data["data_esterilizacao"],
-            validade_ate=data["validade_ate"],
+            data_esterilizacao=data_esterilizacao,
+            validade_ate=validade_ate,
             responsavel=data.get("responsavel", ""),
             lote_produto=data.get("lote_produto", ""),
             resultado=data.get("resultado", "aprovado"),
