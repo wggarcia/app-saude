@@ -3068,7 +3068,28 @@ function _t(msg, tipo) {
 </aside>
 <script>
 function openModulePanel(url, title) {
-  window.location.href = url;
+  var panel = document.getElementById('modPanel');
+  var backdrop = document.getElementById('modBackdrop');
+  var iframe = document.getElementById('modPanelIframe');
+  var titleEl = document.getElementById('modPanelTitle');
+  // Fallback seguro: se o painel nao existir, navega como antes.
+  if (!panel || !iframe) { window.location.href = url; return; }
+  if (titleEl) titleEl.textContent = title || 'Modulo';
+  // Ao carregar, esconde o menu lateral do proprio modulo (mesma origem) —
+  // o modulo abre so com o conteudo, sem repetir o menu que ja esta na Gestao.
+  iframe.onload = function () {
+    try {
+      var d = iframe.contentDocument;
+      if (d) {
+        var sb = d.querySelector('.sidebar');
+        if (sb) sb.style.display = 'none';
+      }
+    } catch (e) { /* cross-doc bloqueado — mostra o modulo inteiro, sem quebrar */ }
+  };
+  iframe.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'embed=1';
+  panel.classList.add('open');
+  backdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 function closeModulePanel() {
   var panel = document.getElementById('modPanel');
