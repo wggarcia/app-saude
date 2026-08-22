@@ -20,6 +20,9 @@ _SST_BASE = [
     "sst.funcionarios",     # Cadastro de funcionários
     "sst.esocial",          # eSocial S-2220, S-2240, S-2245 (disponível desde Starter)
     "sst.psicossocial",     # Avaliação Psicossocial NR-01 (liberado para todos os planos SST)
+    "sst.saude_ocupacional",# Campanhas de vacinação ocupacional (views_vacinacao). Gate existia
+                            # no código mas faltava aqui — sem isto, o fail-closed bloqueava
+                            # vacinação para TODOS os tenants SST. Base porque os KPIs já eram abertos.
 ]
 _SST_PROFISSIONAL = _SST_BASE + [
     "sst.afastamentos",     # Gestão de afastamentos
@@ -179,10 +182,14 @@ _PLANO_OPERADORA = [
     "plano.diops_sib",          # DIOPS + SIB (obrigações ANS)
     "plano.ia_autorizacao",     # IA para autorização de guias
     "plano.portal_beneficiario",# Portal web do beneficiário
+    "plano.coparticipacao",     # Regras de coparticipação por contrato — operação básica de
+                                # QUALQUER operadora (cobrar a parte do beneficiário). Módulo
+                                # construído como padrão da Operadora; antes rotulado enterprise
+                                # por engano, o que nem era enforçado no código. Cobrança de
+                                # mensalidade (PIX/boleto/CNAB) não tem feature — já é aberta.
 ]
 _PLANO_ENTERPRISE = _PLANO_OPERADORA + [
-    "plano.coparticipacao",         # Regras de coparticipação por contrato (EXCLUSIVO ENTERPRISE)
-    "plano.faturamento",            # Faturamento integrado (EXCLUSIVO ENTERPRISE)
+    "plano.faturamento",            # Faturamento integrado com sistemas legados (EXCLUSIVO ENTERPRISE)
     "plano.sinistralidade_avancada",# Sinistralidade por segmento/produto (EXCLUSIVO ENTERPRISE)
     "plano.api_integracao",         # API de integração com sistemas legados (EXCLUSIVO ENTERPRISE)
 ]

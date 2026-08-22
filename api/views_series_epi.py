@@ -8,7 +8,14 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import SerieEpidemiologica, PontoSerie
 from .views_dashboard import _empresa_autenticada
-from .access_control import api_requer_feature
+from .access_control import api_requer_setor, requer_setor
+
+# Séries epidemiológicas servem os 4 segmentos de SAÚDE (Governo, Farmácia, Hospital,
+# Plano de Saúde) — Governo é o master de vigilância; os demais consomem tendências
+# do próprio segmento. SST NÃO tem mapa/série epidemiológica. Antes estava travado
+# por "sst.saude_ocupacional" (feature inexistente) → 403 para todos. Corrigido para
+# gate por setor. Endpoints são por-tenant (cada empresa gere as suas séries).
+_SETORES_EPI = ("governo", "farmacia", "hospital", "plano_saude")
 
 
 def _serie_to_dict(s, incluir_pontos=False):
@@ -61,7 +68,7 @@ def _serie_to_dict(s, incluir_pontos=False):
 
 
 @csrf_exempt
-@api_requer_feature("sst.saude_ocupacional")
+@api_requer_setor(*_SETORES_EPI)
 def api_series_epidemiologicas(request):
     """GET list / POST create séries."""
     empresa = _empresa_autenticada(request)
@@ -94,7 +101,7 @@ def api_series_epidemiologicas(request):
 
 
 @csrf_exempt
-@api_requer_feature("sst.saude_ocupacional")
+@api_requer_setor(*_SETORES_EPI)
 def api_serie_epidemiologica_detalhe(request, serie_id):
     """GET (com pontos) / PUT / DELETE série."""
     empresa = _empresa_autenticada(request)
@@ -127,7 +134,7 @@ def api_serie_epidemiologica_detalhe(request, serie_id):
 
 
 @csrf_exempt
-@api_requer_feature("sst.saude_ocupacional")
+@api_requer_setor(*_SETORES_EPI)
 def api_pontos_serie(request, serie_id):
     """GET pontos da série / POST adicionar ponto / DELETE todos."""
     empresa = _empresa_autenticada(request)
@@ -192,7 +199,7 @@ def api_pontos_serie(request, serie_id):
 
 
 @csrf_exempt
-@api_requer_feature("sst.saude_ocupacional")
+@api_requer_setor(*_SETORES_EPI)
 def api_ponto_serie_detalhe(request, ponto_id):
     """PUT / DELETE ponto individual."""
     empresa = _empresa_autenticada(request)
@@ -219,6 +226,7 @@ def api_ponto_serie_detalhe(request, ponto_id):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_setor(*_SETORES_EPI)
 def api_series_dashboard(request):
     """
     Dashboard de séries epidemiológicas com análise de tendências.
@@ -247,6 +255,7 @@ def api_series_dashboard(request):
     })
 
 
+@requer_setor(*_SETORES_EPI)
 def series_epi_page(request):
     from django.shortcuts import render
     return render(request, "series_epidemiologicas.html")

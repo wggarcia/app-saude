@@ -5,21 +5,29 @@
   <a class="nav-link{% if request.path == '/hospital/gestao/' %} active{% endif %}" href="/hospital/gestao/"><span>🏠</span> Painel</a>
 
   {% if hosp_ver_clinico %}
-  <div class="nav-section">Clínico</div>
+  <div class="nav-section">Assistencial</div>
   <a class="nav-link{% if request.path == '/hospital/prontuario/' %} active{% endif %}" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
   <a class="nav-link{% if request.path == '/hospital/cirurgia/' %} active{% endif %}" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
-  <a class="nav-link{% if request.path == '/hospital/lis/' %} active{% endif %}" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
-  <a class="nav-link{% if request.path == '/hospital/imagem/' %} active{% endif %}" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
-  <a class="nav-link{% if request.path == '/hospital/ia-autorizacao/' %} active{% endif %}" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
-  <a class="nav-link{% if request.path == '/hospital/assinatura/' %} active{% endif %}" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
-  <a class="nav-link{% if request.path == '/hospital/ccih/' %} active{% endif %}" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
-  <a class="nav-link{% if request.path == '/hospital/comissao-etica/' %} active{% endif %}" href="/hospital/comissao-etica/"><span>⚖️</span> Comissão de Ética Médica</a>
-  <a class="nav-link{% if request.path == '/hospital/hemoterapia/' %} active{% endif %}" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
   <a class="nav-link{% if request.path == '/hospital/obstetrico/' %} active{% endif %}" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
   <a class="nav-link{% if request.path == '/hospital/oncologia/' %} active{% endif %}" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link{% if request.path == '/hospital/hemoterapia/' %} active{% endif %}" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link{% if request.path == '/hospital/ccih/' %} active{% endif %}" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+
+  <div class="nav-section">Diagnóstico &amp; Apoio</div>
+  <a class="nav-link{% if request.path == '/hospital/lis/' %} active{% endif %}" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link{% if request.path == '/hospital/imagem/' %} active{% endif %}" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+
+  <div class="nav-section">Autorização &amp; OPME</div>
   <a class="nav-link{% if request.path == '/hospital/opme/' %} active{% endif %}" href="/hospital/opme/"><span>🦴</span> OPME</a>
-  <a class="nav-link{% if request.path == '/hospital/importacao/' %} active{% endif %}" href="/hospital/importacao/"><span>📥</span> Migração de Dados</a>
+  <a class="nav-link{% if request.path == '/hospital/ia-autorizacao/' %} active{% endif %}" href="/hospital/ia-autorizacao/"><span>🧠</span> IA de Autorização</a>
+
+  <div class="nav-section">Regulatório &amp; Integração</div>
+  <a class="nav-link{% if request.path == '/hospital/assinatura/' %} active{% endif %}" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link{% if request.path == '/hospital/comissao-etica/' %} active{% endif %}" href="/hospital/comissao-etica/"><span>⚖️</span> Comissão de Ética Médica</a>
   <a class="nav-link{% if request.path == '/hospital/rnds/' %} active{% endif %}" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+
+  <div class="nav-section">Dados</div>
+  <a class="nav-link{% if request.path == '/hospital/importacao/' %} active{% endif %}" href="/hospital/importacao/"><span>📥</span> Migração de Dados</a>
   {% endif %}
 
   {% if hosp_ver_operacional %}

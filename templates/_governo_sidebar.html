@@ -19,6 +19,7 @@
   <a class="nav-link{% if request.path == '/governo/esus/' %} active{% endif %}" href="/governo/esus/"><span>🔗</span> Integração e-SUS / RNDS</a>
   <a class="nav-link{% if request.path == '/governo/rag/' %} active{% endif %}" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
   <a class="nav-link{% if request.path == '/governo/agendamento/' %} active{% endif %}" href="/governo/agendamento/"><span>📅</span> Agendamento UBS</a>
+  <a class="nav-link{% if request.path == '/governo/caps/' %} active{% endif %}" href="/governo/caps/"><span>🧠</span> CAPS — Saúde Mental</a>
   {% endif %}
 
   {% if gov_ver_atencao_clinica or gov_ver_secretaria %}
@@ -66,6 +67,7 @@
   {% if gov_ver_regulacao_urgencia %}
   <div class="nav-section">Regulação / Urgência</div>
   <a class="nav-link{% if request.path == '/governo/regulacao/' %} active{% endif %}" href="/governo/regulacao/"><span>🏨</span> Regulação SISREG</a>
+  <a class="nav-link{% if request.path == '/governo/urgencia/' %} active{% endif %}" href="/governo/urgencia/"><span>🚑</span> Urgência / SAMU</a>
   <a class="nav-link{% if request.path == '/governo/tfd/' %} active{% endif %}" href="/governo/tfd/"><span>🚐</span> TFD / Veículos</a>
   {% endif %}
 

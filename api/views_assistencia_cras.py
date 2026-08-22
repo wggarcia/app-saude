@@ -40,48 +40,9 @@ def _assoc(request):
 
 # ─── HELPERS ────────────────────────────────────────────────────────────────
 
-def _cras_dict(u):
-    return {
-        "id": u.id,
-        "nome": u.nome,
-        "codigo_cras": u.codigo_cras,
-        "cnes": u.cnes,
-        "endereco": u.endereco,
-        "bairro": u.bairro,
-        "municipio": u.municipio,
-        "uf": u.uf,
-        "cep": u.cep,
-        "telefone": u.telefone,
-        "email": u.email,
-        "responsavel_tecnico": u.responsavel_tecnico,
-        "ativo": u.ativo,
-    }
+from .services.suas import cras_dict as _cras_dict, familia_dict as _familia_dict, visita_dict as _visita_dict
 
 
-def _familia_dict(f):
-    return {
-        "id": f.id,
-        "numero_prontuario": f.numero_prontuario,
-        "responsavel_nome": f.responsavel_nome,
-        "responsavel_cpf": f.responsavel_cpf,
-        "responsavel_nis": f.responsavel_nis,
-        "responsavel_cns": f.responsavel_cns,
-        "responsavel_data_nascimento": str(f.responsavel_data_nascimento) if f.responsavel_data_nascimento else None,
-        "responsavel_telefone": f.responsavel_telefone,
-        "num_integrantes": f.num_integrantes,
-        "renda_familiar_total": float(f.renda_familiar_total) if f.renda_familiar_total is not None else None,
-        "endereco": f.endereco,
-        "bairro": f.bairro,
-        "cadUnico_numero_seq": f.cadUnico_numero_seq,
-        "marcador_pbf": f.marcador_pbf,
-        "marcador_bpc": f.marcador_bpc,
-        "situacao": f.situacao,
-        "unidade_cras_id": f.unidade_cras_id,
-        "unidade_cras_nome": f.unidade_cras.nome if f.unidade_cras else None,
-        "data_cadastro": str(f.data_cadastro),
-        "observacoes": f.observacoes,
-        "criado_em": f.criado_em.isoformat(),
-    }
 
 
 def _atendimento_dict(a):
@@ -102,19 +63,6 @@ def _atendimento_dict(a):
     }
 
 
-def _visita_dict(v):
-    return {
-        "id": v.id,
-        "familia_id": v.familia_id,
-        "familia_nome": v.familia.responsavel_nome,
-        "tecnico_nome": v.tecnico_nome,
-        "data_visita": str(v.data_visita),
-        "objetivo": v.objetivo,
-        "relato": v.relato,
-        "resultado": v.resultado,
-        "vulnerabilidade_identificada": v.vulnerabilidade_identificada,
-        "criado_em": v.criado_em.isoformat(),
-    }
 
 
 def _prontuario_paif_dict(p):

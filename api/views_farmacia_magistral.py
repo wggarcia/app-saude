@@ -20,7 +20,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature, get_setor
+from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo, requer_feature_pacote, api_requer_feature, get_setor
 from .utils import validar_cpf_cadastro
 
 from .services.auth_session import empresa_autenticada_from_request
@@ -98,6 +98,7 @@ def _consumir_materias_primas(empresa, om):
 @ensure_csrf_cookie
 @requer_setor("farmacia")
 @requer_operacao_page
+@requer_feature_pacote("farmacia.magistral", "Farmácia Magistral")
 @requer_permissao_modulo("farmacia.gestao")
 def farmacia_magistral_page(request):
     return render(request, "farmacia_magistral.html")

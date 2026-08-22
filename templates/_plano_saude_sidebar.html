@@ -1,31 +1,40 @@
 <aside class="sidebar">
   <div class="logo">Plano de Saúde</div>
-  <div class="nav-section">Navegação</div>
+
+  <div class="nav-section">Visão Geral</div>
   <a class="nav-link{% if request.path == '/plano-saude/gestao/' %} active{% endif %}" href="/plano-saude/gestao/"><span>&#127968;</span> Gestão Operacional</a>
+  {% if ps_ver_autorizacao %}
+  <a class="nav-link{% if request.path == '/plano-saude/portal-admin/' %} active{% endif %}" href="/plano-saude/portal-admin/"><span>&#128100;</span> Portal do Beneficiário</a>
+  {% endif %}
+
   {% if ps_ver_comercial %}
   <div class="nav-section">Comercial</div>
   <a class="nav-link{% if request.path == '/plano-saude/corretores/' %} active{% endif %}" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
   {% endif %}
+
   {% if ps_ver_rede_credenciada %}
-  <div class="nav-section">Rede</div>
+  <div class="nav-section">Rede Credenciada</div>
   <a class="nav-link{% if request.path == '/plano-saude/rede/' %} active{% endif %}" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+  <a class="nav-link{% if request.path == '/plano-saude/portal-prestador/' %} active{% endif %}" href="/plano-saude/portal-prestador/"><span>&#127973;</span> Portal do Prestador</a>
   <a class="nav-link{% if request.path == '/plano-saude/tiss-recepcao/' %} active{% endif %}" href="/plano-saude/tiss-recepcao/"><span>&#128229;</span> Recepção TISS</a>
-  <a class="nav-link{% if request.path == '/plano-saude/contas/' %} active{% endif %}" href="/plano-saude/contas/"><span>&#128176;</span> Contas &middot; Repasse</a>
-  <a class="nav-link{% if request.path == '/plano-saude/portal-prestador/' %} active{% endif %}" href="/plano-saude/portal-prestador/"><span>&#128100;</span> Portal do Prestador</a>
+  <a class="nav-link{% if request.path == '/plano-saude/contas/' %} active{% endif %}" href="/plano-saude/contas/"><span>&#128181;</span> Contas &middot; Repasse</a>
   {% endif %}
-  {% if ps_ver_compliance_ans %}
-  <div class="nav-section">Regulatório</div>
-  <a class="nav-link{% if request.path == '/plano-saude/ans/' %} active{% endif %}" href="/plano-saude/ans/"><span>&#128196;</span> Obrigações ANS</a>
-  <a class="nav-link{% if request.path == '/plano-saude/tuss/' %} active{% endif %}" href="/plano-saude/tuss/"><span>&#128203;</span> TUSS / Rol ANS / NIP</a>
-  {% endif %}
+
   {% if ps_ver_autorizacao %}
-  <div class="nav-section">IA</div>
-  <a class="nav-link{% if request.path == '/plano-saude/ia/' %} active{% endif %}" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorização</a>
-  <a class="nav-link{% if request.path == '/plano-saude/coparticipacao/' %} active{% endif %}" href="/plano-saude/coparticipacao/"><span>&#129534;</span> Coparticipação</a>
-  <a class="nav-link{% if request.path == '/plano-saude/cobranca/' %} active{% endif %}" href="/plano-saude/cobranca/"><span>&#129534;</span> Mensalidade &middot; Boleto/PIX</a>
-  <div class="nav-section">Beneficiários</div>
-  <a class="nav-link{% if request.path == '/plano-saude/portal-admin/' %} active{% endif %}" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiário</a>
+  <div class="nav-section">Autorização &amp; IA</div>
+  <a class="nav-link{% if request.path == '/plano-saude/ia/' %} active{% endif %}" href="/plano-saude/ia/"><span>&#129504;</span> IA de Autorização</a>
+
+  <div class="nav-section">Financeiro</div>
+  <a class="nav-link{% if request.path == '/plano-saude/coparticipacao/' %} active{% endif %}" href="/plano-saude/coparticipacao/"><span>&#10135;</span> Coparticipação</a>
+  <a class="nav-link{% if request.path == '/plano-saude/cobranca/' %} active{% endif %}" href="/plano-saude/cobranca/"><span>&#128179;</span> Mensalidade &middot; Boleto/PIX</a>
   {% endif %}
+
+  {% if ps_ver_compliance_ans %}
+  <div class="nav-section">Regulatório ANS</div>
+  <a class="nav-link{% if request.path == '/plano-saude/ans/' %} active{% endif %}" href="/plano-saude/ans/"><span>&#128196;</span> Obrigações ANS</a>
+  <a class="nav-link{% if request.path == '/plano-saude/tuss/' %} active{% endif %}" href="/plano-saude/tuss/"><span>&#128203;</span> TUSS &middot; Rol ANS &middot; NIP</a>
+  {% endif %}
+
   <div class="sidebar-footer">
     <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
   </div>

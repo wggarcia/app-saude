@@ -1,15 +1,9 @@
 <aside class="sidebar">
   <div class="logo">💊 Farmácia</div>
 
-  <div class="nav-section">Navegação</div>
+  <div class="nav-section">Visão Geral</div>
   <a class="nav-link{% if request.path == '/farmacia/' %} active{% endif %}" href="/farmacia/"><span>📊</span> Inteligência</a>
   <a class="nav-link{% if request.path == '/farmacia/gestao/' %} active{% endif %}" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
-  {% if mostrar_link_ti %}
-  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>🖥️</span> Ambiente IT</a>
-  {% endif %}
-  {% if mostrar_aba_gerencia %}
-  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
-  {% endif %}
 
   {% if farm_ver_pdv %}
   <div class="nav-section">PDV</div>
@@ -17,26 +11,42 @@
   {% endif %}
 
   {% if farm_ver_gestao %}
-  <div class="nav-section">Gestão</div>
+  <div class="nav-section">Operação</div>
   <a class="nav-link{% if request.path == '/farmacia/pbm/' %} active{% endif %}" href="/farmacia/pbm/"><span>💳</span> PBM / Convênios</a>
-  <a class="nav-link{% if request.path == '/farmacia/financeiro/' %} active{% endif %}" href="/farmacia/financeiro/"><span>📈</span> Financeiro / DRE</a>
+  <a class="nav-link{% if request.path == '/farmacia/sngpc/' %} active{% endif %}" href="/farmacia/sngpc/"><span>📋</span> SNGPC</a>
+  <a class="nav-link{% if request.path == '/farmacia/fidelidade/' %} active{% endif %}" href="/farmacia/fidelidade/"><span>⭐</span> Fidelidade</a>
   <a class="nav-link{% if request.path == '/farmacia/delivery/' %} active{% endif %}" href="/farmacia/delivery/"><span>🛵</span> E-commerce / Delivery</a>
+
+  <div class="nav-section">Financeiro</div>
+  <a class="nav-link{% if request.path == '/farmacia/financeiro/' %} active{% endif %}" href="/farmacia/financeiro/"><span>📈</span> Financeiro / DRE</a>
+
+  <div class="nav-section">Produção</div>
   <a class="nav-link{% if request.path == '/farmacia/magistral/' %} active{% endif %}" href="/farmacia/magistral/"><span>🧪</span> Farmácia Magistral</a>
   <a class="nav-link{% if request.path == '/farmacia/producao/' %} active{% endif %}" href="/farmacia/producao/"><span>🏭</span> Produção Industrial</a>
-  <a class="nav-link{% if request.path == '/farmacia/sngpc/' %} active{% endif %}" href="/farmacia/sngpc/"><span>📋</span> SNGPC</a>
-  <a class="nav-link{% if request.path == '/farmacia/unidades/' %} active{% endif %}" href="/farmacia/unidades/"><span>🏬</span> Unidades (Multi-loja)</a>
-  <a class="nav-link{% if request.path == '/farmacia/fidelidade/' %} active{% endif %}" href="/farmacia/fidelidade/"><span>⭐</span> Fidelidade</a>
   {% endif %}
 
+  {% if farm_ver_rede or farm_ver_gestao %}
+  <div class="nav-section">Rede &amp; Multiloja</div>
+  {% if farm_ver_gestao %}
+  <a class="nav-link{% if request.path == '/farmacia/unidades/' %} active{% endif %}" href="/farmacia/unidades/"><span>🏬</span> Unidades (Multi-loja)</a>
+  {% endif %}
   {% if farm_ver_rede %}
-  <div class="nav-section">Rede</div>
   <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
   <a class="nav-link{% if request.path == '/farmacia/rede/disponibilidade/' %} active{% endif %}" href="/farmacia/rede/disponibilidade/"><span>🔎</span> Disponibilidade na Rede</a>
   {% endif %}
+  {% endif %}
 
-  {% if mostrar_link_rh %}
+  {% if mostrar_link_rh or mostrar_link_ti or mostrar_aba_gerencia %}
   <div class="nav-section">Governança</div>
+  {% if mostrar_aba_gerencia %}
+  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
+  {% endif %}
+  {% if mostrar_link_rh %}
   <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>👤</span> Portal RH</a>
+  {% endif %}
+  {% if mostrar_link_ti %}
+  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>🖥️</span> Ambiente IT</a>
+  {% endif %}
   {% endif %}
 
   <div class="sidebar-footer">
