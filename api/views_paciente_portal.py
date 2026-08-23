@@ -804,8 +804,20 @@ def paciente_mensagens(request):
 
 from .access_control import (  # noqa: E402
     requer_setor, api_requer_feature, api_requer_permissao_modulo,
+    requer_operacao_page, requer_permissao_modulo,
 )
 from django.views.decorators.http import require_http_methods  # noqa: E402
+from django.views.decorators.csrf import ensure_csrf_cookie  # noqa: E402
+
+
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.administrativo")
+def hospital_portal_paciente_page(request):
+    """Tela do cockpit hospitalar para a equipe gerir o Portal do Paciente:
+    criar/gerir agendamentos e responder as mensagens dos pacientes."""
+    return render(request, "hospital_portal_paciente.html")
 
 
 def _hosp_empresa(request):
@@ -821,13 +833,30 @@ def _identidade_para(empresa, identidade_id):
 
 
 @csrf_exempt
-@require_http_methods(["POST"])
-def hospital_agenda_criar(request):
-    """POST /api/hospital/paciente-agenda — a equipe cria um agendamento para o
-    paciente (aparece no portal dele). Body: identidade_id, tipo, data_hora, ..."""
+@require_http_methods(["GET", "POST"])
+def hospital_agenda(request):
+    """GET  /api/hospital/paciente-agenda — a equipe lista os agendamentos.
+    POST /api/hospital/paciente-agenda — a equipe cria um agendamento (aparece no
+    portal do paciente). Body: identidade_id, tipo, data_hora, especialidade…"""
     emp = _hosp_empresa(request)
     if not emp:
         return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
+
+    if request.method == "GET":
+        qs = AgendamentoPaciente.objects.filter(empresa=emp).select_related("identidade")
+        ident_id = request.GET.get("identidade_id")
+        if ident_id:
+            qs = qs.filter(identidade_id=ident_id)
+        agora = timezone.now()
+        items = []
+        for a in qs.order_by("-data_hora")[:300]:
+            d = _agendamento_dict(a)
+            d["paciente_nome"] = a.identidade.nome
+            d["identidade_id"] = a.identidade_id
+            d["futuro"] = a.data_hora >= agora and a.status in ("agendado", "confirmado")
+            items.append(d)
+        return JsonResponse({"agendamentos": items})
+
     try:
         b = json.loads(request.body or "{}")
     except Exception:
@@ -849,6 +878,91 @@ def hospital_agenda_criar(request):
         data_hora=dt, observacoes=b.get("observacoes", ""),
     )
     return JsonResponse({"status": "ok", "id": a.id}, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def hospital_agenda_status(request, pk):
+    """POST /api/hospital/paciente-agenda/<pk>/status {status} — realizar/cancelar."""
+    emp = _hosp_empresa(request)
+    if not emp:
+        return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
+    try:
+        novo = (json.loads(request.body or "{}").get("status") or "").strip()
+    except Exception:
+        novo = ""
+    if novo not in ("realizado", "cancelado", "agendado", "confirmado"):
+        return JsonResponse({"erro": "status inválido"}, status=400)
+    n = AgendamentoPaciente.objects.filter(id=pk, empresa=emp).update(status=novo)
+    if not n:
+        return JsonResponse({"erro": "Agendamento não encontrado"}, status=404)
+    return JsonResponse({"status": "ok"})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def hospital_pacientes_busca(request):
+    """GET /api/hospital/pacientes-busca?q= — busca identidades do hospital por
+    nome/CPF, para a equipe escolher ao criar um agendamento."""
+    emp = _hosp_empresa(request)
+    if not emp:
+        return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
+    q = (request.GET.get("q") or "").strip()
+    qs = IdentidadePaciente.objects.filter(empresa=emp)
+    if q:
+        qd = cpf_digitos(q)
+        cond = Q(nome__icontains=q)
+        if qd:
+            cond |= Q(cpf__startswith=qd)
+        qs = qs.filter(cond)
+    itens = [{"id": i.id, "nome": i.nome, "cpf_mascarado": _mascara_cpf(i.cpf)}
+             for i in qs.order_by("nome")[:20]]
+    return JsonResponse({"pacientes": itens})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def hospital_mensagens_threads(request):
+    """GET /api/hospital/paciente-mensagens — caixa de entrada: um item por
+    paciente que tem conversa, com a última mensagem e quantas não lidas."""
+    emp = _hosp_empresa(request)
+    if not emp:
+        return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
+    threads = {}
+    qs = (MensagemPacientePortal.objects.filter(empresa=emp)
+          .select_related("identidade").order_by("criado_em"))
+    for m in qs:
+        t = threads.setdefault(m.identidade_id, {
+            "identidade_id": m.identidade_id, "paciente_nome": m.identidade.nome,
+            "ultima": "", "data": "", "nao_lidas": 0,
+        })
+        t["ultima"] = ("Você: " if m.autor == "equipe" else "") + m.texto[:60]
+        t["data"] = m.criado_em.strftime("%d/%m/%Y %H:%M")
+        if m.autor == "paciente" and not m.lida_equipe:
+            t["nao_lidas"] += 1
+    ordered = sorted(threads.values(), key=lambda x: (x["nao_lidas"] == 0, x["data"]), reverse=True)
+    return JsonResponse({"threads": ordered})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def hospital_mensagens_thread(request, identidade_id):
+    """GET /api/hospital/paciente-mensagens/<identidade_id> — conversa completa de
+    um paciente; marca as mensagens do paciente como lidas pela equipe."""
+    emp = _hosp_empresa(request)
+    if not emp:
+        return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
+    ident = _identidade_para(emp, identidade_id)
+    if not ident:
+        return JsonResponse({"erro": "Paciente não encontrado"}, status=404)
+    qs = list(MensagemPacientePortal.objects.filter(empresa=emp, identidade=ident).order_by("criado_em"))
+    nao_lidas = [m.id for m in qs if m.autor == "paciente" and not m.lida_equipe]
+    if nao_lidas:
+        MensagemPacientePortal.objects.filter(id__in=nao_lidas).update(lida_equipe=True)
+    return JsonResponse({
+        "paciente_nome": ident.nome,
+        "mensagens": [_mensagem_dict(m) for m in qs],
+    })
 
 
 @csrf_exempt

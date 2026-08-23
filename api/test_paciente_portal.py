@@ -331,6 +331,58 @@ class PortalPacienteTests(TestCase):
         self.assertEqual(r.status_code, 201)
         self.assertTrue(AgendamentoPaciente.objects.using(_DB).filter(identidade=ident, especialidade="Ortopedia").exists())
 
+    def test_hospital_gestao_agenda_e_mensagens(self):
+        from .models import IdentidadePaciente as IP
+        tok = self._logar()  # cria identidade + conta do paciente
+        ident = IP.objects.using(_DB).get(empresa=self.emp, cpf="39053344705")
+        ec = self._cookie_empresa(self.emp)
+
+        # página da gestão abre
+        pg = ec.get("/hospital/portal-paciente/", secure=True)
+        self.assertEqual(pg.status_code, 200)
+        self.assertIn("Portal do Paciente", pg.content.decode())
+
+        # busca de paciente
+        rb = ec.get(f"/api/hospital/pacientes-busca?q={ident.nome[:5]}", secure=True)
+        self.assertEqual(rb.status_code, 200)
+        self.assertTrue(any(p["id"] == ident.id for p in rb.json()["pacientes"]))
+
+        # cria agendamento e lista
+        rc = ec.post("/api/hospital/paciente-agenda",
+                     data=json.dumps({"identidade_id": ident.id, "tipo": "consulta",
+                                      "especialidade": "Dermatologia",
+                                      "data_hora": (timezone.now() + timedelta(days=4)).isoformat()}),
+                     content_type="application/json", secure=True)
+        self.assertEqual(rc.status_code, 201)
+        pk = rc.json()["id"]
+        rl = ec.get("/api/hospital/paciente-agenda", secure=True)
+        self.assertEqual(rl.status_code, 200)
+        self.assertTrue(any(a["id"] == pk and a["paciente_nome"] == ident.nome for a in rl.json()["agendamentos"]))
+
+        # status realizar
+        rs = ec.post(f"/api/hospital/paciente-agenda/{pk}/status",
+                     data=json.dumps({"status": "realizado"}), content_type="application/json", secure=True)
+        self.assertEqual(rs.status_code, 200)
+
+        # paciente manda msg → aparece nas threads → equipe abre e responde
+        self.client.post("/api/paciente/mensagens", data=json.dumps({"texto": "Oi, tudo bem?"}),
+                         content_type="application/json", secure=True, HTTP_AUTHORIZATION=f"Bearer {tok}")
+        rt = ec.get("/api/hospital/paciente-mensagens", secure=True)
+        self.assertEqual(rt.status_code, 200)
+        th = rt.json()["threads"]
+        self.assertTrue(any(t["identidade_id"] == ident.id and t["nao_lidas"] == 1 for t in th))
+        # abre thread (marca como lida) e responde
+        ro = ec.get(f"/api/hospital/paciente-mensagens/{ident.id}", secure=True)
+        self.assertEqual(ro.status_code, 200)
+        self.assertEqual(len(ro.json()["mensagens"]), 1)
+        rr = ec.post(f"/api/hospital/paciente-mensagens/{ident.id}/responder",
+                     data=json.dumps({"texto": "Tudo! Como posso ajudar?", "autor_nome": "Dra. Ana"}),
+                     content_type="application/json", secure=True)
+        self.assertEqual(rr.status_code, 201)
+        # agora não há mais não lidas
+        rt2 = ec.get("/api/hospital/paciente-mensagens", secure=True)
+        self.assertTrue(all(t["nao_lidas"] == 0 for t in rt2.json()["threads"]))
+
     def test_pagina_portal_publica(self):
         r = self.client.get("/paciente/", secure=True)
         self.assertEqual(r.status_code, 200)

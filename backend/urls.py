@@ -1350,7 +1350,9 @@ from api.views_paciente_portal import (
     paciente_meus_exames, paciente_exame_explicar, paciente_resumo,
     paciente_exportar, paciente_excluir_conta, paciente_compartilhar_exame,
     exame_compartilhado_page, paciente_agenda, paciente_agenda_confirmar,
-    paciente_mensagens, hospital_agenda_criar, hospital_paciente_responder,
+    paciente_mensagens, hospital_agenda, hospital_agenda_status,
+    hospital_pacientes_busca, hospital_mensagens_threads, hospital_mensagens_thread,
+    hospital_paciente_responder, hospital_portal_paciente_page,
 )
 from api.views_funcionario_portal import (
     funcionario_login, funcionario_registrar, funcionario_buscar_cpf, funcionario_dashboard,
@@ -2852,8 +2854,13 @@ urlpatterns = [
     path('api/paciente/agenda/<int:pk>/confirmar', paciente_agenda_confirmar),
     path('api/paciente/mensagens', paciente_mensagens),
     path('exame-compartilhado/<str:token>', exame_compartilhado_page),
-    # lado hospital (equipe) — alimenta a agenda e responde mensagens do paciente
-    path('api/hospital/paciente-agenda', hospital_agenda_criar),
+    # lado hospital (equipe) — gere a agenda e responde mensagens do paciente
+    path('hospital/portal-paciente/', hospital_portal_paciente_page),
+    path('api/hospital/paciente-agenda', hospital_agenda),
+    path('api/hospital/paciente-agenda/<int:pk>/status', hospital_agenda_status),
+    path('api/hospital/pacientes-busca', hospital_pacientes_busca),
+    path('api/hospital/paciente-mensagens', hospital_mensagens_threads),
+    path('api/hospital/paciente-mensagens/<int:identidade_id>', hospital_mensagens_thread),
     path('api/hospital/paciente-mensagens/<int:identidade_id>/responder', hospital_paciente_responder),
 
     # ── Portal do Funcionário (app mobile trabalhador SST) ────────────────────

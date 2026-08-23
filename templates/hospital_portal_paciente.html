@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portal do Paciente — Gestão</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--surface3:#103049;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#6d9cb5;--faint:#3f6377;--border:rgba(0,194,255,.12);--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding:0 0 60px}
+h1{font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+.top{position:sticky;top:0;z-index:30;background:rgba(4,16,24,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.top .sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.btn{border:none;border-radius:10px;padding:11px 16px;font-size:.85rem;font-weight:700;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#02121b}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);text-decoration:none}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+.btn-sm{padding:8px 12px;font-size:.76rem;border-radius:8px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin:22px 0 20px}
+.tab{background:none;border:none;padding:12px 4px;margin-right:22px;color:var(--muted);font-weight:800;font-size:.92rem;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:640px}
+th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.chip{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.c-agendado{background:rgba(0,194,255,.14);color:var(--accent)} .c-confirmado{background:rgba(0,229,176,.14);color:var(--ok)}
+.c-realizado{background:rgba(109,156,181,.16);color:var(--muted)} .c-cancelado{background:rgba(255,77,109,.16);color:var(--danger)}
+.empty{text-align:center;color:var(--muted);padding:34px;font-size:.85rem}
+.acoes{display:flex;gap:6px;flex-wrap:wrap}
+/* mensagens 2 colunas */
+.mgrid{display:grid;grid-template-columns:300px 1fr;gap:14px}
+@media(max-width:760px){.mgrid{grid-template-columns:1fr}}
+.threads{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:60vh;overflow-y:auto}
+.thr{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.thr:hover{background:rgba(0,194,255,.05)} .thr.on{background:rgba(0,194,255,.1)}
+.thr .n{font-weight:800;font-size:.9rem;display:flex;align-items:center;gap:8px}
+.thr .u{margin-left:auto;background:var(--accent);color:#02121b;font-size:.68rem;font-weight:800;border-radius:20px;padding:1px 7px}
+.thr .last{font-size:.78rem;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thr .dt{font-size:.68rem;color:var(--faint);margin-top:3px}
+.conv{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;min-height:60vh}
+.conv .ch{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:800}
+.conv .body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+.b{max-width:78%;padding:10px 13px;border-radius:14px;font-size:.88rem}
+.b.pac{background:var(--surface2);align-self:flex-start;border-bottom-left-radius:4px}
+.b.eq{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#02121b;align-self:flex-end;border-bottom-right-radius:4px}
+.b .m{font-size:.66rem;opacity:.75;margin-top:4px;font-weight:600}
+.conv .composer{display:flex;gap:9px;padding:14px;border-top:1px solid var(--border)}
+.conv .composer input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-family:inherit;font-size:.9rem}
+.conv .composer input:focus{outline:none;border-color:var(--accent)}
+.conv-empty{flex:1;display:grid;place-items:center;color:var(--muted);font-size:.86rem;text-align:center;padding:20px}
+/* modal */
+.bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;opacity:0;pointer-events:none;transition:.2s}
+.bd.on{opacity:1;pointer-events:all}
+.modal{position:fixed;z-index:100;top:50%;left:50%;transform:translate(-50%,-46%);width:min(520px,94vw);max-height:92vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;opacity:0;pointer-events:none;transition:.22s}
+.modal.on{opacity:1;pointer-events:all;transform:translate(-50%,-50%)}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.mh h3{font-size:1.1rem;font-weight:800}.x{background:none;border:none;color:var(--muted);font-size:1.3rem}
+.field{margin-bottom:13px;position:relative}
+.field label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:.9rem}
+.field textarea{min-height:60px;resize:vertical}
+.sug{position:absolute;left:0;right:0;top:100%;background:var(--surface3);border:1px solid var(--border);border-radius:9px;margin-top:4px;z-index:5;max-height:200px;overflow-y:auto}
+.sug div{padding:10px 13px;cursor:pointer;font-size:.86rem}.sug div:hover{background:rgba(0,194,255,.12)}
+.pick{background:var(--surface3);border:1px solid var(--accent);border-radius:9px;padding:10px 13px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center}
+.pick .rm{background:none;border:none;color:var(--danger);font-weight:800}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid var(--accent);color:var(--text);padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:600;z-index:200;opacity:0;transition:.25s}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading{color:var(--muted);font-size:.84rem;padding:12px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div><h1>👤 Portal do Paciente — Gestão</h1><div class="sub">Agende atendimentos e responda às mensagens dos pacientes</div></div>
+  <a class="btn btn-ghost" href="/hospital/gestao/">← Gestão</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab on" id="tabAg" onclick="setTab('agenda')">📅 Agenda</button>
+    <button class="tab" id="tabMs" onclick="setTab('mensagens')">💬 Mensagens</button>
+  </div>
+
+  <section id="viewAgenda">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <h2>Agendamentos dos pacientes</h2>
+      <button class="btn btn-primary" onclick="abrirNovo()">+ Novo agendamento</button>
+    </div>
+    <div class="panel"><div class="tw"><table>
+      <thead><tr><th>Paciente</th><th>Tipo</th><th>Especialidade</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody id="agBody"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table></div></div>
+  </section>
+
+  <section id="viewMensagens" style="display:none">
+    <div class="mgrid">
+      <div class="threads" id="threads"><div class="loading">Carregando…</div></div>
+      <div class="conv" id="conv"><div class="conv-empty">Selecione uma conversa à esquerda para responder.</div></div>
+    </div>
+  </section>
+</div>
+
+<div class="bd" id="bd" onclick="fecharModal()"></div>
+<div class="modal" id="mNovo">
+  <div class="mh"><h3>Novo agendamento</h3><button class="x" onclick="fecharModal()">✕</button></div>
+  <div class="field"><label>Paciente</label>
+    <input id="fBusca" placeholder="Buscar por nome ou CPF…" autocomplete="off" oninput="buscarPac(this.value)">
+    <div class="sug" id="sug" style="display:none"></div>
+    <div class="pick" id="pick" style="display:none;margin-top:6px"></div>
+  </div>
+  <div class="field"><label>Tipo</label><select id="fTipo"><option value="consulta">Consulta</option><option value="retorno">Retorno</option><option value="exame">Exame</option><option value="vacina">Vacina</option><option value="procedimento">Procedimento</option></select></div>
+  <div class="field"><label>Especialidade / descrição</label><input id="fEsp" placeholder="Ex.: Cardiologia, Raio-X de tórax…"></div>
+  <div class="field"><label>Profissional</label><input id="fProf" placeholder="Nome do profissional"></div>
+  <div class="field"><label>Local</label><input id="fLocal" placeholder="Unidade / sala"></div>
+  <div class="field"><label>Data e hora</label><input id="fData" type="datetime-local"></div>
+  <div class="field"><label>Observações (opcional)</label><textarea id="fObs"></textarea></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="salvarAg()">Agendar</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var API='/api/hospital';
+var _pick=null,_thread=null;
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},2600);}
+async function jget(u){try{var r=await fetch(u,{credentials:'same-origin'});return r.ok?await r.json():null;}catch(e){return null;}}
+async function jsend(u,b){try{var r=await fetch(u,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});return r.ok?(await r.json().catch(function(){return{};})):null;}catch(e){return null;}}
+function esc(s){return(''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function setTab(t){
+  document.getElementById('tabAg').classList.toggle('on',t==='agenda');
+  document.getElementById('tabMs').classList.toggle('on',t==='mensagens');
+  document.getElementById('viewAgenda').style.display=t==='agenda'?'':'none';
+  document.getElementById('viewMensagens').style.display=t==='mensagens'?'':'none';
+  if(t==='agenda')carregarAgenda();else carregarThreads();
+}
+
+/* ---- AGENDA ---- */
+async function carregarAgenda(){
+  var d=await jget(API+'/paciente-agenda')||{};var arr=d.agendamentos||[];
+  var tb=document.getElementById('agBody');
+  if(!arr.length){tb.innerHTML='<tr><td colspan="6" class="empty">Nenhum agendamento ainda. Clique em “+ Novo agendamento”.</td></tr>';return;}
+  tb.innerHTML=arr.map(function(a){
+    return '<tr><td>'+esc(a.paciente_nome)+'</td><td>'+esc(a.tipo_display)+'</td><td>'+esc(a.especialidade||'—')+'</td>'+
+      '<td>'+a.data+' '+a.hora+'</td><td><span class="chip c-'+a.status+'">'+esc(a.status_display)+'</span></td>'+
+      '<td><div class="acoes">'+
+        (a.futuro?'<button class="btn btn-ghost btn-sm" onclick="statusAg('+a.id+',\'realizado\')">Realizar</button><button class="btn btn-ghost btn-sm" onclick="statusAg('+a.id+',\'cancelado\')">Cancelar</button>':'—')+
+      '</div></td></tr>';
+  }).join('');
+}
+async function statusAg(id,st){
+  if(st==='cancelado'&&!confirm('Cancelar este agendamento?'))return;
+  var r=await jsend(API+'/paciente-agenda/'+id+'/status',{status:st});
+  if(!r){toast('Não foi possível atualizar.');return;}
+  toast('Agendamento atualizado.');carregarAgenda();
+}
+function abrirNovo(){_pick=null;document.getElementById('pick').style.display='none';document.getElementById('fBusca').value='';document.getElementById('sug').style.display='none';
+  document.getElementById('bd').classList.add('on');document.getElementById('mNovo').classList.add('on');}
+function fecharModal(){document.getElementById('bd').classList.remove('on');document.getElementById('mNovo').classList.remove('on');}
+var _bt=null;
+function buscarPac(q){
+  clearTimeout(_bt);var sug=document.getElementById('sug');
+  if(!q||q.length<2){sug.style.display='none';return;}
+  _bt=setTimeout(async function(){
+    var d=await jget(API+'/pacientes-busca?q='+encodeURIComponent(q))||{};var arr=d.pacientes||[];
+    if(!arr.length){sug.innerHTML='<div style="color:var(--muted)">Nenhum paciente encontrado.</div>';sug.style.display='block';return;}
+    sug.innerHTML=arr.map(function(p,i){return '<div onclick="pickPac('+i+')">'+esc(p.nome)+' · '+esc(p.cpf_mascarado)+'</div>';}).join('');
+    window._pacs=arr;sug.style.display='block';
+  },250);
+}
+function pickPac(i){_pick=window._pacs[i];document.getElementById('sug').style.display='none';document.getElementById('fBusca').value='';
+  var pk=document.getElementById('pick');pk.style.display='flex';pk.innerHTML='<span>'+esc(_pick.nome)+' · '+esc(_pick.cpf_mascarado)+'</span><button class="rm" onclick="_pick=null;this.parentNode.style.display=\'none\'">remover</button>';}
+async function salvarAg(){
+  if(!_pick){toast('Escolha o paciente.');return;}
+  var data=document.getElementById('fData').value;if(!data){toast('Informe data e hora.');return;}
+  var body={identidade_id:_pick.id,tipo:document.getElementById('fTipo').value,especialidade:document.getElementById('fEsp').value.trim(),
+    profissional:document.getElementById('fProf').value.trim(),local:document.getElementById('fLocal').value.trim(),
+    data_hora:new Date(data).toISOString(),observacoes:document.getElementById('fObs').value.trim()};
+  var r=await jsend(API+'/paciente-agenda',body);
+  if(!r){toast('Não foi possível agendar.');return;}
+  fecharModal();toast('Agendamento criado — já aparece no portal do paciente.');carregarAgenda();
+}
+
+/* ---- MENSAGENS ---- */
+async function carregarThreads(){
+  var d=await jget(API+'/paciente-mensagens')||{};var arr=d.threads||[];
+  var box=document.getElementById('threads');
+  if(!arr.length){box.innerHTML='<div class="empty">Nenhuma conversa ainda.</div>';return;}
+  box.innerHTML=arr.map(function(t){
+    return '<div class="thr'+(_thread===t.identidade_id?' on':'')+'" onclick="abrirThread('+t.identidade_id+',\''+esc(t.paciente_nome).replace(/\x27/g,"")+'\')">'+
+      '<div class="n">'+esc(t.paciente_nome)+(t.nao_lidas?'<span class="u">'+t.nao_lidas+'</span>':'')+'</div>'+
+      '<div class="last">'+esc(t.ultima)+'</div><div class="dt">'+t.data+'</div></div>';
+  }).join('');
+}
+async function abrirThread(id,nome){
+  _thread=id;carregarThreads();
+  var conv=document.getElementById('conv');
+  conv.innerHTML='<div class="ch">'+esc(nome)+'</div><div class="body" id="convBody"><div class="loading">Carregando…</div></div>'+
+    '<div class="composer"><input id="respInput" placeholder="Responder ao paciente…" onkeydown="if(event.key===\'Enter\')responder()"><button class="btn btn-primary" onclick="responder()">Enviar</button></div>';
+  var d=await jget(API+'/paciente-mensagens/'+id)||{};var arr=d.mensagens||[];
+  document.getElementById('convBody').innerHTML=arr.map(function(m){
+    var eq=m.autor==='equipe';
+    return '<div class="b '+(eq?'eq':'pac')+'"><div>'+esc(m.texto)+'</div><div class="m">'+(eq?esc(m.autor_nome):esc(nome))+' · '+m.data+'</div></div>';
+  }).join('');
+  var cb=document.getElementById('convBody');cb.scrollTop=cb.scrollHeight;
+  carregarThreads();
+}
+async function responder(){
+  if(!_thread)return;var inp=document.getElementById('respInput');var txt=(inp.value||'').trim();if(!txt)return;
+  inp.value='';inp.disabled=true;
+  var r=await jsend(API+'/paciente-mensagens/'+_thread+'/responder',{texto:txt});
+  inp.disabled=false;inp.focus();
+  if(!r){toast('Não foi possível enviar.');inp.value=txt;return;}
+  var nome=document.querySelector('#conv .ch').textContent;abrirThread(_thread,nome);
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharModal();});
+carregarAgenda();
+</script>
+</body>
+</html>
