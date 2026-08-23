@@ -179,6 +179,21 @@ def totem_interface(request):
     })
 
 
+def vita_hub_interface(request):
+    """
+    Central de operação do VITA OS — painel do operador/recepção com câmera
+    de reconhecimento ao vivo, fila de check-ins do dia e fila de triagem do PS.
+    Diferente do totem (autoatendimento do paciente), este é o painel de STAFF.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return render(request, "hospital_vita_hub.html", {"empresa_nome": "Hospital"})
+    return render(request, "hospital_vita_hub.html", {
+        "empresa_nome": empresa.nome_fantasia or empresa.razao_social,
+        "empresa_id": empresa.id,
+    })
+
+
 def ps_triagem_interface(request):
     """Tela de triagem Manchester para a enfermagem do PS."""
     empresa = _empresa_autenticada(request)

@@ -960,6 +960,7 @@ from api.views_producao_industrial import (
 )
 from api.views_hospital_totem import (
     totem_interface,
+    vita_hub_interface,
     api_totem_cadastrar,
     api_totem_reconhecer,
     api_totem_buscar_cpf,
@@ -3799,6 +3800,7 @@ urlpatterns = [
 
     # ── VITA OS — Biometria Totem Hospitalar ─────────────────────────────────
     path('hospital/totem/', totem_interface),
+    path('hospital/vita/', vita_hub_interface),
     path('hospital/ps/triagem/', ps_triagem_interface),
     path('hospital/ps/painel/', api_ps_painel),
     path('api/hospital/totem/cadastrar/', api_totem_cadastrar),
@@ -3806,6 +3808,7 @@ urlpatterns = [
     path('api/hospital/totem/buscar-cpf/', api_totem_buscar_cpf),
     path('api/hospital/totem/stats/', api_totem_stats),
     path('api/hospital/ps/triagem/', api_ps_triagem_classificar),
+    path('api/hospital/ps/painel/', api_ps_painel),
 
     # ── Comercial / Agente de Outreach ───────────────────────────────────────
     path('comercial/', comercial_dashboard),
