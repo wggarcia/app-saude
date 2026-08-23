@@ -194,3 +194,53 @@ def portal_facial_admin_page(request):
     return render(request, "plano_portal_facial_admin.html", {
         "empresa_nome": empresa.nome, "empresa_id": empresa.id,
     })
+
+
+# ─── Enrolamento em massa (operadora sobe fotos nomeadas por carteirinha/CPF) ──
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_portal_facial_enrolar_massa(request):
+    """
+    POST multipart, campo 'fotos' = várias imagens. O NOME de cada arquivo
+    identifica o beneficiário (nº da carteirinha ou CPF, ex.: 'REDE-77.jpg').
+    Cadastra o rosto de cada um. Retorna relatório por arquivo.
+    """
+    import base64 as _b64
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    arquivos = request.FILES.getlist("fotos")
+    if not arquivos:
+        return JsonResponse({"erro": "Nenhuma foto enviada (campo 'fotos')."}, status=400)
+    if len(arquivos) > 100:
+        return JsonResponse({"erro": "Máximo de 100 fotos por lote."}, status=400)
+
+    qs = BeneficiarioPlano.objects.filter(plano__empresa=empresa, situacao="ativo")
+    resultados, ok, falhas = [], 0, 0
+    for f in arquivos:
+        nome_arq = f.name
+        chave = nome_arq.rsplit(".", 1)[0].strip()        # tira a extensão
+        so_digitos = "".join(c for c in chave if c.isdigit())
+        benef = qs.filter(numero_carteirinha=chave).first()
+        if not benef and so_digitos:
+            benef = qs.filter(cpf=so_digitos).first() or qs.filter(numero_carteirinha=so_digitos).first()
+        if not benef:
+            falhas += 1
+            resultados.append({"arquivo": nome_arq, "status": "erro", "motivo": "beneficiário não encontrado"})
+            continue
+        try:
+            data_uri = "data:image/jpeg;base64," + _b64.b64encode(f.read()).decode("ascii")
+            embedding = _extrair_embedding(data_uri)
+        except (ValueError, ImportError):
+            falhas += 1
+            resultados.append({"arquivo": nome_arq, "status": "erro", "motivo": "nenhum rosto detectado"})
+            continue
+        benef.face_embedding = embedding
+        benef.face_thumb_base64 = _thumbnail(data_uri)
+        benef.save(update_fields=["face_embedding", "face_thumb_base64"])
+        ok += 1
+        resultados.append({"arquivo": nome_arq, "status": "ok", "beneficiario": benef.nome})
+
+    return JsonResponse({"ok": True, "cadastrados": ok, "falhas": falhas, "resultados": resultados})

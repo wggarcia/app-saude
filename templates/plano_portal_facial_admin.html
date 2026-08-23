@@ -110,6 +110,22 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
     🧭 <strong>Como usar:</strong> Coloque este QR na recepção para o beneficiário acessar pelo celular, ou abra o link no totem em tela cheia.
     No primeiro acesso o beneficiário informa a carteirinha e cadastra o rosto; depois é só olhar para a câmera.
   </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="card-header"><span class="card-title">📸 Cadastro de rostos em massa</span></div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+      <p style="font-size:13px;color:var(--muted);line-height:1.6">
+        Já tem as fotos dos beneficiários? Suba um lote de uma vez. <strong>O nome de cada arquivo
+        deve ser a carteirinha ou o CPF</strong> do beneficiário (ex.: <code>REDE-77.jpg</code>, <code>39053344705.png</code>).
+        O sistema detecta o rosto e cadastra cada um automaticamente.
+      </p>
+      <input type="file" id="fotosMassa" accept="image/*" multiple
+             style="padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+      <button class="btn primary" id="btnMassa" onclick="enrolarMassa()" style="align-self:flex-start">Cadastrar em massa</button>
+      <div id="massaStatus" style="font-size:13px;color:var(--muted)"></div>
+      <div id="massaResultado" style="max-height:260px;overflow:auto"></div>
+    </div>
+  </div>
 </div>
 {% endif %}
 
@@ -409,6 +425,33 @@ function baixarQR(){
   var a=document.createElement('a');
   a.href=url; a.download='qr-portal-beneficiario.png';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+async function enrolarMassa(){
+  var inp=document.getElementById('fotosMassa');
+  var st=document.getElementById('massaStatus');
+  var out=document.getElementById('massaResultado');
+  if(!inp.files||!inp.files.length){st.textContent='Selecione as fotos primeiro.';st.style.color='var(--danger)';return;}
+  var fd=new FormData();
+  for(var i=0;i<inp.files.length;i++)fd.append('fotos',inp.files[i]);
+  document.getElementById('btnMassa').disabled=true;
+  st.style.color='var(--muted)';st.textContent='Processando '+inp.files.length+' foto(s)… (o reconhecimento leva alguns segundos por foto)';
+  out.innerHTML='';
+  function csrf(){var m=document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');return m?m.pop():'';}
+  try{
+    var r=await fetch('/api/plano-saude/portal-facial/enrolar-massa/',{method:'POST',headers:{'X-CSRFToken':csrf()},credentials:'same-origin',body:fd});
+    var d=await r.json();
+    document.getElementById('btnMassa').disabled=false;
+    if(!r.ok){st.style.color='var(--danger)';st.textContent=(d&&d.erro)||'Falha no envio.';return;}
+    st.style.color='var(--ok)';st.textContent='✅ '+d.cadastrados+' cadastrado(s), '+d.falhas+' falha(s).';
+    out.innerHTML=(d.resultados||[]).map(function(x){
+      var ok=x.status==='ok';
+      return '<div style="display:flex;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px">'+
+        '<span>'+(ok?'✅':'⚠️')+'</span>'+
+        '<span style="flex:1"><strong>'+x.arquivo+'</strong>'+(ok?(' → '+x.beneficiario):(' — '+x.motivo))+'</span></div>';
+    }).join('');
+    if(typeof carregar==='function')carregar();
+  }catch(e){document.getElementById('btnMassa').disabled=false;st.style.color='var(--danger)';st.textContent='Erro de conexão.';}
 }
 
 carregar();

@@ -444,7 +444,7 @@ from api.views_plano_integracao import api_dados_plano_saude
 from api.views_plano_antifraude import plano_antifraude_page, api_plano_antifraude, api_tiss_receber_guia
 from api.views_plano_portal_facial import (
     portal_facial_page, api_portal_facial_login, api_portal_facial_enrolar, api_portal_facial_config,
-    portal_facial_admin_page,
+    portal_facial_admin_page, api_portal_facial_enrolar_massa,
 )
 from api.views_competencia import (
     competencia_corporativa,
@@ -1655,6 +1655,7 @@ urlpatterns = [
     path('api/plano-saude/acesso/<str:token>/login/', api_portal_facial_login),
     path('api/plano-saude/acesso/<str:token>/enrolar/', api_portal_facial_enrolar),
     path('api/plano-saude/portal-facial/config/', api_portal_facial_config),
+    path('api/plano-saude/portal-facial/enrolar-massa/', api_portal_facial_enrolar_massa),
     path('plano-saude/portal-facial/', portal_facial_admin_page),
     path('plano-saude/cobranca/', plano_cobranca_page),
     path('api/plano-saude/cobranca/gerar-faturas/', api_cob_gerar_faturas),
