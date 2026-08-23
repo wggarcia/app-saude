@@ -690,6 +690,7 @@ from api.views_plano_tiss_recepcao import (
     api_tiss_recepcao_lista,
     api_tiss_recepcao_detalhe,
     api_tiss_recepcao_retorno,
+    api_tiss_recepcao_exemplo,
     plano_tiss_recepcao_page,
 )
 from api.views_plano_contas_pagamento import (
@@ -2382,6 +2383,7 @@ urlpatterns = [
     path('api/plano-saude/ans/sib/<int:sib_id>/registrar-protocolo/', api_sib_registrar_protocolo),
     # ── TISS Operadora — recepção de lote + glosa/IA + demonstrativo retorno ──
     path('api/plano-saude/tiss/recepcao/importar/', api_tiss_recepcao_importar),
+    path('api/plano-saude/tiss/recepcao/exemplo/', api_tiss_recepcao_exemplo),
     path('api/plano-saude/tiss/recepcao/', api_tiss_recepcao_lista),
     path('api/plano-saude/tiss/recepcao/<int:lote_id>/', api_tiss_recepcao_detalhe),
     path('api/plano-saude/tiss/recepcao/<int:lote_id>/retorno/', api_tiss_recepcao_retorno),

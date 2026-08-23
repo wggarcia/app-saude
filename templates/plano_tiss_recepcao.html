@@ -116,6 +116,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <input type="file" id="xml-file" accept=".xml,text/xml" class="mono" style="font-size:12px;color:var(--muted)">
+      <a class="btn btn-ghost" href="/api/plano-saude/tiss/recepcao/exemplo/" title="Baixa um XML TISS de teste já com o selo biométrico VITA">⬇️ XML de exemplo (com selo)</a>
       <div style="flex:1"></div>
       <button class="btn btn-ghost" onclick="fecharImport()">Cancelar</button>
       <button class="btn btn-primary" id="btn-import" onclick="importar()">Importar &amp; analisar</button>

@@ -96,6 +96,18 @@ def importar_lote_tiss(xml_str: str, empresa) -> LoteTISSRecebido:
                  or (PrestadorPlanoSaude.objects.filter(empresa=empresa, registro_cnes=prest_cnes).first()
                      if prest_cnes else None))
 
+    # Selo biométrico VITA (guia de hospital SoloCRT com paciente verificado por rosto).
+    # O hospital embute o marcador "VITA-BIO:<token>" no XML (ex.: em <ans:observacao>).
+    import re as _re
+    from .biometria_token import validar_token as _validar_selo
+    bio_verif, bio_score = False, 0.0
+    _m = _re.search(r"VITA-BIO:([A-Za-z0-9_\-.]+)", xml_str)
+    if _m:
+        _payload = _validar_selo(_m.group(1))
+        if _payload:
+            bio_verif = True
+            bio_score = float(_payload.get("sc", 0) or 0)
+
     with transaction.atomic():
         lote = LoteTISSRecebido.objects.create(
             empresa=empresa, prestador=prestador, numero_lote=numero_lote,
@@ -103,6 +115,7 @@ def importar_lote_tiss(xml_str: str, empresa) -> LoteTISSRecebido:
             beneficiario_carteirinha=carteirinha, beneficiario_nome=ben_nome,
             guia_numero=guia_num, cid10=cid, versao_tiss=versao,
             hash_tiss=hash_declarado, xml_original=xml_str, status="recebido",
+            biometria_verificada=bio_verif, biometria_score=bio_score,
         )
         # procedimentos executados
         atend = guia_el.find("ans:dadosAtendimento", _NSMAP) if guia_el is not None else None
@@ -318,6 +331,66 @@ def api_tiss_recepcao_retorno(request, lote_id: int):
         lote.save(update_fields=["xml_retorno", "status"])
     resp = HttpResponse(xml_out, content_type="application/xml; charset=utf-8")
     resp["Content-Disposition"] = f'attachment; filename="demonstrativo_lote_{lote.id}.xml"'
+    return resp
+
+
+@require_http_methods(["GET"])
+def api_tiss_recepcao_exemplo(request):
+    """
+    Baixa um XML TISS de EXEMPLO (mensagemTISS) já com o selo biométrico VITA
+    válido, para testar a recepção real ponta a ponta. ?sem_selo=1 gera sem selo.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    com_selo = request.GET.get("sem_selo") != "1"
+    from .biometria_token import gerar_token
+    selo = gerar_token(0, empresa.id, "52998224725", 0.93) if com_selo else ""
+    obs = f"VITA-BIO:{selo}" if com_selo else "Guia de teste"
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<ans:mensagemTISS xmlns:ans="http://www.ans.gov.br/padroes/tiss/schemas">
+  <ans:cabecalho>
+    <ans:identificacaoTransacao>
+      <ans:tipoTransacao>ENVIO_LOTE_GUIAS</ans:tipoTransacao>
+      <ans:sequencialTransacao>EX{empresa.id}001</ans:sequencialTransacao>
+      <ans:versaoLeiaute>3.05.00</ans:versaoLeiaute>
+    </ans:identificacaoTransacao>
+    <ans:origem><ans:identificacaoPrestador>
+      <ans:codigoPrestadorNaOperadora>PREST-DEMO</ans:codigoPrestadorNaOperadora>
+      <ans:nomeContratado>Hospital SoloCRT (Demo)</ans:nomeContratado>
+      <ans:CNES>1234567</ans:CNES>
+    </ans:identificacaoPrestador></ans:origem>
+  </ans:cabecalho>
+  <ans:prestadorParaOperadora>
+    <ans:loteGuiasSP>
+      <ans:numeroLote>EX{empresa.id}001</ans:numeroLote>
+      <ans:guiaSP>
+        <ans:cabecalhoGuia><ans:nrGuiaPrestador>GEX-0001</ans:nrGuiaPrestador></ans:cabecalhoGuia>
+        <ans:dadosBeneficiario>
+          <ans:numeroCarteira>2222</ans:numeroCarteira>
+          <ans:nomeBeneficiario>Beneficiario Exemplo VITA</ans:nomeBeneficiario>
+        </ans:dadosBeneficiario>
+        <ans:dadosSolicitacaoExame><ans:codigoCID10>Z00</ans:codigoCID10></ans:dadosSolicitacaoExame>
+        <ans:dadosAtendimento><ans:procedimentosExecutados>
+          <ans:procedimentoExecutado>
+            <ans:sequencialItem>1</ans:sequencialItem>
+            <ans:codigoTabela>22</ans:codigoTabela>
+            <ans:codigoProcedimento>10101012</ans:codigoProcedimento>
+            <ans:descricaoProcedimento>Consulta em consultorio</ans:descricaoProcedimento>
+            <ans:quantidadeExecutada>1</ans:quantidadeExecutada>
+            <ans:valorUnitario>120.00</ans:valorUnitario>
+            <ans:valorTotal>120.00</ans:valorTotal>
+          </ans:procedimentoExecutado>
+        </ans:procedimentosExecutados></ans:dadosAtendimento>
+        <ans:observacao>{obs}</ans:observacao>
+      </ans:guiaSP>
+    </ans:loteGuiasSP>
+  </ans:prestadorParaOperadora>
+  <ans:epilogo><ans:hash>demohash{empresa.id}</ans:hash></ans:epilogo>
+</ans:mensagemTISS>"""
+    resp = HttpResponse(xml, content_type="application/xml; charset=utf-8")
+    nome = "exemplo_tiss_com_selo.xml" if com_selo else "exemplo_tiss_sem_selo.xml"
+    resp["Content-Disposition"] = f'attachment; filename="{nome}"'
     return resp
 
 
