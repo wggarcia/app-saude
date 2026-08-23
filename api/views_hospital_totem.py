@@ -174,7 +174,7 @@ def totem_interface(request):
     if not empresa:
         return render(request, "hospital_totem.html", {"empresa_nome": "Hospital"})
     return render(request, "hospital_totem.html", {
-        "empresa_nome": empresa.nome_fantasia or empresa.razao_social,
+        "empresa_nome": empresa.nome,
         "empresa_id": empresa.id,
     })
 
@@ -189,7 +189,7 @@ def vita_hub_interface(request):
     if not empresa:
         return render(request, "hospital_vita_hub.html", {"empresa_nome": "Hospital"})
     return render(request, "hospital_vita_hub.html", {
-        "empresa_nome": empresa.nome_fantasia or empresa.razao_social,
+        "empresa_nome": empresa.nome,
         "empresa_id": empresa.id,
     })
 
@@ -199,7 +199,7 @@ def ps_triagem_interface(request):
     empresa = _empresa_autenticada(request)
     ctx = {"empresa_nome": "Hospital"}
     if empresa:
-        ctx["empresa_nome"] = empresa.nome_fantasia or empresa.razao_social
+        ctx["empresa_nome"] = empresa.nome
         ctx["empresa_id"] = empresa.id
     return render(request, "hospital_ps_triagem.html", ctx)
 
