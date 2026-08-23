@@ -1,0 +1,145 @@
+<title>Estação de Exame</title>
+<style>
+  :root{--bg:#050a14;--surface:#0d1b2a;--surface2:#112240;--accent:#00b4d8;--accent2:#0077b6;--success:#06d6a0;--warn:#ffd166;--danger:#ef233c;--text:#e8f4f8;--muted:#8ab4c8;--border:rgba(0,180,216,.2)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;user-select:none}
+  .wrap{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;padding:24px;gap:20px}
+  .header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:16px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:24px}
+  .logo h1{font-size:22px;font-weight:700}.logo p{font-size:13px;color:var(--muted);margin-top:2px}
+  .clock{font-size:28px;font-weight:300;color:var(--accent);font-variant-numeric:tabular-nums}
+  .main{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  .cam-panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .cam-frame{position:relative;width:100%;max-width:380px;aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 0 40px rgba(0,180,216,.3)}
+  #video{width:100%;height:100%;object-fit:cover}
+  .status{display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:100px;font-size:14px;font-weight:600;background:var(--surface2);border:1px solid var(--border)}
+  .status.ok{border-color:var(--success);color:var(--success)}.status.err{border-color:var(--danger);color:var(--danger)}
+  .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .btn{width:100%;padding:16px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:12px;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform .15s}
+  .btn:hover{transform:translateY(-2px)}.btn:disabled{opacity:.5}
+  .right{display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;display:none}
+  .card.show{display:block}
+  .card.success{border-color:var(--success)}
+  .pac{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .pac img{width:64px;height:64px;border-radius:14px;object-fit:cover;background:var(--surface2)}
+  .pac .nome{font-size:22px;font-weight:700}
+  .exame{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+  .exame-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .exame-tipo{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+  .exame-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(255,209,102,.15);color:var(--warn)}
+  .exame-status.autorizado{background:rgba(6,214,160,.15);color:var(--success)}
+  .exame-nomes{font-size:15px;font-weight:600;margin-bottom:8px}
+  .exame-acoes{display:flex;gap:8px}
+  .btn-sm{flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:700;cursor:pointer}
+  .btn-sm.go{background:var(--success);border-color:var(--success);color:#04231a}
+  .msg{font-size:15px;color:var(--muted);padding:20px;text-align:center}
+  .footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:14px;font-size:12px;color:var(--muted)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 24px;font-size:15px;font-weight:600;opacity:0;transition:opacity .3s;z-index:99;min-width:280px;text-align:center}
+  .toast.show{opacity:1}.toast.ok{border-color:var(--success);color:var(--success)}.toast.err{border-color:var(--danger);color:var(--danger)}
+</style>
+
+<div class="wrap">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🧪</div>
+      <div>
+        <h1>{{ empresa_nome|default:"Hospital" }}</h1>
+        <p>Estação de Exame — VITA OS</p>
+      </div>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+
+  <div class="main">
+    <div class="cam-panel">
+      <div class="cam-frame">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="cvs" style="display:none"></canvas>
+      </div>
+      <div class="status" id="status"><div class="dot"></div><span id="statusTxt">Câmera pronta</span></div>
+      <button class="btn" id="btn" onclick="identificar()">🧫 Identificar Paciente</button>
+    </div>
+
+    <div class="right">
+      <div class="card" id="card">
+        <div class="pac">
+          <img id="pacFoto" src="" alt="">
+          <div>
+            <div class="nome" id="pacNome">—</div>
+            <div style="font-size:13px;color:var(--muted)" id="pacSub">Exames pendentes</div>
+          </div>
+        </div>
+        <div id="lista"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>⚡ VITA OS · SoloCRT Saúde</div>
+    <div>🔒 Reconhecimento facial · LGPD</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api/hospital/';
+function relogio(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+setInterval(relogio,1000);relogio();
+
+const video=document.getElementById('video'), cvs=document.getElementById('cvs');
+navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}}).then(s=>video.srcObject=s).catch(()=>toast('Câmera não disponível.','err'));
+function capturar(){cvs.width=video.videoWidth||640;cvs.height=video.videoHeight||480;cvs.getContext('2d').drawImage(video,0,0);return cvs.toDataURL('image/jpeg',0.85);}
+
+function setStatus(t,txt){document.getElementById('status').className='status '+(t||'');document.getElementById('statusTxt').textContent=txt;}
+function toast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast show '+(t||'');setTimeout(()=>e.className='toast',3500);}
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify(body)});return {ok:r.ok,data:await r.json()};}
+
+async function identificar(){
+  setStatus('','🔍 Analisando...');document.getElementById('btn').disabled=true;
+  const {ok,data}=await post(API+'estacao/reconhecer/',{foto_base64:capturar()});
+  document.getElementById('btn').disabled=false;
+  if(!ok||!data.reconhecido){setStatus('err','❓ Não reconhecido');toast((data&&data.mensagem)||'Rosto não encontrado.','err');return;}
+  setStatus('ok','✅ '+data.nome.split(' ')[0]);
+  mostrar(data);
+}
+
+function mostrar(d){
+  document.getElementById('pacFoto').src=d.foto||'';
+  document.getElementById('pacNome').textContent=d.nome;
+  const lista=document.getElementById('lista');
+  if(d.sem_exames){
+    document.getElementById('pacSub').textContent='Nenhum exame pendente';
+    lista.innerHTML='<div class="msg">✅ Este paciente não tem exames pendentes nesta estação.</div>';
+  }else{
+    document.getElementById('pacSub').textContent=d.exames.length+' exame(s) pendente(s)';
+    lista.innerHTML=d.exames.map(function(e){
+      const nomes=(e.exames||[]).map(x=>x.nome||x).join(', ')||e.tipo_label;
+      const prox = e.status==='realizado'?'concluido':(e.status==='em_atendimento'?'realizado':(e.status==='aguardando'?'em_atendimento':'aguardando'));
+      const proxLabel={aguardando:'Paciente chegou',em_atendimento:'Iniciar atendimento',realizado:'Marcar realizado',concluido:'Concluir'}[prox];
+      return '<div class="exame">'+
+        '<div class="exame-top"><span class="exame-tipo">'+e.tipo_label+'</span>'+
+        '<span class="exame-status '+(e.autorizado?'autorizado':'')+'">'+e.status_label+'</span></div>'+
+        '<div class="exame-nomes">'+nomes+'</div>'+
+        (e.estacao?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">📍 '+e.estacao+'</div>':'')+
+        '<div class="exame-acoes"><button class="btn-sm go" onclick="avancar('+e.id+',\''+prox+'\')">'+proxLabel+'</button></div>'+
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('card').className='card show success';
+  clearTimeout(window._t);window._t=setTimeout(resetar,25000);
+}
+
+async function avancar(id,novo){
+  const {ok,data}=await post(API+'exames/avancar/',{pedido_id:id,novo_status:novo});
+  if(ok&&data.ok){toast('✅ Atualizado: '+data.pedido.status_label,'ok');document.getElementById('btn').click&&0;identificarDeNovo();}
+  else toast('Erro ao atualizar.','err');
+}
+async function identificarDeNovo(){ // recarrega a lista do mesmo paciente
+  const {ok,data}=await post(API+'estacao/reconhecer/',{foto_base64:capturar()});
+  if(ok&&data.reconhecido)mostrar(data);
+}
+function resetar(){setStatus('','Câmera pronta');document.getElementById('card').className='card';}
+</script>

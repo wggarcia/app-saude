@@ -1035,6 +1035,46 @@ tr:hover td{background:rgba(255,255,255,.018)}
           </div>
         </div>
 
+        <!-- Pós-consulta / Exames -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <span class="card-title">🧪 Estação de Exame</span>
+                <div style="font-size:11px;color:var(--muted);margin-top:3px">Lab/Imagem · paciente reconhecido por rosto na chegada</div>
+              </div>
+            </div>
+            <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+              <p style="font-size:13px;color:var(--muted);line-height:1.6">
+                Tela pro laboratório/radiologia: o paciente chega, olha pra câmera e o sistema mostra
+                os exames pendentes dele — sem papel, sem senha.
+              </p>
+              <a href="/hospital/estacao-exame/" onclick="return abrirVitaSessao(event,'/hospital/estacao-exame/')"
+                 style="padding:14px;background:linear-gradient(135deg,#0077b6,#00b4d8);border-radius:10px;color:#fff;font-size:14px;font-weight:700;text-align:center;text-decoration:none">
+                🧫 Abrir Estação de Exame
+              </a>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">📝 Novo pedido de exame</span></div>
+            <div style="padding:18px;display:flex;flex-direction:column;gap:10px">
+              <input id="exCpf" placeholder="CPF do paciente" inputmode="numeric"
+                     style="padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+              <select id="exTipo" style="padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                <option value="laboratorio">🧪 Laboratório</option>
+                <option value="imagem">🩻 Imagem / Radiologia</option>
+              </select>
+              <input id="exExames" placeholder="Exames (separados por vírgula)"
+                     style="padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+              <input id="exEstacao" placeholder="Estação (ex: Coleta 1, Sala 2)"
+                     style="padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+              <button class="btn btn-primary" style="font-size:13px" onclick="criarPedidoExame()">Criar pedido</button>
+              <div id="exResultado" style="font-size:12px;color:var(--muted)"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Dispositivos / Kiosk -->
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
@@ -3714,6 +3754,27 @@ async function carregarVitaStats() {
   }
 
   carregarDispositivos();
+}
+
+// ── Pedido de exame (pós-consulta) ─────────────────────────────────────────────
+async function criarPedidoExame() {
+  const cpf = (document.getElementById('exCpf').value||'').replace(/\D/g,'');
+  const exames = document.getElementById('exExames').value.trim();
+  const res = document.getElementById('exResultado');
+  if (cpf.length !== 11) { res.textContent = '⚠️ CPF inválido.'; res.style.color='var(--danger)'; return; }
+  if (!exames) { res.textContent = '⚠️ Informe os exames.'; res.style.color='var(--danger)'; return; }
+  res.textContent = 'Criando...'; res.style.color='var(--muted)';
+  try {
+    const r = await api('/api/hospital/exames/criar/', { method:'POST', body: JSON.stringify({
+      cpf: cpf, tipo: document.getElementById('exTipo').value,
+      exames: exames, estacao: document.getElementById('exEstacao').value.trim(),
+    })});
+    if (r && r.ok) {
+      res.style.color='var(--ok)';
+      res.textContent = '✅ Pedido criado — ' + (r.autorizacao || '');
+      ['exCpf','exExames','exEstacao'].forEach(id=>document.getElementById(id).value='');
+    } else { res.style.color='var(--danger)'; res.textContent = (r&&r.erro)||'Erro ao criar.'; }
+  } catch(e) { res.style.color='var(--danger)'; res.textContent = 'Erro: paciente não encontrado ou sem acesso.'; }
 }
 
 // ── Dispositivos de Kiosk ──────────────────────────────────────────────────────

@@ -278,8 +278,9 @@ class EmpresaMiddleware:
         # (tablet fixo na recepção/PS), sem exigir login de operador. O token
         # identifica o hospital e é escopo-limitado a estas rotas (LGPD).
         # À prova de falha: token ausente/inválido → cai no fluxo normal abaixo.
-        _totem_paths = ("/hospital/totem/", "/hospital/ps/",
-                        "/api/hospital/totem/", "/api/hospital/ps/")
+        _totem_paths = ("/hospital/totem/", "/hospital/ps/", "/hospital/estacao-exame/",
+                        "/api/hospital/totem/", "/api/hospital/ps/",
+                        "/api/hospital/estacao/", "/api/hospital/exames/")
         # A gestão de dispositivos NUNCA é acessível por token de kiosk
         # (evita escalonamento: um totem não pode criar/revogar dispositivos).
         _totem_admin = "/api/hospital/totem/dispositivos"

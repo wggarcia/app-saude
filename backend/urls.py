@@ -974,6 +974,11 @@ from api.views_hospital_totem import (
     api_totem_dispositivos_listar,
     api_totem_dispositivo_criar,
     api_totem_dispositivo_revogar,
+    estacao_exame_interface,
+    api_exame_criar,
+    api_estacao_reconhecer,
+    api_exame_avancar,
+    api_exames_paciente,
 )
 from api.views_hospital_opme import (
     api_opme_catalogo,
@@ -3824,6 +3829,12 @@ urlpatterns = [
     path('api/hospital/totem/dispositivos/', api_totem_dispositivos_listar),
     path('api/hospital/totem/dispositivos/criar/', api_totem_dispositivo_criar),
     path('api/hospital/totem/dispositivos/revogar/', api_totem_dispositivo_revogar),
+    # Fluxo pós-consulta — estação de exame (reconhecimento facial)
+    path('hospital/estacao-exame/', estacao_exame_interface),
+    path('api/hospital/estacao/reconhecer/', api_estacao_reconhecer),
+    path('api/hospital/exames/criar/', api_exame_criar),
+    path('api/hospital/exames/avancar/', api_exame_avancar),
+    path('api/hospital/exames/paciente/', api_exames_paciente),
 
     # ── Comercial / Agente de Outreach ───────────────────────────────────────
     path('comercial/', comercial_dashboard),

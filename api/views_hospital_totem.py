@@ -37,6 +37,7 @@ from .models import (
     ConvenioPacienteTotem,
     Empresa,
     IdentidadePaciente,
+    PedidoExameVita,
     TotemCheckinLog,
     TotemDispositivo,
     TriagemManchesterPS,
@@ -992,3 +993,190 @@ def api_totem_dispositivo_revogar(request):
     disp.ativo = False
     disp.save(update_fields=["ativo"])
     return JsonResponse({"ok": True, "id": disp.id})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fluxo pós-consulta — Pedido de exame + Estação de exame (reconhecimento facial)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_STATUS_EXAME_ATIVO = ("solicitado", "autorizado", "aguardando", "em_atendimento")
+
+
+def _serializar_pedido_exame(p):
+    return {
+        "id":        p.id,
+        "tipo":      p.tipo,
+        "tipo_label": p.get_tipo_display(),
+        "exames":    p.exames or [],
+        "estacao":   p.estacao,
+        "status":    p.status,
+        "status_label": p.get_status_display(),
+        "medico":    p.medico_solicitante,
+        "autorizado": p.status not in ("solicitado",),
+        "observacoes": p.observacoes,
+        "criado_em": p.criado_em.strftime("%d/%m %H:%M"),
+    }
+
+
+def estacao_exame_interface(request):
+    """Tela da estação de exame (lab/imagem) — kiosk com reconhecimento facial."""
+    empresa = _empresa_autenticada(request)
+    ctx = {"empresa_nome": empresa.nome if empresa else "Hospital"}
+    if empresa:
+        ctx["empresa_id"] = empresa.id
+    return render(request, "hospital_estacao_exame.html", ctx)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_exame_criar(request):
+    """
+    POST {identidade_id | cpf, tipo, exames:[{nome,codigo_tuss}], estacao,
+          medico_solicitante, observacoes, checkin_id?}
+    Cria o pedido de exame pós-consulta. Se o paciente tem plano, gera o selo
+    biométrico e marca a autorização como solicitada (auto-autorização).
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    ident = None
+    if data.get("identidade_id"):
+        ident = IdentidadePaciente.objects.filter(pk=data["identidade_id"], empresa=empresa).first()
+    if not ident and data.get("cpf"):
+        cpf = "".join(c for c in data["cpf"] if c.isdigit())
+        ident = IdentidadePaciente.objects.filter(empresa=empresa, cpf=cpf).first()
+    if not ident:
+        return JsonResponse({"erro": "Paciente não encontrado."}, status=404)
+
+    exames = data.get("exames") or []
+    if isinstance(exames, str):
+        exames = [{"nome": e.strip()} for e in exames.split(",") if e.strip()]
+    if not exames:
+        return JsonResponse({"erro": "Informe ao menos um exame."}, status=400)
+
+    tem_plano = ConvenioPacienteTotem.objects.filter(identidade=ident).exists()
+    checkin = None
+    if data.get("checkin_id"):
+        checkin = TotemCheckinLog.objects.filter(pk=data["checkin_id"], empresa=empresa).first()
+
+    pedido = PedidoExameVita.objects.create(
+        empresa=empresa,
+        identidade=ident,
+        checkin=checkin,
+        tipo=data.get("tipo", "laboratorio"),
+        exames=exames,
+        estacao=data.get("estacao", ""),
+        medico_solicitante=data.get("medico_solicitante", ""),
+        observacoes=data.get("observacoes", ""),
+    )
+    # Auto-autorização: paciente com plano → gera selo e marca solicitada
+    if tem_plano:
+        pedido.biometria_token = _gerar_selo_biometrico(pedido.checkin_id or pedido.id, empresa.id, ident.cpf, 1.0)
+        pedido.autorizacao_solicitada = True
+        pedido.status = "autorizado"
+        pedido.save(update_fields=["biometria_token", "autorizacao_solicitada", "status"])
+
+    return JsonResponse({
+        "ok": True,
+        "pedido": _serializar_pedido_exame(pedido),
+        "autorizacao": "solicitada ao plano" if tem_plano else "paciente sem plano cadastrado",
+    }, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_estacao_reconhecer(request):
+    """
+    POST {foto_base64}
+    Reconhece o paciente na estação de exame e retorna os exames pendentes dele.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    foto_b64 = data.get("foto_base64", "")
+    if not foto_b64:
+        return JsonResponse({"erro": "Foto obrigatória."}, status=400)
+
+    try:
+        embedding = _extrair_embedding(foto_b64)
+    except (ValueError, ImportError) as exc:
+        return JsonResponse({"reconhecido": False, "erro": str(exc)}, status=422)
+
+    identidade, score = _buscar_por_embedding(embedding, empresa.id)
+    if not identidade:
+        return JsonResponse({
+            "reconhecido": False,
+            "score_max": round(score, 4),
+            "mensagem": "Rosto não encontrado. Procure a recepção.",
+        })
+
+    pendentes = PedidoExameVita.objects.filter(
+        empresa=empresa, identidade=identidade, status__in=_STATUS_EXAME_ATIVO,
+    ).order_by("criado_em")
+
+    bio = getattr(identidade, "biometria_totem", None)
+    return JsonResponse({
+        "reconhecido": True,
+        "score": round(score, 4),
+        "identidade_id": identidade.id,
+        "nome": identidade.nome,
+        "foto": (bio.foto_thumb_base64 if bio else "") or "",
+        "exames": [_serializar_pedido_exame(p) for p in pendentes],
+        "sem_exames": not pendentes.exists(),
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_exame_avancar(request):
+    """POST {pedido_id, novo_status} — avança o status do exame na estação."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    pedido = PedidoExameVita.objects.filter(pk=data.get("pedido_id"), empresa=empresa).first()
+    if not pedido:
+        return JsonResponse({"erro": "Pedido não encontrado."}, status=404)
+
+    novo = data.get("novo_status", "")
+    validos = {s[0] for s in PedidoExameVita.STATUS}
+    if novo not in validos:
+        return JsonResponse({"erro": "Status inválido."}, status=400)
+    pedido.status = novo
+    pedido.save(update_fields=["status", "atualizado_em"])
+    return JsonResponse({"ok": True, "pedido": _serializar_pedido_exame(pedido)})
+
+
+@require_http_methods(["GET"])
+def api_exames_paciente(request):
+    """GET ?identidade_id= | ?cpf= — lista pedidos de exame de um paciente."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    ident = None
+    if request.GET.get("identidade_id"):
+        ident = IdentidadePaciente.objects.filter(pk=request.GET["identidade_id"], empresa=empresa).first()
+    if not ident and request.GET.get("cpf"):
+        cpf = "".join(c for c in request.GET["cpf"] if c.isdigit())
+        ident = IdentidadePaciente.objects.filter(empresa=empresa, cpf=cpf).first()
+    if not ident:
+        return JsonResponse({"erro": "Paciente não encontrado."}, status=404)
+    pedidos = PedidoExameVita.objects.filter(empresa=empresa, identidade=ident).order_by("-criado_em")[:50]
+    return JsonResponse({
+        "identidade_id": ident.id, "nome": ident.nome,
+        "pedidos": [_serializar_pedido_exame(p) for p in pedidos],
+    })

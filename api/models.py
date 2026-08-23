@@ -14634,6 +14634,54 @@ class TotemDispositivo(models.Model):
         return f"{self.nome} ({self.get_tipo_display()}) — {'ativo' if self.ativo else 'revogado'}"
 
 
+class PedidoExameVita(models.Model):
+    """
+    Pedido de exame do fluxo pós-consulta (VITA OS), ligado à identidade
+    biométrica do paciente. O paciente é direcionado a uma estação (lab/imagem)
+    e reconhecido por rosto ao chegar — sem papel, sem senha.
+    """
+    TIPO = [
+        ("laboratorio", "Laboratório"),
+        ("imagem",      "Imagem / Radiologia"),
+        ("outro",       "Outro"),
+    ]
+    STATUS = [
+        ("solicitado",      "Solicitado pelo médico"),
+        ("autorizado",      "Autorizado pelo plano"),
+        ("aguardando",      "Aguardando paciente na estação"),
+        ("em_atendimento",  "Em atendimento"),
+        ("realizado",       "Realizado / Coletado"),
+        ("concluido",       "Concluído (resultado ao médico)"),
+        ("cancelado",       "Cancelado"),
+    ]
+
+    empresa            = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="pedidos_exame_vita")
+    identidade         = models.ForeignKey("IdentidadePaciente", on_delete=models.CASCADE, related_name="pedidos_exame_vita")
+    checkin            = models.ForeignKey("TotemCheckinLog", on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos_exame_vita")
+    tipo               = models.CharField(max_length=15, choices=TIPO, default="laboratorio")
+    exames             = models.JSONField(default=list, help_text='[{"nome":..., "codigo_tuss":...}]')
+    estacao            = models.CharField(max_length=120, blank=True, default="", help_text="Ex: Laboratório - Coleta 1, Radiologia - Sala 2")
+    medico_solicitante = models.CharField(max_length=200, blank=True, default="")
+    observacoes        = models.TextField(blank=True, default="")
+    status             = models.CharField(max_length=20, choices=STATUS, default="solicitado")
+    autorizacao_solicitada = models.BooleanField(default=False, help_text="Autorização pedida ao plano automaticamente")
+    biometria_token    = models.CharField(max_length=400, blank=True, default="", help_text="Selo biométrico para a autorização/guia")
+    criado_em          = models.DateTimeField(auto_now_add=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Pedido de Exame (VITA)"
+        verbose_name_plural = "Pedidos de Exame (VITA)"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["identidade", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Exame {self.get_tipo_display()} — {self.identidade.nome} ({self.status})"
+
+
 class ConvenioPacienteTotem(models.Model):
     """
     Dados do plano de saúde (carteirinha) informados pelo paciente no totem.
