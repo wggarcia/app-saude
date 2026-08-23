@@ -3801,6 +3801,9 @@ class BeneficiarioPlano(models.Model):
         related_name="vidas",
         help_text="Contrato corporativo (empresa-contratante) a que esta vida pertence",
     )
+    # Biometria facial para login no portal do beneficiário (VITA OS)
+    face_embedding    = models.JSONField(null=True, blank=True, help_text="Vetor ArcFace 512D do beneficiário — login por rosto")
+    face_thumb_base64 = models.TextField(blank=True, default="", help_text="Miniatura do rosto para exibição")
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -3808,6 +3811,21 @@ class BeneficiarioPlano(models.Model):
 
     def __str__(self):
         return f"{self.nome} — {self.plano.nome}"
+
+
+class PortalFacialOperadora(models.Model):
+    """
+    Token público de acesso ao portal do beneficiário por reconhecimento facial.
+    A MESMA URL serve pro totem na operadora e pro QR code que o beneficiário
+    lê no celular. O token identifica a operadora sem exigir login prévio.
+    """
+    empresa    = models.OneToOneField("Empresa", on_delete=models.CASCADE, related_name="portal_facial")
+    token      = models.CharField(max_length=64, unique=True, db_index=True)
+    ativo      = models.BooleanField(default=True)
+    criado_em  = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Portal facial — {self.empresa.nome}"
 
 
 class PrestadorPlanoSaude(models.Model):

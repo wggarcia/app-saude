@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Portal do Beneficiário</title>
+<style>
+  :root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--ok:#00e5b0;--danger:#ff4d6d;--text:#e8f6ff;--muted:#5a8fa8;--border:rgba(0,194,255,.15)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:440px;text-align:center}
+  .logo{font-size:20px;font-weight:800;color:var(--accent);margin-bottom:4px}
+  .sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+  .cam{position:relative;width:220px;height:220px;border-radius:50%;overflow:hidden;margin:0 auto 18px;background:#000;border:3px solid var(--accent);box-shadow:0 0 30px rgba(0,194,255,.3)}
+  #video{width:100%;height:100%;object-fit:cover}
+  .btn{width:100%;padding:15px;border:none;border-radius:12px;background:linear-gradient(135deg,#0077b6,#00c2ff);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:6px}
+  .btn:disabled{opacity:.6}
+  .btn.sec{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:14px}
+  .status{font-size:14px;color:var(--muted);min-height:20px;margin:10px 0}
+  .status.err{color:var(--danger)}.status.ok{color:var(--ok)}
+  .campo{width:100%;padding:13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;margin-bottom:10px}
+  .hidden{display:none}
+  /* mini-portal */
+  .mp-foto{width:90px;height:90px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:2px solid var(--ok);display:block;background:var(--surface2)}
+  .mp-nome{font-size:22px;font-weight:800}
+  .mp-badge{display:inline-block;background:rgba(0,229,176,.15);color:var(--ok);font-size:12px;font-weight:700;padding:4px 12px;border-radius:100px;margin-top:6px}
+  .mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0;text-align:left}
+  .mp-item{background:var(--surface2);border-radius:10px;padding:12px}
+  .mp-item label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .mp-item span{display:block;font-size:15px;font-weight:700;margin-top:3px}
+</style>
+</head>
+<body>
+{% if invalido %}
+  <div class="card">
+    <div class="logo">⚠️ Acesso inválido</div>
+    <div class="sub">Este link não está ativo. Procure sua operadora.</div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="logo">🧬 {{ empresa_nome }}</div>
+    <div class="sub">Portal do Beneficiário — entre com seu rosto</div>
+
+    <!-- LOGIN -->
+    <div id="telaLogin">
+      <div class="cam"><video id="video" autoplay playsinline muted></video><canvas id="cvs" class="hidden"></canvas></div>
+      <div class="status" id="status">Posicione o rosto e toque em entrar</div>
+      <button class="btn" id="btnLogin" onclick="login()">🔓 Entrar com meu rosto</button>
+      <button class="btn sec" onclick="mostrarEnroll()">Primeiro acesso? Cadastrar meu rosto</button>
+    </div>
+
+    <!-- PRIMEIRO ACESSO -->
+    <div id="telaEnroll" class="hidden">
+      <div class="cam"><video id="video2" autoplay playsinline muted></video></div>
+      <div class="sub">Informe sua carteirinha (ou CPF) e cadastre seu rosto.</div>
+      <input class="campo" id="carteirinha" placeholder="Número da carteirinha">
+      <input class="campo" id="cpf" placeholder="Ou CPF (só números)" inputmode="numeric">
+      <div class="status" id="statusE"></div>
+      <button class="btn" id="btnEnroll" onclick="enrolar()">📸 Cadastrar meu rosto</button>
+      <button class="btn sec" onclick="mostrarLogin()">Voltar</button>
+    </div>
+
+    <!-- MINI-PORTAL -->
+    <div id="telaPortal" class="hidden">
+      <img class="mp-foto" id="mpFoto" src="" alt="">
+      <div class="mp-nome" id="mpNome">—</div>
+      <div class="mp-badge" id="mpBadge">Ativo</div>
+      <div class="mp-grid">
+        <div class="mp-item"><label>Carteirinha</label><span id="mpCart">—</span></div>
+        <div class="mp-item"><label>Plano</label><span id="mpPlano">—</span></div>
+        <div class="mp-item"><label>Vínculo</label><span id="mpVinculo">—</span></div>
+        <div class="mp-item"><label>Acomodação</label><span id="mpAcom">—</span></div>
+      </div>
+      <button class="btn" onclick="sair()">Sair</button>
+    </div>
+  </div>
+{% endif %}
+
+<script>
+const TOKEN="{{ token }}";
+const API="/api/plano-saude/acesso/"+TOKEN+"/";
+let stream;
+async function initCam(){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}});document.getElementById('video').srcObject=stream;const v2=document.getElementById('video2');if(v2)v2.srcObject=stream;}catch(e){setStatus('Câmera não disponível.','err');}}
+initCam();
+function cap(){const v=document.getElementById('telaEnroll').classList.contains('hidden')?document.getElementById('video'):document.getElementById('video2');const c=document.getElementById('cvs');c.width=v.videoWidth||640;c.height=v.videoHeight||480;c.getContext('2d').drawImage(v,0,0);return c.toDataURL('image/jpeg',0.85);}
+function setStatus(t,cls){const e=document.getElementById('status');e.textContent=t;e.className='status '+(cls||'');}
+function setStatusE(t,cls){const e=document.getElementById('statusE');e.textContent=t;e.className='status '+(cls||'');}
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+async function post(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify(b)});return {ok:r.ok,data:await r.json()};}
+
+function mostrarLogin(){document.getElementById('telaLogin').classList.remove('hidden');document.getElementById('telaEnroll').classList.add('hidden');document.getElementById('telaPortal').classList.add('hidden');}
+function mostrarEnroll(){document.getElementById('telaLogin').classList.add('hidden');document.getElementById('telaEnroll').classList.remove('hidden');document.getElementById('telaPortal').classList.add('hidden');}
+function sair(){mostrarLogin();setStatus('Posicione o rosto e toque em entrar');}
+
+async function login(){
+  document.getElementById('btnLogin').disabled=true;setStatus('🔍 Reconhecendo...');
+  const {ok,data}=await post(API+'login/',{foto_base64:cap()});
+  document.getElementById('btnLogin').disabled=false;
+  if(ok&&data.reconhecido){mostrarPortal(data.beneficiario);}
+  else{setStatus((data&&data.mensagem)||'Rosto não reconhecido.','err');}
+}
+async function enrolar(){
+  const cart=document.getElementById('carteirinha').value.trim();
+  const cpf=document.getElementById('cpf').value.trim();
+  if(!cart&&!cpf){setStatusE('Informe carteirinha ou CPF.','err');return;}
+  document.getElementById('btnEnroll').disabled=true;setStatusE('📸 Cadastrando...');
+  const {ok,data}=await post(API+'enrolar/',{carteirinha:cart,cpf:cpf,foto_base64:cap()});
+  document.getElementById('btnEnroll').disabled=false;
+  if(ok&&data.ok){mostrarPortal(data.beneficiario);}
+  else{setStatusE((data&&data.erro)||'Não foi possível cadastrar.','err');}
+}
+function mostrarPortal(b){
+  document.getElementById('telaLogin').classList.add('hidden');
+  document.getElementById('telaEnroll').classList.add('hidden');
+  document.getElementById('telaPortal').classList.remove('hidden');
+  document.getElementById('mpFoto').src=b.foto||'';
+  document.getElementById('mpNome').textContent=b.nome;
+  document.getElementById('mpBadge').textContent=b.situacao;
+  document.getElementById('mpCart').textContent=b.carteirinha||'—';
+  document.getElementById('mpPlano').textContent=b.plano||'—';
+  document.getElementById('mpVinculo').textContent=b.vinculo+(b.dependentes?(' · '+b.dependentes+' dep.'):'');
+  document.getElementById('mpAcom').textContent=b.acomodacao||'—';
+  clearTimeout(window._t);window._t=setTimeout(sair,30000);
+}
+</script>
+</body>
+</html>
