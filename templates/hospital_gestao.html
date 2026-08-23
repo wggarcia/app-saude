@@ -1075,6 +1075,18 @@ tr:hover td{background:rgba(255,255,255,.018)}
           </div>
         </div>
 
+        <!-- Resultados de exame (volta ao médico) -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <div>
+              <span class="card-title">🔬 Exames — Resultados</span>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">Lançar laudo e resultados prontos pro médico</div>
+            </div>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="carregarResultadosExame()">↻ Atualizar</button>
+          </div>
+          <div id="exResultadosWrap" style="padding:14px;font-size:13px;color:var(--muted);text-align:center">Carregando...</div>
+        </div>
+
         <!-- Dispositivos / Kiosk -->
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
@@ -3754,6 +3766,7 @@ async function carregarVitaStats() {
   }
 
   carregarDispositivos();
+  carregarResultadosExame();
 }
 
 // ── Pedido de exame (pós-consulta) ─────────────────────────────────────────────
@@ -3775,6 +3788,52 @@ async function criarPedidoExame() {
       ['exCpf','exExames','exEstacao'].forEach(id=>document.getElementById(id).value='');
     } else { res.style.color='var(--danger)'; res.textContent = (r&&r.erro)||'Erro ao criar.'; }
   } catch(e) { res.style.color='var(--danger)'; res.textContent = 'Erro: paciente não encontrado ou sem acesso.'; }
+}
+
+// ── Resultados de exame ─────────────────────────────────────────────────────────
+async function carregarResultadosExame() {
+  const wrap = document.getElementById('exResultadosWrap');
+  if (!wrap) return;
+  const d = await api('/api/hospital/exames/resultados/');
+  if (!d) { wrap.innerHTML = '<div style="padding:16px;color:var(--muted)">Indisponível.</div>'; return; }
+  const aguard = d.aguardando_resultado || [];
+  const results = d.resultados || [];
+  const _icon = {normal:'🟢',alterado:'🟡',critico:'🔴',inconclusivo:'⚪'};
+  let html = '';
+  if (aguard.length) {
+    html += '<div style="font-size:11px;color:var(--warn);text-transform:uppercase;letter-spacing:.05em;padding:6px 4px">Aguardando laudo</div>';
+    html += aguard.map(p => `
+      <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <div style="flex:1"><div style="font-weight:700;font-size:13px">${p.paciente}</div>
+        <div style="font-size:11px;color:var(--muted)">${p.tipo_label}: ${(p.exames||[]).map(x=>x.nome||x).join(', ')}</div></div>
+        <button class="btn btn-primary" style="font-size:11px" onclick="lancarResultado(${p.id})">Lançar laudo</button>
+      </div>`).join('');
+  }
+  if (results.length) {
+    html += '<div style="font-size:11px;color:var(--ok);text-transform:uppercase;letter-spacing:.05em;padding:10px 4px 6px">Resultados prontos</div>';
+    html += results.map(p => `
+      <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;${p.resultado_visto?'':'background:rgba(0,180,216,.05)'}">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px">${_icon[p.resultado_interpretacao]||''} ${p.paciente} ${p.resultado_visto?'':'<span style="color:var(--accent);font-size:10px">● novo</span>'}</div>
+          <div style="font-size:11px;color:var(--muted)">${p.tipo_label} · ${p.resultado_interpretacao_label||'—'} · ${p.resultado_em}</div>
+          <div style="font-size:12px;margin-top:4px;white-space:pre-wrap">${p.resultado_laudo}</div>
+        </div>
+        ${p.resultado_visto?'':`<button class="btn btn-ghost" style="font-size:11px" onclick="marcarResultadoVisto(${p.id})">Marcar visto</button>`}
+      </div>`).join('');
+  }
+  wrap.innerHTML = html || '<div style="padding:16px;color:var(--muted)">Nenhum exame aguardando resultado ou resultado pronto.</div>';
+}
+
+async function lancarResultado(pedidoId) {
+  const laudo = prompt('Laudo / resultado do exame:');
+  if (!laudo || !laudo.trim()) return;
+  let interp = (prompt('Interpretação? digite: normal, alterado, critico ou inconclusivo','normal')||'').trim().toLowerCase();
+  const r = await api('/api/hospital/exames/resultado/', { method:'POST', body: JSON.stringify({pedido_id:pedidoId, laudo:laudo.trim(), interpretacao:interp}) });
+  if (r && r.ok) carregarResultadosExame();
+}
+async function marcarResultadoVisto(pedidoId) {
+  await api('/api/hospital/exames/marcar-visto/', { method:'POST', body: JSON.stringify({pedido_id:pedidoId}) });
+  carregarResultadosExame();
 }
 
 // ── Dispositivos de Kiosk ──────────────────────────────────────────────────────

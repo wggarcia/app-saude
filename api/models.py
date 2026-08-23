@@ -14707,6 +14707,15 @@ class PedidoExameVita(models.Model):
     status             = models.CharField(max_length=20, choices=STATUS, default="solicitado")
     autorizacao_solicitada = models.BooleanField(default=False, help_text="Autorização pedida ao plano automaticamente")
     biometria_token    = models.CharField(max_length=400, blank=True, default="", help_text="Selo biométrico para a autorização/guia")
+    # Resultado (laudo devolvido ao médico solicitante)
+    resultado_laudo         = models.TextField(blank=True, default="")
+    resultado_interpretacao = models.CharField(
+        max_length=12, blank=True, default="",
+        choices=[("normal","Normal"),("alterado","Alterado"),("critico","Crítico"),("inconclusivo","Inconclusivo")],
+    )
+    resultado_por           = models.CharField(max_length=150, blank=True, default="")
+    resultado_em            = models.DateTimeField(null=True, blank=True)
+    resultado_visto         = models.BooleanField(default=False, help_text="Médico já visualizou o resultado")
     criado_em          = models.DateTimeField(auto_now_add=True)
     atualizado_em      = models.DateTimeField(auto_now=True)
 

@@ -987,6 +987,9 @@ from api.views_hospital_totem import (
     api_ps_entrada_detectar,
     api_ps_chegadas,
     api_ps_chegada_atender,
+    api_exame_resultado,
+    api_exames_resultados,
+    api_exame_marcar_visto,
 )
 from api.views_hospital_opme import (
     api_opme_catalogo,
@@ -3849,6 +3852,9 @@ urlpatterns = [
     path('api/hospital/exames/criar/', api_exame_criar),
     path('api/hospital/exames/avancar/', api_exame_avancar),
     path('api/hospital/exames/paciente/', api_exames_paciente),
+    path('api/hospital/exames/resultado/', api_exame_resultado),
+    path('api/hospital/exames/resultados/', api_exames_resultados),
+    path('api/hospital/exames/marcar-visto/', api_exame_marcar_visto),
     # PS — câmera passiva na entrada
     path('hospital/ps/entrada/', ps_entrada_interface),
     path('api/hospital/ps/entrada/detectar/', api_ps_entrada_detectar),

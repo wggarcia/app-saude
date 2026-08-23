@@ -1015,6 +1015,13 @@ def _serializar_pedido_exame(p):
         "medico":    p.medico_solicitante,
         "autorizado": p.status not in ("solicitado",),
         "observacoes": p.observacoes,
+        "paciente":  p.identidade.nome if p.identidade_id else "",
+        "resultado_laudo": p.resultado_laudo,
+        "resultado_interpretacao": p.resultado_interpretacao,
+        "resultado_interpretacao_label": p.get_resultado_interpretacao_display() if p.resultado_interpretacao else "",
+        "resultado_por": p.resultado_por,
+        "resultado_em": p.resultado_em.strftime("%d/%m %H:%M") if p.resultado_em else "",
+        "resultado_visto": p.resultado_visto,
         "criado_em": p.criado_em.strftime("%d/%m %H:%M"),
     }
 
@@ -1303,4 +1310,97 @@ def api_ps_chegada_atender(request):
         return JsonResponse({"erro": "Chegada não encontrada."}, status=404)
     c.atendido = True
     c.save(update_fields=["atendido"])
+    return JsonResponse({"ok": True})
+
+
+# ─── Resultado de exame (laudo de volta ao médico) ────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_exame_resultado(request):
+    """
+    POST {pedido_id, laudo, interpretacao, resultado_por?}
+    Lança o resultado/laudo do exame → status 'concluido' → fica disponível
+    pro médico solicitante no painel de resultados.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    pedido = PedidoExameVita.objects.filter(pk=data.get("pedido_id"), empresa=empresa).first()
+    if not pedido:
+        return JsonResponse({"erro": "Pedido não encontrado."}, status=404)
+
+    laudo = (data.get("laudo") or "").strip()
+    if not laudo:
+        return JsonResponse({"erro": "Informe o laudo/resultado."}, status=400)
+    interp = data.get("interpretacao", "")
+    validas = {"normal", "alterado", "critico", "inconclusivo"}
+    if interp and interp not in validas:
+        interp = ""
+
+    pedido.resultado_laudo = laudo
+    pedido.resultado_interpretacao = interp
+    pedido.resultado_por = data.get("resultado_por", "")
+    pedido.resultado_em = timezone.now()
+    pedido.resultado_visto = False
+    pedido.status = "concluido"
+    pedido.save(update_fields=[
+        "resultado_laudo", "resultado_interpretacao", "resultado_por",
+        "resultado_em", "resultado_visto", "status", "atualizado_em",
+    ])
+    return JsonResponse({"ok": True, "pedido": _serializar_pedido_exame(pedido)})
+
+
+@require_http_methods(["GET"])
+def api_exames_resultados(request):
+    """
+    GET — resultados de exame prontos (concluídos), pro médico ver.
+    ?novos=1 mostra só os ainda não vistos.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    qs = (PedidoExameVita.objects
+          .filter(empresa=empresa, status="concluido")
+          .exclude(resultado_laudo="")
+          .select_related("identidade")
+          .order_by("-resultado_em"))
+    if request.GET.get("novos") == "1":
+        qs = qs.filter(resultado_visto=False)
+    resultados = [_serializar_pedido_exame(p) for p in qs[:50]]
+    nao_vistos = PedidoExameVita.objects.filter(
+        empresa=empresa, status="concluido", resultado_visto=False
+    ).exclude(resultado_laudo="").count()
+    # Exames já realizados que ainda aguardam o lançamento do laudo
+    aguardando = PedidoExameVita.objects.filter(
+        empresa=empresa, status="realizado",
+    ).select_related("identidade").order_by("-atualizado_em")[:50]
+    return JsonResponse({
+        "resultados": resultados,
+        "nao_vistos": nao_vistos,
+        "aguardando_resultado": [_serializar_pedido_exame(p) for p in aguardando],
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_exame_marcar_visto(request):
+    """POST {pedido_id} — médico marca o resultado como visto."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+    pedido = PedidoExameVita.objects.filter(pk=data.get("pedido_id"), empresa=empresa).first()
+    if not pedido:
+        return JsonResponse({"erro": "Pedido não encontrado."}, status=404)
+    pedido.resultado_visto = True
+    pedido.save(update_fields=["resultado_visto"])
     return JsonResponse({"ok": True})
