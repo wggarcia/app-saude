@@ -3577,6 +3577,11 @@ function _orcBadgeModuloStatus(st) {
   return `<span class="badge badge-muted">${st || '—'}</span>`;
 }
 
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
 async function carregarVitaStats() {
   const d = await api('/api/hospital/totem/stats/');
   if (!d) return;
