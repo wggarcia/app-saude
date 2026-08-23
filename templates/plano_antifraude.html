@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Antifraude — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+.filtros{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:.15s}
+.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,.1)}
+.achado{display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.achado:last-child{border-bottom:none}
+.sev{width:8px;align-self:stretch;border-radius:4px;flex-shrink:0}
+.sev.alta{background:var(--danger)}.sev.media{background:var(--warn)}.sev.baixa{background:var(--muted)}
+.achado-body{flex:1;min-width:0}
+.achado-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px}
+.tag.alta{background:rgba(255,77,109,.15);color:var(--danger)}
+.tag.media{background:rgba(255,179,71,.15);color:var(--warn)}
+.tag.tipo{background:rgba(0,194,255,.12);color:var(--accent)}
+.achado-titulo{font-size:14px;font-weight:700}
+.achado-detalhe{font-size:12px;color:var(--muted);margin-top:3px}
+.achado-meta{font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+.achado-valor{font-size:16px;font-weight:800;color:var(--danger);white-space:nowrap;font-variant-numeric:tabular-nums}
+.empty{padding:50px;text-align:center;color:var(--muted)}
+.spin{padding:50px;text-align:center;color:var(--muted)}
+.lgpd{font-size:11px;color:var(--muted);line-height:1.7;background:rgba(0,194,255,.05);border:1px solid rgba(0,194,255,.15);border-radius:12px;padding:14px 18px}
+</style>
+</head>
+<body>
+{% include "_plano_saude_sidebar.html" %}
+
+<div class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🛡️ Antifraude — Contas Médicas</div>
+      <div class="page-sub">{{ empresa_nome|default:"Operadora" }} · análise das guias recebidas nos últimos <span id="janela">90</span> dias</div>
+    </div>
+    <button class="chip active" onclick="carregar()">↻ Reanalisar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kGuias">—</div><div class="kpi-lbl">📥 Guias analisadas</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kAlta">—</div><div class="kpi-lbl">🚨 Alertas graves</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kMedia">—</div><div class="kpi-lbl">⚠️ Alertas médios</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kRisco">—</div><div class="kpi-lbl">💸 Valor em risco</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🔎 Achados</span>
+      <div class="filtros" id="filtros">
+        <span class="chip active" data-f="todos" onclick="filtrar('todos',this)">Todos</span>
+        <span class="chip" data-f="alta" onclick="filtrar('alta',this)">Só graves</span>
+      </div>
+    </div>
+    <div id="lista"><div class="spin">Analisando guias…</div></div>
+  </div>
+
+  <div class="lgpd">
+    🔒 <strong style="color:var(--text)">Como funciona:</strong> o motor analisa apenas as guias que <strong>a sua operadora recebeu</strong> (recepção TISS) —
+    nenhum dado de outro segmento é usado (LGPD). Regras: integridade do XML (hash), guias duplicadas, frequência anormal por beneficiário,
+    valores fora do padrão do procedimento e prestadores com alta taxa de duplicidade.
+    <br>🧬 <strong style="color:var(--accent)">Em breve:</strong> guias vindas de hospitais SoloCRT com <strong>verificação por biometria facial</strong> entram com risco reduzido (selo antifraude de rede).
+  </div>
+</div>
+
+<script>
+let _achados = [];
+let _filtro = 'todos';
+
+function fmtBRL(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+async function carregar(){
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '<div class="spin">Analisando guias…</div>';
+  try{
+    const r = await fetch('/api/plano-saude/antifraude/', {credentials:'include'});
+    if(!r.ok){ lista.innerHTML = '<div class="empty">Não foi possível carregar (acesso ou dados indisponíveis).</div>'; return; }
+    const d = await r.json();
+    const s = d.resumo||{};
+    document.getElementById('kGuias').textContent = s.total_guias ?? '—';
+    document.getElementById('kAlta').textContent  = s.flags_alta ?? '—';
+    document.getElementById('kMedia').textContent = s.flags_media ?? '—';
+    document.getElementById('kRisco').textContent = fmtBRL(s.valor_em_risco);
+    document.getElementById('janela').textContent = s.janela_dias ?? 90;
+    _achados = d.achados||[];
+    render();
+  }catch(e){ lista.innerHTML = '<div class="empty">Erro ao carregar.</div>'; }
+}
+
+function filtrar(f, el){
+  _filtro = f;
+  document.querySelectorAll('#filtros .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function render(){
+  const lista = document.getElementById('lista');
+  let itens = _achados;
+  if(_filtro==='alta') itens = itens.filter(a=>a.gravidade==='alta');
+  if(!itens.length){
+    lista.innerHTML = '<div class="empty">✅ Nenhum indício de fraude no período. As guias recebidas estão dentro do padrão.</div>';
+    return;
+  }
+  lista.innerHTML = itens.map(a=>`
+    <div class="achado">
+      <div class="sev ${a.gravidade}"></div>
+      <div class="achado-body">
+        <div class="achado-top">
+          <span class="tag ${a.gravidade}">${a.gravidade==='alta'?'Grave':a.gravidade==='media'?'Médio':'Baixo'}</span>
+          <span class="tag tipo">${a.tipo_label}</span>
+        </div>
+        <div class="achado-titulo">${a.titulo}</div>
+        <div class="achado-detalhe">${a.detalhe}</div>
+        <div class="achado-meta">
+          ${a.beneficiario?`<span>👤 ${a.beneficiario}</span>`:''}
+          ${a.prestador?`<span>🏥 ${a.prestador}</span>`:''}
+          ${a.guia?`<span>📄 Guia ${a.guia}</span>`:''}
+          ${a.data?`<span>📅 ${a.data}</span>`:''}
+        </div>
+      </div>
+      <div class="achado-valor">${fmtBRL(a.valor)}</div>
+    </div>`).join('');
+}
+
+carregar();
+</script>
+</body>
+</html>
