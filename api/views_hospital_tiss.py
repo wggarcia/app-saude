@@ -301,6 +301,33 @@ def _fmt_valor(v):
         return "0.00"
 
 
+def _selo_biometrico_para_guia(guia, empresa) -> str:
+    """
+    Se o beneficiário desta guia foi verificado por biometria facial num
+    check-in recente (≤7 dias) neste hospital, retorna o selo (token) para
+    embutir no XML TISS. Liga guia→paciente pela carteirinha. Best-effort.
+    """
+    try:
+        from datetime import timedelta
+        from django.utils import timezone
+        from .models import ConvenioPacienteTotem, TotemCheckinLog
+        cart = (guia.beneficiario_carteirinha or "").strip()
+        if not cart:
+            return ""
+        conv = (ConvenioPacienteTotem.objects
+                .filter(identidade__empresa=empresa, numero_carteirinha=cart)
+                .select_related("identidade").first())
+        if not conv:
+            return ""
+        limite = timezone.now() - timedelta(days=7)
+        ck = (TotemCheckinLog.objects
+              .filter(empresa=empresa, identidade=conv.identidade, checkin_em__gte=limite)
+              .exclude(biometria_token="").order_by("-checkin_em").first())
+        return ck.biometria_token if ck else ""
+    except Exception:
+        return ""
+
+
 def gerar_xml_tiss_3_05(guia: GuiaTISS, empresa) -> str:
     """
     Gera XML TISS 3.05.00 completo conforme Resolução Normativa ANS nº 305/2012
@@ -368,6 +395,13 @@ def gerar_xml_tiss_3_05(guia: GuiaTISS, empresa) -> str:
         _gerar_guia_internacao(corpo, guia, codigo_prestador, nome_empresa, cnes_prestador, data_str)
     else:
         _gerar_guia_sp_sadt(corpo, guia, codigo_prestador, nome_empresa, cnes_prestador, data_str)
+
+    # ── Selo biométrico VITA (rede SoloCRT) ───────────────────────────────────
+    # Paciente verificado por rosto no check-in → embute o selo como comentário
+    # (não altera o schema TISS; a operadora SoloCRT lê e marca a guia verificada).
+    _selo = _selo_biometrico_para_guia(guia, empresa)
+    if _selo:
+        root.append(ET.Comment(f" VITA-BIO:{_selo} "))
 
     # ── Epílogo com hash SHA-1 ────────────────────────────────────────────────
     # Hash calculado sobre o conteúdo serializado até este ponto (cabecalho + corpo)
