@@ -148,6 +148,31 @@ def _gerar_senha_atendimento(empresa) -> str:
     return f"A{usadas + 1:03d}"
 
 
+def _thumbnail(foto_base64: str, largura: int = 200) -> str:
+    """
+    Gera uma miniatura JPEG (base64 data URI) do rosto para exibição no painel.
+    Reduz o tamanho para não pesar no banco. Best-effort: se falhar, retorna "".
+    """
+    try:
+        import cv2
+        import numpy as np
+        b64 = foto_base64.split(",", 1)[1] if "," in foto_base64 else foto_base64
+        arr = np.frombuffer(base64.b64decode(b64), dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            return ""
+        h, w = img.shape[:2]
+        if w > largura:
+            nova_h = int(h * (largura / w))
+            img = cv2.resize(img, (largura, nova_h), interpolation=cv2.INTER_AREA)
+        ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        if not ok:
+            return ""
+        return "data:image/jpeg;base64," + base64.b64encode(buf).decode("ascii")
+    except Exception:
+        return ""
+
+
 def _dados_convenio(identidade) -> dict:
     """Retorna os dados do plano do paciente para exibição no check-in."""
     conv = ConvenioPacienteTotem.objects.filter(identidade=identidade).first()
@@ -309,7 +334,10 @@ def api_totem_checkin_cpf(request):
         try:
             bio.embedding_json = _extrair_embedding(foto_b64)
             bio.ativo = True
-            bio.save(update_fields=["embedding_json", "ativo", "atualizado_em"])
+            thumb = _thumbnail(foto_b64)
+            if thumb:
+                bio.foto_thumb_base64 = thumb
+            bio.save(update_fields=["embedding_json", "foto_thumb_base64", "ativo", "atualizado_em"])
             reaprendido = True
         except (ValueError, ImportError):
             pass  # face ruim nesta captura — check-in por CPF segue normalmente
@@ -407,6 +435,7 @@ def api_totem_cadastrar(request):
             defaults={
                 "embedding_json":    embedding,
                 "assinatura_base64": assinatura_b64,
+                "foto_thumb_base64": _thumbnail(foto_b64),
                 "consentimento_lgpd": True,
                 "consentimento_em":   timezone.now(),
                 "ativo":              True,
@@ -667,6 +696,49 @@ def api_ps_triagem_classificar(request):
         "id_temporario":  id_temp,
         "triado_em":      triagem.triado_em.isoformat(),
     }, status=201)
+
+
+# ─── API: Check-ins recentes do totem (com foto) ──────────────────────────────
+
+@require_http_methods(["GET"])
+def api_totem_checkins_recentes(request):
+    """
+    GET — últimos check-ins do totem do dia (recepção/eletivo + novos cadastros),
+    com nome, senha de atendimento, foto (miniatura), como foi identificado e hora.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+
+    hoje = timezone.now().date()
+    checkins = (TotemCheckinLog.objects
+                .filter(empresa=empresa, checkin_em__date=hoje)
+                .exclude(tipo_entrada="emergencia")   # emergência aparece no painel do PS
+                .select_related("identidade", "identidade__biometria_totem")
+                .order_by("-checkin_em")[:20])
+
+    lista = []
+    for c in checkins:
+        ident = c.identidade
+        bio = getattr(ident, "biometria_totem", None) if ident else None
+        if c.tipo_entrada == "novo_cadastro":
+            via = "Novo cadastro"
+        elif c.score_similaridade and c.score_similaridade >= LIMIAR_FACE_MATCH:
+            via = "Reconhecimento facial"
+        else:
+            via = "CPF"
+        lista.append({
+            "id":       c.id,
+            "nome":     ident.nome if ident else "—",
+            "cpf":      ident.cpf if ident else "",
+            "senha":    c.senha_atendimento,
+            "via":      via,
+            "hora":     c.checkin_em.strftime("%H:%M"),
+            "foto":     (bio.foto_thumb_base64 if bio else "") or "",
+            "score":    round(c.score_similaridade, 3) if c.score_similaridade else None,
+        })
+
+    return JsonResponse({"checkins": lista, "total": len(lista)})
 
 
 # ─── API: Painel do PS ────────────────────────────────────────────────────────

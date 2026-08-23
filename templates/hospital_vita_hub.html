@@ -655,13 +655,16 @@ function setCtab(tab, el) {
 let _statsCache = null;
 let _psCache    = null;
 
+let _ciCache = null;
 async function carregarTudo() {
-  const [stats, ps] = await Promise.all([
+  const [stats, ps, ci] = await Promise.all([
     get(API_BASE + 'stats/'),
     get(API_PS   + 'painel/'),
+    get(API_BASE + 'checkins/'),
   ]);
   _statsCache = stats;
   _psCache    = ps;
+  _ciCache    = ci;
   renderStats(stats);
   renderPS(ps);
   renderCenterContent();
@@ -703,26 +706,23 @@ function renderCenterContent() {
 
 function renderFila() {
   const q = document.getElementById('filaQueue');
-  if (!_psCache && !_statsCache) {
-    q.innerHTML = '<div class="empty-state"><div class="icon">📋</div>Nenhum check-in ainda hoje.</div>';
+  const ci = _ciCache;
+  if (!ci || !ci.checkins || !ci.checkins.length) {
+    q.innerHTML = '<div class="empty-state"><div class="icon">✅</div>Nenhum check-in no totem ainda hoje.<br><small>Quando um paciente fizer check-in, ele aparece aqui na hora.</small></div>';
     return;
   }
-  const ps = _psCache;
-  if (!ps || !ps.triagens || !ps.triagens.length) {
-    q.innerHTML = '<div class="empty-state"><div class="icon">✅</div>Nenhum paciente na fila agora.<br><small>Use o botão de scan para identificar um paciente.</small></div>';
-    return;
-  }
-  const _ICON = {vermelho:'🔴',laranja:'🟠',amarelo:'🟡',verde:'🟢',azul:'🔵'};
-  const _COR_CLASS = {vermelho:'danger',laranja:'warn',amarelo:'warn',verde:'ok',azul:'neutral'};
-  q.innerHTML = '<div class="patient-queue">' + ps.triagens.map(t => `
-    <div class="patient-card ${_COR_CLASS[t.cor]||'neutral'}">
-      <div class="avatar">${_ICON[t.cor]||'👤'}</div>
-      <div class="info">
-        <div class="nome">${t.nome}${t.id_temp ? ` <span style="color:var(--accent);font-size:11px">${t.id_temp}</span>` : ''}</div>
-        <div class="meta">${t.queixa} · ${t.enfermeiro ? 'Enf: '+t.enfermeiro : ''}</div>
+  const _viaIcon = {'Reconhecimento facial':'📷','CPF':'⌨️','Novo cadastro':'🆕'};
+  q.innerHTML = '<div class="patient-queue">' + ci.checkins.map(c => `
+    <div class="patient-card ok">
+      <div class="avatar" style="overflow:hidden;padding:0">
+        ${c.foto ? `<img src="${c.foto}" style="width:100%;height:100%;object-fit:cover" alt="">` : '👤'}
       </div>
-      <span class="tag ${_COR_CLASS[t.cor]||'muted'}">${t.cor_label.split('—')[0].trim()}</span>
-      <span class="hora">${t.triado_em}</span>
+      <div class="info">
+        <div class="nome">${c.nome}</div>
+        <div class="meta">${_viaIcon[c.via]||''} ${c.via}${c.score!=null?` · ${(c.score*100).toFixed(0)}%`:''}</div>
+      </div>
+      ${c.senha ? `<span class="tag ok" style="font-size:15px;font-weight:800">${c.senha}</span>` : ''}
+      <span class="hora">${c.hora}</span>
     </div>`).join('') + '</div>';
 }
 

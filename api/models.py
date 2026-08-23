@@ -14433,6 +14433,10 @@ class BiometriaTotemPaciente(models.Model):
         blank=True, default="",
         help_text="Assinatura digital PNG em base64 — aplicada automaticamente nas guias"
     )
+    foto_thumb_base64       = models.TextField(
+        blank=True, default="",
+        help_text="Miniatura do rosto (JPEG base64) para identificação visual no painel de operação"
+    )
     consentimento_lgpd      = models.BooleanField(
         default=False,
         help_text="Paciente autorizou uso da biometria e da assinatura automática"
