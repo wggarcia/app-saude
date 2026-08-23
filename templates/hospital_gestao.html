@@ -1035,6 +1035,20 @@ tr:hover td{background:rgba(255,255,255,.018)}
           </div>
         </div>
 
+        <!-- Dispositivos / Kiosk -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <div>
+              <span class="card-title">🖥️ Dispositivos (Kiosk)</span>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">Tablets/PCs pareados na recepção e no PS — funcionam sem login</div>
+            </div>
+            <button class="btn btn-primary" style="font-size:12px" onclick="abrirNovoDispositivo()">+ Parear Dispositivo</button>
+          </div>
+          <div id="vitaDispositivosWrap" style="padding:14px;font-size:13px;color:var(--muted);text-align:center">
+            Carregando...
+          </div>
+        </div>
+
         <!-- Log de checkins recentes -->
         <div class="card">
           <div class="card-header">
@@ -1059,6 +1073,57 @@ tr:hover td{background:rgba(255,255,255,.018)}
   </div><!-- end .content -->
 </main>
 </div><!-- end .layout -->
+
+<!-- Modal: Parear Dispositivo (Kiosk) -->
+<div class="modal-bg" id="modalDispositivo">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span class="modal-title">🖥️ Parear Dispositivo (Kiosk)</span>
+      <button class="btn-icon" onclick="fecharModalDispositivo()">✕</button></div>
+
+    <!-- Formulário -->
+    <div class="modal-body" id="devForm" style="display:flex;flex-direction:column;gap:14px">
+      <p style="font-size:13px;color:var(--muted);margin:0;line-height:1.6">
+        Gera um endereço fixo pra esse dispositivo. Você abre esse endereço no tablet/PC
+        (em tela cheia) <strong>uma vez</strong> e ele fica logado como este hospital,
+        sem precisar de senha. Funciona até você revogar.
+      </p>
+      <div class="mf"><label>Nome do dispositivo *</label>
+        <input id="devNome" type="text" placeholder="Ex: Recepção Térreo, PS - Box 2"
+               style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)"></div>
+      <div class="mf"><label>Tipo de tela *</label>
+        <select id="devTipo" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="totem">⚡ Totem de Check-in (recepção — paciente se identifica)</option>
+          <option value="ps">🚨 Triagem PS (enfermagem — classificação Manchester)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Resultado (URL gerada) -->
+    <div class="modal-body" id="devResultado" style="display:none;flex-direction:column;gap:14px">
+      <div style="padding:14px;background:rgba(6,214,160,.08);border:1px solid rgba(6,214,160,.3);border-radius:10px">
+        <div style="font-weight:700;color:var(--ok);font-size:14px;margin-bottom:4px">✅ Dispositivo "<span id="devResultadoNome"></span>" pareado!</div>
+        <div style="font-size:12px;color:var(--muted)">Abra este endereço no dispositivo (tela cheia). Copie agora — por segurança, o token não é exibido de novo.</div>
+      </div>
+      <div class="mf"><label>Endereço do Kiosk</label>
+        <div style="display:flex;gap:8px">
+          <input id="devUrl" type="text" readonly
+                 style="flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--accent);font-size:12px">
+          <button id="btnCopiarUrl" class="btn btn-primary" style="white-space:nowrap" onclick="copiarUrlDispositivo()">📋 Copiar URL</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6">
+        💡 <strong>Como instalar no tablet:</strong> abra o Chrome, cole essa URL, permita o acesso à câmera
+        quando pedir, e coloque em tela cheia (F11 ou "Adicionar à tela inicial"). Pronto — o dispositivo
+        fica pronto pra uso contínuo.
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModalDispositivo()">Fechar</button>
+      <button class="btn btn-primary" id="btnCriarDispositivo" onclick="criarDispositivo()">Gerar Endereço do Kiosk</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Solicitar Exame -->
 <div class="modal-bg" id="modalExame">
@@ -3631,6 +3696,79 @@ async function carregarVitaStats() {
       <th style="padding:8px 14px;text-align:left">Queixa</th>
       <th style="padding:8px 14px;text-align:left">Horário</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
+
+  carregarDispositivos();
+}
+
+// ── Dispositivos de Kiosk ──────────────────────────────────────────────────────
+async function carregarDispositivos() {
+  const wrap = document.getElementById('vitaDispositivosWrap');
+  if (!wrap) return;
+  const d = await api('/api/hospital/totem/dispositivos/');
+  if (!d || !d.dispositivos || !d.dispositivos.length) {
+    wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Nenhum dispositivo pareado. Clique em "Parear Dispositivo" para configurar um totem na recepção ou um tablet no PS.</div>';
+    return;
+  }
+  const _fmt = s => { if(!s) return 'nunca'; try{ return new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return s; } };
+  wrap.innerHTML = d.dispositivos.map(dev => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:22px">${dev.tipo === 'ps' ? '🚨' : '⚡'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px">${dev.nome} ${dev.ativo ? '' : '<span style="color:var(--danger);font-size:11px">(revogado)</span>'}</div>
+        <div style="font-size:11px;color:var(--muted)">${dev.tipo_label} · último acesso: ${_fmt(dev.ultimo_acesso)}</div>
+      </div>
+      ${dev.ativo ? `<button class="btn btn-ghost" style="font-size:12px;color:var(--danger)" onclick="revogarDispositivo(${dev.id},'${dev.nome.replace(/'/g,"")}')">Revogar</button>` : ''}
+    </div>`).join('');
+}
+
+function abrirNovoDispositivo() {
+  document.getElementById('modalDispositivo').classList.add('open');
+  document.getElementById('devNome').value = '';
+  document.getElementById('devTipo').value = 'totem';
+  document.getElementById('devResultado').style.display = 'none';
+  document.getElementById('devForm').style.display = 'flex';
+  document.getElementById('btnCriarDispositivo').style.display = '';
+  setTimeout(() => document.getElementById('devNome').focus(), 100);
+}
+
+function fecharModalDispositivo() {
+  document.getElementById('modalDispositivo').classList.remove('open');
+  carregarDispositivos();
+}
+
+async function criarDispositivo() {
+  const nome = document.getElementById('devNome').value.trim();
+  const tipo = document.getElementById('devTipo').value;
+  if (!nome) { alert('Dê um nome ao dispositivo (ex: Recepção Térreo).'); return; }
+  const r = await api('/api/hospital/totem/dispositivos/criar/', {
+    method: 'POST', body: JSON.stringify({nome, tipo})
+  });
+  if (!r || !r.ok) { alert((r && r.erro) || 'Erro ao criar dispositivo.'); return; }
+  const dev = r.dispositivo;
+  const url = window.location.origin + dev.kiosk_url;
+  document.getElementById('devForm').style.display = 'none';
+  document.getElementById('devResultado').style.display = 'flex';
+  document.getElementById('btnCriarDispositivo').style.display = 'none';
+  document.getElementById('devUrl').value = url;
+  document.getElementById('devResultadoNome').textContent = dev.nome;
+}
+
+function copiarUrlDispositivo() {
+  const inp = document.getElementById('devUrl');
+  inp.select();
+  navigator.clipboard.writeText(inp.value).then(
+    () => { const b = document.getElementById('btnCopiarUrl'); b.textContent = '✅ Copiado!'; setTimeout(()=>b.textContent='📋 Copiar URL',2000); },
+    () => { document.execCommand('copy'); }
+  );
+}
+
+async function revogarDispositivo(id, nome) {
+  if (!confirm(`Revogar o dispositivo "${nome}"? Ele vai parar de funcionar imediatamente. Você precisará parear de novo se quiser reativar.`)) return;
+  const r = await api('/api/hospital/totem/dispositivos/revogar/', {
+    method: 'POST', body: JSON.stringify({id})
+  });
+  if (r && r.ok) carregarDispositivos();
+  else alert('Erro ao revogar.');
 }
 
 async function carregarOrquestracao() {

@@ -14563,3 +14563,48 @@ class TriagemManchesterPS(models.Model):
 
     def __str__(self):
         return f"Triagem {self.nome_paciente} — {self.get_cor_classificacao_display()} [{self.triado_em:%d/%m %H:%M}]"
+
+
+class TotemDispositivo(models.Model):
+    """
+    Dispositivo de kiosk pareado a um hospital (VITA OS).
+
+    Um tablet/PC na recepção ou no PS é pareado UMA vez a um hospital via um
+    token secreto. A partir daí o dispositivo abre o totem em modo standalone,
+    sem exigir login de operador — o token identifica o hospital.
+
+    Escopo LIMITADO: o token só autentica as rotas de totem/triagem daquele
+    hospital (isolamento por empresa = LGPD). NÃO dá acesso ao painel de gestão
+    nem a outras rotas. Revogável a qualquer momento (ativo=False).
+    """
+    TIPO = [
+        ("totem", "Totem de Check-in (recepção)"),
+        ("ps",    "Triagem PS (enfermagem)"),
+    ]
+
+    empresa        = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE, related_name="totem_dispositivos"
+    )
+    nome           = models.CharField(
+        max_length=120,
+        help_text="Identificação física — ex: 'Recepção Térreo', 'PS - Box 2'"
+    )
+    tipo           = models.CharField(max_length=10, choices=TIPO, default="totem")
+    token          = models.CharField(
+        max_length=64, unique=True, db_index=True,
+        help_text="Segredo de pareamento — vai na URL do kiosk"
+    )
+    ativo          = models.BooleanField(default=True)
+    ultimo_acesso  = models.DateTimeField(null=True, blank=True)
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Dispositivo de Totem"
+        verbose_name_plural = "Dispositivos de Totem"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_tipo_display()}) — {'ativo' if self.ativo else 'revogado'}"

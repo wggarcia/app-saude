@@ -273,6 +273,49 @@ class EmpresaMiddleware:
             if request.path.startswith(rota):
                 return self.get_response(request)
 
+        # ── VITA OS: pareamento de dispositivo (kiosk) ───────────────────────
+        # Rotas de totem/triagem podem autenticar por TOKEN DE DISPOSITIVO
+        # (tablet fixo na recepção/PS), sem exigir login de operador. O token
+        # identifica o hospital e é escopo-limitado a estas rotas (LGPD).
+        # À prova de falha: token ausente/inválido → cai no fluxo normal abaixo.
+        _totem_paths = ("/hospital/totem/", "/hospital/ps/",
+                        "/api/hospital/totem/", "/api/hospital/ps/")
+        # A gestão de dispositivos NUNCA é acessível por token de kiosk
+        # (evita escalonamento: um totem não pode criar/revogar dispositivos).
+        _totem_admin = "/api/hospital/totem/dispositivos"
+        if (any(request.path.startswith(p) for p in _totem_paths)
+                and not request.path.startswith(_totem_admin)):
+            totem_tok = (request.GET.get("totem_token") or
+                         request.COOKIES.get("totem_token") or "").strip()
+            if totem_tok:
+                try:
+                    from .models import TotemDispositivo
+                    disp = (TotemDispositivo.objects
+                            .filter(token=totem_tok, ativo=True)
+                            .select_related("empresa").first())
+                    if disp and disp.empresa and disp.empresa.ativo:
+                        _rls_set_empresa(disp.empresa_id)
+                        request.empresa = disp.empresa
+                        request.totem_dispositivo = disp
+                        # último acesso (throttled: no máx. 1 write / 5 min)
+                        _agora = timezone.now()
+                        if (not disp.ultimo_acesso or
+                                (_agora - disp.ultimo_acesso).total_seconds() > 300):
+                            TotemDispositivo.objects.filter(pk=disp.pk).update(ultimo_acesso=_agora)
+                        resp = self.get_response(request)
+                        # Persiste o token como cookie httponly quando veio pela URL,
+                        # pra que reloads e chamadas de API do kiosk continuem válidos.
+                        if request.GET.get("totem_token"):
+                            resp.set_cookie(
+                                "totem_token", totem_tok,
+                                httponly=True, samesite="Lax",
+                                max_age=60 * 60 * 24 * 365,  # 1 ano
+                                secure=not settings.DEBUG,
+                            )
+                        return resp
+                except Exception:
+                    pass  # qualquer problema → segue autenticação normal
+
         # Rotas que exigem owner_token incondicionalmente.
         strict_owner_paths = (
             "/console-operacional/",

@@ -968,6 +968,9 @@ from api.views_hospital_totem import (
     api_ps_triagem_classificar,
     api_ps_painel,
     api_totem_stats,
+    api_totem_dispositivos_listar,
+    api_totem_dispositivo_criar,
+    api_totem_dispositivo_revogar,
 )
 from api.views_hospital_opme import (
     api_opme_catalogo,
@@ -3809,6 +3812,10 @@ urlpatterns = [
     path('api/hospital/totem/stats/', api_totem_stats),
     path('api/hospital/ps/triagem/', api_ps_triagem_classificar),
     path('api/hospital/ps/painel/', api_ps_painel),
+    # Gestão de dispositivos de kiosk (pareamento) — exige login de operador
+    path('api/hospital/totem/dispositivos/', api_totem_dispositivos_listar),
+    path('api/hospital/totem/dispositivos/criar/', api_totem_dispositivo_criar),
+    path('api/hospital/totem/dispositivos/revogar/', api_totem_dispositivo_revogar),
 
     # ── Comercial / Agente de Outreach ───────────────────────────────────────
     path('comercial/', comercial_dashboard),

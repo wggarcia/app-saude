@@ -20,6 +20,7 @@ import io
 import json
 import logging
 import random
+import secrets
 import string
 from datetime import datetime
 
@@ -36,6 +37,7 @@ from .models import (
     Empresa,
     IdentidadePaciente,
     TotemCheckinLog,
+    TotemDispositivo,
     TriagemManchesterPS,
 )
 from .views_dashboard import _empresa_autenticada
@@ -596,3 +598,95 @@ def api_totem_stats(request):
         },
         "total_pacientes_cadastrados": total_biometrias,
     })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Gestão de Dispositivos de Kiosk (pareamento)
+# Estas rotas exigem LOGIN DE OPERADOR (não token de dispositivo).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _serializar_dispositivo(d, incluir_token=False):
+    dados = {
+        "id":            d.id,
+        "nome":          d.nome,
+        "tipo":          d.tipo,
+        "tipo_label":    d.get_tipo_display(),
+        "ativo":         d.ativo,
+        "ultimo_acesso": d.ultimo_acesso.isoformat() if d.ultimo_acesso else None,
+        "criado_em":     d.criado_em.isoformat(),
+    }
+    if incluir_token:
+        rota = "/hospital/ps/triagem/" if d.tipo == "ps" else "/hospital/totem/"
+        dados["token"] = d.token
+        dados["kiosk_url"] = f"{rota}?totem_token={d.token}"
+    return dados
+
+
+@require_http_methods(["GET"])
+def api_totem_dispositivos_listar(request):
+    """GET — lista os dispositivos de kiosk do hospital (sem expor o token)."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+
+    disps = TotemDispositivo.objects.filter(empresa=empresa)
+    return JsonResponse({
+        "dispositivos": [_serializar_dispositivo(d) for d in disps]
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_totem_dispositivo_criar(request):
+    """
+    POST {nome, tipo:'totem'|'ps'} → cria um dispositivo e retorna o token +
+    a URL do kiosk (o token só é exibido nesta resposta de criação).
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    nome = (data.get("nome") or "").strip()
+    tipo = data.get("tipo", "totem")
+    if not nome:
+        return JsonResponse({"erro": "Nome do dispositivo é obrigatório."}, status=400)
+    if tipo not in ("totem", "ps"):
+        tipo = "totem"
+
+    disp = TotemDispositivo.objects.create(
+        empresa=empresa,
+        nome=nome,
+        tipo=tipo,
+        token=secrets.token_urlsafe(32),
+    )
+    return JsonResponse({
+        "ok": True,
+        "dispositivo": _serializar_dispositivo(disp, incluir_token=True),
+    }, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_totem_dispositivo_revogar(request):
+    """POST {id} → revoga (desativa) um dispositivo. O token deixa de funcionar."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    disp = TotemDispositivo.objects.filter(pk=data.get("id"), empresa=empresa).first()
+    if not disp:
+        return JsonResponse({"erro": "Dispositivo não encontrado."}, status=404)
+
+    disp.ativo = False
+    disp.save(update_fields=["ativo"])
+    return JsonResponse({"ok": True, "id": disp.id})
