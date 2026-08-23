@@ -1074,6 +1074,13 @@ tr:hover td{background:rgba(255,255,255,.018)}
 </main>
 </div><!-- end .layout -->
 
+<!-- Lightbox: foto do paciente ampliada -->
+<div id="fotoLightbox" onclick="fecharFoto()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;gap:14px;cursor:zoom-out">
+  <img id="fotoLightboxImg" src="" alt="" style="max-width:90vw;max-height:80vh;width:auto;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6)">
+  <div id="fotoLightboxNome" style="color:#fff;font-size:18px;font-weight:700"></div>
+  <div style="color:rgba(255,255,255,.6);font-size:13px">Clique em qualquer lugar para fechar</div>
+</div>
+
 <!-- Modal: Parear Dispositivo (Kiosk) -->
 <div class="modal-bg" id="modalDispositivo">
   <div class="modal" style="max-width:560px">
@@ -3646,6 +3653,16 @@ function setText(id, v) {
   if (el) el.textContent = v;
 }
 
+// Lightbox da foto do paciente (miniatura → ampliada ao clicar)
+function ampliarFoto(src, nome) {
+  const lb = document.getElementById('fotoLightbox');
+  document.getElementById('fotoLightboxImg').src = src;
+  document.getElementById('fotoLightboxNome').textContent = nome || '';
+  lb.style.display = 'flex';
+}
+function fecharFoto() { document.getElementById('fotoLightbox').style.display = 'none'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharFoto(); });
+
 // Abre uma tela VITA OS em nova aba propagando a sessão desta aba (?tab=<key>).
 // Sem isso, a aba nova cai no middleware anti-sequestro-de-sessão e é redirecionada
 // para o login (302). Mesmo mecanismo usado pela navegação interna do app.
@@ -3684,7 +3701,7 @@ async function carregarVitaStats() {
       wrap.innerHTML = ci.checkins.map(c => `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border)">
           <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surface2);display:flex;align-items:center;justify-content:center">
-            ${c.foto ? `<img src="${c.foto}" style="width:100%;height:100%;object-fit:cover" alt="">` : '<span style="font-size:20px">👤</span>'}
+            ${c.foto ? `<img src="${c.foto}" onclick="ampliarFoto('${c.foto}','${(c.nome||'').replace(/'/g,'')}')" title="Clique para ampliar" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" alt="">` : '<span style="font-size:20px">👤</span>'}
           </div>
           <div style="flex:1;min-width:0">
             <div style="font-weight:700;font-size:14px">${c.nome}</div>

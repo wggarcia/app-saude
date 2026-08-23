@@ -655,6 +655,23 @@ function setCtab(tab, el) {
 let _statsCache = null;
 let _psCache    = null;
 
+// Lightbox da foto do paciente (cria o overlay sob demanda)
+function ampliarFoto(src, nome) {
+  let lb = document.getElementById('fotoLightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'fotoLightbox';
+    lb.onclick = () => { lb.style.display = 'none'; };
+    lb.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;cursor:zoom-out';
+    lb.innerHTML = '<img id="fotoLbImg" style="max-width:90vw;max-height:80vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6)"><div id="fotoLbNome" style="color:#fff;font-size:18px;font-weight:700"></div><div style="color:rgba(255,255,255,.6);font-size:13px">Clique para fechar</div>';
+    document.body.appendChild(lb);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.style.display = 'none'; });
+  }
+  document.getElementById('fotoLbImg').src = src;
+  document.getElementById('fotoLbNome').textContent = nome || '';
+  lb.style.display = 'flex';
+}
+
 let _ciCache = null;
 async function carregarTudo() {
   const [stats, ps, ci] = await Promise.all([
@@ -715,7 +732,7 @@ function renderFila() {
   q.innerHTML = '<div class="patient-queue">' + ci.checkins.map(c => `
     <div class="patient-card ok">
       <div class="avatar" style="overflow:hidden;padding:0">
-        ${c.foto ? `<img src="${c.foto}" style="width:100%;height:100%;object-fit:cover" alt="">` : '👤'}
+        ${c.foto ? `<img src="${c.foto}" onclick="ampliarFoto('${c.foto}','${(c.nome||'').replace(/'/g,'')}')" title="Clique para ampliar" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" alt="">` : '👤'}
       </div>
       <div class="info">
         <div class="nome">${c.nome}</div>

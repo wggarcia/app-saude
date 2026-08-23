@@ -148,7 +148,7 @@ def _gerar_senha_atendimento(empresa) -> str:
     return f"A{usadas + 1:03d}"
 
 
-def _thumbnail(foto_base64: str, largura: int = 200) -> str:
+def _thumbnail(foto_base64: str, largura: int = 360) -> str:
     """
     Gera uma miniatura JPEG (base64 data URI) do rosto para exibição no painel.
     Reduz o tamanho para não pesar no banco. Best-effort: se falhar, retorna "".
