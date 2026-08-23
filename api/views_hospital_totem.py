@@ -22,7 +22,7 @@ import logging
 import random
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 from django.db import transaction
@@ -97,34 +97,86 @@ def _extrair_embedding(foto_base64: str) -> list[float]:
         raise ValueError(f"Erro ao processar imagem: {exc}")
 
 
+MAX_EMBEDDINGS_POR_PESSOA = 5   # principal + até 4 extras (câmeras/ângulos diferentes)
+
+
+def _todos_embeddings(bio) -> list:
+    """Lista de todos os embeddings de um paciente: principal + extras."""
+    embs = [bio.embedding_json] if bio.embedding_json else []
+    extras = bio.embeddings_extra or []
+    if isinstance(extras, list):
+        embs.extend(extras)
+    return embs
+
+
 def _buscar_por_embedding(embedding_novo: list[float], empresa_id: int):
     """
-    Busca 1:N — compara embedding com todos os pacientes do hospital.
-    Retorna (identidade, score) ou (None, 0.0).
-    Performance: O(n) em numpy, adequado para até ~100k pacientes.
+    Busca 1:N — compara o embedding com TODOS os vetores de cada paciente
+    (principal + extras de outras câmeras). Retorna (identidade, score) ou (None, score_max).
+    Performance: O(n·k) em numpy, adequado para até ~100k pacientes.
     """
     biometrias = BiometriaTotemPaciente.objects.filter(
         identidade__empresa_id=empresa_id,
         ativo=True,
     ).select_related("identidade")
 
-    if not biometrias.exists():
-        return None, 0.0
-
     emb_novo = np.array(embedding_novo, dtype=np.float32)
     melhor_score = 0.0
     melhor_bio = None
 
     for bio in biometrias:
-        emb_salvo = np.array(bio.embedding_json, dtype=np.float32)
-        score = float(np.dot(emb_novo, emb_salvo))  # Vetores já normalizados
-        if score > melhor_score:
-            melhor_score = score
-            melhor_bio = bio
+        for emb in _todos_embeddings(bio):
+            try:
+                score = float(np.dot(emb_novo, np.array(emb, dtype=np.float32)))
+            except Exception:
+                continue
+            if score > melhor_score:
+                melhor_score = score
+                melhor_bio = bio
 
     if melhor_score >= LIMIAR_FACE_MATCH and melhor_bio:
         return melhor_bio.identidade, melhor_score
     return None, melhor_score
+
+
+def _registrar_embedding_extra(bio, emb_novo: list[float]):
+    """
+    Aprende um novo ângulo/câmera: adiciona o embedding aos extras se ele for
+    suficientemente diferente dos já guardados (evita duplicar quase-iguais).
+    Mantém no máximo MAX_EMBEDDINGS_POR_PESSOA (descarta o mais antigo).
+    """
+    try:
+        novo = np.array(emb_novo, dtype=np.float32)
+        existentes = _todos_embeddings(bio)
+        for e in existentes:
+            if float(np.dot(novo, np.array(e, dtype=np.float32))) >= 0.92:
+                return False  # já temos um vetor muito parecido — não precisa
+        extras = list(bio.embeddings_extra or [])
+        extras.append(emb_novo)
+        # cap: principal conta como 1, então extras no máx. (MAX-1)
+        if len(extras) > MAX_EMBEDDINGS_POR_PESSOA - 1:
+            extras = extras[-(MAX_EMBEDDINGS_POR_PESSOA - 1):]
+        bio.embeddings_extra = extras
+        bio.save(update_fields=["embeddings_extra", "atualizado_em"])
+        return True
+    except Exception:
+        return False
+
+
+def _checkin_recente(empresa, identidade, minutos: int = 10):
+    """
+    Anti-duplicação: retorna um check-in do mesmo paciente feito nos últimos
+    `minutos` (mesmo dia), se existir — para reaproveitar a senha em vez de
+    gerar outra quando a pessoa escaneia/entra de novo em seguida.
+    """
+    if not identidade:
+        return None
+    limite = timezone.now() - timedelta(minutes=minutos)
+    return (TotemCheckinLog.objects
+            .filter(empresa=empresa, identidade=identidade, checkin_em__gte=limite)
+            .exclude(senha_atendimento="")
+            .order_by("-checkin_em")
+            .first())
 
 
 def _gerar_id_temp(empresa_id: int) -> str:
@@ -328,28 +380,38 @@ def api_totem_checkin_cpf(request):
 
     bio = BiometriaTotemPaciente.objects.filter(identidade=identidade).first()
 
-    # Re-aprendizado do rosto (best-effort): atualiza o embedding, preserva a assinatura.
+    # Re-aprendizado do rosto (best-effort): ADICIONA este ângulo/câmera aos
+    # extras (sem apagar o principal nem a assinatura) — melhora o match futuro.
     reaprendido = False
     if foto_b64 and bio:
         try:
-            bio.embedding_json = _extrair_embedding(foto_b64)
+            emb = _extrair_embedding(foto_b64)
             bio.ativo = True
             thumb = _thumbnail(foto_b64)
+            campos = ["ativo", "atualizado_em"]
             if thumb:
                 bio.foto_thumb_base64 = thumb
-            bio.save(update_fields=["embedding_json", "foto_thumb_base64", "ativo", "atualizado_em"])
+                campos.append("foto_thumb_base64")
+            bio.save(update_fields=campos)
+            _registrar_embedding_extra(bio, emb)   # acumula câmera nova
             reaprendido = True
         except (ValueError, ImportError):
             pass  # face ruim nesta captura — check-in por CPF segue normalmente
 
-    senha = _gerar_senha_atendimento(empresa)
-    checkin = TotemCheckinLog.objects.create(
-        empresa=empresa,
-        identidade=identidade,
-        score_similaridade=0.0,
-        tipo_entrada="eletivo",
-        senha_atendimento=senha,
-    )
+    # Anti-duplicação: reaproveita a senha se já entrou nos últimos 10 min.
+    recente = _checkin_recente(empresa, identidade)
+    if recente:
+        senha = recente.senha_atendimento
+        checkin = recente
+    else:
+        senha = _gerar_senha_atendimento(empresa)
+        checkin = TotemCheckinLog.objects.create(
+            empresa=empresa,
+            identidade=identidade,
+            score_similaridade=0.0,
+            tipo_entrada="eletivo",
+            senha_atendimento=senha,
+        )
 
     primeiro_nome = (identidade.nome or "").split(" ")[0] or "paciente"
     return JsonResponse({
@@ -531,14 +593,27 @@ def api_totem_reconhecer(request):
             if thumb:
                 bio.foto_thumb_base64 = thumb
                 bio.save(update_fields=["foto_thumb_base64", "atualizado_em"])
-        senha = _gerar_senha_atendimento(empresa)
-        checkin = TotemCheckinLog.objects.create(
-            empresa=empresa,
-            identidade=identidade,
-            score_similaridade=score,
-            tipo_entrada=tipo_entrada,
-            senha_atendimento=senha,
-        )
+        # Aprende esta câmera/ângulo se o match não foi quase-perfeito
+        # (score < 0.92 sugere condição de captura diferente das já guardadas).
+        if bio and score < 0.92:
+            _registrar_embedding_extra(bio, embedding)
+
+        # Anti-duplicação: se já entrou nos últimos 10 min, reaproveita a senha.
+        recente = _checkin_recente(empresa, identidade)
+        if recente:
+            senha = recente.senha_atendimento
+            checkin = recente
+            duplicado = True
+        else:
+            senha = _gerar_senha_atendimento(empresa)
+            checkin = TotemCheckinLog.objects.create(
+                empresa=empresa,
+                identidade=identidade,
+                score_similaridade=score,
+                tipo_entrada=tipo_entrada,
+                senha_atendimento=senha,
+            )
+            duplicado = False
 
         # Buscar agendamento do dia
         agendamento = _buscar_agendamento_hoje(identidade)
@@ -555,7 +630,10 @@ def api_totem_reconhecer(request):
             "checkin_id":      checkin.id,
             "agendamento":     agendamento,
             "senha":           senha,
-            "mensagem":        f"Olá, {primeiro_nome}! Check-in confirmado. Aguarde ser chamado(a).",
+            "duplicado":       duplicado,
+            "mensagem":        (f"Olá, {primeiro_nome}! Você já fez check-in — sua senha é {senha}. Aguarde ser chamado(a)."
+                                if duplicado else
+                                f"Olá, {primeiro_nome}! Check-in confirmado. Aguarde ser chamado(a)."),
             "plano":           _dados_convenio(identidade),
             "proximo_passo":   "validar_plano",
         })

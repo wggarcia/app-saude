@@ -14427,7 +14427,11 @@ class BiometriaTotemPaciente(models.Model):
         related_name="biometria_totem",
     )
     embedding_json          = models.JSONField(
-        help_text="Vetor ArcFace 512D normalizado — busca por similaridade cosseno"
+        help_text="Vetor ArcFace 512D normalizado (principal) — busca por similaridade cosseno"
+    )
+    embeddings_extra        = models.JSONField(
+        blank=True, default=list,
+        help_text="Vetores ArcFace adicionais (outras câmeras/ângulos) — melhora o match entre dispositivos"
     )
     assinatura_base64       = models.TextField(
         blank=True, default="",
