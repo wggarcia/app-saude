@@ -1,0 +1,415 @@
+<title>Triagem Manchester — PS</title>
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --surface: #111827;
+    --surface2: #1f2937;
+    --text: #f1f5f9;
+    --muted: #9ca3af;
+    --border: rgba(255,255,255,0.08);
+    --vermelho: #ef4444;
+    --laranja: #f97316;
+    --amarelo: #eab308;
+    --verde: #22c55e;
+    --azul: #3b82f6;
+    --accent: #6366f1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 13px; color: var(--muted); }
+  .badge-ps {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid var(--vermelho);
+    color: var(--vermelho);
+    padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 700;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1200px; margin: 0 auto;
+  }
+
+  /* ── Form ── */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .form-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .field input, .field textarea {
+    width: 100%; padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 15px;
+    outline: none; transition: border-color .2s; resize: none;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+
+  .sintomas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .sintoma-btn {
+    padding: 14px 12px;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; text-align: center;
+    transition: all .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .sintoma-btn .icon { font-size: 22px; }
+  .sintoma-btn.ativo { border-color: var(--vermelho); background: rgba(239,68,68,0.12); color: var(--vermelho); }
+  .sintoma-btn.amarelo.ativo { border-color: var(--amarelo); background: rgba(234,179,8,0.12); color: var(--amarelo); }
+  .sintoma-btn.verde.ativo { border-color: var(--verde); background: rgba(34,197,94,0.12); color: var(--verde); }
+
+  .vitais-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-bottom: 20px;
+  }
+  .vital-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px;
+  }
+  .vital-input label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .vital-input input {
+    width: 100%; background: transparent; border: none;
+    color: var(--text); font-size: 18px; font-weight: 700;
+    outline: none; padding: 0;
+  }
+  .vital-input small { font-size: 11px; color: var(--muted); }
+
+  .btn-classificar {
+    width: 100%; padding: 18px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: none; border-radius: 12px;
+    color: #fff; font-size: 18px; font-weight: 700;
+    cursor: pointer; transition: transform .15s;
+  }
+  .btn-classificar:hover { transform: translateY(-2px); }
+
+  /* ── Painel de resultado ── */
+  .result-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    display: none;
+    margin-bottom: 20px;
+  }
+  .result-panel.show { display: block; }
+
+  .cor-badge {
+    width: 100%; padding: 20px;
+    border-radius: 14px;
+    text-align: center; font-size: 22px; font-weight: 800;
+    margin-bottom: 16px;
+  }
+  .cor-badge.vermelho { background: rgba(239,68,68,0.15); border: 2px solid var(--vermelho); color: var(--vermelho); }
+  .cor-badge.laranja  { background: rgba(249,115,22,0.15); border: 2px solid var(--laranja); color: var(--laranja); }
+  .cor-badge.amarelo  { background: rgba(234,179,8,0.15); border: 2px solid var(--amarelo); color: var(--amarelo); }
+  .cor-badge.verde    { background: rgba(34,197,94,0.15); border: 2px solid var(--verde); color: var(--verde); }
+  .cor-badge.azul     { background: rgba(59,130,246,0.15); border: 2px solid var(--azul); color: var(--azul); }
+
+  .result-info { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+  .result-id { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+
+  .btn-novo {
+    width: 100%; padding: 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 12px;
+  }
+  .btn-novo:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Painel de triagens do dia ── */
+  .painel-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .painel-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .painel-card .sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
+  .resumo-cores {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .resumo-cor {
+    padding: 6px 12px; border-radius: 100px;
+    font-size: 13px; font-weight: 700;
+    border: 1px solid;
+  }
+  .resumo-cor.vermelho { background: rgba(239,68,68,.1); border-color: var(--vermelho); color: var(--vermelho); }
+  .resumo-cor.laranja  { background: rgba(249,115,22,.1); border-color: var(--laranja); color: var(--laranja); }
+  .resumo-cor.amarelo  { background: rgba(234,179,8,.1); border-color: var(--amarelo); color: var(--amarelo); }
+  .resumo-cor.verde    { background: rgba(34,197,94,.1); border-color: var(--verde); color: var(--verde); }
+  .resumo-cor.azul     { background: rgba(59,130,246,.1); border-color: var(--azul); color: var(--azul); }
+
+  .lista-triagens { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+  .triagem-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-left: 4px solid;
+  }
+  .triagem-item.vermelho { border-left-color: var(--vermelho); }
+  .triagem-item.laranja  { border-left-color: var(--laranja); }
+  .triagem-item.amarelo  { border-left-color: var(--amarelo); }
+  .triagem-item.verde    { border-left-color: var(--verde); }
+  .triagem-item.azul     { border-left-color: var(--azul); }
+  .triagem-item .nome { font-weight: 700; font-size: 15px; }
+  .triagem-item .queixa { font-size: 12px; color: var(--muted); }
+  .triagem-item .hora { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+</style>
+
+<div class="header">
+  <div>
+    <h1>🚨 Triagem de Manchester — Pronto-Socorro</h1>
+    <p>{{ empresa_nome|default:"Hospital" }} — VITA OS</p>
+  </div>
+  <div class="badge-ps">PS ATIVO</div>
+</div>
+
+<div class="layout">
+
+  <!-- Formulário -->
+  <div>
+
+    <!-- Resultado -->
+    <div class="result-panel" id="resultPanel">
+      <div class="cor-badge" id="corBadge">—</div>
+      <div class="result-id" id="resultId">—</div>
+      <div class="result-info" id="resultInfo">—</div>
+      <button class="btn-novo" onclick="novaTriagem()">+ Nova Triagem</button>
+    </div>
+
+    <div class="form-card" id="formCard">
+      <h2>📋 Nova Triagem</h2>
+
+      <div class="field">
+        <label>Nome do Paciente</label>
+        <input type="text" id="nomePaciente" placeholder="Nome completo ou ID temporário (PS-2026-XXXX)">
+      </div>
+
+      <div class="field">
+        <label>Queixa Principal</label>
+        <textarea id="queixaPrincipal" rows="2" placeholder="Descreva o motivo da vinda ao PS..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Sintomas presentes</label>
+        <div class="sintomas-grid">
+          <div class="sintoma-btn" data-key="dor_intensa" onclick="toggleSintoma(this)">
+            <span class="icon">😣</span>Dor intensa (EVA>7)
+          </div>
+          <div class="sintoma-btn" data-key="alteracao_consciencia" onclick="toggleSintoma(this)">
+            <span class="icon">🧠</span>Alt. consciência
+          </div>
+          <div class="sintoma-btn" data-key="dificuldade_respirar" onclick="toggleSintoma(this)">
+            <span class="icon">😮‍💨</span>Dif. respirar
+          </div>
+          <div class="sintoma-btn" data-key="sangramento_ativo" onclick="toggleSintoma(this)">
+            <span class="icon">🩸</span>Sangramento ativo
+          </div>
+          <div class="sintoma-btn" data-key="dor_toracica" onclick="toggleSintoma(this)">
+            <span class="icon">💔</span>Dor torácica
+          </div>
+          <div class="sintoma-btn" data-key="convulsao" onclick="toggleSintoma(this)">
+            <span class="icon">⚡</span>Convulsão
+          </div>
+          <div class="sintoma-btn amarelo" data-key="febre_alta" onclick="toggleSintoma(this)">
+            <span class="icon">🌡️</span>Febre alta
+          </div>
+          <div class="sintoma-btn amarelo" data-key="trauma" onclick="toggleSintoma(this)">
+            <span class="icon">🦴</span>Trauma / queda
+          </div>
+          <div class="sintoma-btn amarelo" data-key="gestante" onclick="toggleSintoma(this)">
+            <span class="icon">🤰</span>Gestante
+          </div>
+          <div class="sintoma-btn verde" data-key="crianca_menor_2" onclick="toggleSintoma(this)">
+            <span class="icon">👶</span>Criança < 2 anos
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Sinais Vitais (opcional)</label>
+        <div class="vitais-grid">
+          <div class="vital-input">
+            <label>PA Sistólica</label>
+            <input type="number" id="paSis" placeholder="120">
+            <small>mmHg</small>
+          </div>
+          <div class="vital-input">
+            <label>PA Diastólica</label>
+            <input type="number" id="paDia" placeholder="80">
+            <small>mmHg</small>
+          </div>
+          <div class="vital-input">
+            <label>FC</label>
+            <input type="number" id="fc" placeholder="72">
+            <small>bpm</small>
+          </div>
+          <div class="vital-input">
+            <label>FR</label>
+            <input type="number" id="fr" placeholder="16">
+            <small>rpm</small>
+          </div>
+          <div class="vital-input">
+            <label>SpO₂</label>
+            <input type="number" id="spo2" placeholder="98">
+            <small>%</small>
+          </div>
+          <div class="vital-input">
+            <label>Temperatura</label>
+            <input type="number" id="temp" placeholder="36.5" step="0.1">
+            <small>°C</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Enfermeiro(a) responsável</label>
+        <input type="text" id="enfermeiro" placeholder="Nome da enfermeira/enfermeiro">
+      </div>
+
+      <button class="btn-classificar" onclick="classificar()">
+        🚦 Classificar e Registrar Triagem
+      </button>
+    </div>
+  </div>
+
+  <!-- Painel do dia -->
+  <div class="painel-card">
+    <h2>📊 Triagens de Hoje</h2>
+    <p class="sub" id="totalDia">Carregando...</p>
+    <div class="resumo-cores" id="resumoCores"></div>
+    <div class="lista-triagens" id="listaTriagens">
+      <div style="color:var(--muted);text-align:center;padding:20px">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_TRIAGEM = '/api/hospital/ps/triagem/';
+const API_PAINEL  = '/api/hospital/ps/painel/';
+
+let sintomasSelecionados = {};
+
+function toggleSintoma(el) {
+  const key = el.dataset.key;
+  sintomasSelecionados[key] = !sintomasSelecionados[key];
+  if (sintomasSelecionados[key]) {
+    el.classList.add('ativo');
+  } else {
+    el.classList.remove('ativo');
+    delete sintomasSelecionados[key];
+  }
+}
+
+async function classificar() {
+  const nome = document.getElementById('nomePaciente').value.trim();
+  const queixa = document.getElementById('queixaPrincipal').value.trim();
+  if (!nome || !queixa) { alert('Nome e queixa principal são obrigatórios.'); return; }
+
+  const payload = {
+    nome_paciente:     nome,
+    queixa_principal:  queixa,
+    ...sintomasSelecionados,
+    pa_sistolica:   parseInt(document.getElementById('paSis').value) || null,
+    pa_diastolica:  parseInt(document.getElementById('paDia').value) || null,
+    freq_cardiaca:  parseInt(document.getElementById('fc').value) || null,
+    freq_respiratoria: parseInt(document.getElementById('fr').value) || null,
+    saturacao_o2:   parseInt(document.getElementById('spo2').value) || null,
+    temperatura:    parseFloat(document.getElementById('temp').value) || null,
+    enfermeiro:     document.getElementById('enfermeiro').value.trim(),
+  };
+
+  const resp = await fetch(API_TRIAGEM, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify(payload),
+  });
+  const data = await resp.json();
+
+  if (data.ok) {
+    document.getElementById('formCard').style.display = 'none';
+    const rp = document.getElementById('resultPanel');
+    rp.className = 'result-panel show';
+    document.getElementById('corBadge').textContent = data.cor_label;
+    document.getElementById('corBadge').className = 'cor-badge ' + data.cor;
+    document.getElementById('resultId').textContent = data.nome_paciente + (data.id_temporario ? ` — ${data.id_temporario}` : '');
+    document.getElementById('resultInfo').textContent = data.justificativa;
+    carregarPainel();
+  }
+}
+
+function novaTriagem() {
+  document.getElementById('formCard').style.display = 'block';
+  document.getElementById('resultPanel').className = 'result-panel';
+  sintomasSelecionados = {};
+  document.querySelectorAll('.sintoma-btn').forEach(b => b.classList.remove('ativo'));
+  ['nomePaciente','queixaPrincipal','paSis','paDia','fc','fr','spo2','temp','enfermeiro'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+async function carregarPainel() {
+  try {
+    const resp = await fetch(API_PAINEL);
+    const data = await resp.json();
+    document.getElementById('totalDia').textContent = `${data.total} triagem(ns) hoje`;
+
+    const _ICON = {vermelho:'🔴',laranja:'🟠',amarelo:'🟡',verde:'🟢',azul:'🔵'};
+    const resumoEl = document.getElementById('resumoCores');
+    resumoEl.innerHTML = Object.entries(data.resumo)
+      .filter(([,n])=>n>0)
+      .map(([cor,n])=>`<span class="resumo-cor ${cor}">${_ICON[cor]} ${n}</span>`).join('');
+
+    const lista = document.getElementById('listaTriagens');
+    if (!data.triagens.length) {
+      lista.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Nenhuma triagem hoje</div>';
+      return;
+    }
+    lista.innerHTML = data.triagens.map(t => `
+      <div class="triagem-item ${t.cor}">
+        <div>
+          <div class="nome">${t.nome}</div>
+          <div class="queixa">${t.queixa}</div>
+          ${t.id_temp ? `<div class="queixa" style="color:var(--accent)">ID: ${t.id_temp}</div>` : ''}
+        </div>
+        <div class="hora">${t.triado_em}</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
+carregarPainel();
+setInterval(carregarPainel, 30000);
+</script>

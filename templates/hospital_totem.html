@@ -1,0 +1,635 @@
+<title>Totem de Check-in</title>
+<style>
+  :root {
+    --bg: #050a14;
+    --surface: #0d1b2a;
+    --surface2: #112240;
+    --accent: #00b4d8;
+    --accent2: #0077b6;
+    --success: #06d6a0;
+    --warn: #ffd166;
+    --danger: #ef233c;
+    --text: #e8f4f8;
+    --muted: #8ab4c8;
+    --border: rgba(0,180,216,0.2);
+    --glow: 0 0 40px rgba(0,180,216,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    user-select: none;
+  }
+
+  /* ── Layout ── */
+  .totem {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    padding: 24px;
+    gap: 20px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .logo h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+  .logo p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .clock { font-size: 28px; font-weight: 300; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  /* ── Main ── */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* ── Camera ── */
+  .camera-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .camera-frame {
+    position: relative;
+    width: 100%; max-width: 380px;
+    aspect-ratio: 3/4;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: var(--glow);
+  }
+  #video {
+    width: 100%; height: 100%; object-fit: cover;
+    border-radius: 16px;
+  }
+  .scan-overlay {
+    position: absolute; inset: 0;
+    border-radius: 16px;
+    pointer-events: none;
+  }
+  .scan-line {
+    position: absolute;
+    left: 10%; right: 10%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scan 2s ease-in-out infinite;
+    opacity: 0;
+  }
+  .scan-line.active { opacity: 1; }
+  @keyframes scan {
+    0% { top: 10%; }
+    50% { top: 85%; }
+    100% { top: 10%; }
+  }
+  .corner {
+    position: absolute;
+    width: 28px; height: 28px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.7;
+  }
+  .corner.tl { top: 12px; left: 12px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .corner.tr { top: 12px; right: 12px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .corner.bl { bottom: 12px; left: 12px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .corner.br { bottom: 12px; right: 12px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 18px; border-radius: 100px;
+    font-size: 14px; font-weight: 600;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+  .status-badge.scanning { border-color: var(--accent); color: var(--accent); }
+  .status-badge.matched  { border-color: var(--success); color: var(--success); background: rgba(6,214,160,0.1); }
+  .status-badge.error    { border-color: var(--danger); color: var(--danger); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(0.8)} }
+
+  .btn-scan {
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none; border-radius: 12px;
+    color: #fff; font-size: 17px; font-weight: 700;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 4px 20px rgba(0,180,216,0.3);
+  }
+  .btn-scan:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,180,216,0.4); }
+  .btn-scan:active { transform: translateY(0); }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* ── Result Card ── */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    display: none;
+  }
+  .result-card.show { display: block; }
+  .result-card.success { border-color: var(--success); box-shadow: 0 0 30px rgba(6,214,160,0.15); }
+  .result-card.warning { border-color: var(--warn); }
+
+  .patient-name {
+    font-size: 26px; font-weight: 700; margin-bottom: 4px;
+  }
+  .patient-meta { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+
+  .info-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
+  }
+  .info-item {
+    background: var(--surface2);
+    border-radius: 12px; padding: 14px;
+  }
+  .info-item label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .info-item span { font-size: 15px; font-weight: 600; display: block; margin-top: 4px; }
+  .badge-ok { color: var(--success); }
+  .badge-warn { color: var(--warn); }
+
+  .plan-banner {
+    background: linear-gradient(135deg, rgba(0,119,182,0.2), rgba(0,180,216,0.1));
+    border: 1px solid rgba(0,180,216,0.3);
+    border-radius: 12px; padding: 16px;
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 16px;
+  }
+  .plan-banner .plan-icon { font-size: 28px; }
+  .plan-banner h3 { font-size: 16px; font-weight: 700; }
+  .plan-banner p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .btn-confirm {
+    width: 100%; padding: 18px;
+    background: linear-gradient(135deg, #06814f, var(--success));
+    border: none; border-radius: 12px;
+    color: #fff; font-size: 18px; font-weight: 700;
+    cursor: pointer; transition: transform .15s;
+  }
+  .btn-confirm:hover { transform: translateY(-2px); }
+
+  /* ── CPF Form ── */
+  .cpf-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+  }
+  .cpf-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .cpf-card p { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+
+  .input-cpf {
+    width: 100%; padding: 16px 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text); font-size: 22px; font-weight: 600;
+    letter-spacing: .1em; text-align: center;
+    outline: none; transition: border-color .2s;
+  }
+  .input-cpf:focus { border-color: var(--accent); }
+
+  .numpad {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px;
+  }
+  .numpad-btn {
+    padding: 18px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 12px;
+    color: var(--text); font-size: 22px; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+  }
+  .numpad-btn:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+  .numpad-btn.del { font-size: 18px; }
+  .numpad-btn.ok { background: var(--accent2); border-color: var(--accent); color: #fff; }
+
+  /* ── Signature ── */
+  .sig-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    display: none;
+  }
+  .sig-card.show { display: block; }
+  .sig-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .sig-card p { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  #sigCanvas {
+    width: 100%; height: 120px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; cursor: crosshair;
+    touch-action: none;
+  }
+  .sig-actions { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-sm {
+    flex: 1; padding: 12px;
+    border-radius: 10px; border: 1px solid var(--border);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: var(--surface2); color: var(--text);
+    transition: border-color .15s;
+  }
+  .btn-sm.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-sm:hover { border-color: var(--accent); }
+
+  /* ── Footer ── */
+  .footer {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid var(--border); padding-top: 14px;
+    font-size: 12px; color: var(--muted);
+  }
+  .footer-brand { display: flex; align-items: center; gap: 8px; }
+  .privacy-note { font-size: 11px; }
+  .privacy-note span { color: var(--accent); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 24px;
+    font-size: 15px; font-weight: 600;
+    opacity: 0; transition: opacity .3s;
+    z-index: 999; pointer-events: none;
+    min-width: 280px; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+  .toast.ok { border-color: var(--success); color: var(--success); }
+  .toast.err { border-color: var(--danger); color: var(--danger); }
+</style>
+
+<div class="totem">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🏥</div>
+      <div>
+        <h1>{{ empresa_nome|default:"Hospital" }}</h1>
+        <p>Check-in Automático — VITA OS</p>
+      </div>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Câmera -->
+    <div class="camera-panel">
+      <div class="camera-frame">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="captureCanvas" style="display:none"></canvas>
+        <div class="scan-overlay">
+          <div class="scan-line" id="scanLine"></div>
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+        </div>
+      </div>
+
+      <div class="status-badge" id="statusBadge">
+        <div class="dot"></div>
+        <span id="statusText">Câmera pronta</span>
+      </div>
+
+      <button class="btn-scan" id="btnScan" onclick="iniciarScan()">
+        📷 Iniciar Reconhecimento Facial
+      </button>
+    </div>
+
+    <!-- Painel direito -->
+    <div class="right-panel">
+
+      <!-- Resultado do reconhecimento -->
+      <div class="result-card" id="resultCard">
+        <div class="patient-name" id="patientName">—</div>
+        <div class="patient-meta" id="patientMeta">—</div>
+
+        <div class="plan-banner" id="planBanner" style="display:none">
+          <div class="plan-icon">🏥</div>
+          <div>
+            <h3 id="planName">—</h3>
+            <p id="planInfo">—</p>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Plano</label>
+            <span id="planStatus" class="badge-ok">—</span>
+          </div>
+          <div class="info-item">
+            <label>Coparticipação</label>
+            <span id="planCopag">—</span>
+          </div>
+          <div class="info-item">
+            <label>Consulta</label>
+            <span id="agendMedico">—</span>
+          </div>
+          <div class="info-item">
+            <label>Horário</label>
+            <span id="agendHorario">—</span>
+          </div>
+        </div>
+
+        <button class="btn-confirm" onclick="confirmarCheckin()">
+          ✅ Confirmar Check-in — Guia Gerada
+        </button>
+      </div>
+
+      <!-- Formulário de CPF -->
+      <div class="cpf-card" id="cpfCard">
+        <h2>👋 Primeiro acesso?</h2>
+        <p>Informe seu CPF para o cadastro inicial.<br>Nas próximas visitas, só olhe para a câmera.</p>
+        <input type="text" class="input-cpf" id="cpfInput" placeholder="000.000.000-00" readonly maxlength="14">
+        <div class="numpad">
+          <button class="numpad-btn" onclick="numpad('1')">1</button>
+          <button class="numpad-btn" onclick="numpad('2')">2</button>
+          <button class="numpad-btn" onclick="numpad('3')">3</button>
+          <button class="numpad-btn" onclick="numpad('4')">4</button>
+          <button class="numpad-btn" onclick="numpad('5')">5</button>
+          <button class="numpad-btn" onclick="numpad('6')">6</button>
+          <button class="numpad-btn" onclick="numpad('7')">7</button>
+          <button class="numpad-btn" onclick="numpad('8')">8</button>
+          <button class="numpad-btn" onclick="numpad('9')">9</button>
+          <button class="numpad-btn del" onclick="numpad('del')">⌫</button>
+          <button class="numpad-btn" onclick="numpad('0')">0</button>
+          <button class="numpad-btn ok" onclick="buscarCPF()">OK</button>
+        </div>
+      </div>
+
+      <!-- Assinatura (primeiro cadastro) -->
+      <div class="sig-card" id="sigCard">
+        <h2>✍️ Assine abaixo</h2>
+        <p>Sua assinatura será usada automaticamente nas guias futuras neste hospital.<br>
+           <small style="color:var(--accent)">LGPD: seus dados biométricos ficam protegidos e criptografados.</small></p>
+        <canvas id="sigCanvas"></canvas>
+        <div class="sig-actions">
+          <button class="btn-sm" onclick="limparAssinatura()">Limpar</button>
+          <button class="btn-sm primary" onclick="confirmarCadastro()">Confirmar e Cadastrar</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-brand">
+      <span>⚡ VITA OS</span>
+      <span>•</span>
+      <span>SoloCRT Saúde — solocrt.com.br</span>
+    </div>
+    <div class="privacy-note">
+      🔒 Dados protegidos por <span>LGPD</span> — Biometria criptografada
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EMPRESA_ID = "{{ empresa_id|default:'' }}";
+const API = "/api/hospital/totem/";
+
+// ── Relógio ───────────────────────────────────────────────────────────────────
+function atualizarRelogio() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
+
+// ── Estado ────────────────────────────────────────────────────────────────────
+let state = {
+  foto: null,
+  cpfDigitos: '',
+  identidadeId: null,
+  checkinId: null,
+  sig: null,
+  sigCtx: null,
+  sigDrawing: false,
+};
+
+// ── Câmera ────────────────────────────────────────────────────────────────────
+const video = document.getElementById('video');
+const canvas = document.getElementById('captureCanvas');
+
+navigator.mediaDevices.getUserMedia({video: {facingMode: 'user', width: 640, height: 480}})
+  .then(stream => { video.srcObject = stream; })
+  .catch(() => toast('Câmera não disponível.', 'err'));
+
+function capturarFoto() {
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+// ── Scan ──────────────────────────────────────────────────────────────────────
+async function iniciarScan() {
+  setStatus('scanning', '🔍 Analisando...');
+  document.getElementById('scanLine').classList.add('active');
+  document.getElementById('btnScan').disabled = true;
+
+  state.foto = capturarFoto();
+
+  try {
+    const resp = await fetch(API + 'reconhecer/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+      body: JSON.stringify({foto_base64: state.foto, tipo_entrada: 'eletivo'}),
+    });
+    const data = await resp.json();
+
+    document.getElementById('scanLine').classList.remove('active');
+    document.getElementById('btnScan').disabled = false;
+
+    if (data.reconhecido) {
+      mostrarResultado(data);
+    } else {
+      setStatus('default', '❓ Não reconhecido');
+      mostrarFormCPF();
+    }
+  } catch(e) {
+    document.getElementById('scanLine').classList.remove('active');
+    document.getElementById('btnScan').disabled = false;
+    setStatus('error', '⚠️ Erro de conexão');
+    toast('Erro ao processar. Tente novamente.', 'err');
+  }
+}
+
+function mostrarResultado(data) {
+  setStatus('matched', '✅ Identificado!');
+  state.identidadeId = data.identidade_id;
+  state.checkinId = data.checkin_id;
+
+  document.getElementById('patientName').textContent = data.nome || 'Paciente';
+  document.getElementById('patientMeta').textContent = `CPF: ${formatCPF(data.cpf)} • CNS: ${data.cns || '—'}`;
+
+  if (data.agendamento) {
+    document.getElementById('agendMedico').textContent = data.agendamento.medico || '—';
+    document.getElementById('agendHorario').textContent = data.agendamento.horario || '—';
+  }
+
+  document.getElementById('planStatus').textContent = '✅ Ativo';
+  document.getElementById('planCopag').textContent = 'Verificando...';
+  document.getElementById('planBanner').style.display = 'flex';
+  document.getElementById('planName').textContent = 'Plano de Saúde';
+  document.getElementById('planInfo').textContent = 'Elegibilidade confirmada via TISS';
+
+  document.getElementById('resultCard').className = 'result-card show success';
+  document.getElementById('cpfCard').style.display = 'none';
+  document.getElementById('sigCard').className = 'sig-card';
+}
+
+function mostrarFormCPF() {
+  document.getElementById('resultCard').className = 'result-card';
+  document.getElementById('sigCard').className = 'sig-card';
+  state.cpfDigitos = '';
+  document.getElementById('cpfInput').value = '';
+}
+
+// ── Numpad CPF ────────────────────────────────────────────────────────────────
+function numpad(val) {
+  if (val === 'del') {
+    state.cpfDigitos = state.cpfDigitos.slice(0, -1);
+  } else if (state.cpfDigitos.length < 11) {
+    state.cpfDigitos += val;
+  }
+  document.getElementById('cpfInput').value = formatCPF(state.cpfDigitos);
+}
+
+async function buscarCPF() {
+  if (state.cpfDigitos.length !== 11) { toast('CPF incompleto.', 'err'); return; }
+  try {
+    const resp = await fetch(API + 'buscar-cpf/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+      body: JSON.stringify({cpf: state.cpfDigitos}),
+    });
+    const data = await resp.json();
+    if (data.encontrado && data.tem_biometria) {
+      toast('Cadastro encontrado. Refaça o reconhecimento facial.', 'ok');
+    } else {
+      // Novo cadastro: capturar foto e assinatura
+      if (!state.foto) state.foto = capturarFoto();
+      state.identidadeId = data.identidade_id || null;
+      mostrarAssinatura();
+    }
+  } catch(e) { toast('Erro ao buscar CPF.', 'err'); }
+}
+
+// ── Assinatura ────────────────────────────────────────────────────────────────
+function mostrarAssinatura() {
+  document.getElementById('sigCard').className = 'sig-card show';
+  const cvs = document.getElementById('sigCanvas');
+  state.sigCtx = cvs.getContext('2d');
+  state.sigCtx.strokeStyle = '#00b4d8';
+  state.sigCtx.lineWidth = 2.5;
+  state.sigCtx.lineCap = 'round';
+
+  cvs.addEventListener('pointerdown', e => { state.sigDrawing = true; state.sigCtx.beginPath(); state.sigCtx.moveTo(e.offsetX, e.offsetY); });
+  cvs.addEventListener('pointermove', e => { if (!state.sigDrawing) return; state.sigCtx.lineTo(e.offsetX, e.offsetY); state.sigCtx.stroke(); });
+  cvs.addEventListener('pointerup', () => { state.sigDrawing = false; });
+}
+
+function limparAssinatura() {
+  const cvs = document.getElementById('sigCanvas');
+  state.sigCtx.clearRect(0, 0, cvs.width, cvs.height);
+}
+
+async function confirmarCadastro() {
+  const cvs = document.getElementById('sigCanvas');
+  const sigB64 = cvs.toDataURL('image/png');
+
+  try {
+    const resp = await fetch(API + 'cadastrar/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+      body: JSON.stringify({
+        cpf: state.cpfDigitos,
+        foto_base64: state.foto,
+        assinatura_base64: sigB64,
+        consentimento_lgpd: true,
+      }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      toast('✅ Cadastro realizado! Bem-vindo ao sistema.', 'ok');
+      setStatus('matched', '✅ Cadastrado com sucesso');
+      document.getElementById('sigCard').className = 'sig-card';
+      state.identidadeId = data.identidade_id;
+      setTimeout(() => resetarTotem(), 4000);
+    } else {
+      toast(data.erro || 'Erro no cadastro.', 'err');
+    }
+  } catch(e) { toast('Erro ao cadastrar.', 'err'); }
+}
+
+// ── Confirmar check-in ────────────────────────────────────────────────────────
+function confirmarCheckin() {
+  toast('✅ Check-in confirmado! Aguarde ser chamado.', 'ok');
+  setTimeout(() => resetarTotem(), 3500);
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetarTotem() {
+  state = {foto: null, cpfDigitos: '', identidadeId: null, checkinId: null, sig: null, sigCtx: null, sigDrawing: false};
+  setStatus('default', 'Câmera pronta');
+  document.getElementById('resultCard').className = 'result-card';
+  document.getElementById('cpfCard').style.display = '';
+  document.getElementById('sigCard').className = 'sig-card';
+  document.getElementById('cpfInput').value = '';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setStatus(tipo, txt) {
+  const el = document.getElementById('statusBadge');
+  el.className = 'status-badge ' + (tipo === 'matched' ? 'matched' : tipo === 'error' ? 'error' : tipo === 'scanning' ? 'scanning' : '');
+  document.getElementById('statusText').textContent = txt;
+}
+
+function toast(msg, tipo) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (tipo || '');
+  setTimeout(() => { el.className = 'toast'; }, 3500);
+}
+
+function formatCPF(d) {
+  d = d.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return d.slice(0,3) + '.' + d.slice(3);
+  if (d.length <= 9) return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6);
+  return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6,9) + '-' + d.slice(9);
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+</script>

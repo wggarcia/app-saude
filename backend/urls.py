@@ -958,6 +958,16 @@ from api.views_producao_industrial import (
     api_producao_analise,
     api_producao_registrar_cq,
 )
+from api.views_hospital_totem import (
+    totem_interface,
+    api_totem_cadastrar,
+    api_totem_reconhecer,
+    api_totem_buscar_cpf,
+    ps_triagem_interface,
+    api_ps_triagem_classificar,
+    api_ps_painel,
+    api_totem_stats,
+)
 from api.views_hospital_opme import (
     api_opme_catalogo,
     api_opme_catalogo_detalhe,
@@ -3779,6 +3789,16 @@ urlpatterns = [
     path('api/assistencia-social/beneficios-eventuais/',                          api_ass_beneficios_eventuais),
     path('api/assistencia-social/beneficios-eventuais/<int:beneficio_id>',        api_ass_beneficio_eventual_detalhe),
     path('api/assistencia-social/beneficios-eventuais/<int:beneficio_id>/',       api_ass_beneficio_eventual_detalhe),
+
+    # ── VITA OS — Biometria Totem Hospitalar ─────────────────────────────────
+    path('hospital/totem/', totem_interface),
+    path('hospital/ps/triagem/', ps_triagem_interface),
+    path('hospital/ps/painel/', api_ps_painel),
+    path('api/hospital/totem/cadastrar/', api_totem_cadastrar),
+    path('api/hospital/totem/reconhecer/', api_totem_reconhecer),
+    path('api/hospital/totem/buscar-cpf/', api_totem_buscar_cpf),
+    path('api/hospital/totem/stats/', api_totem_stats),
+    path('api/hospital/ps/triagem/', api_ps_triagem_classificar),
 
     # ── Comercial / Agente de Outreach ───────────────────────────────────────
     path('comercial/', comercial_dashboard),

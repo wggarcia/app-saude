@@ -14403,3 +14403,163 @@ class RemessaCNAB(models.Model):
 
     def __str__(self):
         return f"CNAB {self.tipo} {self.competencia} — {self.qtd_titulos} títulos"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VITA OS — Biometria de Totem Hospitalar
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class BiometriaTotemPaciente(models.Model):
+    """
+    Perfil biométrico do paciente no totem de check-in hospitalar.
+
+    Armazena o embedding ArcFace (512D) e a assinatura digital capturada
+    no primeiro cadastro. A assinatura é reutilizada automaticamente em
+    guias futuras — paciente nunca assina duas vezes no mesmo hospital.
+
+    LGPD Art. 11: dado biométrico sensível.
+    O embedding é um vetor matemático derivado — não reconstrói a imagem original.
+    Consentimento explícito coletado no primeiro acesso ao totem.
+    """
+    identidade              = models.OneToOneField(
+        "IdentidadePaciente",
+        on_delete=models.CASCADE,
+        related_name="biometria_totem",
+    )
+    embedding_json          = models.JSONField(
+        help_text="Vetor ArcFace 512D normalizado — busca por similaridade cosseno"
+    )
+    assinatura_base64       = models.TextField(
+        blank=True, default="",
+        help_text="Assinatura digital PNG em base64 — aplicada automaticamente nas guias"
+    )
+    consentimento_lgpd      = models.BooleanField(
+        default=False,
+        help_text="Paciente autorizou uso da biometria e da assinatura automática"
+    )
+    consentimento_em        = models.DateTimeField(null=True, blank=True)
+    ativo                   = models.BooleanField(default=True)
+    coletado_em             = models.DateTimeField(auto_now_add=True)
+    atualizado_em           = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Biometria Totem Paciente"
+        verbose_name_plural = "Biometrias Totem Paciente"
+
+    def __str__(self):
+        return f"Biometria — {self.identidade.nome} ({self.identidade.cpf or 'sem CPF'})"
+
+
+class TotemCheckinLog(models.Model):
+    """
+    Log imutável de cada check-in realizado no totem hospitalar.
+    Trilha de auditoria: quem entrou, quando, como foi identificado e o resultado.
+    """
+    TIPO = [
+        ("eletivo",        "Eletivo — consulta agendada"),
+        ("emergencia",     "Emergência — PS"),
+        ("novo_cadastro",  "Novo cadastro"),
+        ("nao_reconhecido","Não reconhecido"),
+    ]
+
+    empresa             = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE, related_name="totem_checkins"
+    )
+    identidade          = models.ForeignKey(
+        "IdentidadePaciente",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="checkins_totem",
+    )
+    id_temporario       = models.CharField(
+        max_length=30, blank=True, default="",
+        help_text="ID temporário para emergências sem cadastro — ex: PS-2026-0847"
+    )
+    score_similaridade  = models.FloatField(default=0.0)
+    tipo_entrada        = models.CharField(max_length=20, choices=TIPO, default="eletivo")
+    guia_gerada         = models.BooleanField(default=False)
+    guia_numero         = models.CharField(max_length=50, blank=True, default="")
+    plano_elegivel      = models.BooleanField(null=True, blank=True)
+    checkin_em          = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Log de Check-in no Totem"
+        verbose_name_plural = "Logs de Check-in no Totem"
+        ordering            = ["-checkin_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "checkin_em"]),
+        ]
+
+    def __str__(self):
+        nome = self.identidade.nome if self.identidade else self.id_temporario or "—"
+        return f"Check-in {nome} [{self.get_tipo_entrada_display()}] {self.checkin_em:%d/%m/%Y %H:%M}"
+
+
+class TriagemManchesterPS(models.Model):
+    """
+    Registro da triagem de Manchester realizado pela enfermagem no Pronto-Socorro.
+    Classificação automática baseada nos sintomas informados.
+    """
+    COR = [
+        ("vermelho", "🔴 Vermelho — Emergência imediata"),
+        ("laranja",  "🟠 Laranja   — Muito urgente (≤ 10 min)"),
+        ("amarelo",  "🟡 Amarelo   — Urgente (≤ 30 min)"),
+        ("verde",    "🟢 Verde     — Pouco urgente (≤ 120 min)"),
+        ("azul",     "🔵 Azul      — Não urgente"),
+    ]
+
+    empresa             = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE, related_name="triagens_manchester_ps"
+    )
+    checkin             = models.OneToOneField(
+        TotemCheckinLog,
+        on_delete=models.CASCADE,
+        related_name="triagem",
+        null=True, blank=True,
+    )
+    identidade          = models.ForeignKey(
+        "IdentidadePaciente",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="triagens",
+    )
+    id_temporario       = models.CharField(max_length=30, blank=True, default="")
+    nome_paciente       = models.CharField(max_length=200)
+
+    # Sintomas principais (Manchester)
+    queixa_principal    = models.TextField()
+    dor_intensa         = models.BooleanField(default=False)   # EVA > 7
+    alteracao_consciencia = models.BooleanField(default=False)
+    dificuldade_respirar = models.BooleanField(default=False)
+    sangramento_ativo   = models.BooleanField(default=False)
+    febre_alta          = models.BooleanField(default=False)   # > 38.5°C
+    convulsao           = models.BooleanField(default=False)
+    dor_toracica        = models.BooleanField(default=False)
+    trauma              = models.BooleanField(default=False)
+    gestante            = models.BooleanField(default=False)
+    crianca_menor_2     = models.BooleanField(default=False)
+
+    # Sinais vitais (opcionais — enfermeira preenche se disponível)
+    pa_sistolica        = models.IntegerField(null=True, blank=True)
+    pa_diastolica       = models.IntegerField(null=True, blank=True)
+    freq_cardiaca       = models.IntegerField(null=True, blank=True)
+    freq_respiratoria   = models.IntegerField(null=True, blank=True)
+    saturacao_o2        = models.IntegerField(null=True, blank=True)
+    temperatura         = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+
+    cor_classificacao   = models.CharField(max_length=10, choices=COR)
+    justificativa_ia    = models.TextField(blank=True, default="")
+    enfermeiro          = models.CharField(max_length=150, blank=True, default="")
+    triado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Triagem de Manchester (PS)"
+        verbose_name_plural = "Triagens de Manchester (PS)"
+        ordering            = ["-triado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "cor_classificacao"]),
+            models.Index(fields=["empresa", "triado_em"]),
+        ]
+
+    def __str__(self):
+        return f"Triagem {self.nome_paciente} — {self.get_cor_classificacao_display()} [{self.triado_em:%d/%m %H:%M}]"
