@@ -533,7 +533,24 @@ async function buscarCPF() {
     });
     const data = await resp.json();
     if (data.encontrado && data.tem_biometria) {
-      toast('Cadastro encontrado. Refaça o reconhecimento facial.', 'ok');
+      // Já cadastrado, mas o rosto não casou (câmera/luz diferente).
+      // Confirma pelo CPF, faz o check-in e re-aprende o rosto desta câmera.
+      setStatus('scanning', '🔓 Confirmando pelo CPF...');
+      const foto = state.foto || capturarFoto();
+      const rc = await fetch(API + 'checkin-cpf/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+        body: JSON.stringify({cpf: state.cpfDigitos, foto_base64: foto}),
+      });
+      const rd = await rc.json();
+      if (rc.ok && rd.reconhecido) {
+        toast(rd.face_reaprendida
+          ? '✅ Check-in confirmado! Seu rosto foi atualizado para as próximas vezes.'
+          : '✅ Check-in confirmado pelo CPF.', 'ok');
+        mostrarResultado(rd);
+      } else {
+        toast((rd && rd.erro) || 'Não foi possível confirmar.', 'err');
+      }
     } else {
       // Novo cadastro: capturar foto e assinatura
       if (!state.foto) state.foto = capturarFoto();

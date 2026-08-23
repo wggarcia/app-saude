@@ -241,6 +241,72 @@ def api_totem_buscar_cpf(request):
     })
 
 
+# ─── API: Check-in por CPF (fallback quando a face não casa) ──────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_totem_checkin_cpf(request):
+    """
+    POST {cpf, foto_base64?}
+
+    Fallback de identificação: o paciente já é cadastrado mas o reconhecimento
+    facial não casou (câmera/luz/ângulo diferentes). Confirma a identidade pelo
+    CPF e, se uma foto for enviada, RE-APRENDE o rosto daquela câmera (atualiza
+    o embedding SEM apagar a assinatura). Registra o check-in.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    cpf = "".join(c for c in data.get("cpf", "") if c.isdigit())
+    foto_b64 = data.get("foto_base64", "")
+    if len(cpf) != 11:
+        return JsonResponse({"erro": "CPF inválido."}, status=400)
+
+    identidade = IdentidadePaciente.objects.filter(empresa=empresa, cpf=cpf).first()
+    if not identidade:
+        return JsonResponse({"encontrado": False, "erro": "Paciente não encontrado."}, status=404)
+
+    bio = BiometriaTotemPaciente.objects.filter(identidade=identidade).first()
+
+    # Re-aprendizado do rosto (best-effort): atualiza o embedding, preserva a assinatura.
+    reaprendido = False
+    if foto_b64 and bio:
+        try:
+            bio.embedding_json = _extrair_embedding(foto_b64)
+            bio.ativo = True
+            bio.save(update_fields=["embedding_json", "ativo", "atualizado_em"])
+            reaprendido = True
+        except (ValueError, ImportError):
+            pass  # face ruim nesta captura — check-in por CPF segue normalmente
+
+    checkin = TotemCheckinLog.objects.create(
+        empresa=empresa,
+        identidade=identidade,
+        score_similaridade=0.0,
+        tipo_entrada="eletivo",
+    )
+
+    return JsonResponse({
+        "reconhecido":    True,
+        "via":            "cpf",
+        "identidade_id":  identidade.id,
+        "nome":           identidade.nome,
+        "cpf":            identidade.cpf,
+        "cns":            identidade.cns,
+        "tem_assinatura": bool(bio and bio.assinatura_base64),
+        "face_reaprendida": reaprendido,
+        "checkin_id":     checkin.id,
+        "agendamento":    _buscar_agendamento_hoje(identidade),
+        "proximo_passo":  "validar_plano",
+    })
+
+
 # ─── API: Cadastrar biometria (primeiro acesso) ───────────────────────────────
 
 @csrf_exempt
