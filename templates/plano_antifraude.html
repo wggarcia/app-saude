@@ -66,11 +66,12 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
     <button class="chip active" onclick="carregar()">↻ Reanalisar</button>
   </div>
 
-  <div class="kpi-row">
+  <div class="kpi-row" style="grid-template-columns:repeat(5,1fr)">
     <div class="kpi"><div class="kpi-val" id="kGuias">—</div><div class="kpi-lbl">📥 Guias analisadas</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kAlta">—</div><div class="kpi-lbl">🚨 Alertas graves</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kMedia">—</div><div class="kpi-lbl">⚠️ Alertas médios</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kRisco">—</div><div class="kpi-lbl">💸 Valor em risco</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kBio">—</div><div class="kpi-lbl">🧬 Protegidas por biometria</div></div>
   </div>
 
   <div class="card">
@@ -110,6 +111,7 @@ async function carregar(){
     document.getElementById('kAlta').textContent  = s.flags_alta ?? '—';
     document.getElementById('kMedia').textContent = s.flags_media ?? '—';
     document.getElementById('kRisco').textContent = fmtBRL(s.valor_em_risco);
+    document.getElementById('kBio').textContent = s.protegidas_biometria ?? 0;
     document.getElementById('janela').textContent = s.janela_dias ?? 90;
     _achados = d.achados||[];
     render();
@@ -138,6 +140,7 @@ function render(){
         <div class="achado-top">
           <span class="tag ${a.gravidade}">${a.gravidade==='alta'?'Grave':a.gravidade==='media'?'Médio':'Baixo'}</span>
           <span class="tag tipo">${a.tipo_label}</span>
+          ${a.verificada?'<span class="tag" style="background:rgba(0,229,176,.15);color:var(--ok)">🧬 Verificada por biometria</span>':''}
         </div>
         <div class="achado-titulo">${a.titulo}</div>
         <div class="achado-detalhe">${a.detalhe}</div>

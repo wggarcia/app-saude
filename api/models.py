@@ -14240,6 +14240,14 @@ class LoteTISSRecebido(models.Model):
     valor_liberado = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     ia_score_glosa = models.PositiveSmallIntegerField(default=0)   # 0-100 risco de glosa
     ia_parecer = models.TextField(blank=True, default="")
+    biometria_verificada = models.BooleanField(
+        default=False,
+        help_text="Guia veio de hospital SoloCRT com paciente verificado por biometria facial"
+    )
+    biometria_score = models.FloatField(
+        default=0.0,
+        help_text="Similaridade facial no check-in de origem (0-1)"
+    )
     status = models.CharField(max_length=15, choices=STATUS, default="recebido")
     pagamento = models.ForeignKey("LotePagamentoPrestador", on_delete=models.SET_NULL, null=True, blank=True,
                                   related_name="lotes_incluidos")
@@ -14491,6 +14499,10 @@ class TotemCheckinLog(models.Model):
     senha_atendimento   = models.CharField(
         max_length=12, blank=True, default="",
         help_text="Senha de atendimento (fila) gerada no check-in — ex: A042"
+    )
+    biometria_token     = models.CharField(
+        max_length=400, blank=True, default="",
+        help_text="Selo biométrico assinado (prova de reconhecimento facial) para viajar com a guia TISS"
     )
     checkin_em          = models.DateTimeField(auto_now_add=True)
 

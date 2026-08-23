@@ -41,6 +41,7 @@ from .models import (
     TotemDispositivo,
     TriagemManchesterPS,
 )
+from .biometria_token import gerar_token as _gerar_selo_biometrico
 from .views_dashboard import _empresa_autenticada
 
 logger = logging.getLogger(__name__)
@@ -531,6 +532,9 @@ def api_totem_cadastrar(request):
             tipo_entrada="novo_cadastro",
             senha_atendimento=senha,
         )
+        # Selo biométrico (cadastro = rosto capturado e verificado)
+        checkin.biometria_token = _gerar_selo_biometrico(checkin.id, empresa.id, identidade.cpf, 1.0)
+        checkin.save(update_fields=["biometria_token"])
 
     primeiro_nome = (identidade.nome or "").split(" ")[0] or "paciente"
     return JsonResponse({
@@ -613,6 +617,9 @@ def api_totem_reconhecer(request):
                 tipo_entrada=tipo_entrada,
                 senha_atendimento=senha,
             )
+            # Selo biométrico (paciente verificado por rosto) — viaja com a guia TISS
+            checkin.biometria_token = _gerar_selo_biometrico(checkin.id, empresa.id, identidade.cpf, score)
+            checkin.save(update_fields=["biometria_token"])
             duplicado = False
 
         # Buscar agendamento do dia

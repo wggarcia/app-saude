@@ -19,17 +19,20 @@ hospitais SoloCRT com verificação facial entram com risco reduzido.
 """
 from __future__ import annotations
 
+import json
 import statistics
 from collections import defaultdict
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db.models import Count, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from .biometria_token import validar_token
 from .models import ItemContaTISS, LoteTISSRecebido
 from .views_plano_saude import _ps_auth
 
@@ -116,6 +119,10 @@ def api_plano_antifraude(request):
     freq_desde = timezone.now() - timedelta(days=FREQ_JANELA_DIAS)
     por_benef = defaultdict(list)
     for lo in lotes:
+        # Guia verificada por biometria = paciente real comprovadamente presente,
+        # então não conta para "frequência suspeita" (não é fraude de identidade).
+        if lo.biometria_verificada:
+            continue
         if lo.recebido_em >= freq_desde and lo.beneficiario_carteirinha:
             por_benef[(lo.beneficiario_carteirinha, lo.beneficiario_nome)].append(lo)
     for (cart, nome), grupo in por_benef.items():
@@ -202,10 +209,16 @@ def api_plano_antifraude(request):
                 "lote_id": None,
             })
 
+    # Marca cada achado se a guia de origem tem selo biométrico (badge na UI)
+    verif_por_lote = {lo.id: lo.biometria_verificada for lo in lotes}
+    for a in achados:
+        a["verificada"] = bool(verif_por_lote.get(a.get("lote_id")))
+
     # ── Ordena por gravidade e valor ──────────────────────────────────────────
     achados.sort(key=lambda a: (_gravidade_peso.get(a["gravidade"], 0), a["valor"]), reverse=True)
 
     valor_risco = sum(a["valor"] for a in achados)
+    protegidas = sum(1 for lo in lotes if lo.biometria_verificada)
     resumo = {
         "total_guias":     len(lotes),
         "valor_total":     float(sum(float(x.valor_apresentado or 0) for x in lotes)),
@@ -213,6 +226,7 @@ def api_plano_antifraude(request):
         "flags_alta":      sum(1 for a in achados if a["gravidade"] == "alta"),
         "flags_media":     sum(1 for a in achados if a["gravidade"] == "media"),
         "valor_em_risco":  valor_risco,
+        "protegidas_biometria": protegidas,
         "janela_dias":     JANELA_DIAS,
     }
     por_tipo = defaultdict(int)
@@ -224,3 +238,75 @@ def api_plano_antifraude(request):
         "por_tipo": dict(por_tipo),
         "achados": achados[:200],
     })
+
+
+# ─── Ponto de entrada TISS com selo biométrico (Fase 2b) ──────────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_tiss_receber_guia(request):
+    """
+    Recebe uma guia TISS na operadora, validando o selo biométrico (se vier).
+
+    Este é o ponto de integração para quando a recepção TISS real existir:
+    um hospital SoloCRT envia a guia com o campo `biometria_token` (gerado no
+    check-in facial). Aqui o token é VALIDADO por assinatura (sem cruzar banco
+    com o hospital) e a guia entra marcada como verificada por biometria.
+
+    POST {
+      prestador_nome, prestador_cnes?, prestador_codigo?,
+      beneficiario_nome, beneficiario_carteirinha, beneficiario_cpf?,
+      guia_numero, cid10?, valor_apresentado,
+      biometria_token?    # selo gerado pelo hospital no check-in
+    }
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    if not data.get("beneficiario_nome") or not data.get("guia_numero"):
+        return JsonResponse({"erro": "beneficiario_nome e guia_numero são obrigatórios."}, status=400)
+
+    try:
+        valor = Decimal(str(data.get("valor_apresentado", "0") or "0"))
+    except (InvalidOperation, ValueError):
+        valor = Decimal("0")
+
+    # Valida o selo biométrico (se enviado)
+    verificada = False
+    score = 0.0
+    token = (data.get("biometria_token") or "").strip()
+    if token:
+        payload = validar_token(token, cpf_esperado=data.get("beneficiario_cpf"))
+        if payload:
+            verificada = True
+            score = float(payload.get("sc", 0) or 0)
+
+    lote = LoteTISSRecebido.objects.create(
+        empresa=empresa,
+        prestador_nome=data.get("prestador_nome", ""),
+        prestador_cnes=data.get("prestador_cnes", ""),
+        prestador_codigo=data.get("prestador_codigo", ""),
+        beneficiario_nome=data.get("beneficiario_nome", ""),
+        beneficiario_carteirinha=data.get("beneficiario_carteirinha", ""),
+        guia_numero=data.get("guia_numero", ""),
+        cid10=data.get("cid10", ""),
+        valor_apresentado=valor,
+        biometria_verificada=verificada,
+        biometria_score=score,
+    )
+
+    return JsonResponse({
+        "ok": True,
+        "lote_id": lote.id,
+        "biometria_verificada": verificada,
+        "biometria_score": round(score, 3),
+        "mensagem": ("Guia recebida com selo biométrico válido — paciente verificado por rosto na origem."
+                     if verificada else
+                     "Guia recebida (sem selo biométrico)."),
+    }, status=201)

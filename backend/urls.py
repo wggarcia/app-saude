@@ -441,7 +441,7 @@ from api.views_gestao import (
     api_dados_empresa,
 )
 from api.views_plano_integracao import api_dados_plano_saude
-from api.views_plano_antifraude import plano_antifraude_page, api_plano_antifraude
+from api.views_plano_antifraude import plano_antifraude_page, api_plano_antifraude, api_tiss_receber_guia
 from api.views_competencia import (
     competencia_corporativa,
     api_cargos,
@@ -1632,6 +1632,7 @@ urlpatterns = [
     path('plano-saude/coparticipacao/', plano_coparticipacao_page),
     path('plano-saude/antifraude/', plano_antifraude_page),
     path('api/plano-saude/antifraude/', api_plano_antifraude),
+    path('api/plano-saude/tiss/receber/', api_tiss_receber_guia),
     path('plano-saude/cobranca/', plano_cobranca_page),
     path('api/plano-saude/cobranca/gerar-faturas/', api_cob_gerar_faturas),
     path('api/plano-saude/cobranca/faturas/', api_cob_faturas),
