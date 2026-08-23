@@ -34,6 +34,7 @@ from django.views.decorators.http import require_http_methods
 
 from .models import (
     BiometriaTotemPaciente,
+    ChegadaPS,
     ConvenioPacienteTotem,
     Empresa,
     IdentidadePaciente,
@@ -1180,3 +1181,126 @@ def api_exames_paciente(request):
         "identidade_id": ident.id, "nome": ident.nome,
         "pedidos": [_serializar_pedido_exame(p) for p in pedidos],
     })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PS — Câmera passiva na entrada (detecta chegada antes do balcão)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def ps_entrada_interface(request):
+    """Tela da entrada do PS: câmera passiva + feed de chegadas pra enfermagem."""
+    empresa = _empresa_autenticada(request)
+    ctx = {"empresa_nome": empresa.nome if empresa else "Hospital"}
+    if empresa:
+        ctx["empresa_id"] = empresa.id
+    return render(request, "hospital_ps_entrada.html", ctx)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_ps_entrada_detectar(request):
+    """
+    POST {foto_base64}
+    Detecção passiva: reconhece o rosto na entrada do PS. Se reconhecer e não
+    houver detecção recente do mesmo paciente (5 min), registra a chegada e
+    devolve os dados pra tela da enfermagem. Não reconhecido → não cria nada
+    (evita poluir; o desconhecido é tratado na triagem).
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    foto_b64 = data.get("foto_base64", "")
+    if not foto_b64:
+        return JsonResponse({"erro": "Foto obrigatória."}, status=400)
+
+    try:
+        embedding = _extrair_embedding(foto_b64)
+    except (ValueError, ImportError):
+        return JsonResponse({"reconhecido": False})  # sem rosto no frame — silencioso
+
+    identidade, score = _buscar_por_embedding(embedding, empresa.id)
+    if not identidade:
+        return JsonResponse({"reconhecido": False, "score_max": round(score, 4)})
+
+    # Dedup: já detectado nos últimos 5 min?
+    limite = timezone.now() - timedelta(minutes=5)
+    ja = ChegadaPS.objects.filter(empresa=empresa, identidade=identidade, detectado_em__gte=limite).first()
+    nova = not ja
+    if nova:
+        ChegadaPS.objects.create(empresa=empresa, identidade=identidade, score=score)
+
+    return JsonResponse({
+        "reconhecido": True,
+        "nova": nova,
+        "nome": identidade.nome,
+        "identidade_id": identidade.id,
+    })
+
+
+def _resumo_paciente_ps(identidade):
+    """Dados rápidos do paciente pra tela da enfermagem (prontuário resumido)."""
+    bio = getattr(identidade, "biometria_totem", None)
+    conv = ConvenioPacienteTotem.objects.filter(identidade=identidade).first()
+    ultima_triagem = (TriagemManchesterPS.objects
+                      .filter(empresa=identidade.empresa, identidade=identidade)
+                      .order_by("-triado_em").first())
+    return {
+        "identidade_id": identidade.id,
+        "nome": identidade.nome,
+        "cpf": identidade.cpf,
+        "foto": (bio.foto_thumb_base64 if bio else "") or "",
+        "plano": (conv.operadora if conv else ""),
+        "carteirinha": (conv.numero_carteirinha if conv else ""),
+        "ultima_triagem": (ultima_triagem.get_cor_classificacao_display() if ultima_triagem else ""),
+        "ultima_triagem_em": (ultima_triagem.triado_em.strftime("%d/%m/%Y") if ultima_triagem else ""),
+    }
+
+
+@require_http_methods(["GET"])
+def api_ps_chegadas(request):
+    """GET — chegadas detectadas hoje na entrada do PS (feed da enfermagem)."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    hoje = timezone.now().date()
+    chegadas = (ChegadaPS.objects
+                .filter(empresa=empresa, detectado_em__date=hoje)
+                .select_related("identidade", "identidade__biometria_totem")
+                .order_by("-detectado_em")[:30])
+    lista = []
+    for c in chegadas:
+        if not c.identidade:
+            continue
+        item = _resumo_paciente_ps(c.identidade)
+        item.update({
+            "chegada_id": c.id,
+            "atendido": c.atendido,
+            "hora": c.detectado_em.strftime("%H:%M"),
+            "score": round(c.score, 3),
+        })
+        lista.append(item)
+    return JsonResponse({"chegadas": lista, "total": len(lista)})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_ps_chegada_atender(request):
+    """POST {chegada_id} — marca a chegada como atendida (some do topo do feed)."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+    c = ChegadaPS.objects.filter(pk=data.get("chegada_id"), empresa=empresa).first()
+    if not c:
+        return JsonResponse({"erro": "Chegada não encontrada."}, status=404)
+    c.atendido = True
+    c.save(update_fields=["atendido"])
+    return JsonResponse({"ok": True})

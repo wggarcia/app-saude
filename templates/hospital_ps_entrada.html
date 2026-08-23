@@ -1,0 +1,107 @@
+<title>Entrada do PS — Câmera Passiva</title>
+<style>
+  :root{--bg:#0a0f1a;--surface:#111827;--surface2:#1f2937;--text:#f1f5f9;--muted:#9ca3af;--border:rgba(255,255,255,.08);--accent:#00b4d8;--danger:#ef4444;--warn:#f59e0b;--ok:#22c55e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+  .header h1{font-size:19px;font-weight:800}.header p{font-size:12px;color:var(--muted)}
+  .badge{display:flex;align-items:center;gap:8px;background:rgba(0,180,216,.12);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700}
+  .live-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .layout{display:grid;grid-template-columns:320px 1fr;gap:20px;padding:20px;max-width:1200px;margin:0 auto}
+  .cam-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .cam-frame{position:relative;width:100%;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#000}
+  #video{width:100%;height:100%;object-fit:cover}
+  .cam-label{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
+  .feed-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .feed-head h2{font-size:16px;font-weight:800}
+  .arr{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:12px;border-left:4px solid var(--ok)}
+  .arr.novo{animation:flash 2s}
+  @keyframes flash{0%{background:rgba(0,180,216,.25)}100%{background:var(--surface)}}
+  .arr img{width:60px;height:60px;border-radius:12px;object-fit:cover;background:var(--surface2);flex-shrink:0}
+  .arr .info{flex:1;min-width:0}
+  .arr .nome{font-size:17px;font-weight:800}
+  .arr .meta{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+  .tagp{font-size:11px;font-weight:700;padding:3px 9px;border-radius:100px;background:rgba(34,197,94,.15);color:var(--ok)}
+  .arr .acoes{display:flex;flex-direction:column;gap:6px}
+  .btn{padding:9px 14px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none;text-align:center}
+  .btn.pront{background:var(--accent);border-color:var(--accent);color:#04222b}
+  .empty{padding:50px;text-align:center;color:var(--muted)}
+</style>
+
+<div class="header">
+  <div>
+    <h1>🚨 Entrada do Pronto-Socorro</h1>
+    <p>{{ empresa_nome|default:"Hospital" }} — câmera passiva · VITA OS</p>
+  </div>
+  <div class="badge"><span class="live-dot"></span> Monitorando</div>
+</div>
+
+<div class="layout">
+  <div class="cam-card">
+    <div class="cam-frame">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="cvs" style="display:none"></canvas>
+    </div>
+    <div class="cam-label" id="camLabel">Reconhecendo automaticamente…</div>
+  </div>
+
+  <div>
+    <div class="feed-head">
+      <h2>Chegadas detectadas hoje</h2>
+      <span style="font-size:12px;color:var(--muted)" id="cnt"></span>
+    </div>
+    <div id="feed"><div class="empty">Aguardando chegadas… a câmera detecta o paciente e mostra aqui, com o prontuário, antes de ele chegar ao balcão.</div></div>
+  </div>
+</div>
+
+<script>
+const API='/api/hospital/ps/';
+const video=document.getElementById('video'), cvs=document.getElementById('cvs');
+navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}}).then(s=>video.srcObject=s).catch(()=>{document.getElementById('camLabel').textContent='⚠️ Câmera não disponível';});
+function capturar(){cvs.width=video.videoWidth||640;cvs.height=video.videoHeight||480;cvs.getContext('2d').drawImage(video,0,0);return cvs.toDataURL('image/jpeg',0.8);}
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+async function post(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify(b)});return r.ok?r.json():null;}
+
+let _ocupado=false;
+async function detectar(){
+  if(_ocupado||!video.videoWidth)return; _ocupado=true;
+  try{
+    const d=await post(API+'entrada/detectar/',{foto_base64:capturar()});
+    if(d&&d.reconhecido&&d.nova){ document.getElementById('camLabel').textContent='✅ '+d.nome+' detectado(a)'; carregarFeed(); }
+    else if(d&&d.reconhecido){ document.getElementById('camLabel').textContent='Reconhecendo automaticamente…'; }
+  }catch(e){}
+  _ocupado=false;
+}
+
+async function carregarFeed(){
+  const d=await (await fetch(API+'chegadas/',{credentials:'same-origin'})).json().catch(()=>null);
+  const feed=document.getElementById('feed');
+  if(!d||!d.chegadas||!d.chegadas.length){document.getElementById('cnt').textContent='';return;}
+  const ativos=d.chegadas.filter(c=>!c.atendido);
+  document.getElementById('cnt').textContent=ativos.length+' aguardando';
+  if(!ativos.length){feed.innerHTML='<div class="empty">Nenhuma chegada aguardando.</div>';return;}
+  feed.innerHTML=ativos.map(c=>`
+    <div class="arr">
+      <img src="${c.foto||''}" alt="">
+      <div class="info">
+        <div class="nome">${c.nome}</div>
+        <div class="meta">
+          <span class="tagp">📋 Prontuário disponível</span>
+          ${c.plano?`<span>🏥 ${c.plano}</span>`:''}
+          ${c.ultima_triagem?`<span>Última triagem: ${c.ultima_triagem} (${c.ultima_triagem_em})</span>`:''}
+          <span>🕐 ${c.hora}</span>
+        </div>
+      </div>
+      <div class="acoes">
+        <a class="btn pront" href="/hospital/prontuario/" target="_blank" rel="noopener">Ver prontuário</a>
+        <button class="btn" onclick="atender(${c.chegada_id})">Atender</button>
+      </div>
+    </div>`).join('');
+}
+async function atender(id){ await post(API+'chegada/atender/',{chegada_id:id}); carregarFeed(); }
+
+setInterval(detectar,4000);      // câmera passiva: 1 leitura a cada 4s
+setInterval(carregarFeed,5000);  // atualiza o feed
+carregarFeed();
+</script>

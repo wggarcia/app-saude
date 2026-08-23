@@ -14634,6 +14634,29 @@ class TotemDispositivo(models.Model):
         return f"{self.nome} ({self.get_tipo_display()}) — {'ativo' if self.ativo else 'revogado'}"
 
 
+class ChegadaPS(models.Model):
+    """
+    Detecção passiva na entrada do Pronto-Socorro: a câmera reconhece o rosto
+    e registra a chegada, exibindo o paciente (com prontuário) na tela da
+    enfermagem ANTES dele chegar ao balcão.
+    """
+    empresa       = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="chegadas_ps")
+    identidade    = models.ForeignKey("IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True, related_name="chegadas_ps")
+    score         = models.FloatField(default=0.0)
+    atendido      = models.BooleanField(default=False)
+    detectado_em  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Chegada no PS (câmera passiva)"
+        verbose_name_plural = "Chegadas no PS (câmera passiva)"
+        ordering            = ["-detectado_em"]
+        indexes             = [models.Index(fields=["empresa", "detectado_em"])]
+
+    def __str__(self):
+        nome = self.identidade.nome if self.identidade else "—"
+        return f"Chegada PS {nome} [{self.detectado_em:%d/%m %H:%M}]"
+
+
 class PedidoExameVita(models.Model):
     """
     Pedido de exame do fluxo pós-consulta (VITA OS), ligado à identidade
