@@ -14480,6 +14480,10 @@ class TotemCheckinLog(models.Model):
     guia_gerada         = models.BooleanField(default=False)
     guia_numero         = models.CharField(max_length=50, blank=True, default="")
     plano_elegivel      = models.BooleanField(null=True, blank=True)
+    senha_atendimento   = models.CharField(
+        max_length=12, blank=True, default="",
+        help_text="Senha de atendimento (fila) gerada no check-in — ex: A042"
+    )
     checkin_em          = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -14608,3 +14612,27 @@ class TotemDispositivo(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.get_tipo_display()}) — {'ativo' if self.ativo else 'revogado'}"
+
+
+class ConvenioPacienteTotem(models.Model):
+    """
+    Dados do plano de saúde (carteirinha) informados pelo paciente no totem.
+    Ligado 1:1 à identidade do paciente. Usado no check-in para exibir o plano
+    e (futuramente) validar elegibilidade via TISS.
+    """
+    identidade         = models.OneToOneField(
+        "IdentidadePaciente", on_delete=models.CASCADE, related_name="convenio_totem"
+    )
+    operadora          = models.CharField(max_length=150, blank=True, default="")
+    plano_nome         = models.CharField(max_length=150, blank=True, default="")
+    numero_carteirinha = models.CharField(max_length=60, blank=True, default="")
+    validade           = models.DateField(null=True, blank=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
+    criado_em          = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Convênio do Paciente (Totem)"
+        verbose_name_plural = "Convênios do Paciente (Totem)"
+
+    def __str__(self):
+        return f"{self.operadora or 'sem operadora'} — {self.numero_carteirinha or 's/ carteirinha'}"

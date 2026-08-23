@@ -34,6 +34,7 @@ from django.views.decorators.http import require_http_methods
 
 from .models import (
     BiometriaTotemPaciente,
+    ConvenioPacienteTotem,
     Empresa,
     IdentidadePaciente,
     TotemCheckinLog,
@@ -131,6 +132,34 @@ def _gerar_id_temp(empresa_id: int) -> str:
     sufixo = "".join(random.choices(string.digits, k=4))
     ano = datetime.now().year
     return f"PS-{ano}-{sufixo}"
+
+
+def _gerar_senha_atendimento(empresa) -> str:
+    """
+    Gera a próxima senha de atendimento (fila) do dia para o hospital.
+    Formato: A001, A002, ... reiniciando a cada dia. Baixo volume no totem,
+    então a contagem sequencial diária é suficiente.
+    """
+    hoje = timezone.now().date()
+    usadas = (TotemCheckinLog.objects
+              .filter(empresa=empresa, checkin_em__date=hoje)
+              .exclude(senha_atendimento="")
+              .count())
+    return f"A{usadas + 1:03d}"
+
+
+def _dados_convenio(identidade) -> dict:
+    """Retorna os dados do plano do paciente para exibição no check-in."""
+    conv = ConvenioPacienteTotem.objects.filter(identidade=identidade).first()
+    if not conv:
+        return {"tem_plano": False}
+    return {
+        "tem_plano":   bool(conv.operadora or conv.numero_carteirinha),
+        "operadora":   conv.operadora,
+        "plano_nome":  conv.plano_nome,
+        "carteirinha": conv.numero_carteirinha,
+        "validade":    conv.validade.isoformat() if conv.validade else "",
+    }
 
 
 # ─── Classificação Manchester ─────────────────────────────────────────────────
@@ -285,13 +314,16 @@ def api_totem_checkin_cpf(request):
         except (ValueError, ImportError):
             pass  # face ruim nesta captura — check-in por CPF segue normalmente
 
+    senha = _gerar_senha_atendimento(empresa)
     checkin = TotemCheckinLog.objects.create(
         empresa=empresa,
         identidade=identidade,
         score_similaridade=0.0,
         tipo_entrada="eletivo",
+        senha_atendimento=senha,
     )
 
+    primeiro_nome = (identidade.nome or "").split(" ")[0] or "paciente"
     return JsonResponse({
         "reconhecido":    True,
         "via":            "cpf",
@@ -303,6 +335,9 @@ def api_totem_checkin_cpf(request):
         "face_reaprendida": reaprendido,
         "checkin_id":     checkin.id,
         "agendamento":    _buscar_agendamento_hoje(identidade),
+        "senha":          senha,
+        "mensagem":       f"Olá, {primeiro_nome}! Check-in confirmado pelo CPF. Aguarde ser chamado(a).",
+        "plano":          _dados_convenio(identidade),
         "proximo_passo":  "validar_plano",
     })
 
@@ -335,9 +370,16 @@ def api_totem_cadastrar(request):
     assinatura_b64 = data.get("assinatura_base64", "")
     consentimento = data.get("consentimento_lgpd", False)
     nome = data.get("nome", "").strip()
+    # Dados do plano de saúde (opcionais)
+    operadora   = (data.get("operadora") or "").strip()
+    plano_nome  = (data.get("plano_nome") or "").strip()
+    carteirinha = (data.get("carteirinha") or "").strip()
+    validade    = (data.get("validade") or "").strip()  # "AAAA-MM-DD" ou ""
 
     if len(cpf) != 11:
         return JsonResponse({"erro": "CPF inválido."}, status=400)
+    if not nome:
+        return JsonResponse({"erro": "Nome é obrigatório."}, status=400)
     if not foto_b64:
         return JsonResponse({"erro": "Foto obrigatória."}, status=400)
     if not consentimento:
@@ -355,7 +397,7 @@ def api_totem_cadastrar(request):
             empresa=empresa, cpf=cpf,
             defaults={"nome": nome or f"Paciente CPF {cpf}"},
         )
-        if nome and not criada and not identidade.nome:
+        if nome and identidade.nome != nome:
             identidade.nome = nome
             identidade.save(update_fields=["nome"])
 
@@ -371,20 +413,45 @@ def api_totem_cadastrar(request):
             },
         )
 
-        # Log check-in
+        # Dados do plano (se informados)
+        if operadora or carteirinha:
+            validade_dt = None
+            if validade:
+                try:
+                    validade_dt = datetime.strptime(validade[:10], "%Y-%m-%d").date()
+                except ValueError:
+                    validade_dt = None
+            ConvenioPacienteTotem.objects.update_or_create(
+                identidade=identidade,
+                defaults={
+                    "operadora":          operadora,
+                    "plano_nome":         plano_nome,
+                    "numero_carteirinha": carteirinha,
+                    "validade":           validade_dt,
+                },
+            )
+
+        # Senha de atendimento (fila) + log de check-in
+        senha = _gerar_senha_atendimento(empresa)
         checkin = TotemCheckinLog.objects.create(
             empresa=empresa,
             identidade=identidade,
             score_similaridade=1.0,
             tipo_entrada="novo_cadastro",
+            senha_atendimento=senha,
         )
 
+    primeiro_nome = (identidade.nome or "").split(" ")[0] or "paciente"
     return JsonResponse({
         "ok":            True,
         "identidade_id": identidade.id,
         "nome":          identidade.nome,
+        "cpf":           identidade.cpf,
         "cadastro":      "criado" if criada else "atualizado",
         "checkin_id":    checkin.id,
+        "senha":         senha,
+        "mensagem":      f"Bem-vindo(a), {primeiro_nome}! Cadastro concluído. Guarde sua senha e aguarde ser chamado(a).",
+        "plano":         _dados_convenio(identidade),
     }, status=201)
 
 
@@ -429,15 +496,18 @@ def api_totem_reconhecer(request):
     if identidade:
         # ✅ Paciente reconhecido
         bio = identidade.biometria_totem
+        senha = _gerar_senha_atendimento(empresa)
         checkin = TotemCheckinLog.objects.create(
             empresa=empresa,
             identidade=identidade,
             score_similaridade=score,
             tipo_entrada=tipo_entrada,
+            senha_atendimento=senha,
         )
 
         # Buscar agendamento do dia
         agendamento = _buscar_agendamento_hoje(identidade)
+        primeiro_nome = (identidade.nome or "").split(" ")[0] or "paciente"
 
         return JsonResponse({
             "reconhecido":     True,
@@ -449,6 +519,9 @@ def api_totem_reconhecer(request):
             "tem_assinatura":  bool(bio.assinatura_base64),
             "checkin_id":      checkin.id,
             "agendamento":     agendamento,
+            "senha":           senha,
+            "mensagem":        f"Olá, {primeiro_nome}! Check-in confirmado. Aguarde ser chamado(a).",
+            "plano":           _dados_convenio(identidade),
             "proximo_passo":   "validar_plano",
         })
 

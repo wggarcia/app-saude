@@ -253,6 +253,36 @@
   .btn-sm.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn-sm:hover { border-color: var(--accent); }
 
+  /* ── Campos de cadastro (nome + plano) ── */
+  .dados-form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+  .dados-form .row { display: flex; gap: 10px; }
+  .dados-form .field { flex: 1; }
+  .dados-form label {
+    display: block; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px;
+  }
+  .dados-form input {
+    width: 100%; padding: 13px 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 16px;
+    outline: none; transition: border-color .2s;
+  }
+  .dados-form input:focus { border-color: var(--accent); }
+
+  /* ── Senha de atendimento (resultado) ── */
+  .senha-box {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border-radius: 16px; padding: 18px 20px; margin-bottom: 18px;
+    text-align: center; box-shadow: 0 8px 30px rgba(0,180,216,0.3);
+  }
+  .senha-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.85); letter-spacing: .08em; }
+  .senha-num { font-size: 56px; font-weight: 800; color: #fff; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .result-msg {
+    background: rgba(6,214,160,0.1); border: 1px solid rgba(6,214,160,0.3);
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+    font-size: 14px; color: var(--success); font-weight: 600;
+  }
+
   /* ── Footer ── */
   .footer {
     display: flex; align-items: center; justify-content: space-between;
@@ -324,25 +354,24 @@
 
       <!-- Resultado do reconhecimento -->
       <div class="result-card" id="resultCard">
+        <div class="senha-box" id="senhaBox" style="display:none">
+          <div class="senha-label">SUA SENHA DE ATENDIMENTO</div>
+          <div class="senha-num" id="senhaNum">—</div>
+        </div>
+
         <div class="patient-name" id="patientName">—</div>
         <div class="patient-meta" id="patientMeta">—</div>
 
-        <div class="plan-banner" id="planBanner" style="display:none">
-          <div class="plan-icon">🏥</div>
-          <div>
-            <h3 id="planName">—</h3>
-            <p id="planInfo">—</p>
-          </div>
-        </div>
+        <div class="result-msg" id="resultMsg" style="display:none"></div>
 
         <div class="info-grid">
           <div class="info-item">
-            <label>Plano</label>
+            <label>Plano / Operadora</label>
             <span id="planStatus" class="badge-ok">—</span>
           </div>
           <div class="info-item">
-            <label>Coparticipação</label>
-            <span id="planCopag">—</span>
+            <label>Carteirinha</label>
+            <span id="planCarteirinha">—</span>
           </div>
           <div class="info-item">
             <label>Consulta</label>
@@ -355,7 +384,7 @@
         </div>
 
         <button class="btn-confirm" onclick="confirmarCheckin()">
-          ✅ Confirmar Check-in — Guia Gerada
+          ✅ Concluir
         </button>
       </div>
 
@@ -380,14 +409,37 @@
         </div>
       </div>
 
-      <!-- Assinatura (primeiro cadastro) -->
+      <!-- Cadastro completo (primeiro acesso) -->
       <div class="sig-card" id="sigCard">
-        <h2>✍️ Assine abaixo</h2>
-        <p>Sua assinatura será usada automaticamente nas guias futuras neste hospital.<br>
-           <small style="color:var(--accent)">LGPD: seus dados biométricos ficam protegidos e criptografados.</small></p>
+        <h2>📝 Complete seu cadastro</h2>
+        <p>Preencha seus dados e assine abaixo.
+           <small style="color:var(--accent)">LGPD: seus dados ficam protegidos e criptografados.</small></p>
+
+        <div class="dados-form">
+          <div class="field">
+            <label>Nome completo *</label>
+            <input type="text" id="devNomePac" placeholder="Seu nome completo" autocomplete="name">
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Operadora do plano</label>
+              <input type="text" id="devOperadora" placeholder="Ex: Unimed, Bradesco...">
+            </div>
+            <div class="field">
+              <label>Validade</label>
+              <input type="text" id="devValidade" placeholder="MM/AAAA" inputmode="numeric" maxlength="7">
+            </div>
+          </div>
+          <div class="field">
+            <label>Número da carteirinha</label>
+            <input type="text" id="devCarteirinha" placeholder="Número da carteirinha do plano" inputmode="numeric">
+          </div>
+        </div>
+
+        <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">✍️ Assine com o dedo ou caneta</label>
         <canvas id="sigCanvas"></canvas>
         <div class="sig-actions">
-          <button class="btn-sm" onclick="limparAssinatura()">Limpar</button>
+          <button class="btn-sm" onclick="limparAssinatura()">Limpar assinatura</button>
           <button class="btn-sm primary" onclick="confirmarCadastro()">Confirmar e Cadastrar</button>
         </div>
       </div>
@@ -488,18 +540,31 @@ function mostrarResultado(data) {
   state.checkinId = data.checkin_id;
 
   document.getElementById('patientName').textContent = data.nome || 'Paciente';
-  document.getElementById('patientMeta').textContent = `CPF: ${formatCPF(data.cpf)} • CNS: ${data.cns || '—'}`;
+  document.getElementById('patientMeta').textContent = `CPF: ${formatCPF(data.cpf || '')} • CNS: ${data.cns || '—'}`;
 
-  if (data.agendamento) {
-    document.getElementById('agendMedico').textContent = data.agendamento.medico || '—';
-    document.getElementById('agendHorario').textContent = data.agendamento.horario || '—';
+  // Senha de atendimento (fila)
+  if (data.senha) {
+    document.getElementById('senhaNum').textContent = data.senha;
+    document.getElementById('senhaBox').style.display = 'block';
+  } else {
+    document.getElementById('senhaBox').style.display = 'none';
   }
 
-  document.getElementById('planStatus').textContent = '✅ Ativo';
-  document.getElementById('planCopag').textContent = 'Verificando...';
-  document.getElementById('planBanner').style.display = 'flex';
-  document.getElementById('planName').textContent = 'Plano de Saúde';
-  document.getElementById('planInfo').textContent = 'Elegibilidade confirmada via TISS';
+  // Mensagem de boas-vindas
+  const msgEl = document.getElementById('resultMsg');
+  if (data.mensagem) { msgEl.textContent = data.mensagem; msgEl.style.display = 'block'; }
+  else { msgEl.style.display = 'none'; }
+
+  // Plano de saúde (dados informados pelo paciente)
+  const plano = data.plano || {};
+  document.getElementById('planStatus').textContent =
+    plano.tem_plano ? (plano.operadora || 'Informado') : 'Não informado';
+  document.getElementById('planCarteirinha').textContent = plano.carteirinha || '—';
+
+  // Agendamento
+  const ag = data.agendamento || {};
+  document.getElementById('agendMedico').textContent = ag.medico || '—';
+  document.getElementById('agendHorario').textContent = ag.horario || '—';
 
   document.getElementById('resultCard').className = 'result-card show success';
   document.getElementById('cpfCard').style.display = 'none';
@@ -509,6 +574,7 @@ function mostrarResultado(data) {
 function mostrarFormCPF() {
   document.getElementById('resultCard').className = 'result-card';
   document.getElementById('sigCard').className = 'sig-card';
+  document.getElementById('cpfCard').style.display = '';
   state.cpfDigitos = '';
   document.getElementById('cpfInput').value = '';
 }
@@ -560,28 +626,65 @@ async function buscarCPF() {
   } catch(e) { toast('Erro ao buscar CPF.', 'err'); }
 }
 
-// ── Assinatura ────────────────────────────────────────────────────────────────
+// ── Cadastro completo + Assinatura por toque ────────────────────────────────────
 function mostrarAssinatura() {
+  document.getElementById('cpfCard').style.display = 'none';
   document.getElementById('sigCard').className = 'sig-card show';
   const cvs = document.getElementById('sigCanvas');
-  state.sigCtx = cvs.getContext('2d');
-  state.sigCtx.strokeStyle = '#00b4d8';
-  state.sigCtx.lineWidth = 2.5;
-  state.sigCtx.lineCap = 'round';
 
-  cvs.addEventListener('pointerdown', e => { state.sigDrawing = true; state.sigCtx.beginPath(); state.sigCtx.moveTo(e.offsetX, e.offsetY); });
-  cvs.addEventListener('pointermove', e => { if (!state.sigDrawing) return; state.sigCtx.lineTo(e.offsetX, e.offsetY); state.sigCtx.stroke(); });
-  cvs.addEventListener('pointerup', () => { state.sigDrawing = false; });
+  // Dimensiona o canvas conforme o tamanho REAL exibido (corrige o traço
+  // deslocado/escalado que acontece quando width/height ≠ CSS). DPR p/ nitidez.
+  const rect = cvs.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cvs.width = Math.round(rect.width * dpr);
+  cvs.height = Math.round(rect.height * dpr);
+  const ctx = cvs.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#00b4d8';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  state.sigCtx = ctx;
+  state.sigVazia = true;
+
+  // Pointer Events cobrem dedo (touch), caneta (pen) e mouse de forma unificada.
+  const pos = e => { const r = cvs.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  cvs.onpointerdown = e => {
+    e.preventDefault();
+    try { cvs.setPointerCapture(e.pointerId); } catch(_) {}
+    state.sigDrawing = true; state.sigVazia = false;
+    const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+  };
+  cvs.onpointermove = e => {
+    if (!state.sigDrawing) return;
+    e.preventDefault();
+    const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke();
+  };
+  cvs.onpointerup = cvs.onpointercancel = cvs.onpointerleave = () => { state.sigDrawing = false; };
 }
 
 function limparAssinatura() {
   const cvs = document.getElementById('sigCanvas');
-  state.sigCtx.clearRect(0, 0, cvs.width, cvs.height);
+  const ctx = state.sigCtx || cvs.getContext('2d');
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cvs.width, cvs.height); ctx.restore();
+  state.sigVazia = true;
 }
 
 async function confirmarCadastro() {
+  const nome = document.getElementById('devNomePac').value.trim();
+  if (!nome) { toast('Informe seu nome completo.', 'err'); return; }
+  if (state.sigVazia) { toast('Por favor, assine no quadro com o dedo ou caneta.', 'err'); return; }
+
   const cvs = document.getElementById('sigCanvas');
   const sigB64 = cvs.toDataURL('image/png');
+  const operadora   = document.getElementById('devOperadora').value.trim();
+  const carteirinha = document.getElementById('devCarteirinha').value.trim();
+  const validadeRaw = document.getElementById('devValidade').value.trim(); // MM/AAAA
+  let validadeISO = '';
+  const mm = validadeRaw.match(/^(\d{2})\/(\d{4})$/);
+  if (mm) validadeISO = `${mm[2]}-${mm[1]}-01`;
 
   try {
     const resp = await fetch(API + 'cadastrar/', {
@@ -589,18 +692,20 @@ async function confirmarCadastro() {
       headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
       body: JSON.stringify({
         cpf: state.cpfDigitos,
+        nome: nome,
         foto_base64: state.foto,
         assinatura_base64: sigB64,
         consentimento_lgpd: true,
+        operadora: operadora,
+        carteirinha: carteirinha,
+        validade: validadeISO,
       }),
     });
     const data = await resp.json();
     if (data.ok) {
-      toast('✅ Cadastro realizado! Bem-vindo ao sistema.', 'ok');
       setStatus('matched', '✅ Cadastrado com sucesso');
-      document.getElementById('sigCard').className = 'sig-card';
-      state.identidadeId = data.identidade_id;
-      setTimeout(() => resetarTotem(), 4000);
+      mostrarResultado(data);   // mostra senha + mensagem + plano
+      setTimeout(() => resetarTotem(), 12000);
     } else {
       toast(data.erro || 'Erro no cadastro.', 'err');
     }
@@ -615,12 +720,16 @@ function confirmarCheckin() {
 
 // ── Reset ─────────────────────────────────────────────────────────────────────
 function resetarTotem() {
-  state = {foto: null, cpfDigitos: '', identidadeId: null, checkinId: null, sig: null, sigCtx: null, sigDrawing: false};
+  state = {foto: null, cpfDigitos: '', identidadeId: null, checkinId: null, sig: null, sigCtx: null, sigDrawing: false, sigVazia: true};
   setStatus('default', 'Câmera pronta');
   document.getElementById('resultCard').className = 'result-card';
   document.getElementById('cpfCard').style.display = '';
   document.getElementById('sigCard').className = 'sig-card';
   document.getElementById('cpfInput').value = '';
+  // limpa campos de cadastro e resultado
+  ['devNomePac','devOperadora','devCarteirinha','devValidade'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const sb = document.getElementById('senhaBox'); if (sb) sb.style.display = 'none';
+  const rm = document.getElementById('resultMsg'); if (rm) rm.style.display = 'none';
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
