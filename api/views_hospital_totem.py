@@ -525,6 +525,12 @@ def api_totem_reconhecer(request):
     if identidade:
         # ✅ Paciente reconhecido
         bio = identidade.biometria_totem
+        # Atualiza a miniatura do rosto (identificação visual no painel).
+        if bio and not bio.foto_thumb_base64:
+            thumb = _thumbnail(foto_b64)
+            if thumb:
+                bio.foto_thumb_base64 = thumb
+                bio.save(update_fields=["foto_thumb_base64", "atualizado_em"])
         senha = _gerar_senha_atendimento(empresa)
         checkin = TotemCheckinLog.objects.create(
             empresa=empresa,
