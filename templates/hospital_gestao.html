@@ -949,7 +949,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <div class="tab-panel" id="tab-vita">
 
         <!-- Chamada para o painel de operação (staff) -->
-        <a href="/hospital/vita/" target="_blank" rel="noopener" style="text-decoration:none">
+        <a href="/hospital/vita/" onclick="return abrirVitaSessao(event,'/hospital/vita/')" style="text-decoration:none">
           <div style="margin-bottom:16px;padding:20px 24px;border-radius:14px;
                       background:linear-gradient(135deg, rgba(0,119,182,.25), rgba(0,180,216,.1));
                       border:1px solid rgba(0,180,216,.35);display:flex;align-items:center;gap:16px;cursor:pointer">
@@ -990,12 +990,11 @@ tr:hover td{background:rgba(255,255,255,.018)}
                 Nas visitas seguintes, o rosto já gera a guia TISS assinada automaticamente.
               </p>
               <div style="display:flex;gap:10px">
-                <a href="/hospital/totem/" target="_blank" rel="noopener"
+                <a href="/hospital/totem/" onclick="return abrirVitaSessao(event,'/hospital/totem/')"
                    style="flex:1;padding:14px;background:linear-gradient(135deg,#0077b6,#00b4d8);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;text-align:center;text-decoration:none;cursor:pointer">
                   📷 Abrir Totem (nova aba)
                 </a>
-                <a href="/hospital/totem/" target="_blank" rel="noopener"
-                   onclick="this.href='/hospital/totem/?kiosk=1'"
+                <a href="/hospital/totem/?kiosk=1" onclick="return abrirVitaSessao(event,'/hospital/totem/',{kiosk:1})"
                    style="padding:14px 18px;background:rgba(0,180,216,.1);border:1px solid rgba(0,180,216,.3);border-radius:10px;color:#00b4d8;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">
                   🖥️ Modo Kiosk
                 </a>
@@ -1020,11 +1019,11 @@ tr:hover td{background:rgba(255,255,255,.018)}
                 Painel lateral mostra fila do PS em tempo real (atualiza a cada 30s).
               </p>
               <div style="display:flex;gap:10px">
-                <a href="/hospital/ps/triagem/" target="_blank" rel="noopener"
+                <a href="/hospital/ps/triagem/" onclick="return abrirVitaSessao(event,'/hospital/ps/triagem/')"
                    style="flex:1;padding:14px;background:linear-gradient(135deg,#7c0a02,#ef4444);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;text-align:center;text-decoration:none">
                   🚑 Abrir Triagem PS
                 </a>
-                <a href="/hospital/ps/painel/" target="_blank" rel="noopener"
+                <a href="/hospital/ps/triagem/" onclick="return abrirVitaSessao(event,'/hospital/ps/triagem/')"
                    style="padding:14px 18px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;color:#ef4444;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">
                   📊 Fila do PS
                 </a>
@@ -3580,6 +3579,19 @@ function _orcBadgeModuloStatus(st) {
 function setText(id, v) {
   const el = document.getElementById(id);
   if (el) el.textContent = v;
+}
+
+// Abre uma tela VITA OS em nova aba propagando a sessão desta aba (?tab=<key>).
+// Sem isso, a aba nova cai no middleware anti-sequestro-de-sessão e é redirecionada
+// para o login (302). Mesmo mecanismo usado pela navegação interna do app.
+function abrirVitaSessao(ev, url, extra) {
+  if (ev && ev.preventDefault) ev.preventDefault();
+  var tab = sessionStorage.getItem('tab_session_key') || '';
+  var u = new URL(url, window.location.origin);
+  if (tab) u.searchParams.set('tab', tab);
+  if (extra) Object.keys(extra).forEach(function(k){ u.searchParams.set(k, extra[k]); });
+  window.open(u.pathname + u.search, '_blank');
+  return false;
 }
 
 async function carregarVitaStats() {
