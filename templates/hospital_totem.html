@@ -60,6 +60,19 @@
     align-items: start;
   }
 
+  /* ── Responsivo (celular em pé) ── */
+  @media (max-width: 820px) {
+    .totem { height: auto; min-height: 100vh; padding: 14px; gap: 14px; }
+    .main { grid-template-columns: 1fr; gap: 16px; }
+    .camera-frame { max-width: 260px; margin: 0 auto; }
+    .logo h1 { font-size: 18px; }
+    .clock { font-size: 22px; }
+    .footer { flex-direction: column; gap: 6px; text-align: center; }
+    .numpad-btn { padding: 15px; font-size: 20px; }
+    .patient-name { font-size: 22px; }
+    .senha-num { font-size: 44px; }
+  }
+
   /* ── Camera ── */
   .camera-panel {
     background: var(--surface);
