@@ -5462,6 +5462,86 @@ class IdentidadePaciente(models.Model):
         return f"{self.nome} ({self.cpf or 'sem CPF'})"
 
 
+class CredencialAppPaciente(models.Model):
+    """Login do Portal do Paciente (o "MyChart brasileiro"), criado pelo próprio
+    paciente. Ancorado no MPI (IdentidadePaciente), NÃO no login da empresa —
+    isolado por hospital. Espelha CredencialAppFuncionario (SST) na estrutura."""
+    identidade    = models.OneToOneField(
+        IdentidadePaciente, on_delete=models.CASCADE, related_name="credencial_portal"
+    )
+    email         = models.EmailField(unique=True)
+    senha         = models.CharField(max_length=255)  # bcrypt hash
+    ativo         = models.BooleanField(default=True)
+    fcm_token     = models.TextField(blank=True, default="")
+    ultimo_login  = models.DateTimeField(null=True, blank=True)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Credencial do Portal do Paciente"
+        verbose_name_plural = "Credenciais do Portal do Paciente"
+        ordering            = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.email} → {self.identidade_id}"
+
+
+class AgendamentoPaciente(models.Model):
+    """Agendamento visível ao paciente no Portal (consulta, exame, retorno…).
+    Ancorado no MPI (IdentidadePaciente). O hospital cria; o paciente vê e confirma."""
+    TIPO_CHOICES = [
+        ("consulta", "Consulta"), ("exame", "Exame"), ("retorno", "Retorno"),
+        ("vacina", "Vacina"), ("procedimento", "Procedimento"),
+    ]
+    STATUS_CHOICES = [
+        ("agendado", "Agendado"), ("confirmado", "Confirmado"),
+        ("realizado", "Realizado"), ("cancelado", "Cancelado"),
+    ]
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="agendamentos_paciente")
+    identidade    = models.ForeignKey(IdentidadePaciente, on_delete=models.CASCADE, related_name="agendamentos")
+    tipo          = models.CharField(max_length=20, choices=TIPO_CHOICES, default="consulta")
+    especialidade = models.CharField(max_length=120, blank=True, default="")
+    profissional  = models.CharField(max_length=160, blank=True, default="")
+    local         = models.CharField(max_length=160, blank=True, default="", help_text="Unidade/sala")
+    data_hora     = models.DateTimeField()
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default="agendado")
+    observacoes   = models.TextField(blank=True, default="")
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Agendamento do Paciente"
+        verbose_name_plural = "Agendamentos do Paciente"
+        ordering            = ["data_hora"]
+        indexes             = [models.Index(fields=["empresa", "identidade", "data_hora"])]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} {self.data_hora:%d/%m/%Y %H:%M} — {self.identidade_id}"
+
+
+class MensagemPacientePortal(models.Model):
+    """Mensagem segura entre o paciente e a equipe do hospital, vinculada ao MPI.
+    Canal auditável (não é WhatsApp). Paciente e equipe trocam mensagens."""
+    AUTOR_CHOICES = [("paciente", "Paciente"), ("equipe", "Equipe")]
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="mensagens_paciente_portal")
+    identidade    = models.ForeignKey(IdentidadePaciente, on_delete=models.CASCADE, related_name="mensagens_portal")
+    autor         = models.CharField(max_length=10, choices=AUTOR_CHOICES)
+    autor_nome    = models.CharField(max_length=160, blank=True, default="")
+    texto         = models.TextField()
+    lida_paciente = models.BooleanField(default=False)
+    lida_equipe   = models.BooleanField(default=False)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Mensagem do Portal do Paciente"
+        verbose_name_plural = "Mensagens do Portal do Paciente"
+        ordering            = ["criado_em"]
+        indexes             = [models.Index(fields=["empresa", "identidade", "criado_em"])]
+
+    def __str__(self):
+        return f"[{self.autor}] {self.identidade_id}: {self.texto[:30]}"
+
+
 class PacienteInternado(models.Model):
     STATUS_CHOICES = [
         ("cadastrado", "Cadastrado — ainda não internado"),

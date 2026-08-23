@@ -207,6 +207,9 @@ class EmpresaMiddleware:
             "/redefinir-senha/",
             "/api/funcionario/",   # portal do trabalhador — auth própria via Bearer
             "/api/funcionario",
+            "/paciente/",          # Portal do Paciente hospitalar — página pública (auth via Bearer no fetch)
+            "/api/paciente/",      # Portal do Paciente — APIs com auth própria via Bearer (só Hospital)
+            "/exame-compartilhado/",  # exame compartilhado pelo paciente via link assinado (sem login)
             "/api/sst/psicossocial/responder/",  # resposta pública do colaborador (token no URL)
             "/api/login",
             "/api/operacao-central/login",
@@ -253,6 +256,7 @@ class EmpresaMiddleware:
             "/api/operacao-central/login",
             "/solicitar-reset-senha/",
             "/api/funcionario/buscar-cpf",
+            "/api/paciente/acessar",
         )
         if any(request.path.startswith(r) for r in rotas_login):
             if _rate_limit_login(request):

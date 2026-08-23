@@ -1335,6 +1335,13 @@ from api.views_relatorios import (
     relatorio_pdf_treinamentos,
 )
 from api.views_platform import platform_status, sla_page, status_page
+from api.views_paciente_portal import (
+    paciente_portal_page, paciente_acessar, paciente_registrar, paciente_login,
+    paciente_meus_exames, paciente_exame_explicar, paciente_resumo,
+    paciente_exportar, paciente_excluir_conta, paciente_compartilhar_exame,
+    exame_compartilhado_page, paciente_agenda, paciente_agenda_confirmar,
+    paciente_mensagens, hospital_agenda_criar, hospital_paciente_responder,
+)
 from api.views_funcionario_portal import (
     funcionario_login, funcionario_registrar, funcionario_buscar_cpf, funcionario_dashboard,
     funcionario_meu_perfil, funcionario_meus_asos,
@@ -2819,6 +2826,25 @@ urlpatterns = [
     path('api/sst/relatorio/asos.pdf', relatorio_pdf_asos),
     path('api/sst/relatorio/cats.pdf', relatorio_pdf_cats),
     path('api/sst/relatorio/treinamentos.pdf', relatorio_pdf_treinamentos),
+
+    # ── Portal do Paciente Hospitalar (MyChart brasileiro) — SÓ Hospital ──────
+    path('paciente/', paciente_portal_page),
+    path('api/paciente/acessar', paciente_acessar),
+    path('api/paciente/registrar', paciente_registrar),
+    path('api/paciente/login', paciente_login),
+    path('api/paciente/resumo', paciente_resumo),
+    path('api/paciente/meus-exames', paciente_meus_exames),
+    path('api/paciente/exames/<int:pk>/explicar', paciente_exame_explicar),
+    path('api/paciente/exames/<int:pk>/compartilhar', paciente_compartilhar_exame),
+    path('api/paciente/exportar', paciente_exportar),
+    path('api/paciente/excluir-conta', paciente_excluir_conta),
+    path('api/paciente/agenda', paciente_agenda),
+    path('api/paciente/agenda/<int:pk>/confirmar', paciente_agenda_confirmar),
+    path('api/paciente/mensagens', paciente_mensagens),
+    path('exame-compartilhado/<str:token>', exame_compartilhado_page),
+    # lado hospital (equipe) — alimenta a agenda e responde mensagens do paciente
+    path('api/hospital/paciente-agenda', hospital_agenda_criar),
+    path('api/hospital/paciente-mensagens/<int:identidade_id>/responder', hospital_paciente_responder),
 
     # ── Portal do Funcionário (app mobile trabalhador SST) ────────────────────
     path('api/funcionario/buscar-cpf', funcionario_buscar_cpf),

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exame compartilhado — SoloCRT Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070b10;--card:#0e1820;--card2:#132330;--ink:#f4efe3;--muted:#a2b2bd;--faint:#63757f;
+  --line:rgba(120,190,195,.12);--cyan:#45ead9;--gold:#d9b86f;--ok:#5fe3b8;--warn:#e6c37e;--info:#9cc3ff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;min-height:100vh;padding:30px 18px}
+.wrap{max-width:620px;margin:0 auto}
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Plus Jakarta Sans';font-weight:800;color:#f0d9a0;margin-bottom:8px}
+.brand .m{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,#f0d9a0,var(--gold));color:#1a1205;display:grid;place-items:center;font-weight:800;font-size:1.1rem}
+.sub{text-align:center;color:var(--faint);font-size:.8rem;margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+h1{font-family:'Plus Jakarta Sans';font-size:1.3rem;font-weight:800;letter-spacing:-.02em}
+.meta{color:var(--muted);font-size:.85rem;margin-top:4px;margin-bottom:20px}
+.rrow{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid rgba(120,190,195,.07)}
+.rrow:last-child{border-bottom:none}
+.si{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-weight:900;font-size:.8rem}
+.si.ok{background:rgba(95,227,184,.13);color:var(--ok)}.si.up{background:rgba(217,184,111,.15);color:var(--warn)}.si.down{background:rgba(138,183,255,.14);color:var(--info)}
+.rn{flex:1;font-weight:700;font-size:.92rem}
+.rv{font-family:'Plus Jakarta Sans';font-weight:800}.rv small{color:var(--faint);font-weight:600;font-size:.76rem}
+.rref{font-size:.72rem;color:var(--faint)}
+.laudo{margin-top:18px;background:var(--card2);border-radius:12px;padding:14px 16px;border-left:3px solid var(--cyan);font-size:.92rem;white-space:pre-wrap}
+.resp{margin-top:14px;font-size:.8rem;color:var(--muted)}
+.foot{text-align:center;color:var(--faint);font-size:.76rem;margin-top:22px;line-height:1.7}
+.invalid{text-align:center;padding:40px 20px}
+.invalid .big{font-size:2.6rem;margin-bottom:12px}
+.invalid h1{margin-bottom:8px}.invalid p{color:var(--muted);font-size:.92rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="m">＋</span> SoloCRT Saúde</div>
+  <div class="sub">Exame compartilhado pelo paciente</div>
+  {% if valido %}
+  <div class="card">
+    <h1>{{ exames|join:", "|default:"Resultado de exame" }}</h1>
+    <div class="meta">{{ paciente_nome }} · {{ hospital }} · {{ data }}</div>
+    {% for v in valores %}
+      <div class="rrow">
+        <span class="si {% if v.status == 'normal' or not v.status %}ok{% else %}up{% endif %}">
+          {% if v.status == 'normal' or not v.status %}✓{% else %}!{% endif %}
+        </span>
+        <span class="rn">{{ v.exame|default:"—" }}</span>
+        <span class="rv">{{ v.valor|default:"—" }}{% if v.unidade %} <small>{{ v.unidade }}</small>{% endif %}</span>
+        <span class="rref">ref {{ v.referencia|default:"—" }}</span>
+      </div>
+    {% endfor %}
+    {% if laudo %}<div class="laudo">{{ laudo }}</div>{% endif %}
+    {% if responsavel %}<div class="resp">Responsável pelo laudo: {{ responsavel }}</div>{% endif %}
+  </div>
+  <div class="foot">🔒 Link temporário e somente leitura, gerado pelo próprio paciente.<br>Este resultado não substitui a avaliação médica.</div>
+  {% else %}
+  <div class="card invalid">
+    <div class="big">🔗</div>
+    <h1>Link indisponível</h1>
+    <p>Este link de compartilhamento expirou ou não é mais válido. Peça ao paciente para gerar um novo pelo portal.</p>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>
