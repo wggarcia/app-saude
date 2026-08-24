@@ -1274,9 +1274,11 @@ def api_ps_chegadas(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
-    hoje = timezone.now().date()
+    # Janela móvel (últimas 12h) em vez de "data de hoje" — evita o corte de
+    # data/fuso (servidor em UTC) que escondia chegadas recentes no feed do PS.
+    desde = timezone.now() - timedelta(hours=12)
     chegadas = (ChegadaPS.objects
-                .filter(empresa=empresa, detectado_em__date=hoje)
+                .filter(empresa=empresa, detectado_em__gte=desde)
                 .select_related("identidade", "identidade__biometria_totem")
                 .order_by("-detectado_em")[:30])
     lista = []
