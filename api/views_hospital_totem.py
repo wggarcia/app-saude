@@ -1406,3 +1406,64 @@ def api_exame_marcar_visto(request):
     pedido.resultado_visto = True
     pedido.save(update_fields=["resultado_visto"])
     return JsonResponse({"ok": True})
+
+
+# ─── Cadastro rápido de rosto na entrada do PS (enfermagem) ───────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_ps_entrada_cadastrar_rosto(request):
+    """
+    POST {cpf, foto_base64, nome?}
+    Cadastro assistido pela enfermagem na entrada do PS: captura o rosto do
+    paciente por ESTA câmera e o associa ao CPF. Se o paciente já existe, ADICIONA
+    o embedding (aprende o ângulo/luz do PS → passa a reconhecer com folga).
+    Se não existe, cria a identidade + biometria.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado."}, status=401)
+    try:
+        data = json.loads(request.body or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    cpf = "".join(c for c in data.get("cpf", "") if c.isdigit())
+    foto_b64 = data.get("foto_base64", "")
+    nome = (data.get("nome") or "").strip()
+    if len(cpf) != 11:
+        return JsonResponse({"erro": "CPF inválido."}, status=400)
+    if not foto_b64:
+        return JsonResponse({"erro": "Foto obrigatória."}, status=400)
+
+    try:
+        embedding = _extrair_embedding(foto_b64)
+    except (ValueError, ImportError) as exc:
+        return JsonResponse({"erro": str(exc)}, status=422)
+
+    thumb = _thumbnail(foto_b64)
+    with transaction.atomic():
+        identidade, criada = IdentidadePaciente.objects.get_or_create(
+            empresa=empresa, cpf=cpf,
+            defaults={"nome": nome or f"Paciente CPF {cpf}"},
+        )
+        if nome and identidade.nome != nome:
+            identidade.nome = nome
+            identidade.save(update_fields=["nome"])
+        bio = BiometriaTotemPaciente.objects.filter(identidade=identidade).first()
+        if bio:
+            bio.ativo = True
+            if thumb:
+                bio.foto_thumb_base64 = thumb
+            bio.save(update_fields=["ativo", "foto_thumb_base64", "atualizado_em"])
+            _registrar_embedding_extra(bio, embedding)   # aprende a câmera do PS
+            acao = "rosto_atualizado"
+        else:
+            BiometriaTotemPaciente.objects.create(
+                identidade=identidade, embedding_json=embedding,
+                foto_thumb_base64=thumb, consentimento_lgpd=True,
+                consentimento_em=timezone.now(), ativo=True,
+            )
+            acao = "cadastrado"
+
+    return JsonResponse({"ok": True, "nome": identidade.nome, "acao": acao})
