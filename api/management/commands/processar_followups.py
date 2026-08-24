@@ -39,7 +39,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from api.models import LeadProspeccao, EmailProspeccao
-        from api.email_ai import gerar_email
+        from api.email_ai import gerar_email, IAIndisponivelError
         from api.brevo_service import enviar_email
 
         dry_run = options["dry_run"]
@@ -76,6 +76,11 @@ class Command(BaseCommand):
 
             try:
                 resultado = gerar_email(lead, seq)
+            except IAIndisponivelError as exc:
+                # Crédito/billing/quota da IA — todos os leads falhariam igual.
+                # Para o lote aqui (evita martelar a API e poluir o Sentry).
+                self.stderr.write(f"    IA indisponível (billing/quota) — parando o lote: {exc}")
+                break
             except Exception as exc:
                 self.stderr.write(f"    ERRO ao gerar email: {exc}")
                 erros += 1

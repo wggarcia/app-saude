@@ -514,8 +514,26 @@ Separe cada seção com exatamente essas marcações:
         return {"assunto": assunto, "corpo_html": corpo_html, "corpo_texto": corpo_texto}
 
     except Exception as exc:
+        if _e_indisponibilidade_ia(exc):
+            # Billing/crédito/quota da API — NÃO é erro de dado. Loga como aviso
+            # (o Sentry captura ERROR+, então isto não vira alerta) e sinaliza
+            # ao chamador pra PARAR o lote (todos os leads falhariam igual).
+            logger.warning("email_ai: IA indisponível (billing/quota) lead=%s: %s", lead.email, exc)
+            raise IAIndisponivelError(str(exc)) from exc
         logger.error("email_ai error lead=%s: %s", lead.email, exc)
         raise
+
+
+class IAIndisponivelError(RuntimeError):
+    """IA (Anthropic API) indisponível por crédito/billing/quota — não é erro de dado."""
+
+
+def _e_indisponibilidade_ia(exc) -> bool:
+    m = str(exc).lower()
+    return any(t in m for t in (
+        "credit balance", "plans & billing", "spend limit", "quota",
+        "rate limit", "insufficient", "authentication", "permission",
+    ))
 
 
 def _extract_section(text: str, start_marker: str, end_marker: str) -> str:

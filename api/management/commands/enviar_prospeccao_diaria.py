@@ -27,7 +27,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from api.brevo_service import enviar_email
-from api.email_ai import gerar_email
+from api.email_ai import gerar_email, IAIndisponivelError
 from api.models import EmailProspeccao, LeadProspeccao
 
 _BREVO_TETO_GRATIS = 300  # limite físico do plano grátis do Brevo
@@ -95,6 +95,9 @@ class Command(BaseCommand):
         for lead in leads:
             try:
                 resultado = gerar_email(lead, numero_sequencia=1)
+            except IAIndisponivelError as exc:
+                self.stdout.write(f"  IA indisponível (billing/quota) — parando o lote: {exc}")
+                break
             except Exception as exc:
                 self.stdout.write(f"  ERRO ao gerar (lead={lead.id} {lead.email}): {exc}")
                 erros += 1
