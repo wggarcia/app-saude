@@ -449,7 +449,17 @@ async function verLead(id){
       ? (l.funcionarios_estimados ? `${l.funcionarios_estimados} colaboradores` : 'colaboradores não informados')
       : (l.unidades_estimadas ? `${l.unidades_estimadas} unidade(s)` : 'unidades não informadas');
     document.getElementById('d_info').innerHTML=`
-      <div><span class="muted">📧</span> ${esc(l.email)} &nbsp; <span class="muted">📱</span> ${esc(l.telefone||'—')}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="muted">📧</span>
+        <span id="d_email_txt">${esc(l.email)}</span>
+        <button onclick="editarEmail()" style="font-size:11px;padding:2px 8px;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer">✏️ editar</button>
+      </div>
+      <div id="d_email_form" style="display:none;gap:6px;align-items:center;margin-top:4px">
+        <input id="d_email_input" type="email" style="flex:1;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);font-size:13px" placeholder="novo@email.com.br">
+        <button onclick="salvarEmail()" style="padding:4px 12px;background:var(--green);color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px">Salvar</button>
+        <button onclick="cancelarEditarEmail()" style="padding:4px 10px;background:var(--border);color:var(--fg);border:none;border-radius:3px;cursor:pointer;font-size:12px">✕</button>
+      </div>
+      <div><span class="muted">📱</span> ${esc(l.telefone||'—')}</div>
       <div><span class="muted">📍</span> ${esc(l.cidade)}/${esc(l.estado)} &nbsp; <span class="seg-pill seg-${l.segmento}">${esc(l.segmento_display)}</span> ${esc(l.tipo_display)}</div>
       <div><span class="muted">📏</span> ${esc(tamanho)} &nbsp; <span class="muted">→ plano sugerido:</span> <strong>${esc(l.pacote_sugerido)}</strong></div>
       <div><span class="muted">Status:</span> ${badgeStatus(l.status)} ${l.website?'&nbsp; <a href="'+esc(l.website)+'" target="_blank" rel="noopener">site ↗</a>':''}</div>
@@ -466,6 +476,25 @@ async function verLead(id){
     } else { eh.innerHTML=''; }
     abrir('m_det');
   }catch(e){ toast(e.message,'err'); }
+}
+
+function editarEmail(){
+  document.getElementById('d_email_input').value=leadAberto.email||'';
+  document.getElementById('d_email_form').style.display='flex';
+}
+function cancelarEditarEmail(){
+  document.getElementById('d_email_form').style.display='none';
+}
+async function salvarEmail(){
+  const novoEmail=document.getElementById('d_email_input').value.trim();
+  if(!novoEmail){toast('Digite um email válido.','err');return;}
+  try{
+    const updated=await api('/api/comercial/leads/'+leadAberto.id+'/',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:novoEmail})});
+    leadAberto.email=updated.email;
+    document.getElementById('d_email_txt').textContent=updated.email;
+    document.getElementById('d_email_form').style.display='none';
+    toast('Email atualizado!','ok');
+  }catch(e){toast(e.message,'err');}
 }
 
 async function gerarEmail(){

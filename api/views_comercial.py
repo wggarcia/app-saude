@@ -247,7 +247,7 @@ def api_lead_detalhe(request, lead_id: int):
     if request.method == "PUT":
         data = _json_body(request)
         campos_permitidos = [
-            "nome", "empresa", "cargo", "telefone", "cidade", "estado",
+            "nome", "empresa", "cargo", "email", "telefone", "cidade", "estado",
             "website", "linkedin_url", "notas", "score", "tipo", "segmento",
             "funcionarios_estimados", "unidades_estimadas",
         ]
