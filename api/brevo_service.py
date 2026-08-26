@@ -90,10 +90,18 @@ def enviar_email(email_comercial) -> bool:
         return False
 
     lead = email_comercial.lead
+    dest_email = lead.email.strip()
+
+    if not dest_email or "@" not in dest_email:
+        email_comercial.status = "erro"
+        email_comercial.erro = f"Email inválido: '{lead.email}'"
+        email_comercial.save(update_fields=["status", "erro"])
+        logger.warning("brevo: email inválido ignorado lead=%s email=%r", lead.id, lead.email)
+        return False
 
     payload = {
         "sender": {"email": cfg["from_email"], "name": cfg["from_name"]},
-        "to": [{"email": lead.email, "name": lead.nome}],
+        "to": [{"email": dest_email, "name": lead.nome}],
         "replyTo": {"email": cfg["from_email"], "name": cfg["from_name"]},
         "subject": email_comercial.assunto,
         "htmlContent": _wrap_html(email_comercial.corpo_html, lead.nome, rodape=_rodape_prospeccao_com_descadastro(lead)),

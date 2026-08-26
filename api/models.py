@@ -14117,6 +14117,11 @@ class LeadProspeccao(models.Model):
             models.Index(fields=['proximo_followup_em']),
         ]
 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.nome} — {self.empresa} ({self.get_status_display()})"
 
