@@ -7800,7 +7800,7 @@ class HospitalPaginasOrfasSemTemplateTests(TestCase):
                 )
                 corpo = resp.content.lower()
                 # Antes essas telas eram placeholder "em construção"; hoje
-                # renderizam o módulo real (hospital_modulo_generico.html).
+                # renderizam o módulo real (hospital_modulo_operavel.html).
                 self.assertNotIn(b"em constru", corpo, msg=f"{url} voltou a ser placeholder")
                 self.assertIn(b"hospitalos", corpo, msg=f"{url} não renderizou o módulo real")
 

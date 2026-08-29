@@ -1,7 +1,7 @@
 """
 Smoke dos módulos hospitalares que antes mostravam "em construção" e agora
-renderizam o template genérico (hospital_modulo_generico.html) consumindo as
-APIs já existentes. Garante 200 + template certo + config injetada.
+renderizam o template operável data-driven (hospital_modulo_operavel.html)
+consumindo as APIs já existentes. Garante 200 + template certo + config injetada.
 """
 import json
 from datetime import timedelta

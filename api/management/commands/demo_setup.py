@@ -211,6 +211,7 @@ class Command(BaseCommand):
         ]
 
         criados = 0
+        atualizados = 0
         for email, criar_fn, dados_fn in demos:
             if Empresa.objects.filter(email=email).exists():
                 if email == "demo.sst@solocrt.com":
