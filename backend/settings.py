@@ -135,6 +135,7 @@ INSTALLED_APPS = [
 ] + (['django_extensions'] if not IS_PRODUCTION else [])
 
 MIDDLEWARE = [
+    'backend.middleware_subdomain.SubdomainRoutingMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -170,6 +171,9 @@ SOLUSCRT_DEFAULT_ORIGINS = [
     "https://governo.solocrt.com.br",
     "https://admin.solocrt.com.br",
     "https://app.solocrt.com.br",
+    # Portais públicos com URL profissional
+    "https://paciente.solocrt.com.br",
+    "https://vita.solocrt.com.br",
 ]
 CORS_ALLOWED_ORIGINS = unique_list(
     env_list(
