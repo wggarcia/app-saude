@@ -18,10 +18,11 @@ numpy==1.26.4
 joblib==1.5.3
 scikit-learn==1.4.2
 opencv-python-headless==4.9.0.80
-# deepface e tensorflow-cpu reativados no Hostinger (8GB RAM disponivel).
-deepface==0.0.93
-tensorflow-cpu==2.16.1
-tf-keras==2.16.0
+# deepface/tensorflow-cpu: NÃO instalar no Render (estoura RAM de 512MB-2GB).
+# Instalar manualmente no VPS: pip install deepface==0.0.93 tensorflow-cpu==2.16.1 tf-keras==2.16.0
+# deepface==0.0.93
+# tensorflow-cpu==2.16.1
+# tf-keras==2.16.0
 python-dotenv==1.2.2
 anthropic==0.40.0
 Pillow==11.0.0
