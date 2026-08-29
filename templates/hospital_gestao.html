@@ -340,6 +340,12 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <button class="nav-link" onclick="openModulePanel('/hospital/rnds/','🔗 RNDS / e-SUS')">
         <div class="nav-link-inner"><span>🔗</span><span>RNDS / e-SUS</span></div>
       </button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/ia-autorizacao/','🧠 IA de Autorização')">
+        <div class="nav-link-inner"><span>🧠</span><span>IA de Autorização</span></div>
+      </button>
+      <button class="nav-link" onclick="openModulePanel('/hospital/importacao/','📥 Migração de Dados')">
+        <div class="nav-link-inner"><span>📥</span><span>Migração de Dados</span></div>
+      </button>
       {% endif %}
     </div>
   </details>
@@ -509,6 +515,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <button class="tab-btn" id="tabBtn-assinatura" onclick="setTab('assinatura')">✍️ Assinatura</button>
         <button class="tab-btn" id="tabBtn-analytics" onclick="setTab('analytics')">📊 Analytics</button>
         <button class="tab-btn" id="tabBtn-orquestracao" onclick="setTab('orquestracao')">🧠 Comando 360</button>
+        <button class="tab-btn" id="tabBtn-vita" onclick="setTab('vita')">⚡ VITA OS</button>
       </div>
 
       <!-- ══════ TAB: LEITOS ══════ -->
@@ -4455,8 +4462,11 @@ async function assinarLoteSelecionados() {
     // Move .tabs bar (hospital has horizontal tab bar)
     var tabsBar = document.querySelector('main .tabs, .main .tabs');
     if (tabsBar) body.appendChild(tabsBar);
-    // Move all tab-panel divs into ops-panel
-    document.querySelectorAll('.tab-panel').forEach(function(el){ body.appendChild(el); });
+    // Move all tab-panel divs into ops-panel — SOMENTE os painéis de aba do
+    // cockpit (id="tab-*"). Sem o seletor de id, os sub-painéis do modal
+    // Equipe Multiprofissional (id="multiTab-*") eram arrancados do modal e
+    // apareciam soltos no rodapé de toda aba (e o modal abria vazio).
+    document.querySelectorAll('.tab-panel[id^="tab-"]').forEach(function(el){ body.appendChild(el); });
   });
 
   document.addEventListener('keydown', function(e){

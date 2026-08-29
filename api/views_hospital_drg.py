@@ -49,6 +49,9 @@ def hospital_drg_page(request):
             {"key": "com_erro", "label": "Pendentes/com erro", "cor": "warn"},
             {"key": "peso_medio_mes", "label": "Peso relativo médio"},
         ]},
+        "credenciais": {"url": "/api/integracoes/credenciais/drg/", "chave_status": "drg_sigquali",
+                        "titulo": "Credenciais Sigquali / DRG Brasil",
+                        "ajuda": "URL e token do contrato Sigquali. O token é criptografado e nunca é exibido."},
         "status": {"url": "/api/hospital/drg/status", "titulo": "Status da integração Sigquali", "campos": [
             {"key": "credencial_configurada", "label": "Credencial", "tipo": "bool"},
             {"key": "ultima_transmissao", "label": "Última transmissão", "tipo": "data"},
@@ -96,11 +99,8 @@ def api_drg_status(request):
     credencial_ok = False
     ultima_transmissao = None
 
-    # CredenciaisIntegracoes não tem um campo genérico "tipo" nem armazenamento
-    # dedicado para o Sigquali/DRG (é um OneToOne por empresa com sub-campos
-    # fixos por integração). Até existir um campo drg_*, não há credencial
-    # configurável por aqui — o envio real usa SIGQUALI_API_URL/TOKEN via env.
-    credencial_ok = False
+    cred = CredenciaisIntegracoes.objects.filter(empresa=emp).first() if CredenciaisIntegracoes else None
+    credencial_ok = bool(cred and cred.drg_ativo and cred.get_drg_token())
 
     if ClassificacaoDRG:
         ultimo = ClassificacaoDRG.objects.filter(
@@ -150,13 +150,13 @@ def api_drg_enviar_internacao(request):
         competencia=comp,
     )
 
-    # Verifica credencial Sigquali — ver nota em api_drg_status.
-    credencial = None
+    cred = CredenciaisIntegracoes.objects.filter(empresa=emp).first() if CredenciaisIntegracoes else None
+    credencial = cred.get_drg_token() if (cred and cred.drg_ativo) else None
 
     if not credencial:
         return JsonResponse({
             "status": "simulado",
-            "mensagem": "Configure credenciais em /configuracoes/integracoes",
+            "mensagem": "Cadastre URL e token nas Credenciais Sigquali, no topo desta tela.",
             "drg_id": drg.id,
         })
 
@@ -170,9 +170,9 @@ def api_drg_enviar_internacao(request):
             "relativeWeight": str(drg.peso_relativo or 1),
         }).encode()
         req = urllib.request.Request(
-            _SIGQUALI_URL,
+            (cred.drg_url or _SIGQUALI_URL),
             data=payload_json,
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {getattr(credencial, 'token', '')}"},
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {credencial}"},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=10) as resp:

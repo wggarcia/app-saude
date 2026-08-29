@@ -289,7 +289,8 @@ class EmpresaMiddleware:
         if (any(request.path.startswith(p) for p in _totem_paths)
                 and not request.path.startswith(_totem_admin)):
             totem_tok = (request.GET.get("totem_token") or
-                         request.COOKIES.get("totem_token") or "").strip()
+                         request.COOKIES.get("totem_token") or
+                         request.headers.get("X-Totem-Token") or "").strip()
             if totem_tok:
                 try:
                     from .models import TotemDispositivo

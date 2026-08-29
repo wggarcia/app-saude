@@ -68,6 +68,22 @@
 </div>
 
 <script>
+/* VITA OS kiosk: quando a página foi aberta com token de dispositivo pareado,
+   reenvia o token em toda chamada de API (header X-Totem-Token) — permite o
+   kiosk operar sem sessão de login (design do TotemDispositivo). */
+window.TOTEM_TOKEN = "{{ totem_token|default:'' }}";
+if (window.TOTEM_TOKEN) {
+  const _vitaFetch = window.fetch.bind(window);
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    const h = new Headers(opts.headers || {});
+    h.set('X-Totem-Token', window.TOTEM_TOKEN);
+    opts.headers = h;
+    return _vitaFetch(url, opts);
+  };
+}
+</script>
+<script>
 const API='/api/hospital/ps/';
 const video=document.getElementById('video'), cvs=document.getElementById('cvs');
 navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}}).then(s=>video.srcObject=s).catch(()=>{document.getElementById('camLabel').textContent='⚠️ Câmera não disponível';});

@@ -17,9 +17,9 @@ from .access_control import get_setor, requer_setor, requer_feature_pacote, requ
 from .services.modulo_operavel import render_modulo_operavel
 
 try:
-    from .models import TransmissaoEpimed, PacienteInternado, LeitoHospitalar
+    from .models import TransmissaoEpimed, CredenciaisIntegracoes, PacienteInternado, LeitoHospitalar
 except ImportError:
-    TransmissaoEpimed = PacienteInternado = LeitoHospitalar = None
+    TransmissaoEpimed = PacienteInternado = LeitoHospitalar = CredenciaisIntegracoes = None
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,9 @@ def hospital_epimed_page(request):
             {"key": "registros_uti_mes", "label": "Registros UTI no mês"},
             {"key": "ultima_competencia", "label": "Última competência"},
         ]},
+        "credenciais": {"url": "/api/integracoes/credenciais/epimed/", "chave_status": "epimed",
+                        "titulo": "Credenciais Epimed Monitor",
+                        "ajuda": "URL e token do Epimed Monitor. Sem credenciais, o arquivo da competência fica disponível para download manual."},
         "status": {"url": "/api/hospital/epimed/status", "titulo": "Status da integração", "campos": [
             {"key": "credencial_configurada", "label": "Credencial", "tipo": "bool",
              "true_label": "Configurada", "false_label": "Não configurada (envio manual/CSV)"},
@@ -86,10 +89,8 @@ def api_epimed_status(request):
     if not emp:
         return JsonResponse({"erro": "Não autenticado ou setor incorreto"}, status=401)
 
-    # CredenciaisIntegracoes não tem campo dedicado para Epimed ainda (é um
-    # OneToOne por empresa com sub-campos fixos por integração), então não há
-    # credencial configurável por aqui — o envio real usa EPIMED_API_URL/TOKEN.
-    credencial_ok = False
+    cred = CredenciaisIntegracoes.objects.filter(empresa=emp).first() if CredenciaisIntegracoes else None
+    credencial_ok = bool(cred and cred.epimed_ativo and cred.get_epimed_token())
     ultima_transmissao = None
     total_transmissoes = 0
 
@@ -190,9 +191,8 @@ def api_epimed_transmitir(request, id):
     except TransmissaoEpimed.DoesNotExist:
         return JsonResponse({"erro": "Transmissão não encontrada"}, status=404)
 
-    # Verifica credenciais — ver nota em api_epimed_status: CredenciaisIntegracoes
-    # não tem campo dedicado para Epimed ainda, então nunca há credencial aqui.
-    credencial = None
+    cred = CredenciaisIntegracoes.objects.filter(empresa=emp).first() if CredenciaisIntegracoes else None
+    credencial = cred.get_epimed_token() if (cred and cred.epimed_ativo) else None
 
     if not credencial:
         # Sem credencial cadastrada — retorna CSV para download manual
@@ -203,13 +203,13 @@ def api_epimed_transmitir(request, id):
         return response
 
     # Com credencial cadastrada — tenta envio automático real ao Epimed
-    epimed_url = os.environ.get("EPIMED_API_URL")
-    epimed_token = os.environ.get("EPIMED_API_TOKEN")
+    epimed_url = (cred.epimed_url if cred else "") or os.environ.get("EPIMED_API_URL")
+    epimed_token = credencial or os.environ.get("EPIMED_API_TOKEN")
     if not epimed_url or not epimed_token:
         return JsonResponse({
             "erro": "Integração Epimed não configurada",
-            "mensagem": "Configure as variáveis de ambiente EPIMED_API_URL e "
-                        "EPIMED_API_TOKEN para habilitar a transmissão automática.",
+            "mensagem": "Cadastre a URL e o token do Epimed nas credenciais de "
+                        "integrações da empresa para habilitar a transmissão automática.",
             "transmissao_id": transmissao.id,
         }, status=503)
 

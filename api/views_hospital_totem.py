@@ -44,7 +44,50 @@ from .models import (
     TriagemManchesterPS,
 )
 from .biometria_token import gerar_token as _gerar_selo_biometrico
-from .views_dashboard import _empresa_autenticada
+from .views_dashboard import _empresa_autenticada as _empresa_sessao
+from .access_control import get_setor
+
+
+def _dispositivo_do_request(request):
+    """Resolve um TotemDispositivo ativo a partir do token de pareamento
+    (querystring ?totem_token= na página do kiosk, ou header X-Totem-Token
+    nas chamadas de API feitas pelo kiosk)."""
+    tok = (request.GET.get("totem_token") or request.headers.get("X-Totem-Token") or "").strip()
+    if not tok:
+        return None
+    disp = (
+        TotemDispositivo.objects.filter(token=tok, ativo=True)
+        .select_related("empresa")
+        .first()
+    )
+    if disp:
+        TotemDispositivo.objects.filter(pk=disp.pk).update(ultimo_acesso=timezone.now())
+    return disp
+
+
+def _empresa_autenticada(request, dispositivo_ok=False):
+    """Empresa autorizada a usar o VITA OS.
+
+    Correção de auditoria (ago/2026): esta família de views era a única do
+    hospital sem verificação de setor — qualquer sessão autenticada de outro
+    segmento alcançava dados clínicos do totem. Agora:
+      1. dispositivo_ok=True → aceita token de dispositivo pareado
+         (TotemDispositivo ativo), que identifica o hospital sem login —
+         este era o design documentado no model e nunca tinha sido ligado;
+      2. sessão de operador só vale se a empresa for do setor hospital.
+    """
+    if dispositivo_ok:
+        disp = getattr(request, "totem_dispositivo", None) or _dispositivo_do_request(request)
+        if disp:
+            return disp.empresa
+    elif getattr(request, "totem_dispositivo", None) is not None:
+        # Requisição autenticada por token de kiosk tentando rota de OPERADOR
+        # (stats, criação de exame, gestão de dispositivos…) → nega.
+        return None
+    emp = _empresa_sessao(request)
+    if emp is not None and get_setor(emp) == "hospital":
+        return emp
+    return None
 
 logger = logging.getLogger(__name__)
 
@@ -281,10 +324,11 @@ def _classificar_manchester(dados: dict) -> tuple[str, str]:
 
 def totem_interface(request):
     """Tela do totem — fullscreen, sem login necessário (totem é dispositivo dedicado)."""
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
+    _tok = request.GET.get("totem_token", "") if _dispositivo_do_request(request) else ""
     if not empresa:
-        return render(request, "hospital_totem.html", {"empresa_nome": "Hospital"})
-    return render(request, "hospital_totem.html", {
+        return render(request, "hospital_totem.html", {"totem_token": _tok, "empresa_nome": "Hospital"})
+    return render(request, "hospital_totem.html", {"totem_token": _tok, 
         "empresa_nome": empresa.nome,
         "empresa_id": empresa.id,
     })
@@ -307,8 +351,9 @@ def vita_hub_interface(request):
 
 def ps_triagem_interface(request):
     """Tela de triagem Manchester para a enfermagem do PS."""
-    empresa = _empresa_autenticada(request)
-    ctx = {"empresa_nome": "Hospital"}
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
+    _tok = request.GET.get("totem_token", "") if _dispositivo_do_request(request) else ""
+    ctx = {"totem_token": _tok, "empresa_nome": "Hospital"}
     if empresa:
         ctx["empresa_nome"] = empresa.nome
         ctx["empresa_id"] = empresa.id
@@ -321,7 +366,7 @@ def ps_triagem_interface(request):
 @require_http_methods(["POST"])
 def api_totem_buscar_cpf(request):
     """POST {cpf} → dados do paciente se encontrado."""
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
 
@@ -363,7 +408,7 @@ def api_totem_checkin_cpf(request):
     CPF e, se uma foto for enviada, RE-APRENDE o rosto daquela câmera (atualiza
     o embedding SEM apagar a assinatura). Registra o check-in.
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
 
@@ -449,7 +494,7 @@ def api_totem_cadastrar(request):
       3. Armazena embedding + assinatura
       4. Registra consentimento LGPD
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
 
@@ -566,7 +611,7 @@ def api_totem_reconhecer(request):
       3. Se match: retorna dados do paciente + inicia validação TISS
       4. Se não match: cria ID temporário (emergência) ou pede CPF (eletivo)
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
 
@@ -713,7 +758,7 @@ def api_ps_triagem_classificar(request):
 
     Classifica cor Manchester e registra a triagem.
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
 
@@ -839,7 +884,7 @@ def api_totem_checkins_recentes(request):
 @require_http_methods(["GET"])
 def api_ps_painel(request):
     """GET — lista triagens ativas do dia no PS, ordenadas por urgência."""
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
 
@@ -1028,8 +1073,9 @@ def _serializar_pedido_exame(p):
 
 def estacao_exame_interface(request):
     """Tela da estação de exame (lab/imagem) — kiosk com reconhecimento facial."""
-    empresa = _empresa_autenticada(request)
-    ctx = {"empresa_nome": empresa.nome if empresa else "Hospital"}
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
+    _tok = request.GET.get("totem_token", "") if _dispositivo_do_request(request) else ""
+    ctx = {"totem_token": _tok, "empresa_nome": empresa.nome if empresa else "Hospital"}
     if empresa:
         ctx["empresa_id"] = empresa.id
     return render(request, "hospital_estacao_exame.html", ctx)
@@ -1103,7 +1149,7 @@ def api_estacao_reconhecer(request):
     POST {foto_base64}
     Reconhece o paciente na estação de exame e retorna os exames pendentes dele.
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     try:
@@ -1148,7 +1194,7 @@ def api_estacao_reconhecer(request):
 @require_http_methods(["POST"])
 def api_exame_avancar(request):
     """POST {pedido_id, novo_status} — avança o status do exame na estação."""
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     try:
@@ -1172,7 +1218,7 @@ def api_exame_avancar(request):
 @require_http_methods(["GET"])
 def api_exames_paciente(request):
     """GET ?identidade_id= | ?cpf= — lista pedidos de exame de um paciente."""
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     ident = None
@@ -1196,8 +1242,9 @@ def api_exames_paciente(request):
 
 def ps_entrada_interface(request):
     """Tela da entrada do PS: câmera passiva + feed de chegadas pra enfermagem."""
-    empresa = _empresa_autenticada(request)
-    ctx = {"empresa_nome": empresa.nome if empresa else "Hospital"}
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
+    _tok = request.GET.get("totem_token", "") if _dispositivo_do_request(request) else ""
+    ctx = {"totem_token": _tok, "empresa_nome": empresa.nome if empresa else "Hospital"}
     if empresa:
         ctx["empresa_id"] = empresa.id
     return render(request, "hospital_ps_entrada.html", ctx)
@@ -1213,7 +1260,7 @@ def api_ps_entrada_detectar(request):
     devolve os dados pra tela da enfermagem. Não reconhecido → não cria nada
     (evita poluir; o desconhecido é tratado na triagem).
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     try:
@@ -1271,7 +1318,7 @@ def _resumo_paciente_ps(identidade):
 @require_http_methods(["GET"])
 def api_ps_chegadas(request):
     """GET — chegadas detectadas hoje na entrada do PS (feed da enfermagem)."""
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     # Janela móvel (últimas 12h) em vez de "data de hoje" — evita o corte de
@@ -1300,7 +1347,7 @@ def api_ps_chegadas(request):
 @require_http_methods(["POST"])
 def api_ps_chegada_atender(request):
     """POST {chegada_id} — marca a chegada como atendida (some do topo do feed)."""
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     try:
@@ -1325,7 +1372,7 @@ def api_exame_resultado(request):
     Lança o resultado/laudo do exame → status 'concluido' → fica disponível
     pro médico solicitante no painel de resultados.
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     try:
@@ -1420,7 +1467,7 @@ def api_ps_entrada_cadastrar_rosto(request):
     o embedding (aprende o ângulo/luz do PS → passa a reconhecer com folga).
     Se não existe, cria a identidade + biometria.
     """
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada(request, dispositivo_ok=True)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado."}, status=401)
     try:

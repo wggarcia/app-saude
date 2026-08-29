@@ -37,6 +37,25 @@
   <a class="nav-link{% if request.path == '/hospital/whatsapp-agendamento/' %} active{% endif %}" href="/hospital/whatsapp-agendamento/"><span>📱</span> WhatsApp Agendamento</a>
   {% endif %}
 
+  {% if hosp_ver_clinico or hosp_ver_operacional %}
+  <div class="nav-section">Apoio, Qualidade e Integrações</div>
+  <a class="nav-link{% if request.path == '/hospital/portal-paciente/' %} active{% endif %}" href="/hospital/portal-paciente/"><span>👤</span> Portal do Paciente</a>
+  <a class="nav-link{% if request.path == '/hospital/qualidade/' %} active{% endif %}" href="/hospital/qualidade/"><span>✅</span> Qualidade (NSP)</a>
+  <a class="nav-link{% if request.path == '/hospital/cme/' %} active{% endif %}" href="/hospital/cme/"><span>🧼</span> CME</a>
+  <a class="nav-link{% if request.path == '/hospital/nutricao/' %} active{% endif %}" href="/hospital/nutricao/"><span>🍽️</span> Nutrição</a>
+  <a class="nav-link{% if request.path == '/hospital/radioterapia/' %} active{% endif %}" href="/hospital/radioterapia/"><span>☢️</span> Radioterapia</a>
+  <a class="nav-link{% if request.path == '/hospital/rhc/' %} active{% endif %}" href="/hospital/rhc/"><span>🎗️</span> RHC — Reg. Câncer</a>
+  <a class="nav-link{% if request.path == '/hospital/nhve/' %} active{% endif %}" href="/hospital/nhve/"><span>📢</span> NHVE — Notificação</a>
+  <a class="nav-link{% if request.path == '/hospital/same/' %} active{% endif %}" href="/hospital/same/"><span>🗄️</span> SAME — Prontuários</a>
+  <a class="nav-link{% if request.path == '/hospital/telemedicina/' %} active{% endif %}" href="/hospital/telemedicina/"><span>📹</span> Telemedicina</a>
+  <a class="nav-link{% if request.path == '/hospital/custos/' %} active{% endif %}" href="/hospital/custos/"><span>💰</span> Custos Hospitalares</a>
+  <a class="nav-link{% if request.path == '/hospital/drg/' %} active{% endif %}" href="/hospital/drg/"><span>🏷️</span> DRG</a>
+  <a class="nav-link{% if request.path == '/hospital/manutencao/' %} active{% endif %}" href="/hospital/manutencao/"><span>🔧</span> Manutenção Predial</a>
+  <a class="nav-link{% if request.path == '/hospital/lavanderia/' %} active{% endif %}" href="/hospital/lavanderia/"><span>🧺</span> Lavanderia</a>
+  <a class="nav-link{% if request.path == '/hospital/epimed/' %} active{% endif %}" href="/hospital/epimed/"><span>📊</span> Epimed (UTI)</a>
+  <a class="nav-link{% if request.path == '/hospital/betha/' %} active{% endif %}" href="/hospital/betha/"><span>🔗</span> Betha (ERP)</a>
+  {% endif %}
+
   {% if hosp_ver_rede or mostrar_link_ti or mostrar_link_rh or mostrar_aba_gerencia %}
   <div class="nav-section">Rede e Gestão</div>
   {% if hosp_ver_rede %}

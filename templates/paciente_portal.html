@@ -558,6 +558,7 @@ async function carregarDados(){
   if(r1.status===401){sair();return;}
   _resumo=r1.data;
   var r2=await get('/meus-exames');_exames=r2.data;
+  var r3=await get('/agenda');if(r3.ok)_agenda=r3.data||{};
   renderNav();irPara(_viewAtual);
 }
 
@@ -574,7 +575,7 @@ function viewInicio(){
   h+='<div class="acts">'+
     actCard('a1','flask','Seus exames','Acesse seus resultados em um só lugar.','Ver resultados','exames')+
     actCard('a2','heart','Minha saúde','Diagnóstico, alergias e medicações.','Ver resumo','saude')+
-    actCard('a3','calendar','Consultas','Agende e acompanhe seus atendimentos.','Em breve','agenda')+
+    actCard('a3','calendar','Consultas','Agende e acompanhe seus atendimentos.','Ver agenda','agenda')+
     '</div>';
 
   h+='<div class="section-h"><h2>Seus atalhos</h2></div><div class="atalhos">'+
@@ -587,7 +588,9 @@ function viewInicio(){
   h+='<div class="stats">'+
     '<div class="stat ok"><div class="v">'+(st.exames_disponiveis||0)+'</div><div class="l">Exames disponíveis</div></div>'+
     '<div class="stat warn"><div class="v">'+(st.exames_reservados||0)+'</div><div class="l">Aguardando seu médico</div></div>'+
-    '<div class="stat"><div class="v">—</div><div class="l">Próxima consulta</div></div></div>';
+    (function(){var px=(_agenda&&_agenda.proximas&&_agenda.proximas[0])||null;
+      var v=px?(px.data.slice(0,5)+' '+(px.hora||'')):'—';
+      return '<div class="stat"><div class="v" style="font-size:'+(px?'1.05rem':'')+'">'+v+'</div><div class="l">Próxima consulta</div></div></div>';})();
 
   if(_resumo.saude){
     var s=_resumo.saude;
@@ -857,10 +860,8 @@ async function enviarMsg(){
 
 /* ---------- VIEW: EM BREVE ---------- */
 function viewEmBreve(id){
-  var m={agenda:{ic:'calendar',t:'Agenda',d:'Em breve você poderá ver e confirmar suas consultas, exames e retornos — tudo num só lugar.'},
-         mensagens:{ic:'chat',t:'Mensagens',d:'Em breve um canal seguro para falar com a equipe do hospital, vinculado ao seu prontuário.'}};
-  var x=m[id]||{ic:'sparkle',t:'Em breve',d:''};
-  return '<div class="soon-card"><div class="em">'+ic(x.ic,38)+'</div><h3>'+x.t+'</h3><p>'+x.d+'</p><div class="badge2">Em desenvolvimento</div></div>';
+  /* fallback defensivo — todas as seções do portal já têm view real */
+  return '<div class="soon-card"><div class="em">'+ic('sparkle',38)+'</div><h3>Seção indisponível</h3><p>Volte ao início e tente novamente.</p></div>';
 }
 
 /* máscara CPF */

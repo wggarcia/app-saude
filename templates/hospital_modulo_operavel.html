@@ -86,6 +86,17 @@ td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle
     <div class="status-grid" id="statusBody"></div>
   </section>
 
+  <section class="panel" id="painelCredenciais" style="display:none">
+    <div class="panel-h"><h2 id="credTitulo">Credenciais</h2></div>
+    <div style="display:grid;grid-template-columns:2fr 2fr auto auto;gap:10px;align-items:end;flex-wrap:wrap">
+      <div class="field" style="margin:0"><label>URL da API</label><input type="text" id="credUrl" placeholder="https://…"></div>
+      <div class="field" style="margin:0"><label>Token <span id="credTokenStatus" style="text-transform:none;font-weight:400"></span></label><input type="password" id="credToken" placeholder="Cole o token (em branco = manter)"></div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:.8rem;padding-bottom:11px"><input type="checkbox" id="credAtivo" checked> Ativo</label>
+      <button class="btn btn-primary" style="margin-bottom:0" onclick="salvarCredenciais()">Salvar credenciais</button>
+    </div>
+    <div class="hint" id="credAjuda"></div>
+  </section>
+
   <section class="panel" id="painelSecundario" style="display:none">
     <div class="panel-h"><h2 id="secTitulo"></h2></div>
     <div id="secBody"><div class="loading">Carregando…</div></div>
@@ -154,6 +165,29 @@ async function carregarStatus(){
     if(c.tipo==='data')v = fmtData(v);
     return '<div class="status-row"><div class="k">'+c.label+'</div><div class="v">'+(v===undefined||v===null||v===''?'—':v)+'</div></div>';
   }).join('');
+}
+
+/* ---- credenciais da integração (Betha, DRG, Epimed…) ---- */
+async function carregarCredenciais(){
+  if(!CFG.credenciais)return;
+  document.getElementById('painelCredenciais').style.display='';
+  document.getElementById('credTitulo').textContent=CFG.credenciais.titulo||'Credenciais da integração';
+  document.getElementById('credAjuda').textContent=CFG.credenciais.ajuda||'';
+  var st=await jget('/api/integracoes/credenciais/')||{};
+  var meu=st[CFG.credenciais.chave_status]||{};
+  if(meu.url)document.getElementById('credUrl').value=meu.url;
+  document.getElementById('credAtivo').checked=meu.ativo!==false;
+  document.getElementById('credTokenStatus').textContent=meu.token_salvo?'(já salvo — em branco mantém)':'';
+}
+async function salvarCredenciais(){
+  var body={url:document.getElementById('credUrl').value.trim(),
+            token:document.getElementById('credToken').value.trim(),
+            ativo:document.getElementById('credAtivo').checked};
+  var r=await jsend(CFG.credenciais.url,'POST',body);
+  if(!r){toast('Não foi possível salvar as credenciais.');return;}
+  document.getElementById('credToken').value='';
+  toast('Credenciais salvas.');
+  carregarCredenciais();carregarStatus();carregarKpis();
 }
 
 /* ---- painel secundário (read-only, ex: vencimentos, saldo) ---- */
@@ -302,7 +336,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharTudo()
 document.getElementById('listaTitulo').textContent=CFG.lista.titulo||'Registros';
 montarAcoesModulo();
 montarFiltros();
-carregarKpis();carregarStatus();carregarSecundario();carregarLista();
+carregarKpis();carregarStatus();carregarCredenciais();carregarSecundario();carregarLista();
 </script>
 </body>
 </html>

@@ -50,6 +50,9 @@ def hospital_betha_page(request):
             {"key": "sincronizados_hoje", "label": "Sincronizados hoje", "cor": "ok"},
             {"key": "erros", "label": "Com erro", "cor": "danger"},
         ]},
+        "credenciais": {"url": "/api/integracoes/credenciais/betha/", "chave_status": "betha",
+                        "titulo": "Credenciais Betha",
+                        "ajuda": "URL e token fornecidos pelo suporte Betha do seu município. O token é criptografado e nunca é exibido."},
         "status": {"url": "/api/hospital/betha/status", "titulo": "Status da integração", "campos": [
             {"key": "credencial_configurada", "label": "Credencial", "tipo": "bool"},
             {"key": "ultima_sync", "label": "Última sincronização", "tipo": "data"},
@@ -86,11 +89,8 @@ def api_betha_status(request):
     credencial_ok = False
     ultima_sync = None
 
-    # CredenciaisIntegracoes não tem um campo genérico "tipo" nem armazenamento
-    # dedicado para Betha (é um OneToOne por empresa com sub-campos fixos por
-    # integração: sngpc_*, ans_*, nfe_*, rnds_*, sisreg_*, sus_*, tiss_*).
-    # Até existir um campo betha_* nesse model, não há credencial configurável.
-    credencial_ok = False
+    cred = CredenciaisIntegracoes.objects.filter(empresa=emp).first() if CredenciaisIntegracoes else None
+    credencial_ok = bool(cred and cred.betha_ativo and cred.get_betha_token())
 
     if IntegracaoBetha:
         ultimo = IntegracaoBetha.objects.filter(
@@ -120,21 +120,20 @@ def _sincronizar(emp, tipo):
         status="pendente",
     )
 
-    # Ver nota em api_betha_status: sem campo dedicado em CredenciaisIntegracoes
-    # para Betha ainda, então o token nunca existe hoje — cai sempre em "pendente".
-    token = None
+    cred = CredenciaisIntegracoes.objects.filter(empresa=emp).first() if CredenciaisIntegracoes else None
+    token = cred.get_betha_token() if (cred and cred.betha_ativo) else None
 
     if not token:
         return JsonResponse({
             "status": "pendente",
             "integracao_id": integracao.id,
-            "mensagem": "Configure credenciais Betha em /configuracoes/integracoes",
+            "mensagem": "Cadastre URL e token nas Credenciais Betha, no topo desta tela.",
         })
 
     # Envio real à API Betha (placeholder)
     try:
         import urllib.request
-        url = f"{_BETHA_API_BASE}/sincronizar/{tipo}"
+        url = f"{(cred.betha_url or _BETHA_API_BASE).rstrip('/')}/sincronizar/{tipo}"
         payload_json = json.dumps({"competencia": comp, "empresa_id": emp.id}).encode()
         req = urllib.request.Request(
             url,
@@ -204,10 +203,10 @@ def api_betha_webhook(request):
             )
             return JsonResponse({"erro": "Assinatura inválida"}, status=401)
     else:
-        logger.warning(
-            "Webhook Betha recebido sem BETHA_WEBHOOK_SECRET configurado — "
-            "requisição aceita SEM verificação de autenticidade. Configure a "
-            "variável de ambiente BETHA_WEBHOOK_SECRET para habilitar a validação HMAC."
+        logger.warning("Webhook Betha recusado: BETHA_WEBHOOK_SECRET não configurado.")
+        return JsonResponse(
+            {"erro": "Webhook não configurado — defina BETHA_WEBHOOK_SECRET."},
+            status=503,
         )
 
     try:

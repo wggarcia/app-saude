@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic.base import RedirectView
 from django.http import FileResponse
 import os
 from api.views_dashboard import dashboard
@@ -1327,6 +1328,9 @@ from api.views_credenciais import (
     api_credenciais_sisreg_testar,
     api_credenciais_tiss_salvar,
     api_credenciais_tiss_testar,
+    api_credenciais_betha_salvar,
+    api_credenciais_drg_salvar,
+    api_credenciais_epimed_salvar,
     api_credenciais_revogar,
 )
 from api.views_nfe import (
@@ -2416,6 +2420,9 @@ urlpatterns = [
     path('api/integracoes/credenciais/sisreg/', api_credenciais_sisreg_salvar),
     path('api/integracoes/credenciais/sisreg/testar/', api_credenciais_sisreg_testar),
     path('api/integracoes/credenciais/tiss/', api_credenciais_tiss_salvar),
+    path('api/integracoes/credenciais/betha/', api_credenciais_betha_salvar),
+    path('api/integracoes/credenciais/drg/', api_credenciais_drg_salvar),
+    path('api/integracoes/credenciais/epimed/', api_credenciais_epimed_salvar),
     path('api/integracoes/credenciais/tiss/testar/', api_credenciais_tiss_testar),
     path('api/integracoes/credenciais/revogar/', api_credenciais_revogar),
     # NF-e / SEFAZ
@@ -3837,7 +3844,7 @@ urlpatterns = [
     path('hospital/totem/', totem_interface),
     path('hospital/vita/', vita_hub_interface),
     path('hospital/ps/triagem/', ps_triagem_interface),
-    path('hospital/ps/painel/', api_ps_painel),
+    path('hospital/ps/painel/', RedirectView.as_view(url='/hospital/ps/triagem/', permanent=False)),
     path('api/hospital/totem/cadastrar/', api_totem_cadastrar),
     path('api/hospital/totem/reconhecer/', api_totem_reconhecer),
     path('api/hospital/totem/buscar-cpf/', api_totem_buscar_cpf),

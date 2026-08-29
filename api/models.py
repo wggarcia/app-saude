@@ -7460,6 +7460,15 @@ class ProntuarioHospitalar(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
     class Meta:
         ordering = ["-criado_em"]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Número do prontuário é obrigatório num EMR real; auto-gera quando o
+        # operador não informa (baseado no pk = único e à prova de corrida).
+        if not self.numero_prontuario:
+            self.numero_prontuario = f"PRT-{self.pk:06d}"
+            super().save(update_fields=["numero_prontuario"])
+
     def __str__(self):
         return f"Prontuário {self.paciente_nome} — {self.empresa.nome}"
 
@@ -8616,6 +8625,27 @@ class CredenciaisIntegracoes(models.Model):
     tiss_versao         = models.CharField(max_length=10, blank=True, default="3.05.00")
     tiss_ativo          = models.BooleanField(default=False)
 
+    # ── Betha (ERP municipal — almoxarifado/compras do hospital) ─────────────
+    betha_url           = models.URLField(blank=True, default="",
+                                          help_text="URL base da API Betha do município")
+    betha_token_cripto  = models.TextField(blank=True, default="",
+                                           help_text="Token de API Betha criptografado (Fernet)")
+    betha_ativo         = models.BooleanField(default=False)
+
+    # ── DRG Brasil / Sigquali (classificação DRG) ─────────────────────────────
+    drg_url             = models.URLField(blank=True, default="",
+                                          help_text="URL da API Sigquali/DRG Brasil")
+    drg_token_cripto    = models.TextField(blank=True, default="",
+                                           help_text="Token Sigquali criptografado (Fernet)")
+    drg_ativo           = models.BooleanField(default=False)
+
+    # ── Epimed Monitor (UTI) ──────────────────────────────────────────────────
+    epimed_url          = models.URLField(blank=True, default="",
+                                          help_text="URL da API Epimed Monitor")
+    epimed_token_cripto = models.TextField(blank=True, default="",
+                                           help_text="Token Epimed criptografado (Fernet)")
+    epimed_ativo        = models.BooleanField(default=False)
+
     # ── Metadados ─────────────────────────────────────────────────────────────
     atualizado_em   = models.DateTimeField(auto_now=True)
     atualizado_por  = models.CharField(max_length=120, blank=True, default="")
@@ -8653,6 +8683,25 @@ class CredenciaisIntegracoes(models.Model):
             return self._fernet().decrypt(self.sngpc_senha_cripto.encode()).decode()
         except Exception:
             return ""
+
+    def _set_token(self, campo: str, token_plain: str):
+        setattr(self, campo, self._fernet().encrypt(token_plain.encode()).decode() if token_plain else "")
+
+    def _get_token(self, campo: str) -> str:
+        valor = getattr(self, campo, "")
+        if not valor:
+            return ""
+        try:
+            return self._fernet().decrypt(valor.encode()).decode()
+        except Exception:
+            return ""
+
+    def set_betha_token(self, t):  self._set_token("betha_token_cripto", t)
+    def get_betha_token(self):     return self._get_token("betha_token_cripto")
+    def set_drg_token(self, t):    self._set_token("drg_token_cripto", t)
+    def get_drg_token(self):       return self._get_token("drg_token_cripto")
+    def set_epimed_token(self, t): self._set_token("epimed_token_cripto", t)
+    def get_epimed_token(self):    return self._get_token("epimed_token_cripto")
 
     def set_ans_senha(self, senha_plain: str):
         """Criptografa e salva a senha ANS."""

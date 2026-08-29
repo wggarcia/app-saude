@@ -85,6 +85,22 @@
 <div class="toast" id="toast"></div>
 
 <script>
+/* VITA OS kiosk: quando a página foi aberta com token de dispositivo pareado,
+   reenvia o token em toda chamada de API (header X-Totem-Token) — permite o
+   kiosk operar sem sessão de login (design do TotemDispositivo). */
+window.TOTEM_TOKEN = "{{ totem_token|default:'' }}";
+if (window.TOTEM_TOKEN) {
+  const _vitaFetch = window.fetch.bind(window);
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    const h = new Headers(opts.headers || {});
+    h.set('X-Totem-Token', window.TOTEM_TOKEN);
+    opts.headers = h;
+    return _vitaFetch(url, opts);
+  };
+}
+</script>
+<script>
 const API = '/api/hospital/';
 function relogio(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
 setInterval(relogio,1000);relogio();

@@ -105,8 +105,51 @@ def _status_seguro(cred: CredenciaisIntegracoes) -> dict:
             "senha_salva": bool(cred.tiss_senha_cripto),
             "ativo":       cred.tiss_ativo,
         },
+        "betha": {
+            "configurado": bool(cred.betha_ativo and cred.betha_token_cripto),
+            "url":         cred.betha_url or None,
+            "token_salvo": bool(cred.betha_token_cripto),
+            "ativo":       cred.betha_ativo,
+        },
+        "drg_sigquali": {
+            "configurado": bool(cred.drg_ativo and cred.drg_token_cripto),
+            "url":         cred.drg_url or None,
+            "token_salvo": bool(cred.drg_token_cripto),
+            "ativo":       cred.drg_ativo,
+        },
+        "epimed": {
+            "configurado": bool(cred.epimed_ativo and cred.epimed_token_cripto),
+            "url":         cred.epimed_url or None,
+            "token_salvo": bool(cred.epimed_token_cripto),
+            "ativo":       cred.epimed_ativo,
+        },
         "atualizado_em": cred.atualizado_em.isoformat() if cred.atualizado_em else None,
     }
+
+
+def _salvar_token_simples(request, prefixo: str):
+    """Handler comum para as integrações token+URL (Betha, DRG/Sigquali, Epimed).
+    POST {url, token, ativo} — o token é criptografado (Fernet), nunca retornado."""
+    empresa = _empresa_autenticada(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido."}, status=400)
+
+    cred = _get_ou_criar_credenciais(empresa)
+    url   = (body.get("url") or "").strip()
+    token = (body.get("token") or "").strip()
+    ativo = bool(body.get("ativo", True))
+
+    setattr(cred, f"{prefixo}_url", url)
+    if token:  # em branco = mantém o token já salvo
+        getattr(cred, f"set_{prefixo}_token")(token)
+    setattr(cred, f"{prefixo}_ativo", ativo)
+    cred.save()
+    return JsonResponse({"ok": True, "ativo": ativo,
+                         "token_salvo": bool(getattr(cred, f"{prefixo}_token_cripto"))})
 
 
 # ─── Views ────────────────────────────────────────────────────────────────────
@@ -993,3 +1036,24 @@ def api_credenciais_revogar(request):
         "ok": True,
         "mensagem": "Todas as credenciais de integrações foram removidas.",
     })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_credenciais_betha_salvar(request):
+    """POST /api/integracoes/credenciais/betha/ — {url, token, ativo}"""
+    return _salvar_token_simples(request, "betha")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_credenciais_drg_salvar(request):
+    """POST /api/integracoes/credenciais/drg/ — {url, token, ativo}"""
+    return _salvar_token_simples(request, "drg")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_credenciais_epimed_salvar(request):
+    """POST /api/integracoes/credenciais/epimed/ — {url, token, ativo}"""
+    return _salvar_token_simples(request, "epimed")
