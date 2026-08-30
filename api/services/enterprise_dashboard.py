@@ -1150,7 +1150,9 @@ def _capacidade(chave, nome, descricao, atual, alvo, concorrentes, acao):
         "status": status,
         "progresso": progresso,
         "metricas": {"atual": atual, "alvo": alvo},
-        "referencias": concorrentes,
+        # Não expõe nome de concorrente na tela do cliente (não é profissional e
+        # pode parecer integração inexistente). O produto mostra o que ELE faz.
+        "referencias": [],
         "proxima_acao": acao,
     }
 

@@ -293,13 +293,6 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
         <small>${escapeHtml(item.modulo || "Automacao recomendada")}</small>
       </div>
     `).join("");
-    const radar = (data.radar_concorrencial || []).slice(0, 3).map((item) => `
-      <div class="ecosystem-item radar-item">
-        <strong>${escapeHtml(item.referencia)}</strong>
-        <small>${escapeHtml(item.forca_mercado)}</small>
-        <small>${escapeHtml(item.resposta_solus)}</small>
-      </div>
-    `).join("");
     target.innerHTML = `
       <div class="ecosystem-score">
         <div class="score-ring" style="--score:${Math.max(0, Math.min(100, score))}%"><span>${score}</span></div>
@@ -310,8 +303,6 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
       </div>
       <div class="ecosystem-list">${risks || '<div class="ecosystem-item">Sem risco prioritario aberto.<small>Ambiente pronto para ampliar automacoes.</small></div>'}</div>
       <div class="ecosystem-list">${actions || '<div class="ecosystem-item">Sem pendencias criticas.<small>Continue alimentando dados reais do ambiente.</small></div>'}</div>
-      <h2>Radar concorrencial</h2>
-      <div class="ecosystem-list">${radar}</div>
     `;
   }
 
