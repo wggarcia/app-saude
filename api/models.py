@@ -7574,9 +7574,11 @@ class ProntuarioHospitalar(models.Model):
     paciente_nascimento = models.DateField(null=True, blank=True)
     paciente_sexo = models.CharField(max_length=1, choices=[("M","M"),("F","F"),("O","O")], default="M")
     paciente_telefone = models.CharField(max_length=20, blank=True)
-    alergias = models.TextField(blank=True)
-    comorbidades = models.TextField(blank=True)
-    observacoes = models.TextField(blank=True)
+    # Texto clínico livre cifrado em repouso (LGPD dado sensível de saúde) —
+    # transparente ao ORM; não é usado em busca, então cifrar não quebra nada.
+    alergias = EncryptedTextField(blank=True)
+    comorbidades = EncryptedTextField(blank=True)
+    observacoes = EncryptedTextField(blank=True)
     identidade = models.ForeignKey(
         "IdentidadePaciente", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="prontuarios",
@@ -7604,7 +7606,7 @@ class EvolucaoProntuario(models.Model):
     profissional = models.CharField(max_length=120)
     crm_coren    = models.CharField(max_length=40, blank=True)
     tipo         = models.CharField(max_length=30, default="medica")  # medica, enfermagem, fisioterapia...
-    texto        = models.TextField()
+    texto        = EncryptedTextField()  # nota clínica cifrada em repouso (LGPD)
     cid10        = models.CharField(max_length=10, blank=True)
     assinado_em  = models.DateTimeField(auto_now_add=True)
 
