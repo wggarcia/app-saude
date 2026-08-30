@@ -167,6 +167,8 @@ class EmpresaMiddleware:
     def __call__(self, request):
         rotas_livres_exatas = {
             "/",
+            "/healthz",   # liveness p/ balanceador — sem login, sem tenant
+            "/readyz",    # readiness (DB+cache) p/ monitoramento — sem login
             "/login-empresa/",
             "/login-governo/",
             "/operacao-central/",

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic.base import RedirectView
+from api import views_health as health_views
 from django.http import FileResponse
 import os
 from api.views_dashboard import dashboard
@@ -1506,6 +1507,10 @@ def service_worker(request):
 
 urlpatterns = [
     path('gestor-638fb21b19cf/', admin.site.urls),
+
+    # ❤️ SAÚDE (liveness/readiness para balanceador e monitoramento)
+    path('healthz', health_views.healthz),
+    path('readyz', health_views.readyz),
 
     # 🔐 LOGIN
     path('', site_principal),

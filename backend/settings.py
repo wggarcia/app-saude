@@ -457,6 +457,33 @@ if _SENTRY_DSN:
     )
 
 
+# ── Logging estruturado ──────────────────────────────────────────────────────
+# Antes: só o default do Django (sem config). Agora: JSON em produção (para
+# agregadores) e formato legível em dev. Níveis controláveis por env.
+_LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {"()": "backend.logging_utils.JsonFormatter"},
+        "console": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json" if IS_PRODUCTION else "console",
+        },
+    },
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        "api": {"handlers": ["console"], "level": _LOG_LEVEL, "propagate": False},
+        "backend": {"handlers": ["console"], "level": _LOG_LEVEL, "propagate": False},
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+    },
+}
+
+
 # ── OpenSky Network (mobilidade aérea — IA #9 de dispersão) ──────────────────
 # Credenciais OAuth2 (client credentials) da conta gratuita OpenSky. Sem elas,
 # o acesso anônimo é rate-limited (HTTP 429) e a coleta de voos falha.
