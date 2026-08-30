@@ -174,6 +174,49 @@ h2{
   font-size:.55rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase
 }
 
+/* ── video section ───────────────────────────────────────── */
+.video-sec{
+  padding:80px 0;
+  background:linear-gradient(180deg,var(--bg),var(--bg2))
+}
+.video-sec-head{text-align:center;margin-bottom:40px}
+.video-sec-head h2{max-width:700px;margin:12px auto 0}
+.video-sec-head p{color:var(--muted);font-size:1rem;line-height:1.7;max-width:560px;margin:14px auto 0}
+.video-container{
+  position:relative;width:min(960px,100%);margin:0 auto;
+  border-radius:20px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 48px 96px rgba(0,0,0,.55),
+             0 0 0 1px rgba(69,234,217,.06)
+}
+.video-container video{
+  display:block;width:100%;aspect-ratio:16/9;
+  background:#000;cursor:pointer
+}
+.video-overlay{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(4,6,9,.45);
+  transition:opacity .3s;cursor:pointer
+}
+.video-overlay.hidden{opacity:0;pointer-events:none}
+.play-btn{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#f6e7b7,#d9b86f);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 16px rgba(217,184,111,.15),0 16px 40px rgba(0,0,0,.4);
+  transition:transform .2s
+}
+.play-btn:hover{transform:scale(1.08)}
+.play-btn svg{width:28px;height:28px;fill:#080b10;margin-left:4px}
+.video-meta{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:16px 20px;
+  background:linear-gradient(0deg,rgba(4,6,9,.9),transparent);
+  font-size:.75rem;color:rgba(240,236,227,.7);
+  pointer-events:none
+}
+
 /* ── segments showcase ───────────────────────────────────── */
 .seg-section{
   padding:100px 0;
@@ -661,6 +704,39 @@ h2{
     </div>
   </div>
 </section>
+
+<!-- ── vídeo pitch ─────────────────────────────────────── -->
+<section class="video-sec">
+  <div class="wrap">
+    <div class="video-sec-head">
+      <div class="eyebrow" style="margin:0 auto">Veja em ação</div>
+      <h2>Um sistema. Seis segmentos. Assistência completa.</h2>
+      <p>Do cidadão no app à decisão do gestor — veja como a plataforma funciona de ponta a ponta.</p>
+    </div>
+    <div class="video-container">
+      <video id="pitch-video" preload="metadata" controls playsinline
+             poster="/static/video/solocrt5_poster.jpg">
+        <source src="/static/video/solocrt5.mp4" type="video/mp4">
+      </video>
+      <div class="video-overlay" id="video-overlay" onclick="playVideo()">
+        <div class="play-btn">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
+      <div class="video-meta">SoloCRT Saúde — Pitch Institucional · 6 min 33 s</div>
+    </div>
+  </div>
+</section>
+<script>
+function playVideo(){
+  const v = document.getElementById('pitch-video');
+  const o = document.getElementById('video-overlay');
+  v.play();
+  o.classList.add('hidden');
+  v.addEventListener('pause', ()=> o.classList.remove('hidden'), {once:false});
+  v.addEventListener('play',  ()=> o.classList.add('hidden'),    {once:false});
+}
+</script>
 
 <!-- ── 6 segmentos ─────────────────────────────────────── -->
 <section class="seg-section">
