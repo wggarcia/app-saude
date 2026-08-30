@@ -15,6 +15,7 @@ from django.views.decorators.http import require_http_methods
 
 from .utils import validar_cpf_cadastro
 from .services.identidade_paciente import resolver_identidade
+from .services.auditoria_clinica import registrar_acesso_clinico
 from .access_control import (
     api_requer_permissao_modulo,
     api_requer_feature,
@@ -169,6 +170,7 @@ def api_prontuario_hospitalar_novo(request):
         observacoes=data.get("observacoes", ""),
         identidade=identidade,
     )
+    registrar_acesso_clinico(request, "criar", "prontuario", p.id, paciente_ref=p.paciente_nome)
     return JsonResponse({"ok": True, "prontuario": _pront_to_dict(p)}, status=201)
 
 
@@ -202,6 +204,7 @@ def api_prontuario_hospitalar_detalhe(request, pront_id):
         d = _pront_to_dict(p)
         d["evolucoes"] = [_evo_to_dict(e) for e in p.evolucoes.all()[:20]]
         d["prescricoes"] = [_presc_to_dict(pr) for pr in p.prescricoes.all()[:20]]
+        registrar_acesso_clinico(request, "visualizar", "prontuario", p.id, paciente_ref=p.paciente_nome)
         return JsonResponse({"prontuario": d})
 
     try:
@@ -228,6 +231,8 @@ def api_prontuario_hospitalar_detalhe(request, pront_id):
         )
 
     p.save()
+    registrar_acesso_clinico(request, "alterar", "prontuario", p.id, paciente_ref=p.paciente_nome,
+                             detalhes={"campos": [f for f in data.keys()]})
     return JsonResponse({"ok": True, "prontuario": _pront_to_dict(p)})
 
 
@@ -269,6 +274,8 @@ def api_prontuario_evolucoes(request, pront_id):
         texto=texto,
         cid10=data.get("cid10", ""),
     )
+    registrar_acesso_clinico(request, "criar", "evolucao", evo.id, paciente_ref=pront.paciente_nome,
+                             detalhes={"prontuario_id": pront.id, "tipo": evo.tipo, "cid10": evo.cid10})
     return JsonResponse({"ok": True, "evolucao": _evo_to_dict(evo)}, status=201)
 
 
@@ -312,4 +319,6 @@ def api_prontuario_prescricoes(request, pront_id):
         duracao=data.get("duracao", ""),
         dispensado=bool(data.get("dispensado", False)),
     )
+    registrar_acesso_clinico(request, "criar", "prescricao", presc.id, paciente_ref=pront.paciente_nome,
+                             detalhes={"prontuario_id": pront.id, "medicamento": medicamento})
     return JsonResponse({"ok": True, "prescricao": _presc_to_dict(presc)}, status=201)

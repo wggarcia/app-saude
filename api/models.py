@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 
 from django.db import models
+from django.utils import timezone as _tz_models
 
 from .crypto_cpf import EncryptedCPFField
 from .crypto_fields import EncryptedTextField
@@ -820,6 +821,124 @@ class AuditoriaInstitucional(models.Model):
     def __str__(self):
         alvo = self.empresa.nome if self.empresa else "plataforma"
         return f"{alvo} - {self.acao}"
+
+
+class _AuditoriaClinicaQuerySet(models.QuerySet):
+    """Bloqueia delete()/update() em massa — a trilha clínica é append-only.
+    (o save()/delete() de instância também bloqueiam; isto fecha o caminho do
+    QuerySet, que não passa pelos métodos de instância.)"""
+    def delete(self, *args, **kwargs):
+        raise ValueError("AuditoriaClinica é imutável — não é possível apagar registros.")
+
+    def update(self, *args, **kwargs):
+        raise ValueError("AuditoriaClinica é imutável — não é possível alterar registros.")
+
+
+class AuditoriaClinica(models.Model):
+    """Trilha de auditoria IMUTÁVEL de acesso a dado clínico (exigência SBIS/CFM).
+
+    Diferente de AuditoriaInstitucional (uso administrativo, editável), esta:
+      • registra também LEITURA (visualização) de dado clínico, não só escrita;
+      • é append-only — save() bloqueia UPDATE e delete() é proibido no ORM;
+      • encadeia hash SHA-256 (hash_registro = f(hash_anterior, conteúdo)),
+        por empresa, tornando adulteração de qualquer registro passado detectável
+        (o elo seguinte deixa de bater).
+
+    Verificação da integridade da cadeia: AuditoriaClinica.verificar_cadeia(empresa).
+    """
+    ACAO_VISUALIZAR = "visualizar"
+    ACAO_CRIAR = "criar"
+    ACAO_ALTERAR = "alterar"
+    ACAO_ASSINAR = "assinar"
+    ACAO_EXPORTAR = "exportar"
+    ACOES = [
+        (ACAO_VISUALIZAR, "Visualização"),
+        (ACAO_CRIAR, "Criação"),
+        (ACAO_ALTERAR, "Alteração"),
+        (ACAO_ASSINAR, "Assinatura"),
+        (ACAO_EXPORTAR, "Exportação"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="auditorias_clinicas")
+    principal_tipo = models.CharField(max_length=40, default="sistema")
+    principal_id = models.CharField(max_length=80, blank=True, default="")
+    principal_nome = models.CharField(max_length=160, blank=True, default="")
+    acao = models.CharField(max_length=20, choices=ACOES)
+    recurso = models.CharField(max_length=60, help_text="Tipo do dado clínico (prontuario, evolucao, exame...)")
+    recurso_id = models.CharField(max_length=80, blank=True, default="")
+    paciente_ref = models.CharField(max_length=120, blank=True, default="",
+                                    help_text="Identificador do paciente cujo dado foi acessado")
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default="")
+    detalhes = models.JSONField(default=dict, blank=True)
+    # default (não auto_now_add): o valor precisa existir ANTES do save() para
+    # entrar no cálculo do hash; auto_now_add sobrescreveria depois e quebraria a cadeia.
+    criado_em = models.DateTimeField(default=_tz_models.now, editable=False)
+    hash_anterior = models.CharField(max_length=64, blank=True, default="")
+    hash_registro = models.CharField(max_length=64, blank=True, default="", db_index=True)
+
+    objects = _AuditoriaClinicaQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "criado_em"]),
+            models.Index(fields=["empresa", "recurso", "recurso_id"]),
+            models.Index(fields=["empresa", "paciente_ref"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_acao_display()} {self.recurso}#{self.recurso_id} por {self.principal_nome or self.principal_id}"
+
+    def _payload_hashavel(self) -> str:
+        import json as _json
+        base = {
+            "empresa_id": self.empresa_id,
+            "principal_tipo": self.principal_tipo,
+            "principal_id": self.principal_id,
+            "acao": self.acao,
+            "recurso": self.recurso,
+            "recurso_id": self.recurso_id,
+            "paciente_ref": self.paciente_ref,
+            "criado_em": self.criado_em.isoformat() if self.criado_em else "",
+            "detalhes": self.detalhes,
+        }
+        return _json.dumps(base, sort_keys=True, ensure_ascii=False, default=str)
+
+    def save(self, *args, **kwargs):
+        import hashlib
+        from django.utils import timezone as _tz
+        if self.pk is not None:
+            # Append-only: nunca permite alteração de um registro já gravado.
+            raise ValueError("AuditoriaClinica é imutável — registros não podem ser alterados.")
+        if not self.criado_em:
+            self.criado_em = _tz.now()
+        # Elo anterior da cadeia (por empresa)
+        anterior = (AuditoriaClinica.objects
+                    .filter(empresa_id=self.empresa_id)
+                    .order_by("-id").values_list("hash_registro", flat=True).first())
+        self.hash_anterior = anterior or ("0" * 64)
+        self.hash_registro = hashlib.sha256(
+            (self.hash_anterior + self._payload_hashavel()).encode("utf-8")
+        ).hexdigest()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("AuditoriaClinica é imutável — registros não podem ser apagados.")
+
+    @classmethod
+    def verificar_cadeia(cls, empresa) -> dict:
+        """Recalcula a cadeia de hash da empresa e aponta o primeiro elo quebrado."""
+        import hashlib
+        anterior = "0" * 64
+        total = 0
+        for reg in cls.objects.filter(empresa=empresa).order_by("id").iterator():
+            esperado = hashlib.sha256((anterior + reg._payload_hashavel()).encode("utf-8")).hexdigest()
+            if reg.hash_anterior != anterior or reg.hash_registro != esperado:
+                return {"integra": False, "quebra_em_id": reg.id, "registros_verificados": total}
+            anterior = reg.hash_registro
+            total += 1
+        return {"integra": True, "quebra_em_id": None, "registros_verificados": total}
 
 
 class DispositivoPushPublico(models.Model):
