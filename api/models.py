@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.db import models
 
 from .crypto_cpf import EncryptedCPFField
+from .crypto_fields import EncryptedTextField
 
 
 def _codigo_acesso():
@@ -27,6 +28,12 @@ class Empresa(models.Model):
     plano = models.CharField(max_length=20, null=True, blank=True)
     ativo = models.BooleanField(default=False)
     acesso_governo = models.BooleanField(default=False)
+    # RBAC estrito (least-privilege): quando True, um sub-usuário sem atribuição
+    # explícita NÃO recebe acesso por padrão (fail-closed). Quando False (legado),
+    # se a empresa não configurou nenhuma atribuição granular, sub-usuários veem
+    # tudo (fail-open). Hospitais/enterprise devem ativar — exigência de
+    # certificação (SBIS/ISO) é acesso explícito, nunca implícito.
+    rbac_estrito = models.BooleanField(default=False)
     max_dispositivos = models.PositiveIntegerField(default=1)
     max_usuarios = models.PositiveIntegerField(default=1)
     sessao_ativa_chave = models.CharField(max_length=120, null=True, blank=True)
@@ -2006,7 +2013,7 @@ class ConfiguracaoSST(models.Model):
     endereco_completo       = models.TextField(blank=True, default="")
     atualizado_em           = models.DateTimeField(auto_now=True)
     # eSocial digital certificate (PKCS#12 stored as base64)
-    certificado_pfx_b64     = models.TextField(blank=True, default="")
+    certificado_pfx_b64     = EncryptedTextField(blank=True, default="")  # chave privada A1/A3 — cifrada em repouso
     certificado_senha       = models.CharField(max_length=255, blank=True, default="",
                                                help_text="Legado — use certificado_senha_cripto")
     certificado_senha_cripto = models.TextField(blank=True, default="",
@@ -8575,8 +8582,8 @@ class CredenciaisIntegracoes(models.Model):
                                                help_text="CNES da unidade de saúde emissora")
     rnds_ibge               = models.CharField(max_length=7, blank=True, default="",
                                                help_text="Código IBGE do município")
-    rnds_certificado_pfx_b64 = models.TextField(blank=True, default="",
-                                                help_text="Certificado ICP-Brasil A1/A3 (PKCS#12 base64)")
+    rnds_certificado_pfx_b64 = EncryptedTextField(blank=True, default="",
+                                                help_text="Certificado ICP-Brasil A1/A3 (PKCS#12 base64) — cifrado em repouso")
     rnds_certificado_senha_cripto = models.TextField(blank=True, default="",
                                                      help_text="Senha do certificado RNDS (Fernet)")
     rnds_ambiente           = models.CharField(
@@ -8589,7 +8596,7 @@ class CredenciaisIntegracoes(models.Model):
 
     # ── NF-e / SEFAZ ──────────────────────────────────────────────────────────
     # Certificado e-CNPJ A1/A3 para emissão de NF-e (diferente do ICP-Brasil RNDS)
-    nfe_certificado_pfx_b64      = models.TextField(blank=True, default="")
+    nfe_certificado_pfx_b64      = EncryptedTextField(blank=True, default="")  # e-CNPJ A1/A3 — cifrado em repouso
     nfe_certificado_senha_cripto = models.TextField(blank=True, default="")
     nfe_cnpj_emitente  = models.CharField(max_length=14, blank=True, default="")
     nfe_ie             = models.CharField(max_length=20, blank=True, default="", verbose_name="Inscrição Estadual")

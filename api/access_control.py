@@ -477,6 +477,10 @@ def _modulo_sem_rbac_configurado(empresa, codigo_modulo):
     não configurou NENHUMA atribuição granular pro setor desse código, trata
     como "RBAC ainda não configurado" e libera, em vez de bloquear a tela real
     de quem nunca recebeu (nem precisava receber) uma RBACAtribuicao explícita."""
+    # Fail-closed opt-in: empresa com RBAC estrito nunca libera por ausência de
+    # config — acesso só por atribuição explícita (least-privilege).
+    if getattr(empresa, "rbac_estrito", False):
+        return False
     setor = None
     for setor_key, modulos in MODULOS_POR_SETOR.items():
         if any(m["codigo"] == codigo_modulo for m in modulos):
@@ -590,10 +594,12 @@ def meus_modulos(request):
     principal = getattr(request, "principal", None) or empresa
     if principal_e_gerencia_principal(principal):
         return codigos_setor
-    if codigos_setor and not _setor_tem_rbac_configurado(empresa, codigos_setor):
+    if (codigos_setor and not getattr(empresa, "rbac_estrito", False)
+            and not _setor_tem_rbac_configurado(empresa, codigos_setor)):
         # Ninguém na empresa recebeu ainda nenhuma atribuição granular pra esse
         # setor — trata como "RBAC granular ainda não configurado" e libera
         # tudo, em vez de esconder o menu inteiro por engano.
+        # (empresa com rbac_estrito=True NÃO cai aqui: fail-closed.)
         return codigos_setor
     return [
         codigo for codigo in codigos_setor
