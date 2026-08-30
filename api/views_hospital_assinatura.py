@@ -23,6 +23,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .services.auth_session import empresa_autenticada_from_request
+from .assinatura_digital import assinar_conteudo, verificar_assinatura
 from .access_control import (
     api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
@@ -143,20 +144,13 @@ def api_assinatura_assinar(request, evolucao_id):
     senha_override    = (body.get("senha_certificado") or "").strip()
 
     cred = _get_cred(empresa)
-    pfx_b64 = getattr(cred, "rnds_certificado_pfx_b64", "") if cred else ""
-
-    if not pfx_b64:
-        # Sem certificado — aplica assinatura funcional (hash SHA-256)
-        # Válida para fins operacionais internos; para validade jurídica plena,
-        # o hospital precisa configurar o certificado ICP-Brasil.
-        ok, assinatura, hash_doc, erro = _assinar_hash_simples(evolucao, crm_coren)
-        metodo = "SHA256-HMAC"
-    else:
-        ok, assinatura, hash_doc, erro = _assinar_icp_brasil(
-            evolucao, cred, crm_coren, senha_override
-        )
-        metodo = "ICP-Brasil-PKCS7"
-
+    # Usa o módulo de assinatura compartilhado: CAdES-BES real quando há
+    # certificado ICP-Brasil; fallback SHA-256 quando não. O método retornado
+    # é HONESTO (não mais rótulo "PKCS7" fixo).
+    conteudo_canonical = _conteudo_canonical(evolucao)
+    ok, assinatura, hash_doc, metodo, erro = assinar_conteudo(
+        conteudo_canonical, cred, identificador=crm_coren, senha_override=senha_override
+    )
     if not ok:
         return JsonResponse({"erro": f"Falha na assinatura: {erro}"}, status=422)
 
@@ -183,7 +177,7 @@ def api_assinatura_assinar(request, evolucao_id):
             "Assinatura aplicada como hash SHA-256 (modo operacional). "
             "Para validade jurídica plena (CFM Res. 2.299/2021), configure "
             "o certificado ICP-Brasil em Configurações → Integrações → RNDS."
-        ) if metodo == "SHA256-HMAC" else None,
+        ) if metodo == "SHA256" else None,
     })
 
 
@@ -231,12 +225,9 @@ def api_assinatura_assinar_lote(request):
     metodo       = None
 
     for ev in evs:
-        if pfx_b64:
-            ok, assinatura, hash_doc, erro = _assinar_icp_brasil(ev, cred, crm_coren, "")
-            metodo = "ICP-Brasil-PKCS7"
-        else:
-            ok, assinatura, hash_doc, erro = _assinar_hash_simples(ev, crm_coren)
-            metodo = "SHA256-HMAC"
+        ok, assinatura, hash_doc, metodo, erro = assinar_conteudo(
+            _conteudo_canonical(ev), cred, identificador=crm_coren
+        )
 
         if ok:
             ev.assinatura_icp           = assinatura
@@ -291,24 +282,39 @@ def api_assinatura_verificar(request, evolucao_id):
             "mensagem":  "Evolução não possui assinatura digital.",
         })
 
-    # Re-calcula hash e compara
+    # Verificação REAL: integridade (hash) + autenticidade criptográfica
+    # (assinatura confere com o certificado), não apenas comparação de hash.
     conteudo_canonical = _conteudo_canonical(ev)
-    hash_atual         = hashlib.sha256(conteudo_canonical.encode("utf-8")).hexdigest()
-    integro            = hash_atual == ev.assinatura_hash
+    cred = _get_cred(empresa)
+    v = verificar_assinatura(conteudo_canonical, ev.assinatura_icp, ev.assinatura_hash, cred)
+
+    integro = v["integro"]
+    autentico = v["autentico"]
+    # "valido" só é True quando íntegro E (autenticidade confirmada OU não aplicável=SHA256)
+    valido = integro and (autentico is not False)
+
+    if not integro:
+        msg = "⚠ ALERTA: documento alterado após a assinatura (hash divergente)."
+    elif autentico is True:
+        msg = "✓ Assinatura válida — íntegra e confere com o certificado ICP-Brasil."
+    elif autentico is False:
+        msg = "⚠ ALERTA: assinatura NÃO confere com o certificado."
+    else:
+        msg = "✓ Documento íntegro (assinatura SHA-256, sem validade jurídica plena)."
 
     return JsonResponse({
         "assinado":              True,
-        "valido":                integro,
+        "valido":                valido,
+        "integro":               integro,
+        "autentico":             autentico,
+        "metodo":                v["metodo"],
         "hash_armazenado":       ev.assinatura_hash,
-        "hash_calculado_agora":  hash_atual,
+        "hash_calculado_agora":  v["hash_calculado"],
         "assinado_em":           ev.assinado_digitalmente_em.isoformat() if ev.assinado_digitalmente_em else None,
         "profissional":          ev.profissional,
         "crm_coren":             ev.crm_coren,
-        "mensagem": (
-            "✓ Assinatura íntegra — documento não foi alterado após a assinatura."
-            if integro else
-            "⚠ ALERTA: Hash divergente — documento pode ter sido alterado após a assinatura."
-        ),
+        "detalhe":               v["detalhe"],
+        "mensagem":              msg,
     })
 
 
@@ -360,79 +366,6 @@ def _conteudo_canonical(evolucao):
         f"TEXTO:{evolucao.texto}|"
         f"DATA:{evolucao.assinado_em.isoformat() if evolucao.assinado_em else ''}"
     )
-
-
-def _assinar_hash_simples(evolucao, crm_coren):
-    """
-    Assinatura funcional por SHA-256.
-    Não tem validade jurídica plena (sem ICP-Brasil), mas garante
-    integridade do documento (qualquer alteração invalida o hash).
-    """
-    try:
-        conteudo = _conteudo_canonical(evolucao)
-        hash_hex = hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
-        # Assinatura = base64(hash + metadata)
-        meta     = json.dumps({
-            "hash":        hash_hex,
-            "profissional": evolucao.profissional,
-            "crm_coren":   crm_coren,
-            "timestamp":   timezone.now().isoformat(),
-            "metodo":      "SHA256",
-        })
-        assinatura = base64.b64encode(meta.encode("utf-8")).decode("utf-8")
-        return True, assinatura, hash_hex, None
-    except Exception as e:
-        return False, "", "", str(e)
-
-
-def _assinar_icp_brasil(evolucao, cred, crm_coren, senha_override):
-    """
-    Assinatura digital real via PKCS#7 / CAdES com certificado ICP-Brasil.
-    Retorna (ok, assinatura_base64, hash_hex, erro).
-    """
-    try:
-        from cryptography.hazmat.primitives import hashes, serialization
-        from cryptography.hazmat.primitives.serialization import pkcs12
-        from cryptography.hazmat.primitives.asymmetric import padding
-        from cryptography.hazmat.backends import default_backend
-
-        pfx_b64   = getattr(cred, "rnds_certificado_pfx_b64", "")
-        pfx_bytes = base64.b64decode(pfx_b64)
-        senha     = senha_override or (
-            cred.get_rnds_certificado_senha() if hasattr(cred, "get_rnds_certificado_senha") else ""
-        )
-        senha_bytes = senha.encode() if senha else None
-
-        priv_key, cert, _ = pkcs12.load_key_and_certificates(
-            pfx_bytes, senha_bytes, backend=default_backend()
-        )
-
-        # Conteúdo a assinar
-        conteudo  = _conteudo_canonical(evolucao)
-        hash_hex  = hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
-
-        # Assina com RSA-SHA256
-        assinatura_bytes = priv_key.sign(
-            conteudo.encode("utf-8"),
-            padding.PKCS1v15(),
-            hashes.SHA256(),
-        )
-        assinatura_b64 = base64.b64encode(assinatura_bytes).decode("utf-8")
-
-        return True, assinatura_b64, hash_hex, None
-
-    except ImportError:
-        # Fallback para hash simples se cryptography não disponível
-        logger.warning(
-            "Biblioteca 'cryptography' não instalada — evolução id=%s assinada "
-            "via SHA-256 simples (SEM validade jurídica ICP-Brasil / CFM Res. "
-            "2.299/2021). Instale 'cryptography' para habilitar assinatura digital real.",
-            getattr(evolucao, "id", "?"),
-        )
-        return _assinar_hash_simples(evolucao, crm_coren)
-    except Exception as e:
-        logger.exception("Erro ao assinar com ICP-Brasil: %s", e)
-        return False, "", "", str(e)[:300]
 
 
 def _evolucao_dict(e):
