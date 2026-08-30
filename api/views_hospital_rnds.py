@@ -487,9 +487,70 @@ def _gerar_bundle_rac(prontuario, empresa):
         pass
 
     paciente_nome = getattr(prontuario, "paciente_nome", "Paciente")
-    cns           = getattr(prontuario, "cns", "") or ""
+    # CNS vem da identidade única (MPI); fallback para campo direto se houver.
+    ident = getattr(prontuario, "identidade", None)
+    cns   = (getattr(ident, "cns", "") if ident else "") or getattr(prontuario, "cns", "") or ""
+    cpf   = getattr(prontuario, "paciente_cpf", "") or (getattr(ident, "cpf", "") if ident else "")
     data_atend    = getattr(prontuario, "data_atendimento", date.today()) or date.today()
     cid           = getattr(prontuario, "cid_principal", "") or ""
+
+    # Identificadores do paciente: CNS (preferencial no RNDS) + CPF como secundário.
+    _pid = f"patient-rac-{prontuario.id}"
+    identifiers = []
+    if cns:
+        identifiers.append({"system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns", "value": cns})
+    if cpf:
+        identifiers.append({"system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+                            "value": "".join(c for c in cpf if c.isdigit())})
+
+    # AllergyIntolerance a partir do campo de alergias do prontuário.
+    alergias_txt = (getattr(prontuario, "alergias", "") or "").strip()
+    alergia_entries = []
+    for i, item in enumerate([a.strip() for a in alergias_txt.replace(";", ",").split(",") if a.strip()][:20]):
+        alergia_entries.append({
+            "fullUrl": f"urn:uuid:allergy-{prontuario.id}-{i}",
+            "resource": {
+                "resourceType": "AllergyIntolerance",
+                "clinicalStatus": {"coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+                    "code": "active"}]},
+                "code": {"text": item},
+                "patient": {"reference": f"urn:uuid:{_pid}"},
+            },
+        })
+
+    # MedicationStatement a partir das prescrições ativas do prontuário.
+    med_entries = []
+    try:
+        prescricoes = list(prontuario.prescricoes.all()[:30])
+    except Exception:
+        prescricoes = []
+    for i, pr in enumerate(prescricoes):
+        med_entries.append({
+            "fullUrl": f"urn:uuid:med-{prontuario.id}-{i}",
+            "resource": {
+                "resourceType": "MedicationStatement",
+                "status": "active",
+                "medicationCodeableConcept": {"text": getattr(pr, "medicamento", "") or "medicamento"},
+                "subject": {"reference": f"urn:uuid:{_pid}"},
+                "dosage": [{"text": " ".join(x for x in [getattr(pr, "dose", ""), getattr(pr, "via", ""),
+                                                          getattr(pr, "frequencia", "")] if x)}],
+            },
+        })
+
+    _secoes_extra = []
+    if alergia_entries:
+        _secoes_extra.append({
+            "title": "Alergias e Reações Adversas",
+            "code": {"coding": [{"system": "http://loinc.org", "code": "48765-2"}]},
+            "entry": [{"reference": e["fullUrl"]} for e in alergia_entries],
+        })
+    if med_entries:
+        _secoes_extra.append({
+            "title": "Medicações",
+            "code": {"coding": [{"system": "http://loinc.org", "code": "10160-0"}]},
+            "entry": [{"reference": e["fullUrl"]} for e in med_entries],
+        })
 
     return {
         "resourceType": "Bundle",
@@ -529,16 +590,14 @@ def _gerar_bundle_rac(prontuario, empresa):
                             "code":  {"coding": [{"system": "http://loinc.org", "code": "29548-5"}]},
                             "entry": [{"reference": f"urn:uuid:condition-rac-{prontuario.id}"}] if cid else [],
                         }
-                    ],
+                    ] + _secoes_extra,
                 },
             },
             {
-                "fullUrl":  f"urn:uuid:patient-rac-{prontuario.id}",
+                "fullUrl":  f"urn:uuid:{_pid}",
                 "resource": {
                     "resourceType": "Patient",
-                    "identifier": [
-                        {"system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns", "value": cns}
-                    ] if cns else [],
+                    "identifier": identifiers,
                     "name": [{"text": paciente_nome}],
                 },
             },
@@ -557,9 +616,9 @@ def _gerar_bundle_rac(prontuario, empresa):
                 "code": {
                     "coding": [{"system": "http://www.who.int/classifications/icd/en/", "code": cid}]
                 },
-                "subject": {"reference": f"urn:uuid:patient-rac-{prontuario.id}"},
+                "subject": {"reference": f"urn:uuid:{_pid}"},
             },
-        }] if cid else []),
+        }] if cid else []) + alergia_entries + med_entries,
     }
 
 
