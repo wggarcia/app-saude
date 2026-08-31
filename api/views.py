@@ -2998,9 +2998,13 @@ def app_resumo_publico(request):
             "registros_24h": total_24h,
             "registros_7d": total_7d,
             "registros_30d": total_30d,
-            "total_ativo_30d": round(indice_ativo_30d, 2),
-            "indice_ativo_7d": indice_ativo_30d,
-            "indice_ativo_30d": indice_ativo_30d,
+            # "casos" no app da população = CONTAGEM CRUA (número inteiro), igual
+            # ao painel do gestor. "0,7 casos" (índice ponderado) confundia o
+            # cidadão. O índice ponderado segue disponível como indice_ativo_30d
+            # (interno / rótulo explícito no radar), não como "casos".
+            "total_ativo_30d": total_30d,
+            "indice_ativo_7d": round(indice_ativo_30d, 2),
+            "indice_ativo_30d": round(indice_ativo_30d, 2),
             "crescimento_7d": crescimento,
             "suspeitos_24h": ultimas_24h.filter(suspeito=True).count(),
             "nivel_nacional": nivel_nacional,
