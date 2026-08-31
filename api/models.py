@@ -8140,8 +8140,8 @@ class ProntuarioCidadao(models.Model):
     unidade_saude = models.CharField(max_length=120, blank=True)
     microarea = models.CharField(max_length=20, blank=True)
     acs_responsavel = models.CharField(max_length=120, blank=True)
-    alergias = models.TextField(blank=True)
-    condicoes_cronicas = models.TextField(blank=True)
+    alergias = EncryptedTextField(blank=True)  # LGPD: dado de saúde cifrado em repouso
+    condicoes_cronicas = EncryptedTextField(blank=True)  # LGPD: dado de saúde cifrado em repouso
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     class Meta:
@@ -13811,9 +13811,9 @@ class AtendimentoCREAS(models.Model):
     data_atendimento  = models.DateField()
     tipo_violacao     = models.CharField(max_length=40, choices=TIPO_VIOLACAO_CHOICES, default="outros")
     situacao          = models.CharField(max_length=30, choices=SITUACAO_CHOICES, default="em_acompanhamento")
-    descricao         = models.TextField(blank=True, default="")
-    plano_atendimento = models.TextField(blank=True, default="")
-    encaminhamento    = models.TextField(blank=True, default="")
+    descricao         = EncryptedTextField(blank=True, default="")  # CREAS: violência (LGPD sensível) cifrada
+    plano_atendimento = EncryptedTextField(blank=True, default="")  # CREAS: violência (LGPD sensível) cifrada
+    encaminhamento    = EncryptedTextField(blank=True, default="")  # CREAS: violência (LGPD sensível) cifrada
     numero_prontuario = models.CharField(max_length=30, blank=True, default="")
     criado_em         = models.DateTimeField(auto_now_add=True)
     atualizado_em     = models.DateTimeField(auto_now=True)
@@ -14057,10 +14057,10 @@ class ProntuarioSocialPAIF(models.Model):
     data_encerramento        = models.DateField(null=True, blank=True)
     modalidade               = models.CharField(max_length=30, choices=MODALIDADE_CHOICES, default="acompanhamento_paif")
     situacoes_vulnerabilidade = models.JSONField(default=list, blank=True, help_text="Lista de códigos de SITUACAO_VULNERABILIDADE_CHOICES")
-    objetivos                = models.TextField(blank=True, default="")
-    evolucao                 = models.TextField(blank=True, default="")
-    encaminhamentos          = models.TextField(blank=True, default="")
-    plano_acao_familiar      = models.TextField(blank=True, default="")
+    objetivos                = EncryptedTextField(blank=True, default="")  # LGPD sensível (SUAS/PAIF)
+    evolucao                 = EncryptedTextField(blank=True, default="")  # LGPD sensível (SUAS/PAIF)
+    encaminhamentos          = EncryptedTextField(blank=True, default="")  # LGPD sensível (SUAS/PAIF)
+    plano_acao_familiar      = EncryptedTextField(blank=True, default="")  # LGPD sensível (SUAS/PAIF)
     ativo                    = models.BooleanField(default=True)
     criado_em                = models.DateTimeField(auto_now_add=True)
     atualizado_em            = models.DateTimeField(auto_now=True)
@@ -14106,12 +14106,12 @@ class EncaminhamentoConselhoTutelar(models.Model):
     familia                = models.ForeignKey(FamiliaCRAS, on_delete=models.SET_NULL, null=True, blank=True,
                                                 related_name="encaminhamentos_conselho_tutelar")
     tipo_violacao          = models.CharField(max_length=25, choices=TIPO_VIOLACAO)
-    descricao              = models.TextField()
+    descricao              = EncryptedTextField()  # ECA: violação de criança/adolescente cifrada em repouso
     conselheiro_responsavel = models.CharField(max_length=150, blank=True, default="")
     status                 = models.CharField(max_length=20, choices=STATUS, default="encaminhado")
     data_encaminhamento    = models.DateTimeField(auto_now_add=True)
     data_retorno           = models.DateField(null=True, blank=True)
-    parecer_retorno        = models.TextField(blank=True, default="")
+    parecer_retorno        = EncryptedTextField(blank=True, default="")  # ECA: parecer do Conselho Tutelar cifrado
 
     class Meta:
         verbose_name        = "Encaminhamento ao Conselho Tutelar"
