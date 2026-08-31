@@ -178,15 +178,68 @@ def governo_prontuario_page(request):
     cns = request.GET.get('cns', '').strip()
     prontuario = None
     historico = []
+    evolucoes = []
 
     if cns:
         prontuario = ProntuarioCidadao.objects.filter(empresa=e, cns=cns).first()
         historico = list(
             TeleconsultaGoverno.objects.filter(empresa=e, cns=cns).order_by('-data_hora')[:10]
         )
+        evolucoes = list(
+            DocumentoClinicoGov.objects.filter(empresa=e, cns=cns, tipo='evolucao').order_by('-criado_em')[:20]
+        )
 
     ctx = contexto_navegacao_setorial(request, 'governo')
     ctx['prontuario'] = prontuario
     ctx['historico'] = historico
+    ctx['evolucoes'] = evolucoes
     ctx['cns'] = cns
     return render(request, 'governo_prontuario_tc.html', ctx)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+@api_requer_permissao_modulo('governo.atencao_clinica')
+def api_governo_evolucao_salvar(request):
+    """Persiste uma anotação/evolução clínica no prontuário do cidadão (governo)."""
+    e = _e(request)
+    if e is None:
+        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'erro': 'JSON inválido'}, status=400)
+
+    texto = (body.get('texto') or '').strip()
+    cns = (body.get('cns') or '').strip()
+    if not texto:
+        return JsonResponse({'erro': 'Texto obrigatório'}, status=400)
+
+    paciente_nome = ''
+    if cns:
+        pront = ProntuarioCidadao.objects.filter(empresa=e, cns=cns).first()
+        if pront:
+            paciente_nome = pront.nome_completo
+
+    profissional = (body.get('profissional') or '').strip()
+    if not profissional:
+        principal = getattr(request, 'principal', None)
+        if principal is not None:
+            profissional = getattr(principal, 'nome', '') or ''
+
+    doc = DocumentoClinicoGov.objects.create(
+        empresa=e,
+        tipo='evolucao',
+        paciente_nome=paciente_nome,
+        cns=cns,
+        profissional=profissional,
+        dados={'texto': texto},
+    )
+    return JsonResponse({
+        'id': doc.id,
+        'ok': True,
+        'criado_em': doc.criado_em.strftime('%d/%m/%Y %H:%M'),
+        'profissional': profissional,
+        'texto': texto,
+    })

@@ -908,6 +908,97 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["atos"], [])
 
+    def test_prontuario_evolucao_persiste_de_verdade(self):
+        """A evolução clínica do prontuário do cidadão precisa PERSISTIR no banco
+        (antes o botão fingia sucesso com console.log — auditoria governo 2026-08)."""
+        from .models import DocumentoClinicoGov
+
+        governo = Empresa.objects.create(
+            nome="Governo Prontuario",
+            email="governo-prontuario@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        client_governo = Client()
+        login = client_governo.post(
+            "/api/login-governo",
+            data=json.dumps({
+                "email": governo.email,
+                "senha": "123456",
+                "device_id": "governo-prontuario-device",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        resp = client_governo.post(
+            "/api/governo/prontuario/evolucao/salvar/",
+            data=json.dumps({"texto": "Paciente estável, PA 120x80.", "cns": "700000000000001"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["ok"])
+
+        doc = DocumentoClinicoGov.objects.filter(empresa=governo, tipo="evolucao").first()
+        self.assertIsNotNone(doc)
+        self.assertEqual(doc.dados.get("texto"), "Paciente estável, PA 120x80.")
+        self.assertEqual(doc.cns, "700000000000001")
+
+        # texto vazio é rejeitado
+        vazio = client_governo.post(
+            "/api/governo/prontuario/evolucao/salvar/",
+            data=json.dumps({"texto": "   ", "cns": "700000000000001"}),
+            content_type="application/json",
+        )
+        self.assertEqual(vazio.status_code, 400)
+
+    def test_sim_obito_transmitir_nao_finge_transmissao(self):
+        """Transmitir DO ao SIM não expõe API pública — marca 'aguardando_transmissao',
+        nunca 'transmitido' (auditoria governo 2026-08)."""
+        from .models import RegistroObitoMunicipal
+
+        governo = Empresa.objects.create(
+            nome="Governo SIM",
+            email="governo-sim@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        obito = RegistroObitoMunicipal.objects.create(
+            empresa=governo,
+            falecido_nome="Fulano de Tal",
+            data_obito=timezone.now(),
+            causa_basica_cid="I21",
+        )
+        client_governo = Client()
+        self.assertEqual(
+            client_governo.post(
+                "/api/login-governo",
+                data=json.dumps({
+                    "email": governo.email,
+                    "senha": "123456",
+                    "device_id": "governo-sim-device",
+                }),
+                content_type="application/json",
+            ).status_code,
+            200,
+        )
+        resp = client_governo.post(f"/api/governo/sim/obitos/{obito.id}/transmitir", data="{}",
+                                   content_type="application/json")
+        self.assertEqual(resp.status_code, 200)
+        obito.refresh_from_db()
+        self.assertEqual(obito.status_transmissao, "aguardando_transmissao")
+        self.assertNotEqual(obito.status_transmissao, "transmitido")
+
     def test_enterprise_command_center_exige_autenticacao(self):
         response = self.client.get("/api/enterprise/command-center")
 
@@ -1253,8 +1344,9 @@ class AuthDeviceTests(TestCase):
         self.assertIn("Rede credenciada e portal do prestador", nomes)
         self.assertIn("Compliance ANS", nomes)
         self.assertIn("Epidemiologia", nomes)
-        self.assertIn("HealthEdge", referencias)
-        self.assertIn("Softheon", referencias)
+        # Nomes de concorrentes foram removidos da UI do cliente (decisão de
+        # produto: vender pelo que o produto faz, não citar concorrentes).
+        self.assertEqual(referencias.strip(), "")
         self.assertIn("Operacao de operadora ponta a ponta", processos)
         self.assertIn("Monitorar epidemiologia da carteira", etapas)
         self.assertIn("sem substituir o core legado", payload["headline"].lower())
@@ -2183,7 +2275,9 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cinco ambientes privados")
         self.assertContains(response, "Google Play")
-        self.assertContains(response, "Valores que fazem a tecnologia merecer confiança")
+        # Redesign visual (2026-08): página cobre os 6 segmentos com mockups reais.
+        self.assertContains(response, "Assistência Social")
+        self.assertContains(response, "HospitalOS")
         self.assertNotContains(response, "Slide 01")
         self.assertNotContains(response, "Slide 09")
 

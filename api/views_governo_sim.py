@@ -159,7 +159,16 @@ def api_sim_obito_detalhe(request, obito_id):
 @require_http_methods(["POST"])
 @api_requer_permissao_modulo("governo.atencao_clinica", "governo.epidemiologia")
 def api_sim_obito_transmitir(request, obito_id):
-    """POST /api/governo/sim/obitos/<id>/transmitir — marca como transmitido ao SIM/DATASUS."""
+    """POST /api/governo/sim/obitos/<id>/transmitir — finaliza a DO e a coloca em fila
+    de transmissão ao SIM/DATASUS.
+
+    O SIM (Sistema de Informação sobre Mortalidade) não expõe API pública de
+    recepção — a transmissão oficial é feita via SCNS/transmissor DATASUS por
+    upload de arquivo. Por isso NÃO marcamos "transmitido" aqui (seria falso):
+    marcamos "aguardando_transmissao" e o município conclui o envio pelo SCNS.
+    Quando existir integração automatizada configurada, este ponto passa a
+    despachar de fato e marcar "transmitido".
+    """
     empresa = _gov(request)
     if not empresa:
         return JsonResponse({"erro": "Acesso restrito ao módulo Governo"}, status=403)
@@ -170,10 +179,13 @@ def api_sim_obito_transmitir(request, obito_id):
     except RegistroObitoMunicipal.DoesNotExist:
         return JsonResponse({"erro": "Não encontrado"}, status=404)
 
-    o.status_transmissao = "transmitido"
-    o.transmitido_em = timezone.now()
-    o.save(update_fields=["status_transmissao", "transmitido_em"])
-    return JsonResponse({"ok": True, "status_transmissao": o.status_transmissao})
+    o.status_transmissao = "aguardando_transmissao"
+    o.save(update_fields=["status_transmissao"])
+    return JsonResponse({
+        "ok": True,
+        "status_transmissao": o.status_transmissao,
+        "mensagem": "DO finalizada e em fila. Conclua a transmissão oficial pelo SCNS/DATASUS.",
+    })
 
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────

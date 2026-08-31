@@ -164,6 +164,7 @@ function fmtDataHora(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") :
 
 const STATUS_BADGE = {
   pendente: '<span class="badge badge-warn">Pendente</span>',
+  aguardando_transmissao: '<span class="badge badge-info">Aguardando SCNS</span>',
   transmitido: '<span class="badge badge-ok">Transmitido</span>',
   erro: '<span class="badge badge-danger">Erro</span>',
 };
@@ -199,7 +200,7 @@ async function carregarObitos() {
     <td><span class="badge badge-info">${o.tipo_morte_display}</span></td>
     <td>${o.causa_basica_cid}</td>
     <td>${STATUS_BADGE[o.status_transmissao] || o.status_transmissao}</td>
-    <td>${o.status_transmissao !== "transmitido" ? `<button class="btn btn-ok btn-sm" onclick="transmitir(${o.id})">Transmitir</button>` : ""}</td>
+    <td>${(o.status_transmissao === "pendente" || o.status_transmissao === "erro") ? `<button class="btn btn-ok btn-sm" onclick="transmitir(${o.id})">Finalizar DO</button>` : ""}</td>
   </tr>`).join("");
 }
 
@@ -228,8 +229,9 @@ async function salvarObito() {
 }
 
 async function transmitir(id) {
-  if (!confirm("Marcar este óbito como transmitido ao SIM/DATASUS?")) return;
-  await fetchJSON(`/api/governo/sim/obitos/${id}/transmitir`, { method: "POST", body: "{}" });
+  if (!confirm("Finalizar esta DO e colocá-la em fila de transmissão? A transmissão oficial ao SIM é concluída pelo SCNS/DATASUS.")) return;
+  const r = await fetchJSON(`/api/governo/sim/obitos/${id}/transmitir`, { method: "POST", body: "{}" });
+  if (r && r.mensagem) { /* feedback honesto opcional */ }
   carregarObitos(); carregarKpis();
 }
 

@@ -882,6 +882,7 @@ from api.views_governo_clinica import (
     governo_exame_novo,
     api_governo_exame_salvar,
     governo_prontuario_page,
+    api_governo_evolucao_salvar,
 )
 from api.views_governo_diagnosticos_gov import (
     governo_diagnosticos_panorama_page,
@@ -1638,6 +1639,7 @@ urlpatterns = [
     path('api/governo/teleconsulta/prescricao/salvar/', api_governo_prescricao_salvar),
     path('api/governo/teleconsulta/atestado/salvar/', api_governo_atestado_salvar),
     path('api/governo/teleconsulta/exame/salvar/', api_governo_exame_salvar),
+    path('api/governo/prontuario/evolucao/salvar/', api_governo_evolucao_salvar),
     path('governo/epidemiologia/diagnosticos/', governo_diagnosticos_panorama_page),
     path('governo/reuniao/', governo_reuniao_page),
     path('governo/reuniao/<int:reuniao_id>/sala/', governo_reuniao_sala),

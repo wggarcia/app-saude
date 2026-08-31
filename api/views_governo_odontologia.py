@@ -340,11 +340,12 @@ def api_ceo_transmitir(request, prod_id):
     nome_arquivo = f"BPA_CEO_{prod.cnes or 'CNES'}_{prod.competencia}.txt"
 
     with transaction.atomic():
-        # Marca como "aguardando_transmissao" — confirmação manual após upload SCNS
-        prod.protocolo_datasus = f"BPA-CEO-{prod.competencia}-{prod.pk}-PENDENTE"
-        prod.status = "transmitido"      # operador confirma após transmissão real
-        prod.transmitido_em = timezone.now()
-        prod.save()
+        # Arquivo BPA-I gerado. A transmissão oficial ao SIASUS é feita pelo
+        # operador via Transmissor SIA / portal SCNS. NÃO marcamos "transmitido"
+        # aqui (seria falso) — fica "aguardando_transmissao" até a confirmação
+        # real com o protocolo DATASUS retornado.
+        prod.status = "aguardando_transmissao"
+        prod.save(update_fields=["status"])
 
     logger.info(
         "BPA CEO gerado empresa=%s prod=%s competencia=%s linhas=%d",
@@ -360,7 +361,7 @@ def api_ceo_transmitir(request, prod_id):
         "linhas_bpa": prod.arquivo_bpa.count("\n") + 1,
         "competencia": prod.competencia,
         "cnes": prod.cnes,
-        "protocolo_local": prod.protocolo_datasus,
+        "status": prod.status,
         "instrucoes": [
             "1. Baixe o arquivo BPA pelo endpoint GET /api/governo/ceo/producao/{id}/bpa-download/",
             "2. Acesse o Posto de Transmissão da sua Secretaria Municipal/Estadual de Saúde",
@@ -409,8 +410,13 @@ def api_ceo_bpa_download(request, prod_id):
 
 # ── catálogo de procedimentos por especialidade ────────────────────────────────
 
+@api_requer_permissao_modulo("governo.atencao_clinica")
 def api_ceo_procedimentos(request):
     """GET /api/governo/ceo/procedimentos/?especialidade=endodontia"""
+    empresa = _e(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
     especialidade = request.GET.get("especialidade")
     if especialidade and especialidade in _PROCEDIMENTOS_CEO:
         procs = [{"codigo": c, "descricao": d} for c, d in _PROCEDIMENTOS_CEO[especialidade]]

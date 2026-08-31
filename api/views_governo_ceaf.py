@@ -85,8 +85,13 @@ def _get_ceaf_models():
 
 # ── catálogo RENAME ────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.farmacia", "governo.atencao_clinica")
 def api_ceaf_medicamentos(request):
     """GET /api/governo/ceaf/medicamentos/ — catálogo RENAME com filtros."""
+    empresa = _e(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito ao módulo Governo"}, status=403)
+
     MedicamentoCEAF, *_ = _get_ceaf_models()
 
     # Seed automático se catálogo vazio

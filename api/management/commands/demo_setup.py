@@ -2607,10 +2607,22 @@ class Command(BaseCommand):
                  cidade="Santo André", estado="SP", bairro="Centro",
                  lat=-23.66, lon=-46.53, origem="cidadao"),
         ]
+        # data_registro é auto_now_add — carimba now() no create. Espalhamos as
+        # datas pelos últimos 7 dias via .update() (bypassa auto_now_add) para os
+        # sinais não envelhecerem além da janela epidemiológica logo após o setup.
+        # OBS: o cockpit epidemiológico (mapa/radar) lê do tenant PÚBLICO da
+        # população e, por controle antifraude (public_integrity), EXCLUI sinais
+        # sintéticos/demo do panorama real — então o mapa do demo permanece vazio
+        # por design (a plataforma não exibe dado epidemiológico falso como real).
+        # A trilha de demonstração com mapa populado é a simulação nacional
+        # (build_demo_panorama_payload, token-gated) usada no stand/RIW.
+        from django.utils import timezone as _tz_gov
+        agora = _tz_gov.now()
+        ids_sintomas = []
         for i in range(60):
             cl = clusters[i % len(clusters)].copy()
             try:
-                RegistroSintoma.objects.create(
+                s = RegistroSintoma.objects.create(
                     empresa=empresa,
                     id_anonimo=_uuid.uuid4(),
                     doenca=cl["doenca"],
@@ -2625,6 +2637,15 @@ class Command(BaseCommand):
                     latitude=cl["lat"] + _rnd_s.uniform(-0.04, 0.04),
                     longitude=cl["lon"] + _rnd_s.uniform(-0.04, 0.04),
                     origem_dado=cl["origem"],
+                )
+                ids_sintomas.append((s.id, i))
+            except Exception:
+                pass
+        for sid, i in ids_sintomas:
+            try:
+                RegistroSintoma.objects.filter(id=sid).update(
+                    data_registro=agora - datetime.timedelta(
+                        days=i % 7, hours=_rnd_s.uniform(0, 23)),
                 )
             except Exception:
                 pass

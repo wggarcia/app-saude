@@ -175,6 +175,34 @@ tr:hover td{background:rgba(255,255,255,.02)}
     {% endif %}
   </div>
 
+  <!-- Evoluções registradas -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Evoluções Clínicas</span>
+      <span style="font-size:12px;color:var(--muted)" id="evolucoes-count">{{ evolucoes|length }} registro(s)</span>
+    </div>
+    <div id="evolucoes-lista">
+      {% if evolucoes %}
+      <table>
+        <thead>
+          <tr><th>Data / Hora</th><th>Profissional</th><th>Anotação</th></tr>
+        </thead>
+        <tbody>
+          {% for ev in evolucoes %}
+          <tr>
+            <td style="white-space:nowrap">{{ ev.criado_em|date:"d/m/Y H:i" }}</td>
+            <td>{{ ev.profissional|default:"—" }}</td>
+            <td>{{ ev.dados.texto }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state" id="evolucoes-vazio">Nenhuma evolução registrada para este paciente.</div>
+      {% endif %}
+    </div>
+  </div>
+
   <!-- Adicionar evolução -->
   <div class="card">
     <div class="card-header">
@@ -184,7 +212,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="evolution-form">
         <textarea id="evolucao-texto" placeholder="Registre uma anotação clínica ou evolução do paciente..."></textarea>
         <div class="evolution-form-footer">
-          <button class="btn btn-ok" onclick="salvarEvolucao()">Salvar evolução</button>
+          <button class="btn btn-ok" id="btn-salvar-evolucao" onclick="salvarEvolucao()">Salvar evolução</button>
         </div>
       </div>
       <div id="evolucao-msg" style="margin-top:10px;font-size:13px;display:none"></div>
@@ -206,18 +234,64 @@ document.addEventListener('keydown', function(e) {
   if (inp && e.key === 'Enter') buscarCNS();
 });
 
+const PRONTUARIO_CNS = "{{ cns|escapejs }}";
+
+function _htmlEscape(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 async function salvarEvolucao() {
-  const texto = document.getElementById('evolucao-texto').value.trim();
+  const ta = document.getElementById('evolucao-texto');
+  const texto = ta.value.trim();
   if (!texto) { alert('Escreva algo antes de salvar.'); return; }
   const msg = document.getElementById('evolucao-msg');
+  const btn = document.getElementById('btn-salvar-evolucao');
   msg.style.display = 'none';
+  btn.disabled = true;
 
-  // Placeholder: log locally (evolution notes endpoint not yet wired)
-  console.log('Evolução salva localmente:', texto);
-  msg.textContent = 'Evolução registrada com sucesso.';
-  msg.style.color = 'var(--accent2)';
-  msg.style.display = 'block';
-  document.getElementById('evolucao-texto').value = '';
+  try {
+    const resp = await fetch('/api/governo/prontuario/evolucao/salvar/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto: texto, cns: PRONTUARIO_CNS }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      throw new Error(data.erro || 'Falha ao salvar');
+    }
+    // sucesso real — persistiu no banco
+    msg.textContent = 'Evolução registrada com sucesso.';
+    msg.style.color = 'var(--accent2)';
+    msg.style.display = 'block';
+    ta.value = '';
+
+    // insere a nova evolução no topo da lista sem recarregar
+    const lista = document.getElementById('evolucoes-lista');
+    const vazio = document.getElementById('evolucoes-vazio');
+    if (vazio) {
+      lista.innerHTML = '<table><thead><tr><th>Data / Hora</th><th>Profissional</th><th>Anotação</th></tr></thead><tbody id="evolucoes-tbody"></tbody></table>';
+    }
+    let tbody = document.getElementById('evolucoes-tbody');
+    if (!tbody) { tbody = lista.querySelector('tbody'); if (tbody) tbody.id = 'evolucoes-tbody'; }
+    if (tbody) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td style="white-space:nowrap">' + _htmlEscape(data.criado_em) + '</td>'
+                   + '<td>' + _htmlEscape(data.profissional || '—') + '</td>'
+                   + '<td>' + _htmlEscape(data.texto) + '</td>';
+      tbody.insertBefore(tr, tbody.firstChild);
+    }
+    const cnt = document.getElementById('evolucoes-count');
+    if (cnt) {
+      const n = (parseInt(cnt.textContent) || 0) + 1;
+      cnt.textContent = n + ' registro(s)';
+    }
+  } catch (err) {
+    msg.textContent = 'Não foi possível salvar: ' + err.message;
+    msg.style.color = 'var(--danger)';
+    msg.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
 }
 </script>
 </body>

@@ -7909,9 +7909,10 @@ class RegistroObitoMunicipal(models.Model):
         ("nao_natural", "Morte Não Natural (causas externas)"),
     ]
     STATUS_TRANSMISSAO = [
-        ("pendente",    "Pendente"),
-        ("transmitido", "Transmitido ao SIM"),
-        ("erro",        "Erro na Transmissão"),
+        ("pendente",              "Pendente"),
+        ("aguardando_transmissao","Aguardando transmissão (SCNS)"),
+        ("transmitido",           "Transmitido ao SIM"),
+        ("erro",                  "Erro na Transmissão"),
     ]
     empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="obitos_municipais")
     unidade_saude            = models.ForeignKey("UnidadeSaude", on_delete=models.SET_NULL, null=True, blank=True,
@@ -7926,7 +7927,7 @@ class RegistroObitoMunicipal(models.Model):
     medico_atestante         = models.CharField(max_length=150, blank=True, default="")
     medico_crm               = models.CharField(max_length=20, blank=True, default="")
     numero_do                = models.CharField(max_length=30, blank=True, default="", verbose_name="Número da DO")
-    status_transmissao       = models.CharField(max_length=15, choices=STATUS_TRANSMISSAO, default="pendente")
+    status_transmissao       = models.CharField(max_length=24, choices=STATUS_TRANSMISSAO, default="pendente")
     transmitido_em           = models.DateTimeField(null=True, blank=True)
     criado_em                = models.DateTimeField(auto_now_add=True)
 
@@ -8304,6 +8305,7 @@ class DocumentoClinicoGov(models.Model):
         ('receita', 'Receita Médica'),
         ('atestado', 'Atestado Médico'),
         ('exame', 'Solicitação de Exame'),
+        ('evolucao', 'Evolução Clínica'),
     ]
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name='documentos_clinicos_gov')
     teleconsulta = models.ForeignKey('TeleconsultaGoverno', null=True, blank=True, on_delete=models.SET_NULL, related_name='documentos')
@@ -10578,10 +10580,11 @@ class AtendimentoCEO(models.Model):
 class ProducaoCEO(models.Model):
     """Consolidado mensal de produção CEO para transmissão ao SIASUS/BPA."""
     STATUS = [
-        ("aberto",      "Em aberto"),
-        ("fechado",     "Fechado"),
-        ("transmitido", "Transmitido"),
-        ("erro",        "Erro na transmissão"),
+        ("aberto",                "Em aberto"),
+        ("fechado",               "Fechado"),
+        ("aguardando_transmissao","Aguardando transmissão (SCNS)"),
+        ("transmitido",           "Transmitido"),
+        ("erro",                  "Erro na transmissão"),
     ]
     empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
                                           related_name="producoes_ceo")
@@ -10594,7 +10597,7 @@ class ProducaoCEO(models.Model):
     arquivo_bpa      = models.TextField(blank=True, default="",
                                          help_text="Conteúdo do arquivo BPA gerado")
     protocolo_datasus = models.CharField(max_length=100, blank=True, default="")
-    status           = models.CharField(max_length=15, choices=STATUS, default="aberto")
+    status           = models.CharField(max_length=24, choices=STATUS, default="aberto")
     criado_em        = models.DateTimeField(auto_now_add=True)
     transmitido_em   = models.DateTimeField(null=True, blank=True)
     erro_transmissao = models.TextField(blank=True, default="")
