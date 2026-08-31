@@ -40,6 +40,15 @@ double _rawValue(Map<String, dynamic> item) {
       _activeValue(item);
 }
 
+// "Casos ativos" exibido = índice temporal ponderado ARREDONDADO p/ inteiro.
+// Decai sozinho conforme o foco envelhece (o "diminuindo até sumir"): 2 → 1 → 0.
+// Um foco AINDA plotado nunca mostra 0 (piso 1); ele some do mapa quando sai da
+// janela de 30 dias. Em escala (milhares) o round é transparente: round(3000)=3000.
+int _displayCasos(Map<String, dynamic> item) {
+  final valor = _activeValue(item).round();
+  return valor < 1 ? 1 : valor;
+}
+
 class TelaMapa extends StatefulWidget {
   const TelaMapa({super.key});
 
@@ -1203,10 +1212,9 @@ class _CompactHotspotMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visual = _FocusVisual.fromItem(item);
-    final total = _activeValue(item);
     return Tooltip(
       message:
-          '${item['cidade'] ?? 'Região'} / ${item['estado'] ?? 'BR'} | foco ativo ${total.toStringAsFixed(1)}',
+          '${item['cidade'] ?? 'Região'} / ${item['estado'] ?? 'BR'} | foco ativo ${_displayCasos(item)}',
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -1262,7 +1270,7 @@ class _HotspotMarker extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Foco ativo: ${_activeValue(item).toStringAsFixed(1)} | Registros 30d: ${_rawValue(item).toStringAsFixed(0)}',
+                    'Foco ativo: ${_displayCasos(item)} | Registros 30d: ${_rawValue(item).toStringAsFixed(0)}',
                     style: const TextStyle(color: Color(0xFF9CC4DB)),
                   ),
                   const SizedBox(height: 4),
@@ -1460,18 +1468,9 @@ class _FocusVisual {
   }
 
   static String _safeDisplayIndex(Map<String, dynamic> item) {
-    // "Casos" = contagem CRUA de registros (número inteiro), igual ao painel do
-    // gestor. O índice ativo ponderado (fracionário) só é usado p/ dimensionar o
-    // marcador, não como rótulo — "0,7 casos" não faz sentido pro cidadão.
-    final raw = item['raw_total_cases'] ??
-        item['total_registros_30d'] ??
-        item['registros_30d'] ??
-        item['total'] ??
-        item['active_cases'] ??
-        item['indice_ativo'] ??
-        0;
-    final value =
-        raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0.0;
-    return value.toStringAsFixed(0);
+    // "Casos ativos" = índice ponderado que DECAI, arredondado p/ inteiro.
+    // Sem sinal novo o foco cai 2 → 1 → 0 e some do mapa (janela de 30 dias).
+    // Número inteiro (nunca "0,7") e piso 1 p/ foco ainda visível.
+    return _displayCasos(item).toString();
   }
 }

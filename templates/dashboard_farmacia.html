@@ -1240,6 +1240,12 @@
       return numericAreaValue(area, ["indice_ativo", "active_cases", "total_cases", "total"]);
     }
 
+    // Exibição inteira do índice que decai (nunca "0,65"); piso 1 p/ foco visível.
+    function displayCasos(area) {
+      const v = Math.round(activeFocusValue(area));
+      return v < 1 ? 1 : v;
+    }
+
     function rawFocusValue(area) {
       const raw = numericAreaValue(area, ["raw_total_cases", "total_registros_30d", "raw_total", "total"]);
       return raw || activeFocusValue(area);
@@ -1459,7 +1465,9 @@
         .map((symptom) => `<li>${symptom.label}: ${symptom.percentage.toFixed(1)}%</li>`)
         .join("");
 
-      const casos = area.raw_total_cases ?? Math.round(area.total_cases);
+      // "Casos ativos" = índice ponderado que decai (piso 1 p/ foco visível);
+      // a contagem crua aparece abaixo em "Registros 30d".
+      const casos = Math.max(1, Math.round(Number(area.active_cases ?? area.total_cases) || 0));
       return `
         <strong>${area.label}</strong><br>
         Casos ativos: ${casos.toLocaleString("pt-BR")}<br>
@@ -1512,7 +1520,7 @@
           <div class="detail-box">
             <strong>Radar do foco</strong>
             <ul>
-              <li>Casos ativos temporais: ${activeFocusValue(area).toLocaleString("pt-BR")}</li>
+              <li>Casos ativos temporais: ${displayCasos(area).toLocaleString("pt-BR")}</li>
               <li>Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}</li>
               <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
@@ -1582,7 +1590,7 @@
             <span class="risk-badge risk-${area.risk_level}" style="color:${riskTextColor(area.risk_level)}">${area.risk_level}</span>
           </div>
           <div class="mini">
-            ${activeFocusValue(area).toLocaleString("pt-BR")} casos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")} | crescimento ${area.growth_percent.toFixed(1)}%<br>
+            ${displayCasos(area).toLocaleString("pt-BR")} casos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")} | crescimento ${area.growth_percent.toFixed(1)}%<br>
             Sintoma dominante: ${area.dominant_symptom}<br>
             Doenca provavel: ${area.dominant_disease}
           </div>

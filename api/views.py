@@ -2998,11 +2998,12 @@ def app_resumo_publico(request):
             "registros_24h": total_24h,
             "registros_7d": total_7d,
             "registros_30d": total_30d,
-            # "casos" no app da população = CONTAGEM CRUA (número inteiro), igual
-            # ao painel do gestor. "0,7 casos" (índice ponderado) confundia o
-            # cidadão. O índice ponderado segue disponível como indice_ativo_30d
-            # (interno / rótulo explícito no radar), não como "casos".
-            "total_ativo_30d": total_30d,
+            # "casos ativos" no app da população = ÍNDICE TEMPORAL PONDERADO
+            # ARREDONDADO p/ inteiro. Sem sinal novo ele DECAI (2 → 1 → 0) e some,
+            # que é o comportamento epidemiológico correto ("diminuindo até sumir").
+            # Nunca mostra fração ("0,7"); em escala o round é transparente
+            # (round(3000)=3000). A contagem crua fica em registros_30d (secundária).
+            "total_ativo_30d": int(round(indice_ativo_30d)),
             "indice_ativo_7d": round(indice_ativo_30d, 2),
             "indice_ativo_30d": round(indice_ativo_30d, 2),
             "crescimento_7d": crescimento,
