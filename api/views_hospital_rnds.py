@@ -415,6 +415,7 @@ def _gerar_bundle_ips_br(internacao, empresa):
                         }]
                     },
                     "subject":  {"reference": f"urn:uuid:patient-{internacao.id}"},
+                    "encounter": {"reference": f"urn:uuid:encounter-{internacao.id}"},
                     "date":     timezone.now().date().isoformat(),
                     "author":   [{"reference": f"urn:uuid:org-{empresa.id}"}],
                     "title":    "Sumário de Alta — IPS-BR",
@@ -468,6 +469,24 @@ def _gerar_bundle_ips_br(internacao, empresa):
                     "subject":      {"reference": f"urn:uuid:patient-{internacao.id}"},
                     "onsetDateTime": data_entrada.isoformat() if hasattr(data_entrada, "isoformat") else str(data_entrada),
                     "abatementDateTime": data_alta.isoformat() if hasattr(data_alta, "isoformat") else str(data_alta),
+                },
+            },
+            {
+                "fullUrl":  f"urn:uuid:encounter-{internacao.id}",
+                "resource": {
+                    "resourceType": "Encounter",
+                    "status":       "finished",
+                    "class": {
+                        "system":  "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                        "code":    "IMP",
+                        "display": "inpatient encounter",
+                    },
+                    "subject": {"reference": f"urn:uuid:patient-{internacao.id}"},
+                    "period": {
+                        "start": data_entrada.isoformat() if hasattr(data_entrada, "isoformat") else str(data_entrada),
+                        "end":   data_alta.isoformat() if hasattr(data_alta, "isoformat") else str(data_alta),
+                    },
+                    "serviceProvider": {"reference": f"urn:uuid:org-{empresa.id}"},
                 },
             },
         ],
