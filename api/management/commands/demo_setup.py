@@ -2815,7 +2815,7 @@ class Command(BaseCommand):
             org, dst = _rnd.choice(unidades), _rnd.choice(unidades)
             try:
                 RegulacaoLeito.objects.create(
-                    empresa=empresa, numero_solicitacao=f"REG-{hoje.year}-{idx+1:04d}",
+                    empresa=empresa, numero_solicitacao=f"REG-{empresa.id}-{hoje.year}-{idx+1:04d}",
                     unidade_origem=org, unidade_destino=dst if st in ("regulado", "internado") else None,
                     tipo_leito=tp, prioridade=prio, status=st, cid_principal=cid,
                     diagnostico=diag, idade_paciente=idade, municipio_origem="São Paulo",
