@@ -999,6 +999,22 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(obito.status_transmissao, "aguardando_transmissao")
         self.assertNotEqual(obito.status_transmissao, "transmitido")
 
+    def test_prontuario_guarda_cfm_bloqueia_exclusao(self):
+        """Prontuário sob guarda CFM (20 anos) não pode ser deletado direto;
+        forcar_retencao=True libera (ordem judicial / encerramento)."""
+        from api.models import ProntuarioHospitalar
+        empresa = Empresa.objects.create(
+            nome="Hosp Guarda", email="hosp-guarda@teste.com",
+            senha=make_password("123456"), ativo=True,
+            pacote_codigo="hospital_rede", max_dispositivos=5, max_usuarios=5,
+        )
+        p = ProntuarioHospitalar.objects.create(empresa=empresa, paciente_nome="Fulano")
+        with self.assertRaises(ValueError):
+            p.delete()  # dentro dos 20 anos → bloqueado
+        self.assertTrue(ProntuarioHospitalar.objects.filter(id=p.id).exists())
+        p.delete(forcar_retencao=True)  # legítimo → permitido
+        self.assertFalse(ProntuarioHospitalar.objects.filter(id=p.id).exists())
+
     def test_enterprise_command_center_exige_autenticacao(self):
         response = self.client.get("/api/enterprise/command-center")
 

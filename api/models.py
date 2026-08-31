@@ -7589,6 +7589,10 @@ class ProntuarioHospitalar(models.Model):
     class Meta:
         ordering = ["-criado_em"]
 
+    # CFM Res. 1.821/2007 art. 8 — guarda mínima do prontuário: 20 anos desde
+    # a última movimentação. Ver [[soluscrt_auditoria_hospital_2026-08]].
+    RETENCAO_CFM_ANOS = 20
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         # Número do prontuário é obrigatório num EMR real; auto-gera quando o
@@ -7596,6 +7600,25 @@ class ProntuarioHospitalar(models.Model):
         if not self.numero_prontuario:
             self.numero_prontuario = f"PRT-{self.pk:06d}"
             super().save(update_fields=["numero_prontuario"])
+
+    def delete(self, *args, **kwargs):
+        # Bloqueia exclusão direta/acidental de prontuário dentro do prazo de
+        # guarda obrigatória (CFM). Passe forcar_retencao=True apenas em casos
+        # legítimos (ordem judicial, encerramento de conta). A cascata de
+        # exclusão da Empresa (on_delete=CASCADE) NÃO passa por aqui — é operação
+        # de terminação de conta, tratada separadamente.
+        forcar = kwargs.pop("forcar_retencao", False)
+        ref = self.atualizado_em or self.criado_em
+        if not forcar and ref:
+            from django.utils import timezone as _tz
+            anos = (_tz.now() - ref).days / 365.25
+            if anos < self.RETENCAO_CFM_ANOS:
+                raise ValueError(
+                    f"Prontuário sob guarda obrigatória (CFM Res. 1.821/2007): "
+                    f"retenção mínima de {self.RETENCAO_CFM_ANOS} anos desde a "
+                    f"última movimentação (faltam {self.RETENCAO_CFM_ANOS - anos:.1f})."
+                )
+        return super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"Prontuário {self.paciente_nome} — {self.empresa.nome}"
@@ -7621,6 +7644,21 @@ class EvolucaoProntuario(models.Model):
     class Meta:
         ordering = ["-assinado_em"]
         indexes  = [models.Index(fields=["prontuario", "assinado_digitalmente"])]
+
+    def delete(self, *args, **kwargs):
+        # Guarda obrigatória (CFM Res. 1.821/2007): a evolução é parte do
+        # prontuário. Bloqueia exclusão direta dentro de 20 anos; forcar_retencao=True
+        # p/ casos legítimos. Cascata do prontuário/empresa não passa por aqui.
+        forcar = kwargs.pop("forcar_retencao", False)
+        if not forcar and self.assinado_em:
+            from django.utils import timezone as _tz
+            anos = (_tz.now() - self.assinado_em).days / 365.25
+            if anos < ProntuarioHospitalar.RETENCAO_CFM_ANOS:
+                raise ValueError(
+                    "Evolução sob guarda obrigatória (CFM Res. 1.821/2007): "
+                    f"retenção mínima de {ProntuarioHospitalar.RETENCAO_CFM_ANOS} anos."
+                )
+        return super().delete(*args, **kwargs)
 
 
 class PrescricaoProntuario(models.Model):
