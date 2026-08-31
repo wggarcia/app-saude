@@ -1016,6 +1016,7 @@
 
   <script>
     const empresaId = "{{ empresa_id|escapejs }}";
+    const PANORAMA_ENDPOINT = "{{ panorama_endpoint|default:'/api/epidemiologia'|escapejs }}";  // demo → simulação nacional
     const variant = "hospital";
     const modeFilter = document.getElementById("modeFilter");
     const levelFilter = document.getElementById("levelFilter");
@@ -1755,7 +1756,7 @@
     }
 
     async function loadPanorama() {
-      const response = await fetch("/api/epidemiologia");
+      const response = await fetch(PANORAMA_ENDPOINT);
       panorama = await response.json();
       document.getElementById("generatedAt").textContent = `Atualizado em ${new Date(panorama.generated_at).toLocaleString("pt-BR")}`;
       populateFilters();

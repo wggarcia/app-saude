@@ -235,6 +235,17 @@ def _onboarding_cliente(empresa, usuarios_ativos, dispositivos_ativos, registros
 
 
 # HTML (dashboard)
+def _panorama_endpoint_para(empresa):
+    """Contas DEMO (qualquer segmento) veem o mapa da simulação nacional (tenant
+    isolado, payload "demo": true) — assim todos os segmentos ficam consistentes
+    no demo. Contas REAIS sempre usam o panorama real (/api/epidemiologia).
+    Ver seed_mapa_demo_governo + build_demo_panorama_payload."""
+    if empresa and (getattr(empresa, "email", "") or "").lower().startswith("demo."):
+        from api.epidemiologia import DEMO_ACCESS_TOKEN
+        return f"/api/epidemiologia/simulacao/{DEMO_ACCESS_TOKEN}/"
+    return "/api/epidemiologia"
+
+
 def _render_dashboard(request, variant):
     empresa = _empresa_autenticada(request)
     empresa_id = request.GET.get("empresa_id") or request.COOKIES.get("empresa_id")
@@ -292,14 +303,7 @@ def _render_dashboard(request, variant):
     }
     template_name = template_by_variant.get(variant, "dashboard_unificado.html")
 
-    # Contas de governo DEMO veem o mapa da simulação nacional (tenant isolado,
-    # payload rotulado "demo": true) em vez do panorama real — que fica vazio no
-    # demo por design (antifraude exclui sinais sintéticos). Contas reais sempre
-    # usam o panorama real. Ver seed_mapa_demo_governo + build_demo_panorama_payload.
-    panorama_endpoint = "/api/epidemiologia"
-    if variant == "governo" and (empresa.email or "").lower().startswith("demo."):
-        from api.epidemiologia import DEMO_ACCESS_TOKEN
-        panorama_endpoint = f"/api/epidemiologia/simulacao/{DEMO_ACCESS_TOKEN}/"
+    panorama_endpoint = _panorama_endpoint_para(empresa)
 
     response = render(request, template_name, {
         "empresa_id": str(empresa.id),
@@ -465,7 +469,9 @@ def portal_rh_page(request):
 @requer_setor('plano_saude')
 @requer_operacao_page
 def dashboard_plano_saude(request):
-    return render(request, "dashboard_plano_saude.html")
+    return render(request, "dashboard_plano_saude.html", {
+        "panorama_endpoint": _panorama_endpoint_para(_empresa_autenticada(request)),
+    })
 
 
 def _dashboard_return_url(empresa):

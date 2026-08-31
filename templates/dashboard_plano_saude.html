@@ -784,6 +784,7 @@
 
   <script>
     const empresaId = "{{ empresa_id|escapejs }}";
+    const PANORAMA_ENDPOINT = "{{ panorama_endpoint|default:'/api/epidemiologia'|escapejs }}";  // demo → simulação nacional
 
     // ── Auth ─────────────────────────────────────────────────────
     function getScopedValue(key) {
@@ -1220,7 +1221,7 @@
 
     async function loadPanorama() {
       try {
-      const response = await fetch("/api/epidemiologia");
+      const response = await fetch(PANORAMA_ENDPOINT);
         panorama = await response.json();
         document.getElementById("generatedAt").textContent =
           `Atualizado em ${new Date(panorama.generated_at || Date.now()).toLocaleString("pt-BR")}`;
