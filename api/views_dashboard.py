@@ -236,13 +236,8 @@ def _onboarding_cliente(empresa, usuarios_ativos, dispositivos_ativos, registros
 
 # HTML (dashboard)
 def _panorama_endpoint_para(empresa):
-    """Contas DEMO (qualquer segmento) veem o mapa da simulação nacional (tenant
-    isolado, payload "demo": true) — assim todos os segmentos ficam consistentes
-    no demo. Contas REAIS sempre usam o panorama real (/api/epidemiologia).
-    Ver seed_mapa_demo_governo + build_demo_panorama_payload."""
-    if empresa and (getattr(empresa, "email", "") or "").lower().startswith("demo."):
-        from api.epidemiologia import DEMO_ACCESS_TOKEN
-        return f"/api/epidemiologia/simulacao/{DEMO_ACCESS_TOKEN}/"
+    """Todas as telas usam o panorama REAL. (A simulação de focos foi removida a
+    pedido — o mapa mostra só dado real, inclusive nas contas demo.)"""
     return "/api/epidemiologia"
 
 
