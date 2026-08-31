@@ -17,7 +17,7 @@ requests==2.34.2
 numpy==1.26.4
 joblib==1.5.3
 scikit-learn==1.4.2
-opencv-python-headless==4.9.0.80
+opencv-python-headless==5.0.0.93
 # deepface/tensorflow-cpu: NÃO instalar no Render (estoura RAM de 512MB-2GB).
 # Instalar manualmente no VPS: pip install deepface==0.0.93 tensorflow-cpu==2.16.1 tf-keras==2.16.0
 # deepface==0.0.93
