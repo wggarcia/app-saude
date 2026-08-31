@@ -1460,16 +1460,18 @@ class _FocusVisual {
   }
 
   static String _safeDisplayIndex(Map<String, dynamic> item) {
-    final raw = item['indice_ativo'] ??
-        item['active_cases'] ??
-        item['total_cases'] ??
-        item['raw_total_cases'] ??
+    // "Casos" = contagem CRUA de registros (número inteiro), igual ao painel do
+    // gestor. O índice ativo ponderado (fracionário) só é usado p/ dimensionar o
+    // marcador, não como rótulo — "0,7 casos" não faz sentido pro cidadão.
+    final raw = item['raw_total_cases'] ??
         item['total_registros_30d'] ??
         item['registros_30d'] ??
         item['total'] ??
+        item['active_cases'] ??
+        item['indice_ativo'] ??
         0;
     final value =
         raw is num ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0.0;
-    return value >= 100 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
+    return value.toStringAsFixed(0);
   }
 }
