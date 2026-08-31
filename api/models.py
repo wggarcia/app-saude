@@ -2440,7 +2440,7 @@ class DispensacaoMedicamento(models.Model):
     paciente_cpf  = models.CharField(max_length=14, blank=True, default="")
     quantidade    = models.PositiveIntegerField()
     responsavel   = models.CharField(max_length=200, blank=True, default="")
-    observacoes   = models.TextField(blank=True, default="")
+    observacoes   = EncryptedTextField(blank=True, default="")  # LGPD: observação clínica da dispensação
     dispensado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -2462,9 +2462,9 @@ class PacienteFarmacia(models.Model):
     telefone          = models.CharField(max_length=20, blank=True, default="")
     email             = models.EmailField(blank=True, default="")
     endereco          = models.CharField(max_length=300, blank=True, default="")
-    alergias          = models.TextField(blank=True, default="", help_text="Alergias e contraindicações conhecidas")
-    condicoes_cronicas = models.TextField(blank=True, default="", help_text="CIDs ou condições crônicas em acompanhamento")
-    medicamentos_uso_continuo = models.TextField(blank=True, default="")
+    alergias          = EncryptedTextField(blank=True, default="", help_text="Alergias e contraindicações conhecidas")  # LGPD saúde
+    condicoes_cronicas = EncryptedTextField(blank=True, default="", help_text="CIDs ou condições crônicas em acompanhamento")  # LGPD saúde
+    medicamentos_uso_continuo = EncryptedTextField(blank=True, default="")  # LGPD: revela condição de saúde
     ativo             = models.BooleanField(default=True)
     criado_em         = models.DateTimeField(auto_now_add=True)
     atualizado_em     = models.DateTimeField(auto_now=True)
@@ -5326,7 +5326,7 @@ class Dispensacao(models.Model):
     valor_total        = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     convenio           = models.CharField(max_length=200, blank=True, default="")
     status             = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
-    observacoes        = models.TextField(blank=True, default="")
+    observacoes        = EncryptedTextField(blank=True, default="")  # LGPD: observação clínica da dispensação
     criado_em          = models.DateTimeField(auto_now_add=True)
     atualizado_em      = models.DateTimeField(auto_now=True)
 
