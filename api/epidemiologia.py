@@ -275,19 +275,6 @@ def _scope_public_population_queryset(queryset):
     return queryset.filter(empresa=empresa)
 
 
-def _scope_demo_population_queryset(queryset):
-    """Escopa o queryset ao tenant de SIMULAÇÃO (demo.simulacao) — usado pelo app
-    da população em modo demo, pra ficar igual aos dashboards demo. Isolado do
-    tenant público real."""
-    demo = _get_demo_empresa()
-    if not demo:
-        return queryset.none()
-    try:
-        return queryset.using("owner").filter(empresa=demo)
-    except Exception:
-        return queryset.filter(empresa=demo)
-
-
 def _rs_base_qs():
     """Base queryset for RegistroSintoma using the correct DB connection.
 

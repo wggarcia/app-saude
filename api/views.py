@@ -19,21 +19,8 @@ from api.epidemiologia import (
     SYMPTOM_LABELS,
     _build_disease_probabilities,
     build_panorama_payload,
-    build_demo_panorama_payload,
     clear_panorama_cache,
-    DEMO_ACCESS_TOKEN,
 )
-
-
-def _panorama_para_request(request):
-    """App da população: alinha o mapa aos painéis. Quando o app é aberto em modo
-    DEMO (querystring ?demo=<token> ou header X-Demo-Token), retorna o panorama
-    da SIMULAÇÃO NACIONAL (tenant isolado) — igual aos dashboards demo dos 6
-    segmentos. App real (sem token) segue no panorama real."""
-    token = request.GET.get("demo") or request.headers.get("X-Demo-Token", "")
-    if token and token == DEMO_ACCESS_TOKEN:
-        return build_demo_panorama_payload()
-    return build_panorama_payload()
 from api.services.public_integrity import (
     alerta_governamental_sintetico,
     q_registro_sintoma_sintetico,
@@ -2921,11 +2908,8 @@ def app_resumo_publico(request):
     _set_rls(_emp_pub.id)
     agora = timezone.now()
     from api.epidemiologia import _scope_public_population_queryset as _scope_public
-    from api.epidemiologia import _scope_demo_population_queryset as _scope_demo
-    _token = request.GET.get("demo") or request.headers.get("X-Demo-Token", "")
-    _scope = _scope_demo if (_token and _token == DEMO_ACCESS_TOKEN) else _scope_public
 
-    base_publica = _scope(
+    base_publica = _scope_public(
         RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
     )
     ultimas_24h = base_publica.filter(data_registro__gte=agora - timedelta(hours=24))
@@ -3045,9 +3029,6 @@ def app_radar_local(request):
     # ── RLS: garante visibilidade dos registros públicos ─────────────────────
     from api.middleware import _rls_set_empresa as _set_rls
     from api.epidemiologia import _scope_public_population_queryset as _scope_public
-    from api.epidemiologia import _scope_demo_population_queryset as _scope_demo
-    _token = request.GET.get("demo") or request.headers.get("X-Demo-Token", "")
-    _scope_pop = _scope_demo if (_token and _token == DEMO_ACCESS_TOKEN) else _scope_public
     _emp_pub = _empresa_app_publico()
     _set_rls(_emp_pub.id)
     latitude = request.GET.get("latitude")
@@ -3072,7 +3053,7 @@ def app_radar_local(request):
     estado_termos = _state_terms(estado) or [estado]
 
     agora = timezone.now()
-    base_publica = _scope_pop(
+    base_publica = _scope_public(
         RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
     )
     atuais = base_publica.filter(
@@ -3216,7 +3197,7 @@ def app_mapa_publico(request):
             return False
         return True
 
-    payload = _panorama_para_request(request)
+    payload = build_panorama_payload()
     hotspots_base = payload.get("layers", {}).get("bairros", [])
     hotspots = []
     for item in hotspots_base:
