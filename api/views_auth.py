@@ -505,10 +505,11 @@ def ativar_trial(request):
     empresa.ativo = True
     empresa.save(update_fields=["ativo"])
 
-    # Email de boas-vindas enviado aqui — momento correto após ativação
+    # Email de boas-vindas — fila assíncrona (fallback inline se a fila off).
     try:
         from .email_service import enviar_email_boas_vindas
-        enviar_email_boas_vindas(empresa)
+        from .tasks import run_async
+        run_async(enviar_email_boas_vindas, empresa)
     except Exception:
         pass
 

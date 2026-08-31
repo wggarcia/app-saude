@@ -132,7 +132,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'api',
     'corsheaders',
-] + (['django_extensions'] if not IS_PRODUCTION else [])
+] + (['django_rq'] if os.environ.get("REDIS_URL") else []) \
+  + (['django_extensions'] if not IS_PRODUCTION else [])
 
 MIDDLEWARE = [
     'backend.middleware_subdomain.SubdomainRoutingMiddleware',
@@ -337,6 +338,19 @@ else:
         "default": {
             "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
             "LOCATION": "/tmp/django_cache",
+        }
+    }
+
+# ── Fila de tarefas assíncronas (RQ) ─────────────────────────────────────────
+# TASK_QUEUE_ENABLED controla se run_async() enfileira (worker) ou roda inline.
+# Default OFF: liga só quando o worker `manage.py rqworker default` estiver de pé.
+# Ver api/tasks.py. Reaproveita o mesmo Redis do cache.
+TASK_QUEUE_ENABLED = env_bool("TASK_QUEUE_ENABLED", default=False) and bool(_REDIS_URL)
+if _REDIS_URL:
+    RQ_QUEUES = {
+        "default": {
+            "URL": _REDIS_URL,
+            "DEFAULT_TIMEOUT": 360,
         }
     }
 

@@ -24,6 +24,8 @@ opencv-python-headless==4.9.0.80
 # tensorflow-cpu==2.16.1
 # tf-keras==2.16.0
 python-dotenv==1.2.2
+rq==1.16.2
+django-rq==2.10.2
 anthropic==0.40.0
 Pillow==11.0.0
 pydicom==2.4.5

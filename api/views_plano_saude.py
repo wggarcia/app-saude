@@ -3534,7 +3534,8 @@ def api_ps_contratos(request):
             logo_emoji=d.get("logo_emoji", "🏢"),
             observacoes=d.get("observacoes", ""),
         )
-        enviar_email_novo_contrato(contrato)
+        from .tasks import run_async
+        run_async(enviar_email_novo_contrato, contrato)
         return JsonResponse({"ok": True, "id": contrato.pk})
 
     contratos = ContratoGrupo.objects.filter(empresa_operadora=empresa).select_related("plano")
@@ -3869,7 +3870,8 @@ def api_ps_telemedicina_autorizar(request, tele_id):
         tele.link_consulta = d.get("link_consulta", "")
     tele.save()
     if tele.status == "autorizado":
-        enviar_email_teleconsulta_autorizada(tele)
+        from .tasks import run_async
+        run_async(enviar_email_teleconsulta_autorizada, tele)
     return JsonResponse({"ok": True, "status": tele.status})
 
 
