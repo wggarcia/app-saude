@@ -1091,6 +1091,9 @@
 
   <script>
     const empresaId = "{{ empresa_id|escapejs }}";
+    // Endpoint do panorama: contas reais usam o real; contas de governo DEMO
+    // recebem a simulação nacional (tenant isolado, payload "demo": true).
+    const PANORAMA_ENDPOINT = "{{ panorama_endpoint|default:'/api/epidemiologia'|escapejs }}";
     const modeFilter = document.getElementById("modeFilter");
     const levelFilter = document.getElementById("levelFilter");
     const stateFilter = document.getElementById("stateFilter");
@@ -2157,7 +2160,7 @@
     }
 
     async function loadPanorama() {
-      const response = await fetch("/api/epidemiologia");
+      const response = await fetch(PANORAMA_ENDPOINT);
       panorama = await response.json();
       document.getElementById("generatedAt").textContent = `Atualizado em ${new Date(panorama.generated_at).toLocaleString("pt-BR")}`;
       document.getElementById("institutionalNote").textContent = panorama?.overview?.institutional_note || "";

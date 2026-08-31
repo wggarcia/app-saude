@@ -292,6 +292,15 @@ def _render_dashboard(request, variant):
     }
     template_name = template_by_variant.get(variant, "dashboard_unificado.html")
 
+    # Contas de governo DEMO veem o mapa da simulação nacional (tenant isolado,
+    # payload rotulado "demo": true) em vez do panorama real — que fica vazio no
+    # demo por design (antifraude exclui sinais sintéticos). Contas reais sempre
+    # usam o panorama real. Ver seed_mapa_demo_governo + build_demo_panorama_payload.
+    panorama_endpoint = "/api/epidemiologia"
+    if variant == "governo" and (empresa.email or "").lower().startswith("demo."):
+        from api.epidemiologia import DEMO_ACCESS_TOKEN
+        panorama_endpoint = f"/api/epidemiologia/simulacao/{DEMO_ACCESS_TOKEN}/"
+
     response = render(request, template_name, {
         "empresa_id": str(empresa.id),
         "empresa_nome": empresa.nome,
@@ -300,6 +309,7 @@ def _render_dashboard(request, variant):
         "setor_label": _setor_label(setor_conta),
         "acesso_governo": empresa.acesso_governo,
         "tipo_conta": empresa.tipo_conta,
+        "panorama_endpoint": panorama_endpoint,
     })
     response.set_cookie("empresa_id", str(empresa.id), samesite="Lax", secure=not settings.DEBUG)
     return response

@@ -205,6 +205,7 @@ class EmpresaMiddleware:
             "/verificar-email/",
         }
         rotas_livres_prefixo = (
+            "/api/epidemiologia/simulacao/",  # simulação nacional do estande/demo — token fixo no URL (Http404 se inválido); payload isolado "demo": true
             "/clinica/aceitar/",  # convite publico de vinculo clinica-empresa (sem login pra visualizar)
             "/redefinir-senha/",
             "/api/funcionario/",   # portal do trabalhador — auth própria via Bearer
