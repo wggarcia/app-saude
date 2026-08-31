@@ -1,4 +1,12 @@
+-- ⚠️  SUPERADO — USE scripts/rls_enforce_fix.sql
 -- ═══════════════════════════════════════════════════════════════════════════
+-- Este script (só transferir dono) é INSUFICIENTE: testado ao vivo, a RLS
+-- continuou inerte porque soluscrt é MEMBRO de soluscrt_app (INHERIT) e herda
+-- o bypass de dono mesmo nas tabelas transferidas. O fix correto e completo
+-- (REVOKE da herança + transferir as 43) está em rls_enforce_fix.sql.
+-- Mantido só como referência dos ALTERs e do rollback.
+-- ═══════════════════════════════════════════════════════════════════════════
+--
 -- RLS OWNERSHIP FIX — fecha o último gap sistêmico de isolamento por tenant
 -- ═══════════════════════════════════════════════════════════════════════════
 --
