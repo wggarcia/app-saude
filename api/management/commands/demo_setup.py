@@ -612,6 +612,29 @@ class Command(BaseCommand):
             ProgramaSaudeGov.objects.filter(empresa=empresa).delete()
             AlertaGovernamental.objects.filter(empresa=empresa).delete()
             RegistroSintoma.objects.filter(empresa=empresa).delete()
+            # Fase 2 — módulos operacionais do governo (ordem importa por FKs:
+            # VisitaDomiciliar tem PROTECT p/ AgenteComunidadeSaude; NotificacaoCompulsoria
+            # tem FK p/ SurtoEpidemiologico).
+            try:
+                from api.models import (
+                    VisitaDomiciliar, AgenteComunidadeSaude, VisitaCombateEndemias,
+                    NotificacaoCompulsoria, SurtoEpidemiologico, RegulacaoLeito,
+                    ProducaoAmbulatorial, MetaPrevine, ContratoGestao,
+                    AtendimentoUrgencia, EquipeSaude,
+                )
+                VisitaDomiciliar.objects.filter(empresa=empresa).delete()
+                AgenteComunidadeSaude.objects.filter(empresa=empresa).delete()
+                VisitaCombateEndemias.objects.filter(empresa=empresa).delete()
+                NotificacaoCompulsoria.objects.filter(empresa=empresa).delete()
+                SurtoEpidemiologico.objects.filter(empresa=empresa).delete()
+                RegulacaoLeito.objects.filter(empresa=empresa).delete()
+                ProducaoAmbulatorial.objects.filter(empresa=empresa).delete()
+                MetaPrevine.objects.filter(empresa=empresa).delete()
+                ContratoGestao.objects.filter(empresa=empresa).delete()
+                AtendimentoUrgencia.objects.filter(empresa=empresa).delete()
+                EquipeSaude.objects.filter(empresa=empresa).delete()
+            except Exception:
+                pass
             UnidadeSaude.objects.filter(empresa=empresa).delete()
             try:
                 from api.models import TeleconsultaGoverno
@@ -2650,13 +2673,287 @@ class Command(BaseCommand):
             except Exception:
                 pass
 
+        # ── 9. Módulos operacionais Fase 2 ───────────────────────────────────
+        self._criar_dados_governo_fase2(empresa, unidade_objs, agora)
+
         n_prog  = len([p for p in prog_objs if p])
         n_unid  = len([u for u in unidade_objs if u])
         self.out(
             f"     ✓ Governo: {n_prog} programas | 12 indicadores | {n_unid} unidades | "
-            f"5 alertas | planos de ação | orçamento | atos normativos | 60 registros sintomas",
+            f"5 alertas | planos de ação | orçamento | atos normativos | 60 registros sintomas | "
+            f"vigilância + regulação + produção + previne + contratos + urgência + ACS",
             self.style.SUCCESS,
         )
+
+    def _criar_dados_governo_fase2(self, empresa, unidade_objs, agora):  # noqa: C901
+        """Popula os módulos operacionais do cockpit de gestão do Governo:
+        Equipes eSF, Vigilância (surtos/notificações/endemias), Regulação de
+        leitos, Produção ambulatorial, Previne Brasil, Contratos de gestão,
+        Urgência/SAMU e ACS/Visitas domiciliares."""
+        import random as _rnd
+        _rnd.seed(77)
+        from api.models import (
+            EquipeSaude, SurtoEpidemiologico, NotificacaoCompulsoria,
+            VisitaCombateEndemias, RegulacaoLeito, ProducaoAmbulatorial,
+            MetaPrevine, ContratoGestao, AtendimentoUrgencia,
+            AgenteComunidadeSaude, VisitaDomiciliar,
+        )
+
+        unidades = [u for u in unidade_objs if u]
+        if not unidades:
+            return
+        hoje = agora.date()
+        comp_atual = hoje.strftime("%Y-%m")
+        mes_ant = (hoje.replace(day=1) - datetime.timedelta(days=1))
+        comp_ant = mes_ant.strftime("%Y-%m")
+
+        # ── Equipes eSF (fixa "Equipes ESF / Pop. Coberta" na Rede e Painel F2)
+        nomes_eq = ["eSF Central", "eSF Norte", "eSF Sul", "eSF Leste", "eSF Oeste",
+                    "eSF Vila Nova", "eSF Jardim", "eSF Industrial"]
+        for idx, u in enumerate(unidades[:8]):
+            try:
+                EquipeSaude.objects.create(
+                    empresa=empresa, unidade=u, nome=nomes_eq[idx % len(nomes_eq)],
+                    tipo="esf", ine=f"00000{idx:05d}"[-10:], area_codigo=f"{idx+1:03d}",
+                    populacao_cadastrada=_rnd.randint(2800, 4500), ativa=True,
+                )
+            except Exception:
+                pass
+
+        # ── Vigilância — Surtos
+        surtos = []
+        surtos_cfg = [
+            ("Dengue", "São Paulo", "SP", "Zona Norte", 12, "ativo", "laranja", 142, 1,
+             "Bloqueio de transmissão, mutirão de eliminação de criadouros, nebulização (fumacê)."),
+            ("Influenza A (H1N1)", "São Paulo", "SP", "Zona Leste", 25, "controlado", "amarelo", 68, 0,
+             "Vacinação de bloqueio, reforço de coleta de amostras, comunicação às UBSs."),
+            ("Doença Diarreica Aguda", "Santo André", "SP", "Centro", 40, "encerrado", "verde", 53, 0,
+             "Investigação de fonte hídrica, orientação sanitária, encerrado sem novos casos."),
+        ]
+        for doenca, mun, uf, bairro, dias, st, nivel, casos, obitos, acoes in surtos_cfg:
+            try:
+                s = SurtoEpidemiologico.objects.create(
+                    empresa=empresa, doenca=doenca, municipio=mun, uf=uf, bairro=bairro,
+                    data_inicio=hoje - datetime.timedelta(days=dias),
+                    data_encerramento=(hoje - datetime.timedelta(days=2)) if st == "encerrado" else None,
+                    total_casos=casos, total_obitos=obitos, status=st, nivel_alerta=nivel,
+                    acoes_resposta=acoes, responsavel_investigacao="Coord. Vigilância Epidemiológica",
+                )
+                surtos.append(s)
+            except Exception:
+                surtos.append(None)
+
+        # ── Vigilância — Notificações compulsórias
+        notif_cfg = [
+            ("dengue", 3, "M", 34, "em_investigacao", "ativo", 0),
+            ("dengue", 5, "F", 28, "encerrado", "curado", 0),
+            ("dengue", 1, "F", 61, "aberto", "ativo", 0),
+            ("tuberculose", 12, "M", 45, "em_investigacao", "ativo", None),
+            ("sifilis", 8, "F", 23, "encerrado", "curado", None),
+            ("hiv_aids", 20, "M", 39, "em_investigacao", "ativo", None),
+            ("hepatite_b", 15, "M", 52, "aberto", "ativo", None),
+            ("chikungunya", 4, "F", 30, "em_investigacao", "ativo", 0),
+            ("meningite", 6, "M", 8, "encerrado", "curado", None),
+            ("covid19", 2, "F", 70, "em_investigacao", "ativo", 1),
+            ("leptospirose", 9, "M", 41, "aberto", "ativo", None),
+            ("sifilis_congenita", 18, "I", 0, "em_investigacao", "ativo", None),
+            ("tuberculose", 25, "F", 33, "encerrado", "curado", None),
+            ("dengue", 2, "M", 19, "aberto", "ativo", 0),
+            ("influenza_grave", 7, "M", 66, "encerrado", "obito", 1),
+        ]
+        for doenca, dias, sexo, idade, st_inv, evol, surto_idx in notif_cfg:
+            try:
+                NotificacaoCompulsoria.objects.create(
+                    empresa=empresa, doenca=doenca,
+                    data_notificacao=hoje - datetime.timedelta(days=dias),
+                    data_inicio_sintomas=hoje - datetime.timedelta(days=dias + _rnd.randint(2, 6)),
+                    municipio_notificacao="São Paulo", uf_notificacao="SP",
+                    unidade_notificante=_rnd.choice(unidades),
+                    idade_paciente=idade or None, sexo=sexo,
+                    zona=_rnd.choice(["urbana", "urbana", "rural"]),
+                    status_investigacao=st_inv, evolucao=evol,
+                    surto=(surtos[surto_idx] if surto_idx is not None and surto_idx < len(surtos) else None),
+                )
+            except Exception:
+                pass
+
+        # ── Vigilância — Combate a endemias (LIRAa)
+        bairros_end = ["Zona Norte", "Zona Leste", "Zona Sul", "Centro", "Vila Nova", "Jardim América"]
+        criadouros = ["a1", "a2", "b", "c", "d1", "d2", "e"]
+        acoes_end = ["tratamento_focal", "eliminacao_mecanica", "orientacao", "tratamento_perifocal"]
+        for i in range(24):
+            foco = i % 3 == 0
+            try:
+                VisitaCombateEndemias.objects.create(
+                    empresa=empresa, agente_nome=f"ACE {_rnd.choice(['Silva','Souza','Lima','Costa','Alves'])}",
+                    data_visita=hoje - datetime.timedelta(days=i % 12),
+                    endereco=f"Rua {_rnd.randint(1,300)}, nº {_rnd.randint(10,999)}",
+                    bairro=_rnd.choice(bairros_end),
+                    tipo_imovel=_rnd.choice(["residencial", "residencial", "comercial", "terreno_baldio"]),
+                    status_visita=_rnd.choice(["realizada", "realizada", "realizada", "imovel_fechado"]),
+                    depositos_inspecionados=_rnd.randint(1, 8),
+                    foco_encontrado=foco,
+                    tipo_criadouro=_rnd.choice(criadouros) if foco else "",
+                    acao_realizada=_rnd.choice(acoes_end) if foco else "orientacao",
+                    larvas_coletadas=foco and i % 2 == 0,
+                )
+            except Exception:
+                pass
+
+        # ── Regulação de leitos
+        reg_cfg = [
+            ("uti_adulto", "emergencia", "regulado", "I21", "Infarto agudo do miocárdio", 58, 6.5),
+            ("uti_adulto", "urgencia", "solicitado", "J96", "Insuficiência respiratória", 72, None),
+            ("clinico", "urgencia", "internado", "A90", "Dengue com sinais de alarme", 34, 3.0),
+            ("uti_neo", "emergencia", "regulado", "P22", "Desconforto respiratório neonatal", 0, 2.0),
+            ("cirurgico", "eletivo", "solicitado", "K80", "Colelitíase", 47, None),
+            ("uti_ped", "urgencia", "internado", "J21", "Bronquiolite", 1, 4.5),
+            ("obstetricia", "urgencia", "regulado", "O60", "Trabalho de parto prematuro", 29, 1.5),
+            ("clinico", "urgencia", "obito_espera", "I64", "AVC", 81, 22.0),
+        ]
+        for idx, (tp, prio, st, cid, diag, idade, espera) in enumerate(reg_cfg):
+            org, dst = _rnd.choice(unidades), _rnd.choice(unidades)
+            try:
+                RegulacaoLeito.objects.create(
+                    empresa=empresa, numero_solicitacao=f"REG-{hoje.year}-{idx+1:04d}",
+                    unidade_origem=org, unidade_destino=dst if st in ("regulado", "internado") else None,
+                    tipo_leito=tp, prioridade=prio, status=st, cid_principal=cid,
+                    diagnostico=diag, idade_paciente=idade, municipio_origem="São Paulo",
+                    medico_solicitante=f"Dr(a). {_rnd.choice(['Souza','Lima','Torres','Bastos'])}",
+                    tempo_espera_horas=espera,
+                )
+            except Exception:
+                pass
+
+        # ── Produção ambulatorial (mês atual + anterior)
+        for u in unidades:
+            for comp in (comp_atual, comp_ant):
+                try:
+                    ProducaoAmbulatorial.objects.create(
+                        empresa=empresa, unidade=u, competencia=comp,
+                        consultas_basicas=_rnd.randint(400, 1200),
+                        consultas_especializadas=_rnd.randint(80, 400),
+                        procedimentos_basicos=_rnd.randint(300, 900),
+                        procedimentos_especializados=_rnd.randint(50, 300),
+                        exames_realizados=_rnd.randint(200, 800),
+                        visitas_domiciliares=_rnd.randint(40, 200),
+                        acolhimentos=_rnd.randint(100, 500),
+                    )
+                except Exception:
+                    pass
+
+        # ── Previne Brasil (9 indicadores)
+        previne_cfg = [
+            ("prenatal_6", 45.0, 420, 210), ("prenatal_sifilis_hiv", 60.0, 420, 340),
+            ("gestante_odonto", 60.0, 420, 190), ("consumo_alcool", 100.0, 380, 300),
+            ("hipertensos", 50.0, 5200, 2900), ("diabeticos", 50.0, 1800, 1150),
+            ("criancas_obesidade", 60.0, 640, 410), ("saude_bucal_ab", 100.0, 5000, 3200),
+            ("visita_puerpera", 60.0, 380, 250),
+        ]
+        for ind, meta, denom, numer in previne_cfg:
+            resultado = round(numer / denom * 100, 2) if denom else 0
+            try:
+                MetaPrevine.objects.create(
+                    empresa=empresa, indicador=ind, competencia=comp_atual,
+                    municipio="São Paulo", denominador=denom, numerador=numer,
+                    meta_percentual=meta, resultado_percentual=resultado,
+                    atingiu_meta=resultado >= meta,
+                )
+            except Exception:
+                pass
+
+        # ── Contratos de gestão
+        contratos_cfg = [
+            ("CT-2026-001", "Hospital São Camilo — OSS", "hospital", "oss", "vigente",
+             "Gestão de 240 leitos hospitalares, PS 24h e UTI adulto/neonatal.",
+             48_000_000, 4_000_000, 0, 365),
+            ("CT-2026-014", "Laboratório Central Análises Clínicas Ltda", "laboratorio", "laboratorio", "vigente",
+             "Exames laboratoriais de análises clínicas para a rede municipal.",
+             7_200_000, 600_000, 30, 335),
+            ("CT-2025-208", "ImagemDiagnóstica Radiologia S/A", "imagem", "imagem", "vigente",
+             "Serviços de radiologia, tomografia e ressonância magnética.",
+             9_600_000, 800_000, 90, 275),
+            ("CT-2025-155", "Instituto de Gestão em Saúde — IGS", "oss", "oss", "vigente",
+             "Gestão de 8 UBS e 2 UPAs 24h (contrato de gestão por metas).",
+             36_000_000, 3_000_000, 60, 305),
+            ("CT-2024-092", "TransSaúde Remoções Ltda", "sadt", "sadt", "vencido",
+             "Transporte sanitário eletivo e remoções inter-hospitalares.",
+             2_400_000, 200_000, 400, 35),
+        ]
+        for num, forn, _tp1, tp, st, obj, total, mensal, ini_off, fim_off in contratos_cfg:
+            try:
+                ContratoGestao.objects.create(
+                    empresa=empresa, numero_contrato=num, fornecedor_nome=forn,
+                    fornecedor_cnpj="12.345.678/0001-90", tipo=tp, status=st, objeto=obj,
+                    valor_total=total, valor_mensal=mensal,
+                    data_inicio=hoje - datetime.timedelta(days=ini_off),
+                    data_fim=hoje + datetime.timedelta(days=fim_off),
+                    gestor_contrato="Diretoria de Contratualização",
+                )
+            except Exception:
+                pass
+
+        # ── Urgência/SAMU (últimos 7 dias, por unidade de urgência)
+        und_urg = unidades[:3]
+        tipos_urg = ["upa", "pronto_socorro", "samu"]
+        for u_i, u in enumerate(und_urg):
+            for d in range(7):
+                verm, lar = _rnd.randint(1, 6), _rnd.randint(8, 20)
+                amar, verde, azul = _rnd.randint(20, 50), _rnd.randint(40, 90), _rnd.randint(10, 30)
+                total = verm + lar + amar + verde + azul
+                try:
+                    AtendimentoUrgencia.objects.create(
+                        empresa=empresa, unidade=u, tipo_unidade=tipos_urg[u_i % len(tipos_urg)],
+                        data_atendimento=hoje - datetime.timedelta(days=d),
+                        total_atendimentos=total, vermelho=verm, laranja=lar,
+                        amarelo=amar, verde=verde, azul=azul,
+                        obitos=_rnd.randint(0, 1),
+                        tempo_espera_medio_min=_rnd.randint(15, 120),
+                    )
+                except Exception:
+                    pass
+
+        # ── ACS + Visitas domiciliares (e-SUS CDS)
+        acs_objs = []
+        nomes_acs = ["Maria Aparecida", "João Batista", "Ana Cláudia", "Pedro Henrique",
+                     "Luciana Ramos", "Carlos Eduardo", "Fernanda Dias", "Roberto Nunes",
+                     "Patrícia Gomes", "Sandro Vieira"]
+        for idx, nome in enumerate(nomes_acs):
+            try:
+                a = AgenteComunidadeSaude.objects.create(
+                    empresa=empresa, nome=nome, registro=f"ACS-{idx+1:04d}",
+                    cnes_usf=f"20799{idx:02d}"[-7:], ine_equipe=f"00000{idx:05d}"[-10:],
+                    microarea=f"{idx+1:02d}", municipio_ibge="3550308", ativo=True,
+                    data_admissao=hoje - datetime.timedelta(days=_rnd.randint(200, 1500)),
+                )
+                acs_objs.append(a)
+            except Exception:
+                pass
+        motivos_vis = ["visita_rotineira", "acompanhamento", "pre_natal", "puericultura",
+                       "pessoa_idosa", "portador_doenca_cronica", "busca_ativa"]
+        pacientes = ["José Santos", "Marta Oliveira", "Antônio Silva", "Rita Pereira",
+                     "Francisco Lima", "Cláudia Rocha", "Manoel Souza", "Vera Costa"]
+        if acs_objs:
+            for i in range(36):
+                acs = _rnd.choice(acs_objs)
+                gest = i % 7 == 0
+                try:
+                    VisitaDomiciliar.objects.create(
+                        empresa=empresa, acs=acs,
+                        paciente_nome=_rnd.choice(pacientes),
+                        data_visita=hoje - datetime.timedelta(days=i % 20),
+                        turno=_rnd.choice(["M", "T"]),
+                        motivo=_rnd.choice(motivos_vis),
+                        desfecho="visita_realizada",
+                        peso_kg=_rnd.choice([None, round(_rnd.uniform(55, 95), 1)]),
+                        pa_sistolica=_rnd.choice([None, _rnd.randint(110, 160)]),
+                        pa_diastolica=_rnd.choice([None, _rnd.randint(70, 100)]),
+                        gestante=gest,
+                        ig_semanas=_rnd.randint(8, 38) if gest else None,
+                        transmitido_esus=i % 3 == 0,
+                    )
+                except Exception:
+                    pass
 
     # ─────────────────────────────────────────────────────────────────────────
     # DADOS DEMO — Plano de Saúde
