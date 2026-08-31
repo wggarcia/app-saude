@@ -1358,8 +1358,8 @@ class ASOOcupacional(models.Model):
     resultado = models.CharField(max_length=20, choices=RESULTADO, default="apto")
     cid_inapto = models.CharField(max_length=10, blank=True, verbose_name="CID (quando inapto/restrito)")
     riscos_ocupacionais = models.TextField(blank=True, verbose_name="Riscos ocupacionais do cargo (NR-7)")
-    restricoes = models.TextField(blank=True)
-    observacoes = models.TextField(blank=True)
+    restricoes = EncryptedTextField(blank=True)  # LGPD: restrições de aptidão (saúde do trabalhador)
+    observacoes = EncryptedTextField(blank=True)  # LGPD: observação clínica do ASO
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1392,9 +1392,9 @@ class ExameOcupacional(models.Model):
     tipo_exame = models.CharField(max_length=30, choices=TIPO_EXAME)
     data_realizacao = models.DateField(null=True, blank=True)
     data_validade = models.DateField(null=True, blank=True)
-    resultado = models.CharField(max_length=200, blank=True)
+    resultado = EncryptedTextField(blank=True)  # LGPD: resultado de exame ocupacional (saúde)
     status = models.CharField(max_length=20, choices=STATUS, default="pendente")
-    observacoes = models.TextField(blank=True)
+    observacoes = EncryptedTextField(blank=True)  # LGPD: observação clínica do exame
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1756,7 +1756,7 @@ class AfastamentoSST(models.Model):
     data_prevista_retorno = models.DateField(null=True, blank=True)
     data_retorno_real = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=30, choices=STATUS, default=STATUS_ATIVO)
-    observacoes = models.TextField(blank=True)
+    observacoes = EncryptedTextField(blank=True)  # LGPD: motivo/observação do afastamento (saúde)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
@@ -4123,7 +4123,7 @@ class GuiaAutorizacao(models.Model):
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     numero_guia = models.CharField(max_length=50, blank=True, default="")
     codigo_procedimento = models.CharField(max_length=20, blank=True, default="")
-    descricao_procedimento = models.TextField()
+    descricao_procedimento = EncryptedTextField()  # LGPD: procedimento/condição do beneficiário
     cid = models.CharField(max_length=10, blank=True, default="")
     medico_solicitante = models.CharField(max_length=150, blank=True, default="")
     crm_medico = models.CharField(max_length=30, blank=True, default="")
@@ -4134,9 +4134,9 @@ class GuiaAutorizacao(models.Model):
     fila_status = models.CharField(max_length=30, choices=FILA_CHOICES, default=FILA_TRIAGEM)
     auditor_responsavel = models.CharField(max_length=150, blank=True, default="")
     prazo_sla_em = models.DateTimeField(null=True, blank=True)
-    observacao_auditoria = models.TextField(blank=True, default="")
+    observacao_auditoria = EncryptedTextField(blank=True, default="")  # LGPD: parecer clínico de auditoria
     documentos_pendentes = models.TextField(blank=True, default="")
-    justificativa_negativa = models.TextField(blank=True, default="")
+    justificativa_negativa = EncryptedTextField(blank=True, default="")  # LGPD: motivo clínico da negativa
     numero_autorizacao = models.CharField(max_length=50, blank=True, default="")
     validade_autorizacao = models.DateField(null=True, blank=True)
     solicitada_em = models.DateTimeField(auto_now_add=True)
@@ -4212,7 +4212,7 @@ class Sinistro(models.Model):
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="consulta")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aberto")
     cid = models.CharField(max_length=10, blank=True, default="")
-    descricao_procedimento = models.TextField(blank=True, default="")
+    descricao_procedimento = EncryptedTextField(blank=True, default="")  # LGPD: procedimento do sinistro
     prestador = models.CharField(max_length=200, blank=True, default="")
     medico = models.CharField(max_length=150, blank=True, default="")
     data_atendimento = models.DateField(null=True, blank=True)
@@ -4220,7 +4220,7 @@ class Sinistro(models.Model):
     valor_pago = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     data_abertura = models.DateTimeField(auto_now_add=True)
     data_fechamento = models.DateTimeField(null=True, blank=True)
-    observacao = models.TextField(blank=True, default="")
+    observacao = EncryptedTextField(blank=True, default="")  # LGPD: observação clínica do sinistro
 
     class Meta:
         ordering = ["-data_abertura"]
@@ -4268,8 +4268,8 @@ class Reembolso(models.Model):
     banco = models.CharField(max_length=100, blank=True, default="")
     agencia = models.CharField(max_length=20, blank=True, default="")
     conta = models.CharField(max_length=30, blank=True, default="")
-    descricao = models.TextField(blank=True, default="")
-    observacao = models.TextField(blank=True, default="")
+    descricao = EncryptedTextField(blank=True, default="")  # LGPD: descrição da despesa médica (reembolso)
+    observacao = EncryptedTextField(blank=True, default="")  # LGPD: observação do reembolso
 
     class Meta:
         ordering = ["-data_solicitacao"]
