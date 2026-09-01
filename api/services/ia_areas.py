@@ -139,6 +139,115 @@ def _opme_justificativa(features, decisao):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# ÁREA: RISCO DE GLOSA (Faturamento — lado PRESTADOR)
+# Aprende com o desfecho real das guias TISS do hospital (pagas x glosadas) para
+# prever, ANTES do envio, o risco de uma guia nova ser glosada. Complementa o
+# motor determinístico de anti_glosa.py (as regras bloqueiam; a IA prioriza).
+# ═══════════════════════════════════════════════════════════════════════════
+
+RISCO_GLOSA_FEATURES = [
+    "n_procedimentos", "valor_total", "valor_medio_item",
+    "tem_cid", "tem_carteirinha", "tem_operadora",
+    "tem_item_sem_codigo", "tem_item_valor_zero",
+]
+
+
+def _rg_features_de_dict(d):
+    """Features de uma guia TISS (dict com os campos crus). Tudo derivável da
+    guia + itens, sem consulta externa."""
+    procs = d.get("procedimentos") or []
+    n = len(procs)
+    soma = 0.0
+    tem_sem_codigo = False
+    tem_valor_zero = False
+    for p in procs:
+        cod = str(p.get("codigo", "") or "").strip()
+        if not cod or cod == "0":
+            tem_sem_codigo = True
+        try:
+            vu = float(p.get("valor_unitario") or 0)
+            qt = float(p.get("quantidade") or 1)
+        except (TypeError, ValueError):
+            vu, qt = 0.0, 1.0
+        if vu <= 0:
+            tem_valor_zero = True
+        soma += vu * qt
+    try:
+        apresentado = float(d.get("valor_apresentado") or 0)
+    except (TypeError, ValueError):
+        apresentado = 0.0
+    valor_total = apresentado if apresentado > 0 else soma
+    return {
+        "n_procedimentos": n,
+        "valor_total": round(valor_total, 2),
+        "valor_medio_item": round(valor_total / n, 2) if n else 0.0,
+        "tem_cid": int(bool(str(d.get("cid10", "") or "").strip())),
+        "tem_carteirinha": int(bool(str(d.get("beneficiario_carteirinha", "") or "").strip())),
+        "tem_operadora": int(bool(str(d.get("operadora_codigo", "") or "").strip())),
+        "tem_item_sem_codigo": int(tem_sem_codigo),
+        "tem_item_valor_zero": int(tem_valor_zero),
+    }
+
+
+def _rg_dataset_real(empresa_id):
+    """Exemplos rotulados a partir das guias já DECIDIDAS do hospital.
+    Ground truth: glosada (status glosada ou aprovado < apresentado) x paga."""
+    from api.models import GuiaTISS
+    exemplos = []
+    qs = GuiaTISS.objects.filter(empresa_id=empresa_id, status__in=["glosada", "paga"])
+    for g in qs:
+        try:
+            apres = float(g.valor_apresentado or 0)
+            aprov = float(g.valor_aprovado or 0)
+        except (TypeError, ValueError):
+            apres, aprov = 0.0, 0.0
+        glosou = g.status == "glosada" or (apres > 0 and aprov < apres * 0.99)
+        exemplos.append({
+            "procedimentos": g.procedimentos or [],
+            "cid10": g.cid10,
+            "beneficiario_carteirinha": g.beneficiario_carteirinha,
+            "operadora_codigo": g.operadora_codigo,
+            "valor_apresentado": apres,
+            "label": "glosada" if glosou else "paga",
+        })
+    return exemplos
+
+
+def _rg_dataset_sintetico():
+    """Bootstrap: guia completa e coerente → paga; guia com faltas graves ou
+    valor destoante → glosada. Só inicializa antes de haver histórico real."""
+    ex = []
+    for _ in range(10):  # limpas → pagas
+        ex.append({"procedimentos": [{"codigo": "10101012", "valor_unitario": 100, "quantidade": 1}],
+                   "cid10": "J06", "beneficiario_carteirinha": "123456", "operadora_codigo": "654321",
+                   "valor_apresentado": 100.0, "label": "paga"})
+    for _ in range(8):   # faltas graves → glosadas
+        ex.append({"procedimentos": [{"codigo": "0", "valor_unitario": 0, "quantidade": 1}],
+                   "cid10": "", "beneficiario_carteirinha": "", "operadora_codigo": "",
+                   "valor_apresentado": 0.0, "label": "glosada"})
+    for _ in range(6):   # valor muito destoante → glosada (parcial)
+        ex.append({"procedimentos": [{"codigo": "10101012", "valor_unitario": 5000, "quantidade": 4}],
+                   "cid10": "J06", "beneficiario_carteirinha": "123456", "operadora_codigo": "654321",
+                   "valor_apresentado": 99000.0, "label": "glosada"})
+    return ex
+
+
+def _rg_justificativa(features, decisao):
+    m = []
+    if not features["tem_cid"]: m.append("CID ausente")
+    if not features["tem_carteirinha"]: m.append("carteirinha ausente")
+    if not features["tem_operadora"]: m.append("operadora ausente")
+    if features["tem_item_sem_codigo"]: m.append("item sem código TUSS")
+    if features["tem_item_valor_zero"]: m.append("item com valor zerado")
+    if decisao == "glosada" and not m:
+        m.append("composição/valor parecidos com guias glosadas anteriores")
+    if decisao == "paga" and not m:
+        m.append("composição em conformidade com o histórico pago")
+    acao = "Alto risco de glosa" if decisao == "glosada" else "Baixo risco de glosa"
+    return f"{acao} — " + "; ".join(m) + "."
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Registry de áreas
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -150,6 +259,14 @@ AREAS = {
         "dataset_real": _opme_dataset_real,
         "dataset_sintetico": _opme_dataset_sintetico,
         "justificativa": _opme_justificativa,
+    },
+    "risco_glosa": {
+        "label": "Risco de glosa — Faturamento TISS (prestador)",
+        "features": RISCO_GLOSA_FEATURES,
+        "extrair": _rg_features_de_dict,
+        "dataset_real": _rg_dataset_real,
+        "dataset_sintetico": _rg_dataset_sintetico,
+        "justificativa": _rg_justificativa,
     },
 }
 

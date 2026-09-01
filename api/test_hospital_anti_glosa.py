@@ -19,7 +19,7 @@ from django.test import Client, TestCase
 from django.utils import timezone
 
 from .models import Empresa, GuiaTISS
-from .services.anti_glosa import criticar_guia_tiss
+from .services.anti_glosa import criticar_guia_tiss, criticar_guia_completa, risco_glosa_ia
 
 
 def _client_for(empresa):
@@ -172,3 +172,52 @@ class AntiGlosaEndpointTests(TestCase):
         client = _client_for(empresa)
         r = client.get(f"/api/hospital/tiss/{g.id}/criticar/", secure=True)
         self.assertEqual(r.status_code, 403)
+
+
+class AntiGlosaIATests(TestCase):
+    """Fase 2 — IA de risco-de-glosa (motor ML por área, bootstrap sintético)."""
+
+    def test_ia_infere_risco_alto_para_guia_problematica(self):
+        empresa = _empresa_hospital("iag1@example.com")
+        ruim = _guia_limpa(empresa, cid10="", beneficiario_carteirinha="", operadora_codigo="",
+                           procedimentos=[{"tabela": "22", "codigo": "0", "descricao": "",
+                                           "quantidade": 1, "valor_unitario": 0}],
+                           valor_apresentado=0)
+        r = risco_glosa_ia(ruim)
+        self.assertIsNotNone(r)
+        self.assertGreaterEqual(r["risco_ia"], 0)
+        self.assertLessEqual(r["risco_ia"], 100)
+        self.assertIn(r["decisao_ia"], {"glosada", "paga"})
+
+    def test_ia_risco_maior_na_ruim_que_na_limpa(self):
+        empresa = _empresa_hospital("iag2@example.com")
+        limpa = _guia_limpa(empresa)
+        ruim = _guia_limpa(empresa, cid10="", beneficiario_carteirinha="", operadora_codigo="",
+                           procedimentos=[{"tabela": "22", "codigo": "0", "descricao": "",
+                                           "quantidade": 1, "valor_unitario": 0}],
+                           valor_apresentado=0)
+        r_limpa = risco_glosa_ia(limpa)
+        r_ruim = risco_glosa_ia(ruim)
+        self.assertIsNotNone(r_limpa)
+        self.assertIsNotNone(r_ruim)
+        # o modelo bootstrap deve enxergar mais risco na guia com faltas graves
+        self.assertGreater(r_ruim["risco_ia"], r_limpa["risco_ia"])
+
+    def test_completa_inclui_ia_e_score_combinado(self):
+        empresa = _empresa_hospital("iag3@example.com")
+        g = _guia_limpa(empresa, cid10="")  # tem bloqueio determinístico
+        full = criticar_guia_completa(g)
+        self.assertIn("ia", full)
+        self.assertIn("score_risco_combinado", full)
+        self.assertTrue(full["bloqueia"])  # regra ainda manda no bloqueio
+        self.assertGreaterEqual(full["score_risco_combinado"], full["score_risco"])
+
+    def test_endpoint_criticar_traz_ia(self):
+        empresa = _empresa_hospital("iag4@example.com")
+        g = _guia_limpa(empresa)
+        client = _client_for(empresa)
+        r = client.get(f"/api/hospital/tiss/{g.id}/criticar/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertIn("ia", body)
+        self.assertIn("score_risco_combinado", body)

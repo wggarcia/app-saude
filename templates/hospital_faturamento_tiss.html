@@ -436,12 +436,16 @@ function mostrarCritica(c, guiaId, bloqueado){
   ov.innerHTML = `
     <div style="background:#0b1220;border:1px solid ${cor};border-radius:12px;max-width:640px;width:100%;max-height:80vh;overflow:auto;padding:22px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-        <div style="font-size:26px;font-weight:800;color:${cor}">${c.score_risco}</div>
+        <div style="font-size:26px;font-weight:800;color:${cor}">${c.score_risco_combinado ?? c.score_risco}</div>
         <div>
           <div style="font-size:15px;font-weight:700;color:#f3f4f6">🛡️ Crítica anti-glosa</div>
           <div style="font-size:12px;color:#9ca3af">Risco de glosa (0–100) · ${c.resumo}</div>
         </div>
       </div>
+      ${c.ia?`<div style="display:flex;align-items:center;gap:8px;background:rgba(96,165,250,.1);border:1px solid #3b82f6;border-radius:6px;padding:8px 10px;margin:6px 0;font-size:12px;color:#bfdbfe">
+        <span style="font-weight:800">🤖 IA ${c.ia.risco_ia}%</span>
+        <span style="color:#93c5fd">${c.ia.justificativa_ia||''}</span>
+      </div>`:''}
       ${bloqueado?`<div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;color:#fca5a5;font-size:12px;padding:8px 10px;border-radius:6px;margin:10px 0">Envio bloqueado até corrigir os itens em vermelho (ou forçar).</div>`:''}
       <div style="margin-top:12px">${linhas}</div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">

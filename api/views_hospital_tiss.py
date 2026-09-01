@@ -27,7 +27,7 @@ from .access_control import (
     requer_permissao_modulo,
 )
 from .models import GuiaTISS
-from .services.anti_glosa import criticar_guia_tiss
+from .services.anti_glosa import criticar_guia_tiss, criticar_guia_completa
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
 
 
@@ -263,7 +263,7 @@ def api_tiss_criticar(request, guia_id):
         guia = GuiaTISS.objects.get(pk=guia_id, empresa=empresa)
     except GuiaTISS.DoesNotExist:
         return JsonResponse({"erro": "Guia não encontrada"}, status=404)
-    return JsonResponse(criticar_guia_tiss(guia))
+    return JsonResponse(criticar_guia_completa(guia))
 
 
 # ─── API: KPIs TISS ───────────────────────────────────────────────────────────

@@ -312,3 +312,40 @@ def criticar_guia_tiss(guia):
         "score_risco": score,
         "resumo": resumo,
     }
+
+
+# ── Fase 2: IA de risco-de-glosa (motor ML por área, isolado por tenant) ─────
+
+def risco_glosa_ia(guia):
+    """Score PREDITIVO de risco de glosa (0-100) via IA por área, treinada com o
+    histórico de guias pagas x glosadas do próprio hospital. Best-effort: retorna
+    None se o motor de IA não estiver disponível ou os dados forem insuficientes."""
+    try:
+        from api.services.ia_areas import inferir
+        dados = {
+            "procedimentos": guia.procedimentos or [],
+            "cid10": guia.cid10,
+            "beneficiario_carteirinha": guia.beneficiario_carteirinha,
+            "operadora_codigo": guia.operadora_codigo,
+            "valor_apresentado": float(guia.valor_apresentado or 0),
+        }
+        r = inferir("risco_glosa", guia.empresa_id, dados)
+        prob_glosa = float(r.get("scores_por_classe", {}).get("glosada", 0.0))
+        return {
+            "risco_ia": round(prob_glosa * 100),
+            "decisao_ia": r.get("decisao"),
+            "justificativa_ia": r.get("justificativa_ia", ""),
+            "modelo": r.get("modelo", ""),
+        }
+    except Exception:
+        return None
+
+
+def criticar_guia_completa(guia):
+    """Crítica determinística (Fase 1) + risco preditivo por IA (Fase 2).
+    As REGRAS bloqueiam o envio; a IA apenas prioriza (advisory)."""
+    base = criticar_guia_tiss(guia)
+    ia = risco_glosa_ia(guia)
+    base["ia"] = ia
+    base["score_risco_combinado"] = max(base["score_risco"], ia["risco_ia"]) if ia else base["score_risco"]
+    return base
