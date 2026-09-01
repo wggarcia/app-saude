@@ -2888,6 +2888,51 @@ def mapa_casos(request):
     return JsonResponse(resultado, safe=False)
 
 
+# ── Cache de endpoints públicos read-only (dado nacional/regional) ───────────
+# Estes endpoints recomputam agregações pesadas (~10 queries) a cada request e o
+# app dispara vários juntos ao atualizar — saturando os poucos workers gunicorn
+# (request que estoura no cliente segue rodando no servidor, segurando worker +
+# conexão → cascata de lentidão). O decorator cacheia os BYTES da resposta JSON
+# por query param (só GET 200). Dado público, sem variação por usuário → chave
+# global. Falha de cache degrada p/ recomputar (Redis já usa IGNORE_EXCEPTIONS).
+import hashlib as _hashlib_pub
+from functools import wraps as _wraps_pub
+from django.core.cache import cache as _pub_cache
+
+_APP_PUBLICO_CACHE_TTL = 30  # segundos — epi nacional muda em escala de dias
+
+
+def _cache_publico(prefix, ttl=_APP_PUBLICO_CACHE_TTL):
+    def deco(view):
+        @_wraps_pub(view)
+        def wrapped(request, *args, **kwargs):
+            if request.method != "GET":
+                return view(request, *args, **kwargs)
+            qs = "&".join(f"{k}={v}" for k, v in sorted(request.GET.items()))
+            key = f"pubcache:{prefix}:v1:" + _hashlib_pub.md5(qs.encode()).hexdigest()[:16]
+            try:
+                hit = _pub_cache.get(key)
+            except Exception:
+                hit = None
+            if hit is not None:
+                resp = HttpResponse(hit["b"], content_type="application/json")
+                if hit.get("cc"):
+                    resp["Cache-Control"] = hit["cc"]
+                resp["X-Cache"] = "HIT"
+                return resp
+            resp = view(request, *args, **kwargs)
+            try:
+                if getattr(resp, "status_code", 0) == 200 and hasattr(resp, "content"):
+                    _pub_cache.set(key, {"b": resp.content, "cc": resp.get("Cache-Control", "")}, ttl)
+                    resp["X-Cache"] = "MISS"
+            except Exception:
+                pass
+            return resp
+        return wrapped
+    return deco
+
+
+@_cache_publico("app_vigilancia")
 def app_vigilancia_resumo(request):
     """
     Resumo epidemiológico nacional (mesma fonte do console admin):
@@ -2901,6 +2946,7 @@ def app_vigilancia_resumo(request):
     return response
 
 
+@_cache_publico("app_resumo")
 def app_resumo_publico(request):
     # ── RLS: garante visibilidade dos registros públicos ─────────────────────
     from api.middleware import _rls_set_empresa as _set_rls
@@ -3030,6 +3076,7 @@ def app_resumo_publico(request):
     return response
 
 
+@_cache_publico("app_radar")
 def app_radar_local(request):
     # ── RLS: garante visibilidade dos registros públicos ─────────────────────
     from api.middleware import _rls_set_empresa as _set_rls
@@ -3175,6 +3222,7 @@ def _risk_level_para_nivel_publico(risk_level):
     return "baixo"
 
 
+@_cache_publico("app_mapa")
 def app_mapa_publico(request):
     """
     Mapa de focos do app da população.
