@@ -319,3 +319,26 @@ class GlosaRecebidaRecursoTests(TestCase):
         client = _client_for(empresa)
         r = client.get("/api/hospital/glosas/", secure=True)
         self.assertEqual(r.status_code, 403)
+
+
+class AntiGlosaCockpitTests(TestCase):
+    """Fase 4 — cockpit consolidado."""
+
+    def test_cockpit_renderiza_e_esta_wired(self):
+        empresa = _empresa_hospital("cok1@example.com")
+        client = _client_for(empresa)
+        r = client.get("/hospital/anti-glosa/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn("Anti-Glosa Inteligente", html)
+        # ligado aos endpoints reais das 4 fases
+        self.assertIn("/api/hospital/tiss/?status=elaborada", html)
+        self.assertIn("/criticar/", html)
+        self.assertIn("/api/hospital/glosas/", html)
+        self.assertIn("sugerir-recurso", html)
+
+    def test_cockpit_gate_tier_baixo(self):
+        empresa = _empresa_hospital("cok2@example.com", pacote="hospital_medio")
+        client = _client_for(empresa)
+        r = client.get("/hospital/anti-glosa/", secure=True)
+        self.assertNotEqual(r.status_code, 200)  # bloqueado (upgrade/redirect)

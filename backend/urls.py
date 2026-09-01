@@ -689,6 +689,7 @@ from api.views_hospital_tiss import (
     api_tiss_criticar,
 )
 from api.views_hospital_glosa import (
+    hospital_anti_glosa_page,
     api_glosa_registrar,
     api_glosas_lista,
     api_glosa_sugerir_recurso,
@@ -1619,6 +1620,7 @@ urlpatterns = [
     path('hospital/imagem/', hospital_imagem_page),
     path('hospital/farmacia-hospitalar/', hospital_farmacia_page),
     path('hospital/faturamento-tiss/', hospital_tiss_page),
+    path('hospital/anti-glosa/', hospital_anti_glosa_page),
     path('governo/gestao/', governo_gestao_page),
     path('governo/pec/', governo_pec_page),
     path('governo/farmacia-basica/', governo_farmacia_basica_page),

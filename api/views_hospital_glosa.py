@@ -11,14 +11,32 @@ from decimal import Decimal, InvalidOperation
 
 from django.db.models import Sum
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_feature, api_requer_permissao_modulo
+from .access_control import (
+    api_requer_feature, api_requer_permissao_modulo,
+    requer_setor, requer_feature_pacote, requer_operacao_page, requer_permissao_modulo,
+)
 from .models import GuiaTISS, GlosaRecebida, RecursoGlosaPrestador
 from .views_hospital_tiss import _empresa as _empresa_hospital
+from .views_dashboard import contexto_navegacao_setorial
 from .views_plano_portal_prestador import _ia_merito_recurso
+
+
+# ── Cockpit Anti-Glosa (Fase 4) ──────────────────────────────────────────────
+
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.anti_glosa", "Anti-Glosa")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.operacional")
+def hospital_anti_glosa_page(request):
+    return render(request, "hospital_anti_glosa.html",
+                  contexto_navegacao_setorial(request, "hospital"))
 
 
 # ── Sugestão de texto de recurso por código de glosa (parte editável) ────────
