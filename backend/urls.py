@@ -686,6 +686,7 @@ from api.views_hospital_tiss import (
     api_tiss_atualizar_status,
     api_tiss_kpis,
     api_tiss_gerar_xml,
+    api_tiss_criticar,
 )
 from api.views_plano_tiss_recepcao import (
     api_tiss_recepcao_importar,
@@ -2349,6 +2350,7 @@ urlpatterns = [
     path('api/hospital/tiss/kpis/', api_tiss_kpis),
     path('api/hospital/tiss/<int:guia_id>/status/', api_tiss_atualizar_status),
     path('api/hospital/tiss/<int:guia_id>/xml/', api_tiss_gerar_xml),
+    path('api/hospital/tiss/<int:guia_id>/criticar/', api_tiss_criticar),
     # ── Rede / Network ───────────────────────────────────────────
     path('api/rede/', api_redes),
     path('api/rede/convidar/', api_rede_convidar),

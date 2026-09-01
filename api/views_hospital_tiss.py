@@ -18,6 +18,7 @@ from .access_control import (
     api_requer_permissao_modulo,
     api_requer_feature,
     api_requer_gerencia,
+    empresa_tem_feature,
     get_setor,
     principal_pode_operacao_setorial,
     requer_setor,
@@ -26,6 +27,7 @@ from .access_control import (
     requer_permissao_modulo,
 )
 from .models import GuiaTISS
+from .services.anti_glosa import criticar_guia_tiss
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
 
 
@@ -223,11 +225,45 @@ def api_tiss_atualizar_status(request, guia_id):
         except InvalidOperation:
             return JsonResponse({"erro": "valor_apresentado inválido"}, status=400)
 
-    if novo_status == "enviada" and not guia.data_autorizacao:
-        guia.data_autorizacao = timezone.now()
+    # ── Anti-glosa: crítica PRÉ-ENVIO ────────────────────────────────────────
+    # Ao passar para "enviada", assinantes do pacote anti-glosa têm a guia
+    # criticada antes de ir à operadora. Erro que bloqueia (ex.: CID ausente,
+    # item sem código) impede o envio a menos que o usuário force explicitamente.
+    if novo_status == "enviada":
+        if empresa_tem_feature(empresa, "hospital.anti_glosa"):
+            critica = criticar_guia_tiss(guia)
+            if critica["bloqueia"] and not data.get("forcar"):
+                return JsonResponse({
+                    "erro": "Envio bloqueado pela crítica anti-glosa.",
+                    "critica": critica,
+                    "pode_forcar": True,
+                }, status=422)
+        if not guia.data_autorizacao:
+            guia.data_autorizacao = timezone.now()
 
     guia.save()
     return JsonResponse({"ok": True, "guia": _guia_to_dict(guia)})
+
+
+# ─── API: Crítica anti-glosa pré-envio ───────────────────────────────────────
+
+@api_requer_feature("hospital.anti_glosa")
+@api_requer_permissao_modulo("hospital.operacional")
+@require_http_methods(["GET"])
+def api_tiss_criticar(request, guia_id):
+    """
+    Roda a crítica anti-glosa sobre uma guia SEM enviá-la (pré-visualização).
+    O cockpit chama isto para mostrar o semáforo de risco e as ocorrências antes
+    do usuário decidir enviar. GET /api/hospital/tiss/<guia_id>/criticar/
+    """
+    empresa = _empresa(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+    try:
+        guia = GuiaTISS.objects.get(pk=guia_id, empresa=empresa)
+    except GuiaTISS.DoesNotExist:
+        return JsonResponse({"erro": "Guia não encontrada"}, status=404)
+    return JsonResponse(criticar_guia_tiss(guia))
 
 
 # ─── API: KPIs TISS ───────────────────────────────────────────────────────────

@@ -271,6 +271,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modalAtualizarGuia')">Cancelar</button>
+      <button class="btn btn-ghost" onclick="criticarGuiaAtual()" title="Roda a crítica anti-glosa sem enviar">🛡️ Criticar</button>
       <button class="btn btn-primary" onclick="atualizarGuia()">Salvar</button>
     </div>
   </div>
@@ -400,6 +401,69 @@ async function atualizarGuia(){
   const res = await fetch(`/api/hospital/tiss/${id}/status/`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   const d = await res.json();
   if(d.ok){ toast('Guia atualizada'); closeModal('modalAtualizarGuia'); loadGuias(); loadKpis(); }
+  else if(res.status===422 && d.critica){ mostrarCritica(d.critica, id, true); }
+  else toast(d.erro||'Erro','error');
+}
+
+// ── Anti-glosa: crítica pré-envio ─────────────────────────────────────────
+const SEV_COR = {bloqueia:'#ef4444', alerta:'#f59e0b', info:'#60a5fa'};
+const SEV_LABEL = {bloqueia:'BLOQUEIA', alerta:'ALERTA', info:'INFO'};
+
+async function criticarGuiaAtual(){
+  const id = document.getElementById('editGuiaId').value;
+  if(!id) return;
+  const r = await fetch(`/api/hospital/tiss/${id}/criticar/`);
+  if(!r.ok){ toast('Não foi possível criticar','error'); return; }
+  mostrarCritica(await r.json(), id, false);
+}
+
+function mostrarCritica(c, guiaId, bloqueado){
+  document.getElementById('critica-overlay')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'critica-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+  const cor = c.bloqueia ? SEV_COR.bloqueia : (c.por_severidade.alerta ? SEV_COR.alerta : '#22c55e');
+  const linhas = (c.ocorrencias||[]).map(o=>`
+    <div style="display:flex;gap:10px;padding:10px 12px;border-left:3px solid ${SEV_COR[o.severidade]||'#888'};background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:8px">
+      <span style="font-size:10px;font-weight:800;color:${SEV_COR[o.severidade]||'#888'};min-width:64px">${SEV_LABEL[o.severidade]||o.severidade}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;color:#e5e7eb">${o.mensagem}</div>
+        ${o.sugestao?`<div style="font-size:12px;color:#9ca3af;margin-top:3px">💡 ${o.sugestao}</div>`:''}
+      </div>
+    </div>`).join('') || '<div style="color:#9ca3af;padding:12px">Nenhuma ocorrência — guia pronta para envio. ✅</div>';
+  const botaoForcar = bloqueado
+    ? `<button class="btn btn-primary" style="background:#ef4444" onclick="forcarEnvioAtual('${guiaId}')">Forçar envio mesmo assim</button>` : '';
+  ov.innerHTML = `
+    <div style="background:#0b1220;border:1px solid ${cor};border-radius:12px;max-width:640px;width:100%;max-height:80vh;overflow:auto;padding:22px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <div style="font-size:26px;font-weight:800;color:${cor}">${c.score_risco}</div>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#f3f4f6">🛡️ Crítica anti-glosa</div>
+          <div style="font-size:12px;color:#9ca3af">Risco de glosa (0–100) · ${c.resumo}</div>
+        </div>
+      </div>
+      ${bloqueado?`<div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;color:#fca5a5;font-size:12px;padding:8px 10px;border-radius:6px;margin:10px 0">Envio bloqueado até corrigir os itens em vermelho (ou forçar).</div>`:''}
+      <div style="margin-top:12px">${linhas}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-ghost" onclick="document.getElementById('critica-overlay').remove()">Fechar</button>
+        ${botaoForcar}
+      </div>
+    </div>`;
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
+async function forcarEnvioAtual(id){
+  const body = {
+    status: 'enviada',
+    valor_aprovado: parseFloat(document.getElementById('editAprovado').value)||0,
+    valor_apresentado: parseFloat(document.getElementById('editApresentado').value)||0,
+    forcar: true,
+  };
+  const res = await fetch(`/api/hospital/tiss/${id}/status/`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  document.getElementById('critica-overlay')?.remove();
+  if(d.ok){ toast('Guia enviada (forçada)'); closeModal('modalAtualizarGuia'); loadGuias(); loadKpis(); }
   else toast(d.erro||'Erro','error');
 }
 
