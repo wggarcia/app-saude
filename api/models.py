@@ -8162,6 +8162,66 @@ class GuiaTISS(models.Model):
         ordering = ["-criado_em"]
 
 
+class GlosaRecebida(models.Model):
+    """Glosa que o PRESTADOR (hospital) RECEBEU da operadora sobre uma guia
+    enviada — item a item. É o espelho, do lado de quem sofre a glosa e vai
+    recorrer, do ItemContaTISS (lado operadora). Fase 3 do módulo Anti-Glosa."""
+    ORIGEM_CHOICES = [
+        ("manual", "Registro manual"),
+        ("xml_retorno", "XML de retorno TISS"),
+        ("demonstrativo", "Demonstrativo de pagamento"),
+    ]
+    STATUS_CHOICES = [
+        ("recebida", "Recebida"),
+        ("em_recurso", "Em recurso"),
+        ("encerrada", "Encerrada"),
+    ]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="glosas_recebidas")
+    guia = models.ForeignKey(GuiaTISS, on_delete=models.CASCADE, related_name="glosas_recebidas")
+    protocolo_operadora = models.CharField(max_length=60, blank=True, default="")
+    data_glosa = models.DateField(null=True, blank=True)
+    origem = models.CharField(max_length=20, choices=ORIGEM_CHOICES, default="manual")
+    valor_glosado_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    # [{codigo, descricao, codigo_glosa, motivo_glosa, valor_glosado}]
+    itens = models.JSONField(default=list)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="recebida")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+
+class RecursoGlosaPrestador(models.Model):
+    """Recurso que o hospital abre contra uma glosa recebida. Reaproveita a
+    heurística de mérito do portal do prestador (lado operadora) para pré-pontuar
+    a chance de deferimento e sugerir prioridade. Fase 3 do módulo Anti-Glosa."""
+    STATUS_CHOICES = [
+        ("aberto", "Aberto"),
+        ("enviado", "Enviado à operadora"),
+        ("deferido", "Deferido"),
+        ("parcial", "Deferido parcial"),
+        ("indeferido", "Indeferido"),
+    ]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="recursos_glosa_prestador")
+    glosa = models.ForeignKey(GlosaRecebida, on_delete=models.CASCADE, related_name="recursos")
+    codigo_glosa = models.CharField(max_length=10, blank=True, default="")
+    justificativa = models.TextField(blank=True, default="")
+    ia_merito_score = models.PositiveSmallIntegerField(default=0)
+    ia_parecer = models.TextField(blank=True, default="")
+    valor_recorrido = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    valor_recuperado = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    protocolo = models.CharField(max_length=60, blank=True, default="")
+    resposta_operadora = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aberto")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 # GOVERNO — e-SUS / PEC / FATURAMENTO SUS / FARMÁCIA BÁSICA / REGULAÇÃO /
 #           TELECONSULTA / RAG-RDQA

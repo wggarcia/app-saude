@@ -688,6 +688,13 @@ from api.views_hospital_tiss import (
     api_tiss_gerar_xml,
     api_tiss_criticar,
 )
+from api.views_hospital_glosa import (
+    api_glosa_registrar,
+    api_glosas_lista,
+    api_glosa_sugerir_recurso,
+    api_glosa_recurso_abrir,
+    api_recurso_status,
+)
 from api.views_plano_tiss_recepcao import (
     api_tiss_recepcao_importar,
     api_tiss_recepcao_lista,
@@ -2351,6 +2358,12 @@ urlpatterns = [
     path('api/hospital/tiss/<int:guia_id>/status/', api_tiss_atualizar_status),
     path('api/hospital/tiss/<int:guia_id>/xml/', api_tiss_gerar_xml),
     path('api/hospital/tiss/<int:guia_id>/criticar/', api_tiss_criticar),
+    # ── Anti-glosa Fase 3: glosa recebida + recurso ──────────────
+    path('api/hospital/tiss/<int:guia_id>/glosa/', api_glosa_registrar),
+    path('api/hospital/glosas/', api_glosas_lista),
+    path('api/hospital/glosa/<int:glosa_id>/sugerir-recurso/', api_glosa_sugerir_recurso),
+    path('api/hospital/glosa/<int:glosa_id>/recurso/', api_glosa_recurso_abrir),
+    path('api/hospital/recurso/<int:recurso_id>/status/', api_recurso_status),
     # ── Rede / Network ───────────────────────────────────────────
     path('api/rede/', api_redes),
     path('api/rede/convidar/', api_rede_convidar),

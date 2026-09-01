@@ -18,7 +18,7 @@ from django.contrib.auth.hashers import make_password
 from django.test import Client, TestCase
 from django.utils import timezone
 
-from .models import Empresa, GuiaTISS
+from .models import Empresa, GuiaTISS, GlosaRecebida, RecursoGlosaPrestador
 from .services.anti_glosa import criticar_guia_tiss, criticar_guia_completa, risco_glosa_ia
 
 
@@ -221,3 +221,101 @@ class AntiGlosaIATests(TestCase):
         body = r.json()
         self.assertIn("ia", body)
         self.assertIn("score_risco_combinado", body)
+
+
+class GlosaRecebidaRecursoTests(TestCase):
+    """Fase 3 — glosa recebida item-a-item + recurso com IA de mérito."""
+
+    def _registrar_glosa(self, client, guia, valor=40.0, codigo_glosa="1403"):
+        return client.post(
+            f"/api/hospital/tiss/{guia.id}/glosa/",
+            data=json.dumps({
+                "protocolo_operadora": "PROT-1",
+                "itens": [{"codigo": "10101012", "descricao": "Consulta",
+                           "codigo_glosa": codigo_glosa, "motivo_glosa": "Duplicidade",
+                           "valor_glosado": valor}],
+            }),
+            content_type="application/json", secure=True,
+        )
+
+    def test_registrar_glosa_reflete_na_guia(self):
+        empresa = _empresa_hospital("gr1@example.com")
+        g = _guia_limpa(empresa, valor_apresentado=Decimal("100.00"), status="enviada")
+        client = _client_for(empresa)
+        r = self._registrar_glosa(client, g, valor=40.0)
+        self.assertEqual(r.status_code, 201)
+        g.refresh_from_db()
+        self.assertEqual(g.status, "glosada")
+        self.assertEqual(float(g.valor_aprovado), 60.0)  # 100 - 40
+        self.assertEqual(GlosaRecebida.objects.filter(empresa=empresa).count(), 1)
+
+    def test_lista_glosas_e_kpis(self):
+        empresa = _empresa_hospital("gr2@example.com")
+        g = _guia_limpa(empresa, valor_apresentado=Decimal("100.00"), status="enviada")
+        client = _client_for(empresa)
+        self._registrar_glosa(client, g, valor=40.0, codigo_glosa="1403")
+        r = client.get("/api/hospital/glosas/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(len(body["glosas"]), 1)
+        self.assertEqual(body["kpis"]["total_glosado"], 40.0)
+        self.assertTrue(any(m["codigo_glosa"] == "1403" for m in body["kpis"]["top_motivos"]))
+
+    def test_sugerir_recurso_traz_merito_ia(self):
+        empresa = _empresa_hospital("gr3@example.com")
+        g = _guia_limpa(empresa, status="enviada")
+        client = _client_for(empresa)
+        gid = self._registrar_glosa(client, g).json()["glosa"]["id"]
+        r = client.get(f"/api/hospital/glosa/{gid}/sugerir-recurso/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertIn("ia_merito_score", body)
+        self.assertTrue(body["texto_sugerido"])
+        self.assertGreaterEqual(body["ia_merito_score"], 0)
+
+    def test_abrir_recurso_e_deferir_recupera_valor(self):
+        empresa = _empresa_hospital("gr4@example.com")
+        g = _guia_limpa(empresa, valor_apresentado=Decimal("100.00"), status="enviada")
+        client = _client_for(empresa)
+        gid = self._registrar_glosa(client, g, valor=40.0).json()["glosa"]["id"]
+
+        # abrir recurso
+        r = client.post(
+            f"/api/hospital/glosa/{gid}/recurso/",
+            data=json.dumps({"codigo_glosa": "1403",
+                             "justificativa": "Atendimentos distintos registrados em prontuário, com laudo anexo.",
+                             "valor_recorrido": 40.0}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(r.status_code, 201)
+        rec = r.json()["recurso"]
+        self.assertGreater(rec["ia_merito_score"], 0)
+        GlosaRecebida.objects.get(pk=gid)
+        self.assertEqual(GlosaRecebida.objects.get(pk=gid).status, "em_recurso")
+
+        # deferir → recupera valor, guia volta a paga
+        r = client.post(
+            f"/api/hospital/recurso/{rec['id']}/status/",
+            data=json.dumps({"status": "deferido"}),
+            content_type="application/json", secure=True,
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(float(r.json()["recurso"]["valor_recuperado"]), 40.0)
+        g.refresh_from_db()
+        self.assertEqual(float(g.valor_aprovado), 100.0)  # 60 + 40 recuperado
+        self.assertEqual(g.status, "paga")
+        self.assertEqual(GlosaRecebida.objects.get(pk=gid).status, "encerrada")
+
+    def test_isolamento_tenant_glosa(self):
+        emp_a = _empresa_hospital("grA@example.com")
+        emp_b = _empresa_hospital("grB@example.com")
+        g_b = _guia_limpa(emp_b, status="enviada")
+        client_a = _client_for(emp_a)
+        r = self._registrar_glosa(client_a, g_b)  # A tenta glosar guia de B
+        self.assertEqual(r.status_code, 404)
+
+    def test_gate_feature_tier_baixo(self):
+        empresa = _empresa_hospital("grC@example.com", pacote="hospital_medio")
+        client = _client_for(empresa)
+        r = client.get("/api/hospital/glosas/", secure=True)
+        self.assertEqual(r.status_code, 403)
