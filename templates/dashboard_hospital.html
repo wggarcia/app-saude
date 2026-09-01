@@ -1273,7 +1273,9 @@
       };
 
       areas.forEach((area) => {
-        totals.total_cases += Math.round(rawFocusValue(area));
+        // "Casos ativos" do headline = índice que DECAI (não o cru), somado como
+        // float e arredondado 1x no display — igual governo/plano/unificado.
+        totals.total_cases += activeFocusValue(area);
         totals.growth_sum += (area.growth_percent ?? 0);
         totals.maxRisk = Math.max(totals.maxRisk, area.risk_score);
 
