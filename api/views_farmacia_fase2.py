@@ -20,6 +20,7 @@ from django.views.decorators.http import require_http_methods
 from .access_control import (
     get_setor, principal_pode_operacao_setorial, api_requer_feature,
     requer_setor, requer_operacao_page, requer_permissao_modulo,
+    requer_feature_pacote,
 )
 from .models import (
     MedicamentoFarmacia, LoteMedicamento,
@@ -33,6 +34,7 @@ from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 @ensure_csrf_cookie
 @requer_setor("farmacia")
 @requer_operacao_page
+@requer_feature_pacote("farmacia.multi_unidade", "Rede Multi-Unidade")
 @requer_permissao_modulo("farmacia.gestao")
 def farmacia_disponibilidade_rede_page(request):
     return render(request, "farmacia_disponibilidade_rede.html")
