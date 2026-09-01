@@ -33,8 +33,8 @@ from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
 @ensure_csrf_cookie
 @requer_setor("farmacia")
-@requer_operacao_page
 @requer_feature_pacote("farmacia.multi_unidade", "Rede Multi-Unidade")
+@requer_operacao_page
 @requer_permissao_modulo("farmacia.gestao")
 def farmacia_disponibilidade_rede_page(request):
     return render(request, "farmacia_disponibilidade_rede.html")
