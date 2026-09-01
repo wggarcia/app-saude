@@ -55,6 +55,26 @@ class Empresa(models.Model):
     cidade = models.CharField(max_length=100, blank=True, default="")
     uf = models.CharField(max_length=2, blank=True, default="")
 
+    # Conformidade LGPD (Art. 41 — Encarregado de Dados / DPO)
+    dpo_nome = models.CharField(
+        max_length=150, blank=True, default="",
+        verbose_name="Nome do DPO (Encarregado)",
+        help_text="Art. 41 LGPD — encarregado de dados indicado pela empresa.",
+    )
+    dpo_email = models.EmailField(
+        blank=True, default="",
+        verbose_name="E-mail do DPO",
+    )
+    # Política de privacidade aceita pela empresa (como controlador)
+    lgpd_politica_versao = models.CharField(
+        max_length=20, blank=True, default="",
+        verbose_name="Versão da política de privacidade aceita",
+    )
+    lgpd_politica_aceita_em = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Data de aceite da política de privacidade",
+    )
+
     def __str__(self):
         return self.nome
 

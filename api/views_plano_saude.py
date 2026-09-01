@@ -3879,10 +3879,10 @@ def api_ps_telemedicina_autorizar(request, tele_id):
 #  ODONTOLOGIA — beneficiários e guias odontológicas
 # ════════════════════════════════════════════════════════════════════════════════
 
-# TODO: valor estimado — não há hoje um model de contrato/mensalidade
-# odontológica vinculado a BeneficiarioOdonto (ver TODO em api_ps_odontologia).
-# Assim que existir um model real com valor_mensal por vida/contrato,
-# substituir esta constante pela agregação real.
+# Fallback usado no MLR odontológico apenas quando nenhuma vida ativa
+# tem valor_mensalidade preenchido em BeneficiarioOdonto.
+# Quando ao menos uma vida tem valor cadastrado, a agregação real prevalece
+# (ver lógica abaixo em api_ps_odontologia — mlr_fonte="real").
 _MENSALIDADE_ODONTO_ESTIMADA = 80.0
 
 @csrf_exempt

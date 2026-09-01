@@ -207,7 +207,7 @@ from api.views_compliance import (
     api_soc2_controles, api_soc2_evidencias, api_rbac_permissoes, api_rbac_atribuir,
 )
 from api.views_hub import hub_view
-from api.views_relatorio import api_relatorio_executivo, relatorio_page
+from api.views_relatorio import api_relatorio_executivo, relatorio_page, api_dpo_config
 from api.views_financeiro import api_financeiro_metricas, api_financeiro_cohorts, financeiro_page
 from api.views_observabilidade import api_health, api_slo_status, api_slo_incidentes, observabilidade_page
 from api.views_gtm import api_gtm_funil, api_gtm_pipeline, api_gtm_expansao, gtm_page
@@ -1822,6 +1822,7 @@ urlpatterns = [
     path('relatorio-executivo/', relatorio_page),
     path('api/relatorio/executivo/', api_relatorio_executivo),
     path('api/relatorio/executivo', api_relatorio_executivo),
+    path('api/relatorio/dpo-config/', api_dpo_config),
     # Contratos de saúde e séries epidemiológicas
     path('contratos/', contratos_page),
     path('series-epidemiologicas/', series_epi_page),

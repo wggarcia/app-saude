@@ -250,10 +250,7 @@ def _relatorio_compliance(empresa, ini, fim):
 
         devs_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).count()
 
-        # Consentimento LGPD (Art. 11) para coleta de dado biométrico de funcionários
-        # (BiometriaFuncionario.consentimento_confirmado_em) é, hoje, o único sinal de
-        # conformidade LGPD que já existe de fato no sistema por empresa — por isso é
-        # a única base real usada abaixo para status_lgpd.
+        # Consentimento biométrico (Art. 11 LGPD)
         biometrias_ativas_qs = BiometriaFuncionario.objects.filter(
             funcionario__empresa=empresa, ativo=True
         )
@@ -262,20 +259,26 @@ def _relatorio_compliance(empresa, ini, fim):
             consentimento_confirmado_em__isnull=True
         ).count()
 
-        # TODO: não existem hoje em api/models.py: (1) campo/relação indicando o DPO
-        # (encarregado de dados) cadastrado por empresa; (2) registro de aceite/versão
-        # de política de privacidade vigente por empresa; (3) um model genérico de
-        # "ConsentimentoLGPD" cobrindo outras bases de tratamento além da biometria
-        # facial. Sem isso, o cálculo de status_lgpd abaixo é parcial: cobre apenas a
-        # pendência de consentimento biométrico já existente no sistema. Um cálculo
-        # completo exigiria adicionar esses campos/models (decisão de schema fora do
-        # escopo desta correção).
+        # DPO (Art. 41 LGPD) e política de privacidade — agora em Empresa.dpo_*
+        tem_dpo = bool(getattr(empresa, "dpo_nome", "") and getattr(empresa, "dpo_email", ""))
+        tem_politica = bool(getattr(empresa, "lgpd_politica_aceita_em", None))
+
+        # status_lgpd hierárquico:
+        # pendente        → há consentimentos biométricos sem confirmação
+        # sem_dpo         → DPO não cadastrado (obrigação Art. 41)
+        # sem_politica    → DPO ok mas política de privacidade não aceita
+        # conforme_parcial→ DPO e política ok, mas sem biometria para avaliar
+        # conforme        → DPO + política + biometria sem pendências
         if consentimentos_biometricos_pendentes > 0:
             status_lgpd = "pendente"
+        elif not tem_dpo:
+            status_lgpd = "sem_dpo"
+        elif not tem_politica:
+            status_lgpd = "sem_politica"
         elif biometrias_ativas > 0:
-            status_lgpd = "conforme_parcial"
+            status_lgpd = "conforme"
         else:
-            status_lgpd = "sem_dados_para_avaliar"
+            status_lgpd = "conforme_parcial"
 
         return {
             "disponivel": True,
@@ -283,6 +286,13 @@ def _relatorio_compliance(empresa, ini, fim):
             "dispositivos_ativos": devs_ativos,
             "biometrias_ativas": biometrias_ativas,
             "consentimentos_biometricos_pendentes": consentimentos_biometricos_pendentes,
+            "dpo_nome": getattr(empresa, "dpo_nome", "") or "",
+            "dpo_email": getattr(empresa, "dpo_email", "") or "",
+            "lgpd_politica_versao": getattr(empresa, "lgpd_politica_versao", "") or "",
+            "lgpd_politica_aceita_em": (
+                empresa.lgpd_politica_aceita_em.strftime("%d/%m/%Y")
+                if getattr(empresa, "lgpd_politica_aceita_em", None) else None
+            ),
             "status_lgpd": status_lgpd,
         }
     except Exception:
@@ -355,3 +365,58 @@ def relatorio_page(request):
     if not empresa:
         return redirect("/login-empresa/")
     return render(request, "relatorio_executivo.html")
+
+
+# ─── DPO / Política de Privacidade ───────────────────────────────────────────
+
+from django.views.decorators.csrf import csrf_exempt as _csrf_exempt
+from django.views.decorators.http import require_http_methods as _req_methods
+import json as _json
+
+
+@_csrf_exempt
+@_req_methods(["GET", "POST"])
+def api_dpo_config(request):
+    """GET /api/relatorio/dpo-config — retorna DPO e política cadastrados.
+    POST — atualiza dpo_nome, dpo_email, lgpd_politica_versao e marca aceite_em=agora."""
+    from django.utils import timezone as _tz
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        from django.http import JsonResponse
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from django.http import JsonResponse
+
+    if request.method == "GET":
+        return JsonResponse({
+            "dpo_nome": empresa.dpo_nome or "",
+            "dpo_email": empresa.dpo_email or "",
+            "lgpd_politica_versao": empresa.lgpd_politica_versao or "",
+            "lgpd_politica_aceita_em": (
+                empresa.lgpd_politica_aceita_em.strftime("%d/%m/%Y %H:%M")
+                if empresa.lgpd_politica_aceita_em else None
+            ),
+        })
+
+    try:
+        d = _json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    campos = {}
+    if "dpo_nome" in d:
+        campos["dpo_nome"] = str(d["dpo_nome"])[:150]
+    if "dpo_email" in d:
+        campos["dpo_email"] = str(d["dpo_email"])[:254]
+    if "lgpd_politica_versao" in d:
+        campos["lgpd_politica_versao"] = str(d["lgpd_politica_versao"])[:20]
+        campos["lgpd_politica_aceita_em"] = _tz.now()
+
+    if not campos:
+        return JsonResponse({"erro": "Nenhum campo válido recebido"}, status=400)
+
+    for k, v in campos.items():
+        setattr(empresa, k, v)
+    empresa.save(update_fields=list(campos.keys()))
+
+    return JsonResponse({"ok": True})

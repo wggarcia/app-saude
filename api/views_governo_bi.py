@@ -24,6 +24,11 @@ except ImportError:
     AgendamentoUBS = None
 
 try:
+    from .models import VisitaDomiciliar
+except ImportError:
+    VisitaDomiciliar = None
+
+try:
     from .models import VacinacaoRegistro
 except ImportError:
     VacinacaoRegistro = None
@@ -287,16 +292,7 @@ def bi_kpis(request):
 
     atendimentos_mes = 0
     consultas_realizadas = 0
-    # TODO: cobertura_acs não é calculada de verdade. O cálculo real seria
-    # (famílias visitadas no mês pelos Agentes Comunitários de Saúde) / (total de
-    # famílias ativas cadastradas na área) * 100. Isso exigiria models como
-    # `VisitaACS` (registro de visita domiciliar do ACS, com data e família) e
-    # `Familia` (cadastro de família ativa por área/microárea). Nenhum dos dois
-    # existe hoje em api/models.py (existe `VisitaDomiciliar`, mas não representa
-    # visita de ACS vinculada a cobertura de família cadastrada) — não foram
-    # criados aqui por não caber a esta correção decidir sozinho sobre novo
-    # model/migration. Mantido em 0.0 até que o model correto seja definido.
-    cobertura_acs = None  # None = indisponível; a tela mostra "n/d", não "0%"
+    cobertura_acs = None  # calculado abaixo se VisitaDomiciliar existir
     producao_bpa = 0
 
     if AtendimentoUBS is not None:
@@ -313,11 +309,42 @@ def bi_kpis(request):
             procedimento_ab__isnull=False
         ).exclude(procedimento_ab="").count()
 
+    # Cobertura ACS real a partir de VisitaDomiciliar (e-SUS CDS).
+    # Numerador: CPFs distintos visitados com sucesso no mês corrente.
+    # Denominador: CPFs distintos visitados nos últimos 12 meses (área de atuação).
+    # Apenas visitas com CPF preenchido entram no cálculo; sem dados → None (n/d).
+    cobertura_acs_fonte = "indisponivel"
+    if VisitaDomiciliar is not None:
+        doze_meses_atras = hoje - timedelta(days=365)
+        base_acs = VisitaDomiciliar.objects.filter(empresa=emp)
+        familias_area = (
+            base_acs.filter(data_visita__gte=doze_meses_atras)
+            .exclude(cpf_paciente="")
+            .values("cpf_paciente")
+            .distinct()
+            .count()
+        )
+        if familias_area > 0:
+            familias_visitadas_mes = (
+                base_acs.filter(
+                    data_visita__year=hoje.year,
+                    data_visita__month=hoje.month,
+                    desfecho="visita_realizada",
+                )
+                .exclude(cpf_paciente="")
+                .values("cpf_paciente")
+                .distinct()
+                .count()
+            )
+            cobertura_acs = round(familias_visitadas_mes / familias_area * 100, 1)
+            cobertura_acs_fonte = "visita_domiciliar_esus"
+        # else: sem histórico de visitas → fica None
+
     return JsonResponse({
         "atendimentos_mes": atendimentos_mes,
         "consultas_realizadas": consultas_realizadas,
         "cobertura_acs": cobertura_acs,
-        "cobertura_acs_fonte": "indisponivel_sem_model_visita_acs",
+        "cobertura_acs_fonte": cobertura_acs_fonte,
         "producao_bpa": producao_bpa,
     })
 

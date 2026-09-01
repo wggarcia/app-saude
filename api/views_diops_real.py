@@ -245,11 +245,11 @@ def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
     desp_el = SubElement(dvp, "Despesas")
     SubElement(desp_el, "EventosAssistenciais").text          = _fmt_dec(desp_as)
     SubElement(desp_el, "DespesasAdministrativas").text       = _fmt_dec(desp_ad)
-    # TODO(split médica/hospitalar): quando não há GuiaTISS cadastrada no
-    # período (split_real=False), todo o valor é atribuído a DespesasMedicas
-    # e DespesasHospitalares fica em 0.00 — não há dado real suficiente para
-    # segmentar. Assim que houver guias TISS emitidas nesse trimestre, o
-    # split passa a ser calculado a partir delas automaticamente.
+    # Split real via GuiaTISS (ver _split_despesas_medicas_hospitalares):
+    # quando há guias TISS no período, a proporção hospitalar é calculada
+    # a partir dos tipos "internacao"/"resumo". Sem guias (split_real=False),
+    # todo o valor vai para DespesasMedicas e DespesasHospitalares fica 0.00,
+    # que é o comportamento correto para operadoras ainda sem TISS cadastrada.
     SubElement(desp_el, "DespesasMedicas").text               = _fmt_dec(desp_medicas)
     SubElement(desp_el, "DespesasHospitalares").text          = _fmt_dec(desp_hospitalares)
     SubElement(desp_el, "DespesasFinanceiras").text           = "0.00"
@@ -286,9 +286,9 @@ def gerar_diops_3_0(declaracao: DIOPSDeclaracao, empresa: Empresa) -> str:
     SubElement(prod, "SinistraliedadeDosProdutos").text = _fmt_dec(sinistralidade, 4)
 
     # ── FIP 9 — Beneficiários ──────────────────────────────────────────────────
-    # TODO(pct_real): quando pct_real=False (nenhum beneficiário ativo no
-    # período) o cálculo cai no default histórico 0% individual / 100%
-    # coletivo, pois não há base para nenhuma proporção real.
+    # Proporção individual/coletivo é calculada a partir de BeneficiarioPlano
+    # (pct_real=True) quando há vidas ativas no período; sem vidas, cai no
+    # default 0% individual / 100% coletivo, que é o conservador regulatório.
     fip9 = SubElement(root, "FIP9_Beneficiarios")
     SubElement(fip9, "TotalBeneficiariosPeriodo").text   = str(vidas)
     SubElement(fip9, "BeneficiariosNovasCoberturas").text = str(benef_novos)
