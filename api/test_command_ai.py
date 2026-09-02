@@ -289,7 +289,8 @@ class CommandAITests(_OwnerSharesDefaultMixin, TestCase):
         self.assertContains(response, "SoloCRT Sala de Decisão IA")
         self.assertContains(response, "Ambiente Hospital")
         self.assertContains(response, "Ecossistema operacional")
-        self.assertContains(response, "Radar concorrencial")
+        # "Radar concorrencial" foi removido de propósito (commit 9e08777 —
+        # nunca exibir nome de concorrente na UI do cliente). Asserção obsoleta.
         self.assertContains(response, 'href="/logout/"')
 
     def test_tela_command_ai_empresa_ganha_contexto_corporativo(self):

@@ -341,6 +341,19 @@ else:
         }
     }
 
+# Em testes, cache em memória isolado por processo. O FileBasedCache (dev) grava
+# em /tmp/django_cache e PERSISTE entre execuções e processos — isso poluía os
+# testes que exercem endpoints públicos cacheados (@_cache_publico, ex.:
+# /api/public/resumo): uma resposta antiga ("0 registros") sobrevivia e derrubava
+# o teste seguinte. LocMemCache começa vazio a cada processo de teste.
+import sys as _sys_test_guard
+if "test" in _sys_test_guard.argv:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
+
 # ── Fila de tarefas assíncronas (RQ) ─────────────────────────────────────────
 # TASK_QUEUE_ENABLED controla se run_async() enfileira (worker) ou roda inline.
 # Default OFF: liga só quando o worker `manage.py rqworker default` estiver de pé.

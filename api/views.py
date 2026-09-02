@@ -3387,10 +3387,15 @@ def app_alertas_publicos(request):
     incluir_gerais = request.GET.get("incluir_gerais", "1").lower() not in {"0", "false", "nao", "não"}
 
     alertas_coletados = []
+    # Exclui os tenants DEMO (demo.governo@ etc.): eles existem em produção para
+    # os logins de demonstração, mas seus alertas de seed têm títulos realistas
+    # ("Surto de Dengue", "Monkeypox — caso confirmado") que furam o filtro de
+    # texto sintético e vazariam para o app de cidadãos reais, causando pânico.
+    from api.utils import EMAILS_CONTAS_DEMO
     empresas_publicaveis = list(
         Empresa.objects.filter(
             Q(id=_emp_pub.id) | Q(tipo_conta=Empresa.TIPO_GOVERNO)
-        ).values_list("id", flat=True)
+        ).exclude(email__in=EMAILS_CONTAS_DEMO).values_list("id", flat=True)
     )
     if _emp_pub.id not in empresas_publicaveis:
         empresas_publicaveis.insert(0, _emp_pub.id)

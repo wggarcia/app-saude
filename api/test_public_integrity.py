@@ -61,6 +61,11 @@ class PublicIntegrityTests(_OwnerSharesDefaultMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.client = Client()
+        # Limpa o cache dos endpoints públicos (@_cache_publico) além do panorama.
+        # Sem isso, uma resposta cacheada por outra classe de teste (ex.: um
+        # /api/public/resumo com 0 registros) sobrevive e derruba este teste.
+        from django.core.cache import cache as _django_cache
+        _django_cache.clear()
         epidemiologia.clear_panorama_cache()
         self.empresa_publica = _empresa_app_publico()
 
@@ -92,6 +97,51 @@ class PublicIntegrityTests(_OwnerSharesDefaultMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual([item["id"] for item in payload["alertas"]], [alerta_real.id])
+
+    def test_app_alertas_publicos_ignora_alerta_de_tenant_demo(self):
+        # Regressão: alertas de seed do tenant DEMO (demo.governo@) têm títulos
+        # realistas que furam o filtro de texto sintético e vazavam para o app
+        # de cidadãos reais. Devem ser excluídos por serem de conta demo.
+        from api.utils import EMAILS_CONTAS_DEMO
+        email_demo = sorted(EMAILS_CONTAS_DEMO)[0]
+        empresa_demo = Empresa.objects.create(
+            nome="Governo Demo",
+            email="demo.governo@solocrt.com" if "demo.governo@solocrt.com" in EMAILS_CONTAS_DEMO else email_demo,
+            senha=make_password("x"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+        )
+        AlertaGovernamental.objects.create(
+            empresa=empresa_demo,
+            titulo="Surto de Dengue — Zona Norte SP",
+            mensagem="Casos confirmados em ascensão na região.",
+            nivel="alto",
+            ativo=True,
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            protocolo="ALR-DEMO-001",
+            criado_por="seed",
+            aprovado_por="seed",
+        )
+        alerta_real = AlertaGovernamental.objects.create(
+            empresa=self.empresa_publica,
+            titulo="Alerta territorial real",
+            mensagem="Monitoramento oficial com comunicação válida.",
+            nivel="alto",
+            ativo=True,
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            protocolo="ALR-REAL-003",
+            criado_por="sala-operacao",
+            aprovado_por="coordenacao",
+        )
+
+        response = self.client.get("/api/public/alertas")
+        self.assertEqual(response.status_code, 200)
+        ids = [item["id"] for item in response.json()["alertas"]]
+        self.assertIn(alerta_real.id, ids)
+        self.assertNotIn(
+            AlertaGovernamental.objects.get(protocolo="ALR-DEMO-001").id, ids,
+            "Alerta de tenant demo vazou para o app público",
+        )
 
     def test_app_alertas_publicos_nao_descarta_alerta_real_com_label_de_teste_no_autor(self):
         alerta_real = AlertaGovernamental.objects.create(

@@ -1160,9 +1160,11 @@ def _build_state_layer(municipios, risco_oficial_map=None, risco_oficial_doenca_
 def _build_timeline(empresa_pub=None):
     now = timezone.now()
     start = (now - timedelta(days=13)).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Sem o tenant público resolvido (cold-start), NÃO consultar sem filtro na
+    # conexão owner (RLS off) — agregaria RegistroSintoma de TODOS os tenants.
+    # Retorna vazio, igual às camadas do mapa (_scope_public_population_queryset).
     qs = _rs_base_qs().filter(data_registro__gte=start)
-    if empresa_pub:
-        qs = qs.filter(empresa=empresa_pub)
+    qs = qs.filter(empresa=empresa_pub) if empresa_pub else qs.none()
     rows = (
         qs.extra(select={"day": "date(data_registro)"})
         .values("day")
@@ -1198,9 +1200,9 @@ def _build_timeline(empresa_pub=None):
 
 
 def _build_data_quality(empresa_pub=None):
+    # Ver _build_timeline: sem empresa_pub, .none() evita agregado cross-tenant.
     qs = _rs_base_qs()
-    if empresa_pub:
-        qs = qs.filter(empresa=empresa_pub)
+    qs = qs.filter(empresa=empresa_pub) if empresa_pub else qs.none()
     summary = qs.aggregate(
         total=Count("id"),
         suspected=Count("id", filter=Q(suspeito=True)),
@@ -1220,9 +1222,9 @@ def _build_data_quality(empresa_pub=None):
 
 
 def _top_value_counts(field_name, label, limit=5, empresa_pub=None):
+    # Ver _build_timeline: sem empresa_pub, .none() evita agregado cross-tenant.
     qs = _rs_base_qs()
-    if empresa_pub:
-        qs = qs.filter(empresa=empresa_pub)
+    qs = qs.filter(empresa=empresa_pub) if empresa_pub else qs.none()
     rows = (
         qs.exclude(**{f"{field_name}__isnull": True})
         .exclude(**{field_name: ""})
