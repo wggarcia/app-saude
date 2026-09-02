@@ -1,3 +1,4 @@
+import signal
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
@@ -6,6 +7,15 @@ from email.utils import parsedate_to_datetime
 import requests
 from django.core.management.base import BaseCommand
 from django.db import IntegrityError
+
+# Tempo máximo de execução do comando (5 minutos). Evita que o processo
+# fique preso por dias em conexões de rede que aceitam o socket mas
+# param de enviar dados (situação que ocorreu em ago/2026).
+_TIMEOUT_SEGUNDOS = 300
+
+
+def _handler_timeout(signum, frame):  # noqa: ARG001
+    raise TimeoutError("monitorar_noticias excedeu o tempo limite de 5 minutos")
 
 from api.models import Empresa, NoticiaEpidemiologica
 
@@ -166,6 +176,16 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        signal.signal(signal.SIGALRM, _handler_timeout)
+        signal.alarm(_TIMEOUT_SEGUNDOS)
+        try:
+            self._handle(*args, **options)
+        except TimeoutError as exc:
+            self.stderr.write(self.style.ERROR(str(exc)))
+        finally:
+            signal.alarm(0)
+
+    def _handle(self, *args, **options):
         empresa_id = options.get("empresa_id")
         dry_run    = options["dry_run"]
         fontes_raw = options.get("fontes") or FONTES_PADRAO
