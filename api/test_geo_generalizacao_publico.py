@@ -9,10 +9,18 @@ centro de uma célula de grade de ~200m antes de persistir, aplicado em
 registrar_sintoma_publico (api/views.py) logo após a geocodificação (que usa
 a coordenada precisa original — só o dado armazenado é generalizado).
 """
+from unittest import mock
+
+from django.core.cache import cache
 from django.test import TestCase
 
-from .models import RegistroSintoma
-from .utils_geo import generalizar_coordenada
+from .models import Empresa, RegistroSintoma
+from .utils_geo import (
+    generalizar_coordenada,
+    geocode_externo_pendente,
+    obter_endereco,
+    refinar_geo_registro,
+)
 
 
 class GeneralizarCoordenadaTests(TestCase):
@@ -65,3 +73,40 @@ class RegistrarSintomaPublicoGeneralizaCoordenadaTests(TestCase):
         # ainda deve estar na vizinhança (a generalização é de ~200m, não de km)
         self.assertAlmostEqual(registro.latitude, lat_exata, delta=0.0025)
         self.assertAlmostEqual(registro.longitude, lon_exata, delta=0.0025)
+
+
+class RefinoGeoBackgroundTests(TestCase):
+    """Geocodificação externa (Nominatim) tirada do caminho síncrono do envio:
+    o envio resolve a região só por cache+base local; coordenadas remotas são
+    refinadas depois pela fila (refinar_geo_registro)."""
+
+    def setUp(self):
+        cache.clear()  # geocode_externo_pendente consulta o cache
+
+    def test_geocode_externo_pendente_perto_e_longe(self):
+        # Perto de ponto conhecido (Rio) → base local resolve, sem pendência.
+        self.assertFalse(geocode_externo_pendente(-22.9068, -43.1729))
+        # Remoto (meio do Atlântico) → só o Nominatim resolveria → pendente.
+        self.assertTrue(geocode_externo_pendente(0.0, -30.0))
+
+    def test_envio_sincrono_nao_chama_nominatim(self):
+        # No caminho do envio (permitir_externo=False), mesmo coordenada remota
+        # NÃO pode disparar a chamada externa de 3s que prende um worker.
+        with mock.patch("api.utils_geo.requests.get") as m:
+            geo = obter_endereco(0.0, -30.0, permitir_externo=False)
+        m.assert_not_called()
+        self.assertIn("estado", geo)  # retorna aproximação local, não vazio
+
+    def test_refinar_geo_registro_atualiza_regiao(self):
+        emp = Empresa.objects.create(nome="Pop", email="populacao@solocrt.com", senha="x", ativo=True)
+        reg = RegistroSintoma.objects.create(
+            empresa=emp, febre=True,
+            latitude=-3.2, longitude=-52.2,  # remoto (Altamira/PA)
+            estado="Aproximado", cidade="Cidade Aproximada", bairro="Centro",
+        )
+        refino = {"estado": "Pará", "cidade": "Altamira", "bairro": "Centro", "pais": "Brasil"}
+        with mock.patch("api.utils_geo.obter_endereco", return_value=refino):
+            refinar_geo_registro(reg.pk)
+        reg.refresh_from_db()
+        self.assertEqual(reg.estado, "Pará")
+        self.assertEqual(reg.cidade, "Altamira")

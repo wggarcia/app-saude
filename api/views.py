@@ -12,7 +12,7 @@ from .utils import obter_localizacao
 from django.conf import settings
 from api.utils_ia import classificar_padrao
 from api.classificador_doencas import classificar_para_cidadao as _classificar_cidadao
-from api.utils_geo import obter_endereco, generalizar_coordenada
+from api.utils_geo import obter_endereco, generalizar_coordenada, geocode_externo_pendente
 from api.utils_auth import validar_token
 from api.models import Empresa, RegistroSintoma
 from api.epidemiologia import (
@@ -2311,7 +2311,11 @@ def registrar_sintoma_publico(request):
             "pais": (dados.get("pais") or "Brasil").strip(),
         }
     else:
-        geo = obter_endereco(latitude, longitude)
+        # permitir_externo=False: NÃO chama o Nominatim (3s) dentro da request —
+        # usa só cache + base local (instantâneo, sempre retorna aproximação). O
+        # refino exato p/ coordenadas remotas vai pra fila (ver abaixo). Isso
+        # mantém o envio rápido sob carga nacional.
+        geo = obter_endereco(latitude, longitude, permitir_externo=False)
     # Privacidade: o bairro/cidade usa a coordenada precisa acima (geocodificação
     # correta), mas a coordenada PERSISTIDA é generalizada para uma grade de
     # ~200m — ninguém, nem o próprio operador do sistema, consegue apontar a
@@ -2428,6 +2432,18 @@ def registrar_sintoma_publico(request):
     )
     # Invalidate after commit so the rebuilt panorama sees the new record.
     transaction.on_commit(clear_panorama_cache)
+
+    # Coordenada remota (>20 km de ponto conhecido): a região gravada é uma
+    # aproximação local (base KNOWN_BRAZIL_POINTS). Refina com o Nominatim FORA
+    # da request, na fila RQ (worker soluscrt-rqworker), e o mapa corrige em
+    # segundos. Só ~<1% dos envios (áreas remotas/rurais) caem aqui — o resto
+    # já resolve exato por cache/base local, sem enfileirar nada.
+    if not simulacao_autorizada and geocode_externo_pendente(latitude, longitude):
+        from api.tasks import run_async
+        _rid = registro.pk
+        transaction.on_commit(
+            lambda: run_async("api.utils_geo.refinar_geo_registro", _rid)
+        )
 
     return JsonResponse({
         "status": "ok",

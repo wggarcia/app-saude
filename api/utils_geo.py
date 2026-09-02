@@ -188,7 +188,7 @@ def _fallback_local(lat, lon):
 _NEARBY_THRESHOLD = 0.18  # ~20 km em graus — cobre a maioria das cidades do Brasil
 
 
-def obter_endereco(lat, lon):
+def obter_endereco(lat, lon, permitir_externo=True):
     """
     Geocodificação reversa: lat/lon → bairro, cidade, estado.
 
@@ -196,6 +196,13 @@ def obter_endereco(lat, lon):
     1. Cache Redis/arquivo (TTL 24h) — retorno imediato em requests repetidos
     2. KNOWN_BRAZIL_POINTS — lookup local instantâneo se ponto estiver a ≤20 km
     3. Nominatim (API externa) — apenas se fora da cobertura local; timeout 3s
+
+    `permitir_externo=False` PULA o tier 3 (Nominatim). Usado no caminho do
+    envio de sintoma (registrar_sintoma_publico): a chamada externa de 3s não
+    pode prender um worker gunicorn sob carga nacional. Nesse modo, coordenadas
+    remotas (>20 km de ponto conhecido) retornam a aproximação local SEM cachear
+    — o refino exato fica para a task de background refinar_geo_registro, que
+    chama este mesmo obter_endereco com permitir_externo=True.
     """
     try:
         lat = float(lat)
@@ -214,6 +221,12 @@ def obter_endereco(lat, lon):
     nearest_dist = _distancia_graus(lat, lon)
     if nearest_dist <= _NEARBY_THRESHOLD:
         cache.set(cache_key, resultado_local, timeout=86400)
+        return resultado_local
+
+    # Ponto remoto (>20 km): só o Nominatim refina. No caminho síncrono do envio
+    # (permitir_externo=False) NÃO cacheia — deixa o refino em background gravar
+    # o resultado real depois.
+    if not permitir_externo:
         return resultado_local
 
     # 3. Nominatim — só para coordenadas fora da cobertura local
@@ -266,6 +279,72 @@ def obter_endereco(lat, lon):
         print(f"[geo] Nominatim falhou para ({lat},{lon}): {exc}")
         cache.set(cache_key, resultado_local, timeout=3600)
         return resultado_local
+
+
+def geocode_externo_pendente(lat, lon):
+    """True se a coordenada é remota (>20 km de ponto conhecido) E ainda não está
+    no cache — ou seja, só o Nominatim (tier 3) daria a região exata. Usado para
+    decidir se vale a pena enfileirar o refino em background. Barato: um get de
+    cache + uma conta de distância, sem rede."""
+    try:
+        lat = float(lat)
+        lon = float(lon)
+    except Exception:
+        return False
+    if cache.get(f"geo_{round(lat, 3)}_{round(lon, 3)}"):
+        return False
+    return _distancia_graus(lat, lon) > _NEARBY_THRESHOLD
+
+
+def refinar_geo_registro(registro_id):
+    """Task de BACKGROUND (fila RQ): refina estado/cidade/bairro de um RegistroSintoma
+    remoto chamando o Nominatim FORA da request. Enfileirada por
+    registrar_sintoma_publico via run_async, só para pontos remotos (<1% dos casos).
+
+    Usa a coordenada JÁ PERSISTIDA (generalizada a ~200 m) — 200 m é irrelevante
+    para resolver bairro/cidade e NÃO recupera a coordenada precisa (sem regressão
+    de privacidade). Idempotente: se a região já estiver correta, não faz nada.
+    """
+    import logging
+    log = logging.getLogger("api")
+    try:
+        from .models import RegistroSintoma, Empresa
+        # Respeita o tenant público (mesmo do INSERT). RLS hoje é inerte (owner
+        # bypassa), mas setar mantém o comportamento correto se for enforçada.
+        try:
+            from .middleware import _rls_set_empresa
+            emp = Empresa.objects.filter(email="populacao@solocrt.com").first()
+            if emp:
+                _rls_set_empresa(emp.id)
+        except Exception:
+            pass
+
+        reg = RegistroSintoma.objects.filter(pk=registro_id).first()
+        if not reg or reg.latitude is None or reg.longitude is None:
+            return
+
+        geo = obter_endereco(reg.latitude, reg.longitude, permitir_externo=True)
+        novo_estado = geo.get("estado") or ""
+        novo_cidade = geo.get("cidade") or ""
+        novo_bairro = geo.get("bairro") or "Centro"
+
+        if (novo_estado, novo_cidade) == ((reg.estado or ""), (reg.cidade or "")):
+            return  # já estava certo — nada a fazer
+
+        reg.estado = novo_estado
+        reg.cidade = novo_cidade
+        reg.bairro = novo_bairro
+        reg.pais = geo.get("pais") or reg.pais
+        reg.save(update_fields=["estado", "cidade", "bairro", "pais"])
+
+        # Invalida o panorama para o mapa mostrar a cidade refinada.
+        try:
+            from .epidemiologia import clear_panorama_cache
+            clear_panorama_cache()
+        except Exception:
+            pass
+    except Exception:
+        log.exception("refinar_geo_registro falhou para registro %s", registro_id)
 
 
 _METROS_POR_GRAU_LATITUDE = 111_320.0
