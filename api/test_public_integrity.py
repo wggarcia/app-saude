@@ -41,7 +41,9 @@ class _OwnerSharesDefaultMixin:
                 del _connections['owner']
             except Exception:
                 pass
-from django.test import Client, TestCase, TransactionTestCase
+import json as _json
+
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from api import epidemiologia
@@ -68,6 +70,43 @@ class PublicIntegrityTests(_OwnerSharesDefaultMixin, TestCase):
         _django_cache.clear()
         epidemiologia.clear_panorama_cache()
         self.empresa_publica = _empresa_app_publico()
+
+    @override_settings(DEBUG=True)
+    def test_envio_de_sintoma_aparece_no_mapa_do_app(self):
+        # Fluxo E2E que o app faz: cidadão envia sintoma -> vira foco no mapa.
+        # Usa o header de simulação (X-Solus-Simulation) para fixar a geo sem
+        # depender de geocodificação externa. Só funciona com DEBUG=True.
+        resp = self.client.post(
+            "/api/public/registrar",
+            data=_json.dumps({
+                "latitude": -23.5505,
+                "longitude": -46.6333,
+                "febre": True,
+                "tosse": True,
+                "dor_corpo": True,
+                "cidade": "São Paulo",
+                "estado": "São Paulo",
+                "bairro": "Sé",
+            }),
+            content_type="application/json",
+            HTTP_X_SOLUS_SIMULATION="true",
+            HTTP_X_DEVICE_ID="e2e-mapa-device-001",
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+
+        # O mapa lê o panorama cacheado — limpa para forçar leitura fresca,
+        # como acontece quando o cache expira (TTL 30s em produção).
+        epidemiologia.clear_panorama_cache()
+
+        mapa = self.client.get("/api/public/mapa")
+        self.assertEqual(mapa.status_code, 200)
+        hotspots = mapa.json().get("hotspots", [])
+        self.assertTrue(hotspots, "Mapa não retornou nenhum foco após envio de sintoma")
+        cidades = {(h.get("cidade") or "").casefold() for h in hotspots}
+        self.assertIn(
+            "são paulo", cidades,
+            f"Sintoma enviado não virou foco no mapa. Focos: {cidades}",
+        )
 
     def test_app_alertas_publicos_ignora_alerta_sintetico(self):
         AlertaGovernamental.objects.create(
