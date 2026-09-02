@@ -71,6 +71,45 @@ class PublicIntegrityTests(_OwnerSharesDefaultMixin, TestCase):
         epidemiologia.clear_panorama_cache()
         self.empresa_publica = _empresa_app_publico()
 
+    def test_client_ip_usa_cloudflare_e_ignora_x_forwarded_for_forjado(self):
+        # P0 anti-abuso: o IP real vem do CF-Connecting-IP (setado pela borda do
+        # Cloudflare, não forjável). X-Forwarded-For[0] é forjável pelo cliente e
+        # NÃO pode ser usado. Trava a regressão do spoofing.
+        from django.test import RequestFactory
+        from api.views import _client_ip
+        rf = RequestFactory()
+        req = rf.post(
+            "/api/public/registrar",
+            HTTP_CF_CONNECTING_IP="203.0.113.7",
+            HTTP_X_FORWARDED_FOR="1.2.3.4, 10.0.0.1",  # forjado pelo atacante
+            REMOTE_ADDR="172.16.0.1",
+        )
+        self.assertEqual(_client_ip(req), "203.0.113.7")
+        # Sem Cloudflare (dev/local), cai no REMOTE_ADDR — nunca no XFF forjável.
+        req2 = rf.post("/api/public/registrar", HTTP_X_FORWARDED_FOR="1.2.3.4", REMOTE_ADDR="172.16.0.9")
+        self.assertEqual(_client_ip(req2), "172.16.0.9")
+
+    def test_rate_limit_publico_bloqueia_flood_por_ip(self):
+        # P0 anti-abuso: acima do limite por minuto por IP real, o endpoint
+        # responde 429 — barreira barata antes dos COUNT no banco.
+        from api.views import _RL_PUBLICO_MAX
+        ip_atacante = "203.0.113.200"
+        ok, bloqueado = 0, 0
+        for _ in range(_RL_PUBLICO_MAX + 5):
+            resp = self.client.post(
+                "/api/public/registrar",
+                data=_json.dumps({"latitude": -23.55, "longitude": -46.63}),
+                content_type="application/json",
+                HTTP_CF_CONNECTING_IP=ip_atacante,
+                HTTP_X_DEVICE_ID="flood-device",
+            )
+            if resp.status_code == 429:
+                bloqueado += 1
+            else:
+                ok += 1
+        self.assertGreater(bloqueado, 0, "Rate limit não bloqueou nenhum request de flood")
+        self.assertLessEqual(ok, _RL_PUBLICO_MAX, "Passou mais requests que o limite")
+
     @override_settings(DEBUG=True)
     def test_envio_de_sintoma_aparece_no_mapa_do_app(self):
         # Fluxo E2E que o app faz: cidadão envia sintoma -> vira foco no mapa.

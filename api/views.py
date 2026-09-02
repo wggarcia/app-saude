@@ -1889,14 +1889,55 @@ def validar_token(request):
 
 
 def _client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    # SEGURANÇA (anti-abuso): atrás do Cloudflare, o IP real do cliente vem em
+    # CF-Connecting-IP — a borda do CF SOBRESCREVE qualquer valor que o cliente
+    # mande, então NÃO é forjável. X-Forwarded-For[0] É forjável: o cliente
+    # prepende um IP falso e o proxy só acrescenta o real à DIREITA. Confiar no
+    # XFF[0] tornava todo limite por IP inútil (device_id + XFF rotativos =
+    # flood ilimitado / surto falso). Ordem: CF real IP → REMOTE_ADDR (dev/local
+    # sem Cloudflare). Complemento de infra: travar a origem para só aceitar IPs
+    # do Cloudflare (firewall), senão um atacante que ache o IP da origem ainda
+    # poderia forjar CF-Connecting-IP indo direto.
+    cf_ip = request.META.get("HTTP_CF_CONNECTING_IP")
+    if cf_ip:
+        return cf_ip.strip()
     return request.META.get("REMOTE_ADDR")
 
 
 def _device_id_request(request):
     return (request.headers.get("X-Device-Id") or "").strip()[:120] or None
+
+
+# ── Rate limit dos endpoints públicos (Redis) ────────────────────────────────
+# Barreira BARATA em memória/Redis ANTES dos COUNT no banco — protege contra
+# flood/DoS de amplificação e limita envio por IP real (não forjável, ver
+# _client_ip). Degrada ABERTO se o Redis cair (não trava usuário legítimo por
+# indisponibilidade de cache). Janela deslizante, mesmo padrão do rate limit de
+# login (middleware._rate_limit_login).
+_RL_PUBLICO_WINDOW_S = 60
+_RL_PUBLICO_MAX = 30  # requisições por IP por minuto no fluxo público de escrita
+
+
+def _rate_limit_publico(request, bucket="registrar", limite=_RL_PUBLICO_MAX):
+    """Retorna True se o IP estourou o limite (deve ser bloqueado com 429)."""
+    if not getattr(settings, "RATE_LIMIT_PUBLICO_ENABLED", True):
+        return False
+    ip = _client_ip(request)
+    if not ip:
+        return False
+    import time as _time
+    from django.core.cache import cache as _cache
+    chave = f"rlpub:{bucket}:{ip}"
+    agora = _time.time()
+    try:
+        janela = [t for t in (_cache.get(chave) or []) if agora - t < _RL_PUBLICO_WINDOW_S]
+        if len(janela) >= limite:
+            return True
+        janela.append(agora)
+        _cache.set(chave, janela, _RL_PUBLICO_WINDOW_S)
+    except Exception:
+        return False
+    return False
 
 
 def _score_suspeita(empresa, request, dados):
@@ -2229,6 +2270,12 @@ def registrar_sintoma(request):
 def registrar_sintoma_publico(request):
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
+
+    if _rate_limit_publico(request, "registrar"):
+        return JsonResponse(
+            {"erro": "Muitas requisições. Aguarde um momento.", "codigo": "rate_limit_publico"},
+            status=429,
+        )
 
     try:
         dados = json.loads(request.body or "{}")
@@ -3444,6 +3491,12 @@ def apagar_meus_dados_lgpd(request):
     if request.method not in ("POST", "DELETE"):
         return JsonResponse({"erro": "use POST"}, status=405)
 
+    if _rate_limit_publico(request, "lgpd"):
+        return JsonResponse(
+            {"erro": "Muitas requisições. Aguarde um momento.", "codigo": "rate_limit_publico"},
+            status=429,
+        )
+
     try:
         dados = json.loads(request.body or "{}")
     except Exception:
@@ -3479,6 +3532,12 @@ def registrar_aceite_legal_publico(request):
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
+    if _rate_limit_publico(request, "aceite"):
+        return JsonResponse(
+            {"erro": "Muitas requisições. Aguarde um momento.", "codigo": "rate_limit_publico"},
+            status=429,
+        )
+
     try:
         dados = json.loads(request.body or "{}")
     except Exception:
@@ -3509,6 +3568,12 @@ def registrar_aceite_legal_publico(request):
 def registrar_push_publico(request):
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
+
+    if _rate_limit_publico(request, "push"):
+        return JsonResponse(
+            {"erro": "Muitas requisições. Aguarde um momento.", "codigo": "rate_limit_publico"},
+            status=429,
+        )
 
     try:
         dados = json.loads(request.body or "{}")
