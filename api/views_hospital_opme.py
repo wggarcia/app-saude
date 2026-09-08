@@ -1321,10 +1321,50 @@ def api_opme_economia(request):
         ).values("medico_solicitante").annotate(n=Count("id", distinct=True)).order_by("-n")[:5]
     )
 
+    # ── Alavanca: cotação competitiva (leilão reverso) ──────────────────────────
+    # Economia comprovada = soma do custo evitado nas cotações encerradas com
+    # vencedor abaixo do teto. Potencial = cotações ABERTAS cujo menor lance
+    # válido já está abaixo da referência (ainda não cravado).
+    from .models import CotacaoOPME
+    cot_qs = CotacaoOPME.objects.filter(empresa=empresa)
+    economia_cotacoes = cot_qs.filter(status="encerrada").aggregate(
+        t=Sum("economia_obtida"))["t"] or 0
+    cotacoes_vencidas = cot_qs.filter(
+        status="encerrada", economia_obtida__isnull=False).count()
+    cot_potencial = 0.0
+    for c in cot_qs.filter(status="aberta").prefetch_related("lances"):
+        ref = float(c.preco_referencia) if c.preco_referencia is not None else None
+        if ref is None:
+            continue
+        validos = [float(l.preco_unitario) for l in c.lances.all() if l.valida]
+        if validos and min(validos) < ref:
+            cot_potencial += (ref - min(validos)) * c.quantidade
+
+    # ── Torre de Economia: as alavancas que compõem o custo evitado total ───────
+    # Cada alavanca é medida de forma independente e auditável. FATO = já obtido;
+    # POTENCIAL = disponível se a operação atuar. Base para a meta de redução.
+    torre = [
+        {"alavanca": "Substituição por equivalente",
+         "descricao": "Troca por marca homologada de mesma qualidade e menor custo, aceita no pedido",
+         "fato": float(realizada), "potencial": round(potencial, 2)},
+        {"alavanca": "Cotação competitiva",
+         "descricao": "Leilão reverso entre fornecedores com AFE ativa — menor lance válido vence",
+         "fato": float(economia_cotacoes), "potencial": round(cot_potencial, 2)},
+    ]
+    fato_total = sum(a["fato"] for a in torre)
+    potencial_total = sum(a["potencial"] for a in torre)
+
     return JsonResponse({
         "economia_realizada": float(realizada),
         "substituicoes_aceitas": substituicoes,
         "economia_potencial_aberta": round(potencial, 2),
+        "economia_cotacoes": float(economia_cotacoes),
+        "cotacoes_vencidas": cotacoes_vencidas,
+        "economia_cotacoes_potencial": round(cot_potencial, 2),
+        # Torre de Economia (soma das alavancas)
+        "torre_economia": torre,
+        "torre_fato_total": round(fato_total, 2),
+        "torre_potencial_total": round(potencial_total, 2),
         "serie_mensal": serie,
         "itens_em_risco": itens_risco[:10],
         "ranking_fora_padrao": ranking,
@@ -1712,6 +1752,278 @@ def api_opme_fornecedores_verificar_afe(request):
         _verificar_afe(f)
         n += 1
     return JsonResponse({"verificados": n})
+
+
+# ── Cotação competitiva (leilão reverso) ────────────────────────────────────────
+# Alavanca de economia: o mesmo item, vários fornecedores com AFE ativa cotam;
+# o menor lance VÁLIDO vence. A economia é sempre medida contra o teto do
+# catálogo e só existe quando o vencedor fica abaixo — número auditável.
+
+def _get_cotacao_models():
+    from .models import CotacaoOPME, CotacaoFornecedorOPME
+    return CotacaoOPME, CotacaoFornecedorOPME
+
+
+def _lance_valido(fornecedor, registro_anvisa):
+    """Retrato de conformidade de um lance: (afe_ativa, anvisa_valido, valida).
+
+    Regra: fornecedor precisa de AFE ANVISA ativa para o lance disputar. Se a
+    base AFE ainda não foi sincronizada, não afirmamos nada e deixamos o lance
+    disputar (a homologação do fornecedor no cadastro já é um selo) — mas se a
+    base ESTÁ e a AFE não está ativa, o lance não vence. Idem para o registro do
+    produto na base de produtos da ANVISA, quando informado."""
+    from .models import EmpresaAfeAnvisa
+    # AFE do fornecedor
+    if not EmpresaAfeAnvisa.objects.exists():
+        afe_ativa = True   # base indisponível — não bloqueia
+    else:
+        afe_ativa = (fornecedor.afe_situacao == "ativa")
+    # Registro do produto (opcional no lance)
+    anvisa_valido = True
+    if registro_anvisa:
+        st = _anvisa_status(registro_anvisa)
+        if st is not None:
+            anvisa_valido = bool(st.get("encontrado") and st.get("valido")
+                                 and not st.get("vencido"))
+    return afe_ativa, anvisa_valido, bool(afe_ativa and anvisa_valido)
+
+
+def _cotacao_payload(c):
+    lances = list(c.lances.select_related("fornecedor").all())
+    lances_validos = [l for l in lances if l.valida]
+    menor_valido = min((float(l.preco_unitario) for l in lances_validos), default=None)
+    ref = float(c.preco_referencia) if c.preco_referencia is not None else None
+    economia_prevista = None
+    if ref is not None and menor_valido is not None and menor_valido < ref:
+        economia_prevista = round((ref - menor_valido) * c.quantidade, 2)
+    return {
+        "id": c.id,
+        "opme_id": c.opme_id,
+        "opme_descricao": c.opme.descricao,
+        "autorizacao_id": c.autorizacao_id,
+        "quantidade": c.quantidade,
+        "preco_referencia": ref,
+        "status": c.status,
+        "status_display": c.get_status_display(),
+        "prazo_ate": c.prazo_ate.isoformat() if c.prazo_ate else None,
+        "economia_obtida": float(c.economia_obtida) if c.economia_obtida else None,
+        "economia_prevista": economia_prevista,
+        "menor_lance_valido": menor_valido,
+        "vencedora_id": c.vencedora_id,
+        "criado_em": c.criado_em.isoformat(),
+        "encerrada_em": c.encerrada_em.isoformat() if c.encerrada_em else None,
+        "lances": [
+            {
+                "id": l.id,
+                "fornecedor_id": l.fornecedor_id,
+                "fornecedor": l.fornecedor.razao_social,
+                "cnpj": l.fornecedor.cnpj,
+                "preco_unitario": float(l.preco_unitario),
+                "marca_ofertada": l.marca_ofertada,
+                "registro_anvisa": l.registro_anvisa,
+                "prazo_entrega_dias": l.prazo_entrega_dias,
+                "afe_ativa": l.afe_ativa,
+                "anvisa_valido": l.anvisa_valido,
+                "valida": l.valida,
+                "vencedor": (l.id == c.vencedora_id),
+                "observacao": l.observacao,
+            }
+            for l in lances
+        ],
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_cotacoes(request):
+    """GET  /api/hospital/opme/cotacoes/ — lista cotações.
+    POST — abre uma cotação para um item do catálogo:
+      {opme_id, quantidade, preco_referencia?, autorizacao_id?, prazo_ate?}"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    CatalogoOPME, AutorizacaoOPME, *_ = _get_opme_models()
+    CotacaoOPME, _CotacaoFornecedor = _get_cotacao_models()
+
+    if request.method == "GET":
+        qs = CotacaoOPME.objects.filter(empresa=empresa).select_related("opme")\
+            .prefetch_related("lances__fornecedor")
+        status_f = request.GET.get("status")
+        if status_f:
+            qs = qs.filter(status=status_f)
+        total = qs.count()
+        limite, offset = _paginacao(request)
+        return JsonResponse({
+            "total": total,
+            "cotacoes": [_cotacao_payload(c) for c in qs[offset:offset + limite]],
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+    try:
+        opme = CatalogoOPME.objects.get(id=data.get("opme_id"), empresa=empresa, ativo=True)
+    except (CatalogoOPME.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({"erro": "Item OPME inválido ou indisponível no catálogo"}, status=400)
+
+    try:
+        quantidade = max(1, int(data.get("quantidade", 1) or 1))
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "Quantidade inválida"}, status=400)
+
+    # Preço de referência: informado, ou o teto do catálogo. É o baseline contra
+    # o qual mediremos a economia — nunca um valor arbitrário.
+    preco_ref = data.get("preco_referencia")
+    if preco_ref in (None, ""):
+        preco_ref = opme.preco_maximo
+    else:
+        try:
+            preco_ref = float(preco_ref)
+        except (TypeError, ValueError):
+            return JsonResponse({"erro": "Preço de referência inválido"}, status=400)
+
+    autorizacao = None
+    if data.get("autorizacao_id"):
+        try:
+            autorizacao = AutorizacaoOPME.objects.get(
+                id=data["autorizacao_id"], empresa=empresa)
+        except (AutorizacaoOPME.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({"erro": "Autorização vinculada inválida"}, status=400)
+
+    c = CotacaoOPME.objects.create(
+        empresa=empresa, opme=opme, autorizacao=autorizacao,
+        quantidade=quantidade, preco_referencia=preco_ref,
+        prazo_ate=data.get("prazo_ate") or None,
+        criado_por=_principal_nome(request, empresa),
+    )
+    return JsonResponse(_cotacao_payload(c), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_cotacao_lances(request, cotacao_id):
+    """GET  — detalhe da cotação com os lances.
+    POST — registra um lance:
+      {fornecedor_id, preco_unitario, marca_ofertada?, registro_anvisa?,
+       prazo_entrega_dias?, observacao?}"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import FornecedorHospital
+    CotacaoOPME, CotacaoFornecedorOPME = _get_cotacao_models()
+    try:
+        c = CotacaoOPME.objects.select_related("opme").get(id=cotacao_id, empresa=empresa)
+    except CotacaoOPME.DoesNotExist:
+        return JsonResponse({"erro": "Cotação não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_cotacao_payload(c))
+
+    if c.status != "aberta":
+        return JsonResponse(
+            {"erro": f"Cotação {c.get_status_display().lower()} não aceita novos lances"},
+            status=400)
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+    try:
+        fornecedor = FornecedorHospital.objects.get(
+            id=data.get("fornecedor_id"), empresa=empresa)
+    except (FornecedorHospital.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({"erro": "Fornecedor inválido"}, status=400)
+
+    preco = data.get("preco_unitario")
+    try:
+        preco = float(preco)
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "Preço do lance inválido"}, status=400)
+    if preco <= 0:
+        return JsonResponse({"erro": "Preço do lance deve ser maior que zero"}, status=400)
+
+    registro = (data.get("registro_anvisa") or "").strip()
+    afe_ativa, anvisa_valido, valida = _lance_valido(fornecedor, registro)
+
+    prazo = data.get("prazo_entrega_dias")
+    try:
+        prazo = int(prazo) if prazo not in (None, "") else None
+    except (TypeError, ValueError):
+        prazo = None
+
+    lance = CotacaoFornecedorOPME.objects.create(
+        cotacao=c, fornecedor=fornecedor, preco_unitario=preco,
+        marca_ofertada=data.get("marca_ofertada", ""),
+        registro_anvisa=registro, prazo_entrega_dias=prazo,
+        observacao=data.get("observacao", ""),
+        afe_ativa=afe_ativa, anvisa_valido=anvisa_valido, valida=valida,
+    )
+    aviso = None
+    if not valida:
+        motivos = []
+        if not afe_ativa:
+            motivos.append("fornecedor sem AFE ANVISA ativa")
+        if not anvisa_valido:
+            motivos.append("registro do produto inválido/vencido na ANVISA")
+        aviso = ("Lance registrado, mas NÃO disputa a vitória: "
+                 + "; ".join(motivos) + ".")
+    return JsonResponse({"lance_id": lance.id, "valida": valida, "aviso": aviso,
+                         "cotacao": _cotacao_payload(c)}, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_cotacao_encerrar(request, cotacao_id):
+    """POST — encerra a cotação e crava o vencedor (menor lance VÁLIDO).
+    Grava a economia comprovada = (referência − vencedor) × qtd, só se positiva.
+    Corpo opcional: {cancelar: true} para cancelar sem escolher vencedor."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    CotacaoOPME, CotacaoFornecedorOPME = _get_cotacao_models()
+    try:
+        c = CotacaoOPME.objects.select_related("opme").get(id=cotacao_id, empresa=empresa)
+    except CotacaoOPME.DoesNotExist:
+        return JsonResponse({"erro": "Cotação não encontrada"}, status=404)
+    if c.status != "aberta":
+        return JsonResponse({"erro": "Cotação já encerrada ou cancelada"}, status=400)
+
+    data, _erro = _parse_json(request)
+    data = data or {}
+    if data.get("cancelar"):
+        c.status = "cancelada"
+        c.encerrada_em = timezone.now()
+        c.save(update_fields=["status", "encerrada_em"])
+        return JsonResponse({"status": c.status})
+
+    # Menor lance VÁLIDO vence.
+    vencedor = c.lances.filter(valida=True).order_by("preco_unitario", "id").first()
+    if not vencedor:
+        return JsonResponse(
+            {"erro": "Nenhum lance válido (fornecedor com AFE ativa) para encerrar. "
+                     "Cancele a cotação ou aguarde lances elegíveis."}, status=400)
+
+    ref = float(c.preco_referencia) if c.preco_referencia is not None else None
+    economia = None
+    if ref is not None and float(vencedor.preco_unitario) < ref:
+        economia = round((ref - float(vencedor.preco_unitario)) * c.quantidade, 2)
+        if economia <= 0:
+            economia = None
+
+    c.vencedora = vencedor
+    c.economia_obtida = economia
+    c.status = "encerrada"
+    c.encerrada_em = timezone.now()
+    c.save(update_fields=["vencedora", "economia_obtida", "status", "encerrada_em"])
+    return JsonResponse(_cotacao_payload(c))
 
 
 # ── Esteira do processo (linha do tempo do pedido) ──────────────────────────────

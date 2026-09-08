@@ -10489,6 +10489,95 @@ class FornecedorHospital(models.Model):
         return f"{self.razao_social} ({self.cnpj or 's/ CNPJ'})"
 
 
+class CotacaoOPME(models.Model):
+    """Cotação competitiva (leilão reverso) de um material OPME.
+
+    Vários fornecedores com AFE ativa na ANVISA cotam o MESMO item; o menor
+    lance VÁLIDO vence. É uma alavanca de economia REAL e auditável: a economia
+    só existe quando o vencedor fica abaixo do preço de referência (o teto
+    SIGTAP/CBHPM do catálogo), e só um lance de fornecedor com Autorização de
+    Funcionamento ativa pode vencer. Nada de número inflado — o custo evitado é
+    sempre (referência − vencedor) × quantidade, e zero quando não há ganho."""
+    STATUS = [
+        ("aberta",    "Aberta para lances"),
+        ("encerrada", "Encerrada"),
+        ("cancelada", "Cancelada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="cotacoes_opme")
+    opme             = models.ForeignKey(CatalogoOPME, on_delete=models.PROTECT,
+                                          related_name="cotacoes")
+    autorizacao      = models.ForeignKey(AutorizacaoOPME, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="cotacoes")
+    quantidade       = models.PositiveIntegerField(default=1)
+    # Preço de referência = teto contra o qual a economia é medida (SIGTAP/CBHPM
+    # do catálogo, por padrão). Baseline conservador e auditável.
+    preco_referencia = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                            blank=True,
+                                            verbose_name="Preço de referência (teto)")
+    status           = models.CharField(max_length=12, choices=STATUS, default="aberta",
+                                         db_index=True)
+    prazo_ate        = models.DateField(null=True, blank=True,
+                                         verbose_name="Prazo para receber lances")
+    vencedora        = models.ForeignKey("CotacaoFornecedorOPME", on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="venceu_cotacao")
+    # Economia comprovada da cotação: (referência − menor lance válido) × qtd.
+    # Só preenchida no encerramento e só quando positiva (senão fica NULL — não
+    # infla a Torre de Economia).
+    economia_obtida  = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                            blank=True)
+    criado_por       = models.CharField(max_length=160, blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    encerrada_em     = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name        = "Cotação OPME"
+        verbose_name_plural = "Cotações OPME"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "opme"]),
+        ]
+
+    def __str__(self):
+        return f"Cotação #{self.pk} — {self.opme.descricao} ({self.status})"
+
+
+class CotacaoFornecedorOPME(models.Model):
+    """Lance de um fornecedor numa cotação de OPME.
+
+    A validade (`valida`) é um retrato do momento do lance: o fornecedor tinha
+    AFE ativa na ANVISA e, se informado o registro do produto, ele estava válido.
+    Só lances válidos disputam a vitória — é isso que dá lastro regulatório à
+    economia obtida (não adianta ganhar com preço baixo de quem não pode vender)."""
+    cotacao          = models.ForeignKey(CotacaoOPME, on_delete=models.CASCADE,
+                                          related_name="lances")
+    fornecedor       = models.ForeignKey(FornecedorHospital, on_delete=models.PROTECT,
+                                          related_name="lances_opme")
+    preco_unitario   = models.DecimalField(max_digits=12, decimal_places=2)
+    marca_ofertada   = models.CharField(max_length=150, blank=True, default="")
+    registro_anvisa  = models.CharField(max_length=20, blank=True, default="")
+    prazo_entrega_dias = models.PositiveIntegerField(null=True, blank=True)
+    observacao       = models.TextField(blank=True, default="")
+    # Retrato de conformidade no momento do lance (não editável à mão).
+    afe_ativa        = models.BooleanField(default=False,
+                                            help_text="Fornecedor tinha AFE ANVISA ativa no lance")
+    anvisa_valido    = models.BooleanField(default=True,
+                                            help_text="Registro do produto válido (ou não informado)")
+    valida           = models.BooleanField(default=False, db_index=True,
+                                            help_text="Elegível a vencer (AFE ativa + ANVISA ok)")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Lance de Cotação OPME"
+        verbose_name_plural = "Lances de Cotação OPME"
+        ordering            = ["preco_unitario", "id"]
+        indexes             = [models.Index(fields=["cotacao", "valida"])]
+
+    def __str__(self):
+        return f"{self.fornecedor.razao_social}: R$ {self.preco_unitario} ({'válido' if self.valida else 'inválido'})"
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ANVISA — bases públicas de referência (produtos para saúde + AFE)
 # Dados abertos oficiais, GLOBAIS (não por empresa) — como SIGTAP/TUSS.

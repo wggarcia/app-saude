@@ -1139,3 +1139,162 @@ class OPMETests(TestCase):
         self.assertTrue(r.json()["alertas_fraude"], "3ª solicitação repetida deveria alertar")
         kpi = client.get("/api/hospital/opme/kpis").json()
         self.assertGreaterEqual(kpi["medicos_padrao_atipico_30d"], 1)
+
+    # ── Cotação competitiva (leilão reverso) ─────────────────────────────────
+    def _forn(self, client, razao, cnpj=""):
+        return client.post("/api/hospital/opme/fornecedores/",
+            data={"razao_social": razao, "cnpj": cnpj},
+            content_type="application/json").json()["id"]
+
+    def test_cotacao_menor_lance_valido_vence_e_grava_economia(self):
+        """Leilão reverso: menor lance vence e a economia comprovada = teto − vencedor."""
+        empresa = _empresa("Hospital Rede", "opme-cot@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Placa de titânio", "tipo": "material", "preco_maximo": 10000},
+            content_type="application/json").json()["id"]
+        f1 = self._forn(client, "Fornecedor A")
+        f2 = self._forn(client, "Fornecedor B")
+        # abre cotação (referência = teto do catálogo = 10000)
+        cot = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 2},
+            content_type="application/json").json()
+        self.assertEqual(cot["preco_referencia"], 10000.0)
+        cid = cot["id"]
+        # dois lances (sem base AFE sincronizada → ambos válidos)
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 9000},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f2, "preco_unitario": 8000},
+            content_type="application/json")
+        # encerra → menor válido (8000) vence; economia = (10000-8000)*2 = 4000
+        r = client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["status"], "encerrada")
+        self.assertEqual(d["economia_obtida"], 4000.0)
+        vencedor = [l for l in d["lances"] if l["vencedor"]][0]
+        self.assertEqual(vencedor["preco_unitario"], 8000.0)
+
+    def test_cotacao_entra_na_torre_de_economia(self):
+        """A economia da cotação encerrada soma na Torre de Economia (alavanca)."""
+        empresa = _empresa("Hospital Rede", "opme-torre@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Parafuso", "tipo": "material", "preco_maximo": 2000},
+            content_type="application/json").json()["id"]
+        f1 = self._forn(client, "Distribuidora X")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 1500},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        eco = client.get("/api/hospital/opme/economia").json()
+        self.assertEqual(eco["economia_cotacoes"], 500.0)
+        self.assertEqual(eco["cotacoes_vencidas"], 1)
+        # a Torre lista a alavanca de cotação com o fato correto
+        cot_lever = [a for a in eco["torre_economia"] if a["alavanca"] == "Cotação competitiva"][0]
+        self.assertEqual(cot_lever["fato"], 500.0)
+        self.assertEqual(eco["torre_fato_total"], 500.0)
+
+    def test_cotacao_lance_de_fornecedor_sem_afe_ativa_nao_vence(self):
+        """Com base AFE sincronizada, lance de fornecedor sem AFE ativa não disputa."""
+        from api.models import EmpresaAfeAnvisa, FornecedorHospital
+        empresa = _empresa("Hospital Rede", "opme-afe@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Haste femoral", "tipo": "protese", "preco_maximo": 20000},
+            content_type="application/json").json()["id"]
+        # dois fornecedores: um com AFE ativa (mais caro), um sem AFE (mais barato)
+        f_ativo = self._forn(client, "Forn Regular", cnpj="11222333000181")
+        f_irregular = self._forn(client, "Forn Sem AFE", cnpj="99888777000166")
+        # base AFE: só o primeiro tem AFE ativa
+        EmpresaAfeAnvisa.objects.create(cnpj="11222333000181", razao_social="Forn Regular",
+                                        numero_afe="1234", ativo=True)
+        EmpresaAfeAnvisa.objects.create(cnpj="99888777000166", razao_social="Forn Sem AFE",
+                                        numero_afe="", ativo=False)
+        # reverifica AFE dos fornecedores agora que a base existe
+        client.post("/api/hospital/opme/fornecedores/verificar-afe",
+                    data={}, content_type="application/json")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1},
+            content_type="application/json").json()["id"]
+        # lance barato do irregular (NÃO deve vencer) e caro do regular
+        r_irr = client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f_irregular, "preco_unitario": 12000},
+            content_type="application/json").json()
+        self.assertFalse(r_irr["valida"])
+        self.assertIsNotNone(r_irr["aviso"])
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f_ativo, "preco_unitario": 18000},
+            content_type="application/json")
+        d = client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json").json()
+        vencedor = [l for l in d["lances"] if l["vencedor"]][0]
+        # vence o regular (18000), não o irregular mais barato (12000)
+        self.assertEqual(vencedor["preco_unitario"], 18000.0)
+        self.assertEqual(d["economia_obtida"], 2000.0)
+
+    def test_cotacao_sem_lance_valido_nao_encerra(self):
+        """Sem nenhum lance válido, não dá pra cravar vencedor (evita economia falsa)."""
+        from api.models import EmpresaAfeAnvisa
+        empresa = _empresa("Hospital Rede", "opme-cot-vazia@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Cage", "tipo": "protese", "preco_maximo": 15000},
+            content_type="application/json").json()["id"]
+        f = self._forn(client, "Forn Irregular", cnpj="55444333000122")
+        EmpresaAfeAnvisa.objects.create(cnpj="00000000000000", razao_social="Outro",
+                                        numero_afe="1", ativo=True)  # base existe, mas sem este CNPJ
+        client.post("/api/hospital/opme/fornecedores/verificar-afe",
+                    data={}, content_type="application/json")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f, "preco_unitario": 9000},
+            content_type="application/json")
+        r = client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_cotacao_encerrada_nao_aceita_novo_lance(self):
+        """Cotação encerrada é imutável para lances."""
+        empresa = _empresa("Hospital Rede", "opme-cot-fecha@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Tela", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        f = self._forn(client, "Forn Z")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f, "preco_unitario": 2500},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        r = client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f, "preco_unitario": 2000},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_cotacao_isolada_por_empresa(self):
+        """Cotação de uma empresa não é acessível por outra (LGPD/multi-tenant)."""
+        emp_a = _empresa("Hospital A", "opme-cot-a@example.com", "hospital_rede")
+        emp_b = _empresa("Hospital B", "opme-cot-b@example.com", "hospital_rede")
+        ca, cb = _client_for(emp_a), _client_for(emp_b)
+        opme = ca.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item A", "tipo": "material", "preco_maximo": 1000},
+            content_type="application/json").json()["id"]
+        cid = ca.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1},
+            content_type="application/json").json()["id"]
+        # empresa B não enxerga a cotação de A
+        r = cb.get(f"/api/hospital/opme/cotacoes/{cid}")
+        self.assertEqual(r.status_code, 404)

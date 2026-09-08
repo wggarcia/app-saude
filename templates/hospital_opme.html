@@ -210,6 +210,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
   <div class="tabs">
     <button class="tab-btn active" data-tab="painel" onclick="setTab('painel')">Painel de Custo</button>
     <button class="tab-btn" data-tab="autorizacoes" onclick="setTab('autorizacoes')">Autorizações</button>
+    <button class="tab-btn" data-tab="cotacoes" onclick="setTab('cotacoes')">Cotações <span class="pill" id="pillCotacoes" style="display:none">0</span></button>
     <button class="tab-btn" data-tab="juntas" onclick="setTab('juntas')">Juntas Médicas <span class="pill" id="pillJuntas" style="display:none">0</span></button>
     <button class="tab-btn" data-tab="procedimentos" onclick="setTab('procedimentos')">Procedimentos</button>
     <button class="tab-btn" data-tab="catalogo" onclick="setTab('catalogo')">Catálogo</button>
@@ -218,6 +219,19 @@ tr:hover td{background:rgba(0,194,255,.03)}
 
   <!-- ═══════════════ PAINEL DE CUSTO ═══════════════ -->
   <div class="tab-panel active" id="panel-painel">
+    <div class="card" style="border:1px solid rgba(0,229,176,.35)">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🏗️ Torre de Economia — custo evitado por alavanca</div>
+          <div class="page-sub" style="font-size:11px;margin-top:2px">Cada alavanca é medida de forma independente e auditável. <b>FATO</b> = já obtido; <b>Potencial</b> = disponível se a operação atuar. Meta de referência da operadora: 3–7% · nossa arquitetura mira até 10%.</div>
+        </div>
+        <div style="text-align:right">
+          <div class="kpi-val" id="torreFatoTotal" style="color:#00e5b0">—</div>
+          <div class="kpi-lbl">Custo evitado comprovado</div>
+        </div>
+      </div>
+      <div class="card-body" id="torreBox"><div class="empty">Carregando…</div></div>
+    </div>
     <div class="card">
       <div class="card-header">
         <div>
@@ -283,6 +297,33 @@ tr:hover td{background:rgba(0,194,255,.03)}
         <table>
           <thead><tr><th>Protocolo</th><th>Paciente</th><th>Médico</th><th>Procedimento</th><th>Materiais</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="autorizacoesBody"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ COTAÇÕES (LEILÃO REVERSO) ═══════════════ -->
+  <div class="tab-panel" id="panel-cotacoes">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">⚖️ Cotação Competitiva — leilão reverso de fornecedores</div>
+          <div class="page-sub" style="font-size:11px;margin-top:2px">O mesmo material, vários fornecedores cotam. <b>Só quem tem AFE ativa na ANVISA disputa a vitória</b> — o menor lance válido vence e a economia é medida contra o teto do catálogo.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="filtroCotacao" onchange="carregarCotacoes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--text)">
+            <option value="">Todas</option>
+            <option value="aberta">Abertas</option>
+            <option value="encerrada">Encerradas</option>
+            <option value="cancelada">Canceladas</option>
+          </select>
+          <button class="btn btn-ok btn-sm" onclick="abrirNovaCotacao()">+ Nova cotação</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Material</th><th class="num">Qtd</th><th class="num">Referência</th><th class="num">Menor lance</th><th class="num">Economia</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="cotacoesBody"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -422,6 +463,8 @@ function fecharModal(){
 document.addEventListener('keydown', function(e){
   if(e.key==='Escape' && document.getElementById('modalBack').classList.contains('show')) fecharModal();
 });
+function setModalBody(html){ document.getElementById('modalCorpo').innerHTML = html; }
+function setModalRodape(html){ document.getElementById('modalRodape').innerHTML = html||''; }
 
 function setTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
@@ -429,6 +472,7 @@ function setTab(tab) {
   if (tab === 'implantaveis') carregarImplantaveis();
   if (tab === 'juntas') carregarJuntas();
   if (tab === 'procedimentos') carregarProcedimentos();
+  if (tab === 'cotacoes') carregarCotacoes();
   if (tab === 'painel') carregarEconomia();
 }
 
@@ -501,6 +545,7 @@ async function carregarEconomia() {
     document.getElementById('kpiEconomia').textContent = moneyCurto(d.economia_realizada);
     document.getElementById('kpiEconomiaSub').textContent = d.substituicoes_aceitas + ' substituição(ões) aceita(s)';
     document.getElementById('kpiPotencial').textContent = moneyCurto(d.economia_potencial_aberta);
+    renderTorre(d);
     desenharGrafico(d.serie_mensal);
 
     var tb = document.getElementById('riscoBody');
@@ -531,6 +576,193 @@ async function carregarEconomia() {
       }).join('');
     }
   } catch(e) { document.getElementById('chartEconomia').innerHTML='<div class="empty">Erro de conexão.</div>'; }
+}
+
+/* ── Torre de Economia (alavancas empilhadas) ──────────────────────────── */
+function renderTorre(d) {
+  var box = document.getElementById('torreBox'); if (!box) return;
+  document.getElementById('torreFatoTotal').textContent = moneyCurto(d.torre_fato_total||0);
+  var torre = d.torre_economia || [];
+  var totalFato = d.torre_fato_total || 0, totalPot = d.torre_potencial_total || 0;
+  var escala = Math.max(totalFato, totalFato + totalPot, 1);
+  box.innerHTML = torre.map(function(a){
+    var pctFato = Math.round((a.fato||0)/escala*100);
+    var pctPot  = Math.round((a.potencial||0)/escala*100);
+    return '<div style="margin-bottom:14px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px">'
+      +   '<div><strong>'+esc(a.alavanca)+'</strong> <span class="itens-mini">'+esc(a.descricao)+'</span></div>'
+      +   '<div style="white-space:nowrap;font-variant-numeric:tabular-nums"><strong style="color:#00e5b0">'+money(a.fato)+'</strong>'
+      +     (a.potencial>0 ? ' <span class="itens-mini">+ '+money(a.potencial)+' potencial</span>' : '')+'</div>'
+      + '</div>'
+      + '<div style="height:14px;background:rgba(255,255,255,.06);border-radius:7px;overflow:hidden;display:flex">'
+      +   '<div style="width:'+pctFato+'%;background:#00e5b0"></div>'
+      +   '<div style="width:'+pctPot+'%;background:repeating-linear-gradient(45deg,rgba(0,229,176,.35),rgba(0,229,176,.35) 6px,transparent 6px,transparent 12px)"></div>'
+      + '</div></div>';
+  }).join('')
+   + '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-top:4px">'
+   +   '<div><strong>Total</strong> <span class="itens-mini">(comprovado + potencial em aberto)</span></div>'
+   +   '<div style="font-variant-numeric:tabular-nums"><strong style="color:#00e5b0">'+money(totalFato)+'</strong> <span class="itens-mini">+ '+money(totalPot)+'</span></div>'
+   + '</div>';
+}
+
+/* ── Cotações (leilão reverso) ─────────────────────────────────────────── */
+async function carregarCotacoes() {
+  var tb = document.getElementById('cotacoesBody');
+  var f = document.getElementById('filtroCotacao').value;
+  try {
+    var r = await fetch('/api/hospital/opme/cotacoes'+(f?('?status='+f):''), { credentials:'include', headers: headers() });
+    var d = await r.json();
+    if (!r.ok) { tb.innerHTML='<tr><td colspan="8" class="empty">'+esc(d.erro||'Erro')+'</td></tr>'; return; }
+    var abertas = (d.cotacoes||[]).filter(function(c){return c.status==='aberta';}).length;
+    var pill = document.getElementById('pillCotacoes');
+    if (abertas>0){ pill.textContent=abertas; pill.style.display=''; } else pill.style.display='none';
+    if (!d.cotacoes.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Nenhuma cotação. Clique em “Nova cotação” para abrir um leilão reverso.</td></tr>'; return; }
+    tb.innerHTML = d.cotacoes.map(function(c){
+      var eco = c.economia_obtida!=null ? '<strong style="color:var(--ok)">'+money(c.economia_obtida)+'</strong>'
+              : (c.economia_prevista!=null ? '<span style="color:var(--warn)">'+money(c.economia_prevista)+' prev.</span>' : '—');
+      var badge = c.status==='aberta' ? '<span class="badge badge-warn">Aberta</span>'
+                : c.status==='encerrada' ? '<span class="badge badge-ok">Encerrada</span>'
+                : '<span class="badge">Cancelada</span>';
+      return '<tr><td>#'+c.id+'</td><td>'+esc(c.opme_descricao)+'</td><td class="num">'+c.quantidade+'</td>'
+        + '<td class="num">'+money(c.preco_referencia)+'</td>'
+        + '<td class="num">'+(c.menor_lance_valido!=null?money(c.menor_lance_valido):'—')+'</td>'
+        + '<td class="num">'+eco+'</td><td>'+badge+' <span class="itens-mini">'+c.lances.length+' lance(s)</span></td>'
+        + '<td><button class="btn btn-ghost btn-sm" onclick="abrirCotacao('+c.id+')">Abrir</button></td></tr>';
+    }).join('');
+  } catch(e){ tb.innerHTML='<tr><td colspan="8" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+async function abrirNovaCotacao() {
+  // carrega catálogo para escolher o material
+  var cat = [];
+  try {
+    var r = await fetch('/api/hospital/opme/catalogo?limit=500', { credentials:'include', headers: headers() });
+    cat = (await r.json()).itens || [];
+  } catch(e){}
+  if (!cat.length) { toast('Cadastre itens no catálogo antes de cotar.', false); return; }
+  var opts = cat.map(function(o){ return '<option value="'+o.id+'" data-teto="'+(o.preco_maximo||'')+'">'+esc(o.descricao)+(o.preco_maximo?(' — teto '+money(o.preco_maximo)):'')+'</option>'; }).join('');
+  var html = '<div class="form-grid">'
+    + '<label>Material do catálogo<select id="ncOpme" onchange="ncSyncTeto()">'+opts+'</select></label>'
+    + '<label>Quantidade<input id="ncQtd" type="number" min="1" value="1"></label>'
+    + '<label>Preço de referência (teto)<input id="ncRef" type="number" step="0.01" placeholder="usa o teto do catálogo"></label>'
+    + '</div><div class="itens-mini" style="margin-top:6px">A economia será medida contra este preço de referência. Deixe em branco para usar o teto do catálogo.</div>';
+  abrirModal('Nova cotação (leilão reverso)', '', html,
+    '<button class="btn btn-ok" onclick="criarCotacao()">Abrir cotação</button>', false);
+  setTimeout(ncSyncTeto, 30);
+}
+function ncSyncTeto(){
+  var sel=document.getElementById('ncOpme'); if(!sel) return;
+  var teto=sel.options[sel.selectedIndex].getAttribute('data-teto');
+  var ref=document.getElementById('ncRef'); if(ref && !ref.value && teto) ref.placeholder='teto do catálogo: '+money(parseFloat(teto));
+}
+async function criarCotacao(){
+  var body={ opme_id: parseInt(document.getElementById('ncOpme').value,10),
+             quantidade: parseInt(document.getElementById('ncQtd').value||'1',10) };
+  var ref=document.getElementById('ncRef').value; if(ref) body.preco_referencia=parseFloat(ref);
+  try{
+    var r=await fetch('/api/hospital/opme/cotacoes/',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(body)});
+    var d=await r.json();
+    if(!r.ok){ toast(d.erro||'Erro',false); return; }
+    fecharModal(); toast('Cotação aberta',true); carregarCotacoes(); abrirCotacao(d.id);
+  }catch(e){ toast('Erro de conexão',false); }
+}
+
+async function abrirCotacao(id){
+  abrirModal('Cotação #'+id, 'Carregando…', '<div class="empty">Consultando…</div>', '', true);
+  try{
+    var r=await fetch('/api/hospital/opme/cotacoes/'+id,{credentials:'include',headers:headers()});
+    var c=await r.json();
+    if(!r.ok){ setModalBody('<div class="empty">'+esc(c.erro||'Erro')+'</div>'); return; }
+    montarCotacao(c);
+  }catch(e){ setModalBody('<div class="empty">Erro de conexão.</div>'); }
+}
+
+function montarCotacao(c){
+  window._cotacaoAtual=c.id;
+  var ref = c.preco_referencia!=null?money(c.preco_referencia):'—';
+  var lances = (c.lances||[]).slice().sort(function(a,b){return a.preco_unitario-b.preco_unitario;});
+  var linhas = lances.length ? lances.map(function(l){
+    var tag = l.vencedor ? '<span class="badge badge-ok">🏆 Vencedor</span>'
+            : (l.valida ? '<span class="badge badge-warn">Válido</span>'
+                        : '<span class="badge" title="Não disputa: AFE/ANVISA">⛔ Não disputa</span>');
+    return '<tr'+(l.vencedor?' style="background:rgba(0,229,176,.08)"':'')+'><td>'+esc(l.fornecedor)+'<div class="itens-mini">'+esc(l.cnpj||'')+'</div></td>'
+      + '<td class="num"><strong>'+money(l.preco_unitario)+'</strong></td>'
+      + '<td class="itens-mini">'+esc(l.marca_ofertada||'—')+(l.prazo_entrega_dias?(' · '+l.prazo_entrega_dias+'d'):'')+'</td>'
+      + '<td>'+tag+'</td></tr>';
+  }).join('') : '<tr><td colspan="4" class="empty">Nenhum lance ainda.</td></tr>';
+
+  var resumo = '<div class="alert-box '+(c.economia_obtida?'ab-ok':'')+'" style="margin-bottom:10px">'
+    + '<div class="ab-title">'+esc(c.opme_descricao)+' × '+c.quantidade+'</div>'
+    + 'Referência (teto): <strong>'+ref+'</strong>'
+    + (c.menor_lance_valido!=null?(' · Menor lance válido: <strong>'+money(c.menor_lance_valido)+'</strong>'):'')
+    + (c.economia_obtida!=null?(' · <strong style="color:var(--ok)">Economia comprovada: '+money(c.economia_obtida)+'</strong>')
+       :(c.economia_prevista!=null?(' · <span style="color:var(--warn)">Economia prevista: '+money(c.economia_prevista)+'</span>'):''))
+    + '</div>';
+
+  var formLance = c.status==='aberta' ? (
+      '<div class="card" style="margin-top:10px"><div class="card-header"><div class="card-title" style="font-size:13px">+ Registrar lance de fornecedor</div></div>'
+    + '<div class="form-grid" style="padding:0 2px">'
+    +   '<label>Fornecedor<select id="lcForn"><option value="">Carregando…</option></select></label>'
+    +   '<label>Preço unitário<input id="lcPreco" type="number" step="0.01"></label>'
+    +   '<label>Marca ofertada<input id="lcMarca" type="text"></label>'
+    +   '<label>Registro ANVISA<input id="lcReg" type="text" placeholder="opcional — valida na base"></label>'
+    +   '<label>Prazo entrega (dias)<input id="lcPrazo" type="number" min="0"></label>'
+    + '</div>'
+    + '<div style="text-align:right;margin-top:8px"><button class="btn btn-ok btn-sm" onclick="registrarLance()">Adicionar lance</button></div></div>'
+  ) : '';
+
+  var tabela = '<div class="table-wrap"><table><thead><tr><th>Fornecedor</th><th class="num">Lance</th><th>Marca / prazo</th><th>Situação</th></tr></thead><tbody>'+linhas+'</tbody></table></div>';
+  setModalBody(resumo + tabela + formLance);
+
+  var rodape = '';
+  if (c.status==='aberta') {
+    rodape = '<button class="btn btn-danger" onclick="encerrarCotacao(true)">Cancelar cotação</button>'
+           + '<button class="btn btn-ok" onclick="encerrarCotacao(false)">Encerrar e cravar vencedor</button>';
+  }
+  setModalRodape(rodape);
+  if (c.status==='aberta') carregarFornecedoresSelect();
+}
+
+async function carregarFornecedoresSelect(){
+  try{
+    var r=await fetch('/api/hospital/opme/fornecedores?limit=500',{credentials:'include',headers:headers()});
+    var d=await r.json(); var sel=document.getElementById('lcForn'); if(!sel) return;
+    if(!(d.fornecedores||[]).length){ sel.innerHTML='<option value="">Cadastre fornecedores primeiro</option>'; return; }
+    sel.innerHTML=d.fornecedores.map(function(f){
+      var afe = f.afe_situacao==='ativa'?' ✓AFE':(f.afe_situacao?(' ⚠'+f.afe_situacao):'');
+      return '<option value="'+f.id+'">'+esc(f.razao_social)+afe+'</option>';
+    }).join('');
+  }catch(e){}
+}
+
+async function registrarLance(){
+  var id=window._cotacaoAtual;
+  var body={ fornecedor_id: parseInt(document.getElementById('lcForn').value,10),
+             preco_unitario: parseFloat(document.getElementById('lcPreco').value),
+             marca_ofertada: document.getElementById('lcMarca').value,
+             registro_anvisa: document.getElementById('lcReg').value,
+             prazo_entrega_dias: document.getElementById('lcPrazo').value };
+  if(!body.fornecedor_id || !(body.preco_unitario>0)){ toast('Informe fornecedor e preço válido',false); return; }
+  try{
+    var r=await fetch('/api/hospital/opme/cotacoes/'+id,{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(body)});
+    var d=await r.json();
+    if(!r.ok){ toast(d.erro||'Erro',false); return; }
+    if(d.aviso) toast(d.aviso,false); else toast('Lance registrado',true);
+    montarCotacao(d.cotacao);
+  }catch(e){ toast('Erro de conexão',false); }
+}
+
+async function encerrarCotacao(cancelar){
+  var id=window._cotacaoAtual;
+  if(cancelar && !confirm('Cancelar esta cotação?')) return;
+  try{
+    var r=await fetch('/api/hospital/opme/cotacoes/'+id+'/encerrar',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify({cancelar:!!cancelar})});
+    var d=await r.json();
+    if(!r.ok){ toast(d.erro||'Erro',false); return; }
+    if(cancelar){ toast('Cotação cancelada',true); fecharModal(); }
+    else { toast('Vencedor cravado — economia comprovada',true); montarCotacao(d); }
+    carregarCotacoes();
+  }catch(e){ toast('Erro de conexão',false); }
 }
 
 function desenharGrafico(serie) {
