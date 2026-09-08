@@ -1387,3 +1387,79 @@ class OPMETests(TestCase):
         d = r.json()
         labels = [g["label"] for g in d["grupos"]]
         self.assertIn("Buco Maxilo", labels)
+
+    # ── Controle de sobrepreço ───────────────────────────────────────────────
+    def _pedido(self, client, opme_id, preco, extra=None):
+        item = {"opme_id": opme_id, "quantidade": 1, "preco_solicitado": preco}
+        if extra:
+            item.update(extra)
+        return client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr. Preço",
+                  "justificativa": "ok",
+                  "itens": [item]}, content_type="application/json")
+
+    def test_sobrepreco_flag_acima_da_mediana(self):
+        """Depois de histórico, um preço bem acima da mediana é sinalizado."""
+        empresa = _empresa("Hospital Rede", "opme-sp1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Parafuso X", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        # histórico: 3 pedidos a ~1000 (mediana = 1000)
+        for _ in range(3):
+            self._pedido(client, opme, 1000)
+        # consulta pontual: preço 2000 deve acusar acima
+        r = client.get(f"/api/hospital/opme/sobrepreco?opme_id={opme}&preco=2000")
+        d = r.json()
+        self.assertEqual(d["mediana"], 1000.0)
+        self.assertTrue(d["acima"])
+        self.assertEqual(d["excesso_unitario"], 1000.0)
+        # e um novo pedido a 2000 registra alerta de triagem de sobrepreço
+        r2 = self._pedido(client, opme, 2000)
+        self.assertEqual(r2.status_code, 201)
+        self.assertTrue(any("acima da mediana" in a for a in r2.json()["alertas_triagem"]))
+
+    def test_sobrepreco_alinhar_mediana_grava_economia_e_entra_na_torre(self):
+        """Aceitar alinhar à mediana grava economia real e soma na Torre."""
+        empresa = _empresa("Hospital Rede", "opme-sp2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Haste Y", "tipo": "protese", "preco_maximo": 9000},
+            content_type="application/json").json()["id"]
+        for _ in range(3):
+            self._pedido(client, opme, 3000)   # mediana = 3000
+        # pedido a 5000 aceitando alinhar → economia (5000-3000)*1 = 2000
+        r = self._pedido(client, opme, 5000, extra={"alinhar_mediana": True})
+        self.assertEqual(r.status_code, 201)
+        eco = client.get("/api/hospital/opme/economia").json()
+        self.assertEqual(eco["economia_sobrepreco"], 2000.0)
+        self.assertEqual(eco["alinhamentos_mediana"], 1)
+        lever = [a for a in eco["torre_economia"] if a["alavanca"] == "Controle de sobrepreço"][0]
+        self.assertEqual(lever["fato"], 2000.0)
+
+    def test_sobrepreco_potencial_no_painel(self):
+        """Pedido pendente acima da mediana entra no painel de sobrepreço (potencial)."""
+        empresa = _empresa("Hospital Rede", "opme-sp3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Cage Z", "tipo": "protese", "preco_maximo": 12000},
+            content_type="application/json").json()["id"]
+        for _ in range(3):
+            self._pedido(client, opme, 4000)   # mediana = 4000
+        self._pedido(client, opme, 7000)       # acima, sem alinhar → potencial 3000
+        pan = client.get("/api/hospital/opme/sobrepreco").json()
+        self.assertEqual(pan["total_evitavel"], 3000.0)
+        self.assertEqual(len(pan["itens"]), 1)
+        self.assertEqual(pan["itens"][0]["excesso_evitavel"], 3000.0)
+
+    def test_sobrepreco_sem_historico_nao_flag(self):
+        """Sem amostra mínima de histórico, não afirma sobrepreço."""
+        empresa = _empresa("Hospital Rede", "opme-sp4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Novo item", "tipo": "material", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        r = client.get(f"/api/hospital/opme/sobrepreco?opme_id={opme}&preco=9999")
+        d = r.json()
+        self.assertIsNone(d["mediana"])
+        self.assertFalse(d["acima"])

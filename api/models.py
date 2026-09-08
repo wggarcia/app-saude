@@ -10336,6 +10336,18 @@ class ItemAutorizacaoOPME(models.Model):
     economia_aplicada = models.DecimalField(max_digits=12, decimal_places=2, null=True,
                                              blank=True,
                                              verbose_name="Economia obtida na substituição (R$)")
+    # Controle de sobrepreço (alavanca distinta da substituição): mesmo material,
+    # mas o preço pedido acima da mediana histórica praticada. `mediana_referencia`
+    # é o retrato da mediana no momento do pedido (auditoria); `economia_sobrepreco`
+    # é preenchida SÓ quando o preço é alinhado à mediana no pedido (ganho real).
+    mediana_referencia = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                             blank=True,
+                                             verbose_name="Mediana do preço praticado (histórico)")
+    acima_mediana      = models.BooleanField(default=False,
+                                             verbose_name="Preço pedido acima da mediana")
+    economia_sobrepreco = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                              blank=True,
+                                              verbose_name="Economia por alinhar à mediana (R$)")
 
     class Meta:
         verbose_name = "Item Autorização OPME"

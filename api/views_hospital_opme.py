@@ -225,6 +225,35 @@ def _detectar_padrao_fraude(empresa, medico_solicitante, opme_ids_solicitados,
 # Confiança mínima da IA para a Via Rápida disparar a pré-aprovação automática.
 IA_SCORE_MINIMO_VIA_RAPIDA = 0.7
 
+# Quanto o preço pode ficar acima da mediana histórica antes de ser sinalizado
+# como sobrepreço. 10% acima da mediana já acende a bandeira.
+SOBREPRECO_LIMIAR = 0.10
+# Amostra mínima de preços históricos para a mediana ser confiável.
+SOBREPRECO_MIN_AMOSTRA = 3
+
+
+def _mediana_preco_praticado(empresa, opme_id, meses=12, ItemModel=None):
+    """Mediana do preço PRATICADO para um material, a partir do histórico real de
+    solicitações (preço solicitado em autorizações não canceladas, últimos `meses`).
+    Retorna (mediana: float|None, n_amostras: int). None quando não há amostra
+    suficiente — sem histórico, não afirmamos sobrepreço (honesto)."""
+    from statistics import median as _median
+    if ItemModel is None:
+        _c, _a, ItemModel, _i = _get_opme_models()
+    janela = timezone.now() - timedelta(days=meses * 31)
+    precos = list(
+        ItemModel.objects.filter(
+            autorizacao__empresa=empresa, opme_id=opme_id,
+            autorizacao__solicitado_em__gte=janela,
+            preco_solicitado__isnull=False,
+        ).exclude(autorizacao__status="cancelada")
+        .values_list("preco_solicitado", flat=True)
+    )
+    precos = [float(p) for p in precos if p is not None and float(p) > 0]
+    if len(precos) < SOBREPRECO_MIN_AMOSTRA:
+        return None, len(precos)
+    return round(_median(precos), 2), len(precos)
+
 # ── Esteira do processo (workflow OPME) ─────────────────────────────────────────
 # Etapas-marco na ordem real, cada uma com o ator/setor responsável e o trilho.
 # 'junta' fica fora da ordem linear — só entra quando há divergência (RN 424).
@@ -807,11 +836,40 @@ def api_opme_autorizacoes(request):
                         if economia <= 0:
                             economia = None  # troca não gerou economia — não infla o KPI
 
+                # ── Controle de sobrepreço (mesmo material, preço acima da mediana
+                # histórica praticada). Distinto da substituição: aqui NÃO se troca
+                # de marca — puxa-se o PREÇO do mesmo item para a mediana. ─────────
+                mediana_ref = None
+                acima_mediana = False
+                economia_sobrepreco = None
+                mediana, _n = _mediana_preco_praticado(
+                    empresa, opme_obj.id, ItemModel=ItemAutorizacaoOPME)
+                if mediana is not None and preco_sol is not None:
+                    mediana_ref = mediana
+                    if preco_sol > mediana * (1 + SOBREPRECO_LIMIAR):
+                        acima_mediana = True
+                        pct = round((preco_sol / mediana - 1) * 100)
+                        alertas_triagem.append(
+                            f"'{opme_obj.descricao}': preço R$ {preco_sol:.2f} está "
+                            f"{pct}% acima da mediana praticada (R$ {mediana:.2f}) para "
+                            f"este item.")
+                        # Se o solicitante ACEITA alinhar à mediana (envia a flag),
+                        # o preço efetivo vira a mediana e grava a economia real.
+                        if it.get("alinhar_mediana"):
+                            economia_sobrepreco = round((preco_sol - mediana) * qtd, 2)
+                            if economia_sobrepreco <= 0:
+                                economia_sobrepreco = None
+                            else:
+                                preco_sol = mediana
+                                acima_mediana = False
+
                 ItemAutorizacaoOPME.objects.create(
                     autorizacao=aut, opme=opme_obj, quantidade=qtd,
                     preco_solicitado=preco_sol, fora_padrao=fora,
                     alerta_triagem=(alertas_item[0] if alertas_item else ""),
-                    substituido_de=substituido_de, economia_aplicada=economia)
+                    substituido_de=substituido_de, economia_aplicada=economia,
+                    mediana_referencia=mediana_ref, acima_mediana=acima_mediana,
+                    economia_sobrepreco=economia_sobrepreco)
                 itens_criados += 1
 
             if itens_criados == 0:
@@ -1341,6 +1399,19 @@ def api_opme_economia(request):
         if validos and min(validos) < ref:
             cot_potencial += (ref - min(validos)) * c.quantidade
 
+    # ── Alavanca: controle de sobrepreço (mesmo item acima da mediana) ──────────
+    # FATO = economia já obtida ao alinhar o preço à mediana no pedido.
+    # POTENCIAL = excesso evitável nos pedidos pendentes ainda acima da mediana.
+    economia_sobrepreco = itens_qs.aggregate(t=Sum("economia_sobrepreco"))["t"] or 0
+    alinhamentos = itens_qs.filter(economia_sobrepreco__isnull=False).count()
+    sobrepreco_potencial = 0.0
+    for it in itens_qs.filter(
+            acima_mediana=True, autorizacao__status="solicitada",
+            mediana_referencia__isnull=False, preco_solicitado__isnull=False):
+        excesso = (float(it.preco_solicitado) - float(it.mediana_referencia)) * it.quantidade
+        if excesso > 0:
+            sobrepreco_potencial += excesso
+
     # ── Torre de Economia: as alavancas que compõem o custo evitado total ───────
     # Cada alavanca é medida de forma independente e auditável. FATO = já obtido;
     # POTENCIAL = disponível se a operação atuar. Base para a meta de redução.
@@ -1351,6 +1422,9 @@ def api_opme_economia(request):
         {"alavanca": "Cotação competitiva",
          "descricao": "Leilão reverso entre fornecedores com AFE ativa — menor lance válido vence",
          "fato": float(economia_cotacoes), "potencial": round(cot_potencial, 2)},
+        {"alavanca": "Controle de sobrepreço",
+         "descricao": "Mesmo material alinhado à mediana histórica praticada — corta o preço acima do normal",
+         "fato": float(economia_sobrepreco), "potencial": round(sobrepreco_potencial, 2)},
     ]
     fato_total = sum(a["fato"] for a in torre)
     potencial_total = sum(a["potencial"] for a in torre)
@@ -1362,6 +1436,9 @@ def api_opme_economia(request):
         "economia_cotacoes": float(economia_cotacoes),
         "cotacoes_vencidas": cotacoes_vencidas,
         "economia_cotacoes_potencial": round(cot_potencial, 2),
+        "economia_sobrepreco": float(economia_sobrepreco),
+        "alinhamentos_mediana": alinhamentos,
+        "economia_sobrepreco_potencial": round(sobrepreco_potencial, 2),
         # Torre de Economia (soma das alavancas)
         "torre_economia": torre,
         "torre_fato_total": round(fato_total, 2),
@@ -1369,6 +1446,85 @@ def api_opme_economia(request):
         "serie_mensal": serie,
         "itens_em_risco": itens_risco[:10],
         "ranking_fora_padrao": ranking,
+    })
+
+
+# ── Sobrepreço: benchmark de mediana + painel de itens acima do praticado ───────
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_sobrepreco(request):
+    """GET /api/hospital/opme/sobrepreco/
+
+    Dois modos:
+      - Consulta pontual: ?opme_id=&preco=  → mediana praticada do item e se o
+        preço informado está acima (para a tela avisar no momento do pedido).
+      - Painel (sem parâmetros): lista os pedidos PENDENTES cujo preço está acima
+        da mediana histórica, com o excesso evitável, e o ranking de solicitantes."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _Cat, AutorizacaoOPME, ItemAutorizacaoOPME, _I = _get_opme_models()
+
+    opme_id = request.GET.get("opme_id")
+    if opme_id:
+        try:
+            oid = int(opme_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"erro": "opme_id inválido"}, status=400)
+        mediana, n = _mediana_preco_praticado(empresa, oid, ItemModel=ItemAutorizacaoOPME)
+        try:
+            preco = float(request.GET.get("preco")) if request.GET.get("preco") else None
+        except (TypeError, ValueError):
+            preco = None
+        resp = {"opme_id": oid, "mediana": mediana, "n_amostras": n,
+                "limiar_pct": int(SOBREPRECO_LIMIAR * 100), "acima": False,
+                "excesso_unitario": None, "pct_acima": None}
+        if mediana is not None and preco is not None and preco > mediana * (1 + SOBREPRECO_LIMIAR):
+            resp["acima"] = True
+            resp["excesso_unitario"] = round(preco - mediana, 2)
+            resp["pct_acima"] = round((preco / mediana - 1) * 100)
+        return JsonResponse(resp)
+
+    # Painel: pedidos pendentes acima da mediana.
+    itens = (ItemAutorizacaoOPME.objects
+             .filter(autorizacao__empresa=empresa, acima_mediana=True,
+                     autorizacao__status="solicitada",
+                     mediana_referencia__isnull=False, preco_solicitado__isnull=False)
+             .select_related("opme", "autorizacao"))
+    lista = []
+    total_evitavel = 0.0
+    ranking = {}
+    for it in itens:
+        excesso = (float(it.preco_solicitado) - float(it.mediana_referencia)) * it.quantidade
+        if excesso <= 0:
+            continue
+        total_evitavel += excesso
+        med = it.autorizacao.medico_solicitante
+        ranking[med] = ranking.get(med, 0.0) + excesso
+        lista.append({
+            "protocolo": it.autorizacao.numero_protocolo,
+            "paciente_nome": it.autorizacao.paciente_nome,
+            "medico_solicitante": it.autorizacao.medico_solicitante,
+            "material": it.opme.descricao,
+            "opme_id": it.opme_id,
+            "preco_solicitado": float(it.preco_solicitado),
+            "mediana": float(it.mediana_referencia),
+            "quantidade": it.quantidade,
+            "excesso_evitavel": round(excesso, 2),
+            "pct_acima": round((float(it.preco_solicitado) / float(it.mediana_referencia) - 1) * 100),
+        })
+    lista.sort(key=lambda x: x["excesso_evitavel"], reverse=True)
+    ranking_ord = sorted(
+        ({"medico_solicitante": k, "excesso": round(v, 2)} for k, v in ranking.items()),
+        key=lambda x: x["excesso"], reverse=True)[:5]
+    return JsonResponse({
+        "total_evitavel": round(total_evitavel, 2),
+        "itens": lista[:20],
+        "ranking_solicitantes": ranking_ord,
+        "limiar_pct": int(SOBREPRECO_LIMIAR * 100),
     })
 
 

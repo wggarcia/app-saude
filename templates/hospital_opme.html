@@ -270,6 +270,22 @@ tr:hover td{background:rgba(0,194,255,.03)}
       </div>
     </div>
 
+    <div class="card" id="sobreprecoCard" style="display:none;border:1px solid rgba(224,87,74,.35)">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🏷️ Sobrepreço — mesmo item acima da mediana praticada</div>
+          <div class="page-sub" style="font-size:11px;margin-top:2px">Pedidos pendentes cujo preço está acima da mediana histórica do próprio item (mesmo abaixo do teto). Alinhar à mediana corta o excesso sem trocar de marca.</div>
+        </div>
+        <div style="text-align:right"><div class="kpi-val" id="sobreprecoTotal" style="color:#e0574a">—</div><div class="kpi-lbl">excesso evitável</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Protocolo</th><th>Médico</th><th>Material</th><th class="num">Preço pedido</th><th class="num">Mediana</th><th class="num">Acima</th><th class="num">Excesso evitável</th></tr></thead>
+          <tbody id="sobreprecoBody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-header"><div class="card-title">🔺 Solicitantes com mais pedidos fora do padrão (90 dias)</div></div>
       <div class="card-body" id="rankingBox"><div class="empty">Carregando…</div></div>
@@ -528,6 +544,27 @@ function setTab(tab) {
   if (tab === 'painel') carregarEconomia();
 }
 
+/* ── Sobrepreço (mesmo item acima da mediana) ───────────────────────────── */
+async function carregarSobrepreco(){
+  var card=document.getElementById('sobreprecoCard'), body=document.getElementById('sobreprecoBody');
+  if(!card) return;
+  try{
+    var r=await fetch('/api/hospital/opme/sobrepreco',{credentials:'include',headers:headers()});
+    var d=await r.json();
+    if(!r.ok || !(d.itens||[]).length){ card.style.display='none'; return; }
+    card.style.display='';
+    document.getElementById('sobreprecoTotal').textContent=moneyCurto(d.total_evitavel);
+    body.innerHTML=d.itens.map(function(i){
+      return '<tr><td><strong>'+esc(i.protocolo)+'</strong></td><td>'+esc(i.medico_solicitante)+'</td>'
+        +'<td class="itens-mini">'+esc(i.material)+'</td>'
+        +'<td class="num">'+money(i.preco_solicitado)+'</td>'
+        +'<td class="num" style="color:var(--ok)">'+money(i.mediana)+'</td>'
+        +'<td class="num"><span class="badge badge-warn">+'+i.pct_acima+'%</span></td>'
+        +'<td class="num"><strong style="color:#e0574a">'+money(i.excesso_evitavel)+'</strong></td></tr>';
+    }).join('');
+  }catch(e){ card.style.display='none'; }
+}
+
 /* ── Previsibilidade de consumo ─────────────────────────────────────────── */
 function trendBadge(t){
   if(t==='alta') return '<span class="badge badge-warn">▲ alta</span>';
@@ -650,6 +687,7 @@ async function carregarEconomia() {
     document.getElementById('kpiEconomiaSub').textContent = d.substituicoes_aceitas + ' substituição(ões) aceita(s)';
     document.getElementById('kpiPotencial').textContent = moneyCurto(d.economia_potencial_aberta);
     renderTorre(d);
+    carregarSobrepreco();
     desenharGrafico(d.serie_mensal);
 
     var tb = document.getElementById('riscoBody');
