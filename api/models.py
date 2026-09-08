@@ -10425,6 +10425,11 @@ class OPMEProcedimento(models.Model):
                                       related_name="opme_procedimentos")
     codigo_tuss  = models.CharField(max_length=10, verbose_name="Código TUSS/SIGTAP")
     descricao    = models.CharField(max_length=200)
+    # Especialidade do procedimento (Coluna, Buco Maxilo, Ortopedia, Cardiologia…).
+    # Usada para agregar a previsibilidade de consumo POR ESPECIALIDADE, uma das
+    # métricas de sucesso da operadora no desafio de OPME.
+    especialidade = models.CharField(max_length=80, blank=True, default="", db_index=True,
+                                      verbose_name="Especialidade")
     ativo        = models.BooleanField(default=True)
     criado_em    = models.DateTimeField(auto_now_add=True)
 

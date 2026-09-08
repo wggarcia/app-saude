@@ -6,6 +6,7 @@ ANVISA RDC 27/2008 | CFM Resolução 2.307/2022
 import json
 import logging
 from datetime import date, timedelta
+from statistics import mean
 
 from django.db import transaction
 from django.db.models import Count, F, Q
@@ -2248,6 +2249,149 @@ def api_opme_implantaveis(request):
     return JsonResponse({"id": impl.id}, status=201)
 
 
+# ── Previsibilidade de consumo (por especialidade / procedimento / material) ────
+
+def _rotulo_mes(ano, mes):
+    return f"{mes:02d}/{ano}"
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_previsibilidade(request):
+    """GET /api/hospital/opme/previsibilidade/?dim=procedimento|material|especialidade&meses=3&historico=12
+
+    Métrica de sucesso da operadora no desafio de OPME: previsibilidade de
+    consumo por especialidade e por procedimento. Monta a série mensal de
+    consumo (quantidade solicitada, excluindo pedidos cancelados — é a demanda
+    que puxa a compra) por grupo da dimensão escolhida e projeta os próximos
+    meses com o motor transparente `opme_previsao`.
+
+    Também sinaliza onde a demanda está em ALTA (comprar antes → evitar compra
+    emergencial, que é uma das dores citadas pela operadora)."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .services.opme_previsao import prever_serie
+    _Catalogo, AutorizacaoOPME, ItemAutorizacaoOPME, _Impl = _get_opme_models()
+    OPMEProcedimento, _OPMEProcItem = _get_proc_models()
+
+    dim = (request.GET.get("dim") or "procedimento").strip()
+    if dim not in ("procedimento", "material", "especialidade"):
+        dim = "procedimento"
+    try:
+        meses_frente = max(1, min(int(request.GET.get("meses", 3)), 12))
+    except (TypeError, ValueError):
+        meses_frente = 3
+    try:
+        historico = max(3, min(int(request.GET.get("historico", 12)), 24))
+    except (TypeError, ValueError):
+        historico = 12
+
+    hoje = date.today()
+    # Índice 0 = mês mais antigo da janela; historico-1 = mês corrente.
+    meses_idx = {}
+    ano, mes = hoje.year, hoje.month
+    seq = []
+    for _ in range(historico):
+        seq.append((ano, mes))
+        mes -= 1
+        if mes == 0:
+            mes = 12
+            ano -= 1
+    seq.reverse()
+    for i, (a, m) in enumerate(seq):
+        meses_idx[(a, m)] = i
+    limite_data = date(seq[0][0], seq[0][1], 1)
+
+    # Mapa procedimento_tuss → especialidade (para a dimensão especialidade).
+    esp_por_tuss = {}
+    if dim == "especialidade":
+        for p in OPMEProcedimento.objects.filter(empresa=empresa).exclude(especialidade=""):
+            esp_por_tuss[p.codigo_tuss] = p.especialidade
+
+    # Itens de autorizações não canceladas dentro da janela.
+    itens = (ItemAutorizacaoOPME.objects
+             .filter(autorizacao__empresa=empresa,
+                     autorizacao__solicitado_em__date__gte=limite_data)
+             .exclude(autorizacao__status="cancelada")
+             .select_related("opme", "autorizacao"))
+
+    series = {}   # chave_grupo -> {"label":..., "serie":[0]*historico}
+    def _bucket(chave, label, idx, qtd):
+        g = series.get(chave)
+        if g is None:
+            g = {"label": label, "serie": [0.0] * historico}
+            series[chave] = g
+        g["serie"][idx] += qtd
+
+    for it in itens:
+        aut = it.autorizacao
+        d = aut.solicitado_em.date()
+        idx = meses_idx.get((d.year, d.month))
+        if idx is None:
+            continue
+        qtd = it.quantidade or 0
+        if dim == "material":
+            _bucket(f"m{it.opme_id}", it.opme.descricao, idx, qtd)
+        elif dim == "procedimento":
+            tuss = aut.procedimento_tuss or "(sem TUSS)"
+            _bucket(f"p{tuss}", tuss, idx, qtd)
+        else:  # especialidade
+            esp = esp_por_tuss.get(aut.procedimento_tuss or "", "") or "(sem especialidade)"
+            _bucket(f"e{esp}", esp, idx, qtd)
+
+    grupos = []
+    for chave, g in series.items():
+        prev = prever_serie(g["serie"], meses_frente)
+        grupos.append({
+            "chave": chave,
+            "label": g["label"],
+            "historico_mensal": [int(v) for v in g["serie"]],
+            "total_historico": int(sum(g["serie"])),
+            **prev,
+        })
+    grupos.sort(key=lambda x: x["total_previsto"], reverse=True)
+
+    # Alertas de compra antecipada: demanda em ALTA e com previsibilidade razoável
+    # (não faz sentido "comprar antes" o que é errático). Ordena por volume previsto.
+    alertas_compra = [
+        {"label": gr["label"], "previsao": gr["previsao"],
+         "total_previsto": gr["total_previsto"], "previsibilidade": gr["previsibilidade"],
+         "consumo_medio_mensal": gr["consumo_medio_mensal"]}
+        for gr in grupos
+        if gr["tendencia"] == "alta" and gr["previsibilidade"] >= 40
+    ][:10]
+
+    rotulos_hist = [_rotulo_mes(a, m) for (a, m) in seq]
+    rotulos_prev = []
+    a2, m2 = hoje.year, hoje.month
+    for _ in range(meses_frente):
+        m2 += 1
+        if m2 == 13:
+            m2 = 1
+            a2 += 1
+        rotulos_prev.append(_rotulo_mes(a2, m2))
+
+    total_previsto = sum(gr["total_previsto"] for gr in grupos)
+    previsibilidades = [gr["previsibilidade"] for gr in grupos if gr["total_historico"] > 0]
+    prev_media = int(round(mean(previsibilidades))) if previsibilidades else 0
+
+    return JsonResponse({
+        "dimensao": dim,
+        "meses_frente": meses_frente,
+        "historico": historico,
+        "rotulos_historico": rotulos_hist,
+        "rotulos_previsao": rotulos_prev,
+        "grupos": grupos[:20],
+        "total_grupos": len(grupos),
+        "total_previsto_proximos_meses": int(total_previsto),
+        "previsibilidade_media": prev_media,
+        "alertas_compra_antecipada": alertas_compra,
+    })
+
+
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
@@ -2348,6 +2492,7 @@ def api_opme_procedimentos(request):
                     "id": p.id,
                     "codigo_tuss": p.codigo_tuss,
                     "descricao": p.descricao,
+                    "especialidade": p.especialidade,
                     "ativo": p.ativo,
                     "itens": [
                         {
@@ -2376,7 +2521,8 @@ def api_opme_procedimentos(request):
 
     with transaction.atomic():
         proc = OPMEProcedimento.objects.create(
-            empresa=empresa, codigo_tuss=codigo, descricao=descricao)
+            empresa=empresa, codigo_tuss=codigo, descricao=descricao,
+            especialidade=(data.get("especialidade") or "").strip())
         for it in data.get("itens", []):
             try:
                 opme = CatalogoOPME.objects.get(
@@ -2417,6 +2563,8 @@ def api_opme_procedimento_detalhe(request, proc_id):
         return erro
     if "descricao" in data:
         proc.descricao = data["descricao"]
+    if "especialidade" in data:
+        proc.especialidade = (data.get("especialidade") or "").strip()
     if "ativo" in data:
         proc.ativo = bool(data["ativo"])
     proc.save()

@@ -1298,3 +1298,92 @@ class OPMETests(TestCase):
         # empresa B não enxerga a cotação de A
         r = cb.get(f"/api/hospital/opme/cotacoes/{cid}")
         self.assertEqual(r.status_code, 404)
+
+    # ── Previsibilidade de consumo ───────────────────────────────────────────
+    def test_previsao_serie_crescente_tendencia_alta(self):
+        """Motor de previsão: série que sobe → tendência 'alta' e previsão > média histórica."""
+        from api.services.opme_previsao import prever_serie
+        d = prever_serie([2, 4, 6, 8, 10, 12], meses_frente=3)
+        self.assertEqual(d["tendencia"], "alta")
+        self.assertEqual(len(d["previsao"]), 3)
+        self.assertGreater(d["previsao"][0], 0)
+        self.assertGreaterEqual(d["meses_historico"], 6)
+
+    def test_previsao_serie_estavel_previsibilidade_alta(self):
+        """Série constante → previsibilidade máxima (100) e tendência estável."""
+        from api.services.opme_previsao import prever_serie
+        d = prever_serie([5, 5, 5, 5, 5, 5], meses_frente=2)
+        self.assertEqual(d["tendencia"], "estavel")
+        self.assertEqual(d["previsibilidade"], 100)
+        self.assertEqual(d["previsao"], [5, 5])
+
+    def test_previsao_serie_erratica_previsibilidade_baixa(self):
+        """Série muito irregular → previsibilidade baixa (não dá pra planejar)."""
+        from api.services.opme_previsao import prever_serie
+        estavel = prever_serie([10, 10, 10, 10])["previsibilidade"]
+        erratica = prever_serie([0, 30, 1, 25, 2, 28])["previsibilidade"]
+        self.assertGreater(estavel, erratica)
+
+    def test_previsao_sem_historico(self):
+        """Sem consumo → previsão indisponível, sem quebrar."""
+        from api.services.opme_previsao import prever_serie
+        d = prever_serie([], meses_frente=3)
+        self.assertEqual(d["previsao"], [0, 0, 0])
+        self.assertEqual(d["previsibilidade"], 0)
+
+    def test_previsibilidade_endpoint_por_procedimento(self):
+        """Endpoint agrega consumo por procedimento em meses distintos e projeta."""
+        from api.models import AutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-prev@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Cage cervical", "tipo": "protese", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        # cria autorizações e "espalha" no tempo (backdate de solicitado_em)
+        base = date.today()
+        for k, mesatras in enumerate([3, 2, 1, 0]):
+            r = client.post("/api/hospital/opme/autorizacoes/",
+                data={"paciente_nome": f"P{k}", "medico_solicitante": "Dr. Coluna",
+                      "procedimento_tuss": "30715016",
+                      "itens": [{"opme_id": opme, "quantidade": k + 1}]},
+                content_type="application/json")
+            aid = r.json()["id"]
+            alvo = base.replace(day=1)
+            for _ in range(mesatras):
+                alvo = (alvo.replace(day=1) - timedelta(days=1)).replace(day=1)
+            AutorizacaoOPME.objects.filter(id=aid).update(
+                solicitado_em=timezone.make_aware(
+                    __import__("datetime").datetime(alvo.year, alvo.month, 15, 12, 0)))
+        r = client.get("/api/hospital/opme/previsibilidade?dim=procedimento&meses=3&historico=12")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["dimensao"], "procedimento")
+        self.assertEqual(len(d["rotulos_previsao"]), 3)
+        grupo = [g for g in d["grupos"] if g["label"] == "30715016"]
+        self.assertTrue(grupo, "procedimento deveria aparecer nos grupos")
+        self.assertEqual(len(grupo[0]["historico_mensal"]), 12)
+        self.assertGreater(grupo[0]["total_historico"], 0)
+
+    def test_previsibilidade_por_especialidade_usa_procedimento(self):
+        """Dimensão especialidade agrega via a especialidade cadastrada no procedimento."""
+        empresa = _empresa("Hospital Rede", "opme-prev-esp@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Placa buco", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        # procedimento com especialidade "Buco Maxilo"
+        client.post("/api/hospital/opme/procedimentos/",
+            data={"codigo_tuss": "40814096", "descricao": "Osteotomia mandibular",
+                  "especialidade": "Buco Maxilo",
+                  "itens": [{"opme_id": opme, "quantidade_maxima": 4}]},
+            content_type="application/json")
+        client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "Paciente Buco", "medico_solicitante": "Dr. BM",
+                  "procedimento_tuss": "40814096",
+                  "itens": [{"opme_id": opme, "quantidade": 2}]},
+            content_type="application/json")
+        r = client.get("/api/hospital/opme/previsibilidade?dim=especialidade")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        labels = [g["label"] for g in d["grupos"]]
+        self.assertIn("Buco Maxilo", labels)
