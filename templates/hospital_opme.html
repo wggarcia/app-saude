@@ -204,6 +204,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div class="kpi danger"><div class="kpi-val" id="kpiJuntas">—</div><div class="kpi-lbl">Juntas Médicas Abertas</div><div class="kpi-sub">RN 424/2017 — ANS</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiFraude">—</div><div class="kpi-lbl">Médicos c/ Padrão Atípico</div><div class="kpi-sub">últimos 30 dias</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiAnvisaVencido">—</div><div class="kpi-lbl">Registros ANVISA Vencidos</div></div>
+    <div class="kpi ok" id="kpiCompraCard" style="cursor:pointer" onclick="setTab('previsibilidade')" title="Ver Previsibilidade"><div class="kpi-val" id="kpiCompraAntecipada">—</div><div class="kpi-lbl">Comprar Antecipado</div><div class="kpi-sub" id="kpiCompraSub">demanda em alta — evita compra emergencial</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiTaxaAprov">—</div><div class="kpi-lbl">Taxa de Aprovação</div><div class="kpi-sub" id="kpiCatalogoSub">—</div></div>
   </div>
 
@@ -633,6 +634,19 @@ async function carregarKpis() {
     document.getElementById('kpiAnvisaVencido').textContent = d.catalogo_registros_anvisa_vencidos;
     document.getElementById('kpiViaRapida').textContent = (d.via_rapida_pct||0) + '%';
     document.getElementById('kpiViaRapidaSub').textContent = (d.via_rapida_total||0) + ' pré-aprovado(s) pela IA, sem fila';
+    var nComp = d.alertas_compra_antecipada_total||0;
+    document.getElementById('kpiCompraAntecipada').textContent = nComp;
+    var topComp = (d.alertas_compra_antecipada_top||[])[0];
+    var cardComp = document.getElementById('kpiCompraCard');
+    if (nComp > 0) {
+      cardComp.className = 'kpi warn'; cardComp.style.cursor='pointer';
+      document.getElementById('kpiCompraSub').textContent = topComp
+        ? ('ex.: '+esc(topComp.label)+' — comprar antes vira previsível')
+        : 'demanda em alta — evita compra emergencial';
+    } else {
+      cardComp.className = 'kpi ok';
+      document.getElementById('kpiCompraSub').textContent = 'nenhuma demanda em alta no momento';
+    }
     var pill = document.getElementById('pillJuntas');
     if (d.juntas_medicas_abertas > 0) { pill.textContent = d.juntas_medicas_abertas; pill.style.display=''; }
     else pill.style.display='none';
@@ -1189,6 +1203,12 @@ function abrirNovaSolicitacao() {
   +       '</select></div>'
   +     '<div class="form-group"><label>CID-10</label><input id="oCid" placeholder="ex: M16.1"></div>'
   +   '</div>'
+  +   '<div class="form-group" style="margin-top:6px">'
+  +     '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">'
+  +       '<input type="checkbox" id="oUrgente" style="width:auto;margin:0">'
+  +       '<span>Pedido <strong>urgente/emergencial</strong> — compra sem tempo de planejar costuma sair mais cara (o sistema estima o sobrecusto evitável).</span>'
+  +     '</label>'
+  +   '</div>'
   +   '<div id="procAviso"></div>'
   + '</div>'
   + '<div class="fieldset-step"><div class="step-label"><span class="step-num">3</span> Materiais OPME</div>'
@@ -1473,6 +1493,7 @@ async function salvarAutorizacao() {
       crm_medico: document.getElementById('oCrm').value,
       cid10: document.getElementById('oCid').value,
       procedimento_tuss: (document.getElementById('oProcSel')||{}).value || '',
+      urgente: !!(document.getElementById('oUrgente')||{}).checked,
       justificativa: document.getElementById('oJustificativa').value,
       itens: itens,
     })});

@@ -1299,6 +1299,44 @@ class OPMETests(TestCase):
         r = cb.get(f"/api/hospital/opme/cotacoes/{cid}")
         self.assertEqual(r.status_code, 404)
 
+    def test_cotacao_encerrada_grava_preco_negociado_no_item(self):
+        """Fecha o ciclo: o preço vencedor da cotação volta para o item do pedido
+        vinculado (preco_negociado), sem sobrescrever o preco_solicitado."""
+        from api.models import ItemAutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-writeback@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Haste femoral", "tipo": "material", "preco_maximo": 12000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1, "preco_solicitado": 12000}]},
+            content_type="application/json").json()
+        aut_id = aut["id"]
+        f1 = self._forn(client, "Distribuidora Z")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1, "autorizacao_id": aut_id},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 9500},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        item = ItemAutorizacaoOPME.objects.get(autorizacao_id=aut_id, opme_id=opme)
+        # preço negociado gravado; preço solicitado intacto (trilha de auditoria)
+        self.assertEqual(float(item.preco_negociado), 9500.0)
+        self.assertEqual(float(item.preco_solicitado), 12000.0)
+
+    def test_kpis_expoem_alerta_compra_antecipada(self):
+        """O painel principal (KPIs) expõe a contagem de alertas de compra
+        antecipada — antes só existia dentro da aba Previsibilidade."""
+        empresa = _empresa("Hospital Rede", "opme-kpi-prev@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        d = client.get("/api/hospital/opme/kpis").json()
+        self.assertIn("alertas_compra_antecipada_total", d)
+        self.assertIn("alertas_compra_antecipada_top", d)
+        self.assertIsInstance(d["alertas_compra_antecipada_top"], list)
+
     # ── Previsibilidade de consumo ───────────────────────────────────────────
     def test_previsao_serie_crescente_tendencia_alta(self):
         """Motor de previsão: série que sobe → tendência 'alta' e previsão > média histórica."""

@@ -10353,6 +10353,14 @@ class ItemAutorizacaoOPME(models.Model):
     economia_sobrepreco = models.DecimalField(max_digits=12, decimal_places=2, null=True,
                                               blank=True,
                                               verbose_name="Economia por alinhar à mediana (R$)")
+    # Preço efetivamente NEGOCIADO na cotação competitiva (leilão reverso), gravado
+    # quando a cotação vinculada encerra com vencedor. Distinto de `preco_solicitado`
+    # (o que o médico pediu): preserva a trilha de auditoria (solicitado × negociado),
+    # alimenta o faturamento TISS com o custo real e serve de base honesta para a
+    # mediana histórica (o preço praticado de verdade, não o pedido inicial).
+    preco_negociado  = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                            blank=True,
+                                            verbose_name="Preço negociado na cotação (R$)")
 
     class Meta:
         verbose_name = "Item Autorização OPME"

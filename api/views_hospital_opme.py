@@ -243,16 +243,20 @@ def _mediana_preco_praticado(empresa, opme_id, meses=12, ItemModel=None):
     Retorna (mediana: float|None, n_amostras: int). None quando não há amostra
     suficiente — sem histórico, não afirmamos sobrepreço (honesto)."""
     from statistics import median as _median
+    from django.db.models.functions import Coalesce
     if ItemModel is None:
         _c, _a, ItemModel, _i = _get_opme_models()
     janela = timezone.now() - timedelta(days=meses * 31)
+    # Preço PRATICADO = negociado na cotação quando existe (custo real), senão o
+    # solicitado. Coalesce evita inflar a mediana com o pedido inicial.
     precos = list(
         ItemModel.objects.filter(
             autorizacao__empresa=empresa, opme_id=opme_id,
             autorizacao__solicitado_em__gte=janela,
-            preco_solicitado__isnull=False,
         ).exclude(autorizacao__status="cancelada")
-        .values_list("preco_solicitado", flat=True)
+        .annotate(_preco=Coalesce("preco_negociado", "preco_solicitado"))
+        .filter(_preco__isnull=False)
+        .values_list("_preco", flat=True)
     )
     precos = [float(p) for p in precos if p is not None and float(p) > 0]
     if len(precos) < SOBREPRECO_MIN_AMOSTRA:
@@ -2271,6 +2275,17 @@ def api_opme_cotacao_encerrar(request, cotacao_id):
     c.status = "encerrada"
     c.encerrada_em = timezone.now()
     c.save(update_fields=["vencedora", "economia_obtida", "status", "encerrada_em"])
+
+    # Fecha o ciclo: o preço vencedor volta para o item do pedido vinculado.
+    # Sem isso o faturamento TISS não sabe o custo real e a mediana histórica
+    # continua usando o preço SOLICITADO (inflada). Grava só o preço negociado —
+    # nunca sobrescreve `preco_solicitado` (preserva solicitado × negociado).
+    if c.autorizacao_id:
+        _, _AutMdl, ItemMdl, _ = _get_opme_models()
+        (ItemMdl.objects
+            .filter(autorizacao_id=c.autorizacao_id, opme_id=c.opme_id)
+            .update(preco_negociado=vencedor.preco_unitario))
+
     return JsonResponse(_cotacao_payload(c))
 
 
@@ -2502,39 +2517,17 @@ def _rotulo_mes(ano, mes):
     return f"{mes:02d}/{ano}"
 
 
-@require_http_methods(["GET"])
-@api_requer_feature("hospital.opme")
-@api_requer_permissao_modulo("hospital.clinico")
-def api_opme_previsibilidade(request):
-    """GET /api/hospital/opme/previsibilidade/?dim=procedimento|material|especialidade&meses=3&historico=12
-
-    Métrica de sucesso da operadora no desafio de OPME: previsibilidade de
-    consumo por especialidade e por procedimento. Monta a série mensal de
-    consumo (quantidade solicitada, excluindo pedidos cancelados — é a demanda
-    que puxa a compra) por grupo da dimensão escolhida e projeta os próximos
-    meses com o motor transparente `opme_previsao`.
-
-    Também sinaliza onde a demanda está em ALTA (comprar antes → evitar compra
-    emergencial, que é uma das dores citadas pela operadora)."""
-    empresa = _hosp(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
-
+def _calc_previsibilidade(empresa, dim="procedimento", meses_frente=3, historico=12):
+    """Motor de previsibilidade reutilizável — monta séries mensais de consumo por
+    grupo da dimensão e projeta com `opme_previsao`. Usado pela view de
+    Previsibilidade e pelos KPIs do painel principal (alertas de compra
+    antecipada). Retorna o dict completo do payload."""
     from .services.opme_previsao import prever_serie
     _Catalogo, AutorizacaoOPME, ItemAutorizacaoOPME, _Impl = _get_opme_models()
     OPMEProcedimento, _OPMEProcItem = _get_proc_models()
 
-    dim = (request.GET.get("dim") or "procedimento").strip()
     if dim not in ("procedimento", "material", "especialidade"):
         dim = "procedimento"
-    try:
-        meses_frente = max(1, min(int(request.GET.get("meses", 3)), 12))
-    except (TypeError, ValueError):
-        meses_frente = 3
-    try:
-        historico = max(3, min(int(request.GET.get("historico", 12)), 24))
-    except (TypeError, ValueError):
-        historico = 12
 
     hoje = date.today()
     # Índice 0 = mês mais antigo da janela; historico-1 = mês corrente.
@@ -2625,7 +2618,7 @@ def api_opme_previsibilidade(request):
     previsibilidades = [gr["previsibilidade"] for gr in grupos if gr["total_historico"] > 0]
     prev_media = int(round(mean(previsibilidades))) if previsibilidades else 0
 
-    return JsonResponse({
+    return {
         "dimensao": dim,
         "meses_frente": meses_frente,
         "historico": historico,
@@ -2636,7 +2629,33 @@ def api_opme_previsibilidade(request):
         "total_previsto_proximos_meses": int(total_previsto),
         "previsibilidade_media": prev_media,
         "alertas_compra_antecipada": alertas_compra,
-    })
+    }
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_previsibilidade(request):
+    """GET /api/hospital/opme/previsibilidade/?dim=procedimento|material|especialidade&meses=3&historico=12
+
+    Métrica de sucesso da operadora no desafio de OPME: previsibilidade de
+    consumo por especialidade e por procedimento. Também sinaliza onde a demanda
+    está em ALTA (comprar antes → evitar compra emergencial)."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    dim = (request.GET.get("dim") or "procedimento").strip()
+    try:
+        meses_frente = max(1, min(int(request.GET.get("meses", 3)), 12))
+    except (TypeError, ValueError):
+        meses_frente = 3
+    try:
+        historico = max(3, min(int(request.GET.get("historico", 12)), 24))
+    except (TypeError, ValueError):
+        historico = 12
+
+    return JsonResponse(_calc_previsibilidade(empresa, dim, meses_frente, historico))
 
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
@@ -2694,6 +2713,17 @@ def api_opme_kpis(request):
     via_rapida_total = aut_qs.filter(via_rapida=True).count()
     via_rapida_pct = round(via_rapida_total / total_aut * 100, 1) if total_aut else 0
 
+    # ── Previsibilidade → alertas de compra antecipada no painel principal ──
+    # Demanda em ALTA e previsível: comprar antes evita compra emergencial (a dor
+    # da operadora). Antes só aparecia dentro da aba Previsibilidade — agora vira
+    # um sinal de topo, com os 3 grupos mais críticos.
+    alertas_compra = []
+    try:
+        _prev = _calc_previsibilidade(empresa, "procedimento", meses_frente=3, historico=12)
+        alertas_compra = _prev.get("alertas_compra_antecipada", [])
+    except Exception:
+        alertas_compra = []
+
     return JsonResponse({
         "catalogo_itens_ativos": total_catalogo,
         "autorizacoes_por_status": por_status,
@@ -2711,6 +2741,9 @@ def api_opme_kpis(request):
         # Via Rápida (IA)
         "via_rapida_total": via_rapida_total,
         "via_rapida_pct": via_rapida_pct,
+        # Previsibilidade — compra antecipada (evita compra emergencial)
+        "alertas_compra_antecipada_total": len(alertas_compra),
+        "alertas_compra_antecipada_top": alertas_compra[:3],
     })
 
 
