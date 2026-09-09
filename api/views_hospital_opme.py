@@ -231,6 +231,11 @@ SOBREPRECO_LIMIAR = 0.10
 # Amostra mínima de preços históricos para a mediana ser confiável.
 SOBREPRECO_MIN_AMOSTRA = 3
 
+# Sobrecusto ESTIMADO de uma compra emergencial vs. planejada. Parâmetro de
+# modelagem (não um fato medido) — usado só na alavanca anti-compra-emergencial,
+# e sempre rotulado como estimativa. Ajustável pela operadora.
+SOBRECUSTO_URGENCIA = 0.20
+
 
 def _mediana_preco_praticado(empresa, opme_id, meses=12, ItemModel=None):
     """Mediana do preço PRATICADO para um material, a partir do histórico real de
@@ -757,6 +762,7 @@ def api_opme_autorizacoes(request):
                 crm_medico=data.get("crm_medico", ""),
                 cid10=data.get("cid10", ""),
                 procedimento_tuss=procedimento_tuss,
+                urgente=bool(data.get("urgente", False)),
                 justificativa=data.get("justificativa", ""),
                 numero_protocolo="",  # preenchido abaixo a partir do PK (race-free)
                 validade_ate=data.get("validade_ate") or validade_padrao.isoformat(),
@@ -1332,6 +1338,7 @@ def api_opme_economia(request):
     # diferença frente a uma alternativa homologada do mesmo grupo clínico.
     potencial = 0.0
     itens_risco = []
+    itens_ja_contados_sub = set()   # evita dupla contagem na alavanca de padronização
     pendentes = itens_qs.filter(
         fora_padrao=True, autorizacao__status="solicitada"
     ).select_related("opme", "autorizacao")
@@ -1347,6 +1354,7 @@ def api_opme_economia(request):
             continue
         dif = (preco - min(baratas)) * it.quantidade
         potencial += dif
+        itens_ja_contados_sub.add(it.id)
         itens_risco.append({
             "protocolo": it.autorizacao.numero_protocolo,
             "paciente_nome": it.autorizacao.paciente_nome,
@@ -1412,6 +1420,75 @@ def api_opme_economia(request):
         if excesso > 0:
             sobrepreco_potencial += excesso
 
+    # ── Alavanca: padronização por procedimento ─────────────────────────────────
+    # Pedido pendente que usa material NÃO preferencial do procedimento, havendo um
+    # preferencial padronizado mais barato. O médico nunca é bloqueado — mede-se o
+    # que a escolha padronizada economizaria. Não conta itens já capturados pela
+    # substituição (evita dupla contagem no total).
+    OPMEProcedimento, OPMEProcedimentoItem = _get_proc_models()
+    padronizacao_potencial = 0.0
+    itens_padronizacao = []
+    pend_proc = itens_qs.filter(
+        autorizacao__status="solicitada"
+    ).exclude(id__in=itens_ja_contados_sub).select_related("opme", "autorizacao")
+    # cache dos preferenciais por (procedimento_tuss)
+    _pref_cache = {}
+    def _preferencial_do_proc(tuss):
+        if not tuss:
+            return None
+        if tuss in _pref_cache:
+            return _pref_cache[tuss]
+        proc = OPMEProcedimento.objects.filter(
+            empresa=empresa, codigo_tuss=tuss, ativo=True).first()
+        melhor = None
+        if proc:
+            for ip in proc.itens_permitidos.select_related("opme").all():
+                if ip.preferencial and ip.opme.preco_maximo is not None:
+                    p = float(ip.opme.preco_maximo)
+                    if melhor is None or p < melhor[1]:
+                        melhor = (ip.opme, p)
+        _pref_cache[tuss] = melhor
+        return melhor
+    for it in pend_proc:
+        tuss = it.autorizacao.procedimento_tuss
+        pref = _preferencial_do_proc(tuss)
+        if not pref:
+            continue
+        pref_opme, pref_preco = pref
+        if it.opme_id == pref_opme.id:
+            continue  # já é o preferencial
+        preco = float(it.preco_solicitado) if it.preco_solicitado else (
+            float(it.opme.preco_maximo) if it.opme.preco_maximo else None)
+        if preco is None or preco <= pref_preco:
+            continue
+        dif = (preco - pref_preco) * it.quantidade
+        padronizacao_potencial += dif
+        itens_padronizacao.append({
+            "protocolo": it.autorizacao.numero_protocolo,
+            "material": it.opme.descricao,
+            "preferencial": pref_opme.descricao,
+            "preco_solicitado": preco, "preco_preferencial": pref_preco,
+            "economia_possivel": round(dif, 2),
+        })
+    itens_padronizacao.sort(key=lambda x: x["economia_possivel"], reverse=True)
+
+    # ── Alavanca: anti-compra-emergencial (ESTIMATIVA) ──────────────────────────
+    # Pedidos urgentes/emergenciais pagam um sobrecusto (sem tempo de planejar/
+    # negociar). Prever a demanda converte urgência em compra planejada. O número
+    # é uma ESTIMATIVA (sobrecusto assumido), nunca somado ao FATO da Torre.
+    urgentes_qs = itens_qs.filter(
+        autorizacao__urgente=True, autorizacao__status="solicitada")
+    valor_urgente = 0.0
+    for it in urgentes_qs.select_related("opme"):
+        preco = float(it.preco_solicitado) if it.preco_solicitado else (
+            float(it.opme.preco_maximo) if it.opme.preco_maximo else None)
+        if preco:
+            valor_urgente += preco * it.quantidade
+    # sobrecusto evitável = valor × (sobrecusto / (1 + sobrecusto)), pois o preço
+    # de urgência JÁ embute o sobrecusto; isolamos a parcela evitável.
+    emergencial_potencial = round(
+        valor_urgente * (SOBRECUSTO_URGENCIA / (1 + SOBRECUSTO_URGENCIA)), 2)
+
     # ── Torre de Economia: as alavancas que compõem o custo evitado total ───────
     # Cada alavanca é medida de forma independente e auditável. FATO = já obtido;
     # POTENCIAL = disponível se a operação atuar. Base para a meta de redução.
@@ -1425,9 +1502,18 @@ def api_opme_economia(request):
         {"alavanca": "Controle de sobrepreço",
          "descricao": "Mesmo material alinhado à mediana histórica praticada — corta o preço acima do normal",
          "fato": float(economia_sobrepreco), "potencial": round(sobrepreco_potencial, 2)},
+        {"alavanca": "Padronização por procedimento",
+         "descricao": "Usar o material preferencial padronizado do procedimento (o médico nunca é bloqueado)",
+         "fato": 0.0, "potencial": round(padronizacao_potencial, 2)},
+        {"alavanca": "Anti-compra-emergencial",
+         "descricao": f"Prever a demanda e comprar planejado evita o sobrecusto de urgência (estimativa: {int(SOBRECUSTO_URGENCIA*100)}%)",
+         "fato": 0.0, "potencial": emergencial_potencial, "estimativa": True},
     ]
     fato_total = sum(a["fato"] for a in torre)
-    potencial_total = sum(a["potencial"] for a in torre)
+    # Estimativas (ex.: anti-emergencial) NÃO entram no potencial "duro" — ficam
+    # separadas para não misturar número medido com número estimado.
+    potencial_total = sum(a["potencial"] for a in torre if not a.get("estimativa"))
+    estimativa_total = sum(a["potencial"] for a in torre if a.get("estimativa"))
 
     return JsonResponse({
         "economia_realizada": float(realizada),
@@ -1439,10 +1525,15 @@ def api_opme_economia(request):
         "economia_sobrepreco": float(economia_sobrepreco),
         "alinhamentos_mediana": alinhamentos,
         "economia_sobrepreco_potencial": round(sobrepreco_potencial, 2),
+        "padronizacao_potencial": round(padronizacao_potencial, 2),
+        "itens_padronizacao": itens_padronizacao[:10],
+        "emergencial_potencial_estimado": emergencial_potencial,
+        "sobrecusto_urgencia_pct": int(SOBRECUSTO_URGENCIA * 100),
         # Torre de Economia (soma das alavancas)
         "torre_economia": torre,
         "torre_fato_total": round(fato_total, 2),
         "torre_potencial_total": round(potencial_total, 2),
+        "torre_estimativa_total": round(estimativa_total, 2),
         "serie_mensal": serie,
         "itens_em_risco": itens_risco[:10],
         "ranking_fora_padrao": ranking,

@@ -10177,6 +10177,11 @@ class AutorizacaoOPME(models.Model):
                                                     help_text="ID do procedimento cirúrgico")
     procedimento_tuss = models.CharField(max_length=10, blank=True, default="",
                                          verbose_name="Procedimento TUSS/SIGTAP vinculado")
+    # Pedido urgente/emergencial: compra sem tempo de planejar costuma sair mais
+    # cara (sobrecusto de urgência). Serve para a alavanca "anti-compra-emergencial":
+    # prever a demanda e comprar planejado evita esse sobrecusto.
+    urgente          = models.BooleanField(default=False, db_index=True,
+                                           verbose_name="Pedido urgente/emergencial")
     # Triagem automática (materiais fora do padrão) + recomendação do motor de IA
     alertas_triagem  = models.JSONField(default=list, blank=True,
                                         verbose_name="Alertas da triagem automática")

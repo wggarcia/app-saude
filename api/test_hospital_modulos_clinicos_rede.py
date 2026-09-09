@@ -1463,3 +1463,55 @@ class OPMETests(TestCase):
         d = r.json()
         self.assertIsNone(d["mediana"])
         self.assertFalse(d["acima"])
+
+    # ── Alavanca padronização por procedimento (lever 5) ─────────────────────
+    def test_padronizacao_potencial_material_nao_preferencial(self):
+        """Pedido pendente com material não-preferencial mais caro que o preferencial
+        do procedimento entra na alavanca de padronização (o médico não é bloqueado)."""
+        empresa = _empresa("Hospital Rede", "opme-pad@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pref = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Preferencial barato", "tipo": "protese", "preco_maximo": 4000},
+            content_type="application/json").json()["id"]
+        caro = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Não preferencial caro", "tipo": "protese", "preco_maximo": 7000},
+            content_type="application/json").json()["id"]
+        # procedimento padroniza o preferencial (barato) e permite o caro também
+        client.post("/api/hospital/opme/procedimentos/",
+            data={"codigo_tuss": "30715016", "descricao": "Artrodese",
+                  "itens": [{"opme_id": pref, "quantidade_maxima": 1, "preferencial": True},
+                            {"opme_id": caro, "quantidade_maxima": 1, "preferencial": False}]},
+            content_type="application/json")
+        # médico pede o caro (com justificativa — nunca é bloqueado)
+        r = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "procedimento_tuss": "30715016", "justificativa": "preferência técnica",
+                  "itens": [{"opme_id": caro, "quantidade": 1, "preco_solicitado": 7000}]},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)  # passou, não foi bloqueado
+        eco = client.get("/api/hospital/opme/economia").json()
+        lever = [a for a in eco["torre_economia"] if a["alavanca"] == "Padronização por procedimento"][0]
+        self.assertEqual(lever["potencial"], 3000.0)  # 7000 - 4000
+        self.assertEqual(eco["padronizacao_potencial"], 3000.0)
+
+    # ── Alavanca anti-compra-emergencial (lever 4) ───────────────────────────
+    def test_anti_emergencial_estimativa_no_torre(self):
+        """Pedido urgente gera estimativa de sobrecusto evitável, marcada como estimativa."""
+        empresa = _empresa("Hospital Rede", "opme-emerg@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item urgente", "tipo": "material", "preco_maximo": 12000},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr", "urgente": True,
+                  "itens": [{"opme_id": opme, "quantidade": 1, "preco_solicitado": 12000}]},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        eco = client.get("/api/hospital/opme/economia").json()
+        lever = [a for a in eco["torre_economia"] if a["alavanca"] == "Anti-compra-emergencial"][0]
+        self.assertTrue(lever.get("estimativa"))
+        self.assertEqual(lever["fato"], 0.0)
+        # 12000 * (0.20 / 1.20) = 2000
+        self.assertEqual(lever["potencial"], 2000.0)
+        # estimativa NÃO entra no potencial "duro" da Torre
+        self.assertEqual(eco["torre_estimativa_total"], 2000.0)

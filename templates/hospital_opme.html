@@ -726,24 +726,30 @@ function renderTorre(d) {
   document.getElementById('torreFatoTotal').textContent = moneyCurto(d.torre_fato_total||0);
   var torre = d.torre_economia || [];
   var totalFato = d.torre_fato_total || 0, totalPot = d.torre_potencial_total || 0;
-  var escala = Math.max(totalFato, totalFato + totalPot, 1);
+  var totalEst = d.torre_estimativa_total || 0;
+  var escala = Math.max(totalFato + totalPot + totalEst, 1);
   box.innerHTML = torre.map(function(a){
+    var est = !!a.estimativa;
     var pctFato = Math.round((a.fato||0)/escala*100);
     var pctPot  = Math.round((a.potencial||0)/escala*100);
+    var valTxt = est
+      ? '<span class="itens-mini" style="color:#f0b400">~ '+money(a.potencial)+' est.</span>'
+      : ('<strong style="color:#00e5b0">'+money(a.fato)+'</strong>'
+         + (a.potencial>0 ? ' <span class="itens-mini">+ '+money(a.potencial)+' potencial</span>' : ''));
+    var barPot = est ? 'rgba(240,180,0,.30)' : 'rgba(0,229,176,.35)';
     return '<div style="margin-bottom:14px">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px">'
-      +   '<div><strong>'+esc(a.alavanca)+'</strong> <span class="itens-mini">'+esc(a.descricao)+'</span></div>'
-      +   '<div style="white-space:nowrap;font-variant-numeric:tabular-nums"><strong style="color:#00e5b0">'+money(a.fato)+'</strong>'
-      +     (a.potencial>0 ? ' <span class="itens-mini">+ '+money(a.potencial)+' potencial</span>' : '')+'</div>'
+      +   '<div><strong>'+esc(a.alavanca)+'</strong>'+(est?' <span class="badge badge-warn">estimativa</span>':'')+' <span class="itens-mini">'+esc(a.descricao)+'</span></div>'
+      +   '<div style="white-space:nowrap;font-variant-numeric:tabular-nums">'+valTxt+'</div>'
       + '</div>'
       + '<div style="height:14px;background:rgba(255,255,255,.06);border-radius:7px;overflow:hidden;display:flex">'
       +   '<div style="width:'+pctFato+'%;background:#00e5b0"></div>'
-      +   '<div style="width:'+pctPot+'%;background:repeating-linear-gradient(45deg,rgba(0,229,176,.35),rgba(0,229,176,.35) 6px,transparent 6px,transparent 12px)"></div>'
+      +   '<div style="width:'+pctPot+'%;background:repeating-linear-gradient(45deg,'+barPot+','+barPot+' 6px,transparent 6px,transparent 12px)"></div>'
       + '</div></div>';
   }).join('')
    + '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-top:4px">'
-   +   '<div><strong>Total</strong> <span class="itens-mini">(comprovado + potencial em aberto)</span></div>'
-   +   '<div style="font-variant-numeric:tabular-nums"><strong style="color:#00e5b0">'+money(totalFato)+'</strong> <span class="itens-mini">+ '+money(totalPot)+'</span></div>'
+   +   '<div><strong>Total</strong> <span class="itens-mini">(comprovado + potencial'+(totalEst>0?' + estimativa':'')+')</span></div>'
+   +   '<div style="font-variant-numeric:tabular-nums"><strong style="color:#00e5b0">'+money(totalFato)+'</strong> <span class="itens-mini">+ '+money(totalPot)+(totalEst>0?' <span style="color:#f0b400">+ ~'+money(totalEst)+' est.</span>':'')+'</span></div>'
    + '</div>';
 }
 
