@@ -205,6 +205,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div class="kpi danger"><div class="kpi-val" id="kpiFraude">—</div><div class="kpi-lbl">Médicos c/ Padrão Atípico</div><div class="kpi-sub">últimos 30 dias</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiAnvisaVencido">—</div><div class="kpi-lbl">Registros ANVISA Vencidos</div></div>
     <div class="kpi ok" id="kpiCompraCard" style="cursor:pointer" onclick="setTab('previsibilidade')" title="Ver Previsibilidade"><div class="kpi-val" id="kpiCompraAntecipada">—</div><div class="kpi-lbl">Comprar Antecipado</div><div class="kpi-sub" id="kpiCompraSub">demanda em alta — evita compra emergencial</div></div>
+    <div class="kpi ok" id="kpiRecebCard" style="cursor:pointer" onclick="setTab('recebimento')" title="Ver Recebimento"><div class="kpi-val" id="kpiRecebBloq">—</div><div class="kpi-lbl">Material Bloqueado</div><div class="kpi-sub" id="kpiRecebSub">liberado p/ cirurgia — validação na entrada</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiTaxaAprov">—</div><div class="kpi-lbl">Taxa de Aprovação</div><div class="kpi-sub" id="kpiCatalogoSub">—</div></div>
   </div>
 
@@ -216,6 +217,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="tab-btn" data-tab="juntas" onclick="setTab('juntas')">Juntas Médicas <span class="pill" id="pillJuntas" style="display:none">0</span></button>
     <button class="tab-btn" data-tab="procedimentos" onclick="setTab('procedimentos')">Procedimentos</button>
     <button class="tab-btn" data-tab="catalogo" onclick="setTab('catalogo')">Catálogo</button>
+    <button class="tab-btn" data-tab="recebimento" onclick="setTab('recebimento')">Recebimento <span class="pill" id="pillReceb" style="display:none">0</span></button>
     <button class="tab-btn" data-tab="implantaveis" onclick="setTab('implantaveis')">Implantáveis</button>
   </div>
 
@@ -464,6 +466,27 @@ tr:hover td{background:rgba(0,194,255,.03)}
   </div>
 
   <!-- ═══════════════ IMPLANTÁVEIS ═══════════════ -->
+  <!-- ═══════════════ RECEBIMENTO / LIBERAÇÃO ═══════════════ -->
+  <div class="tab-panel" id="panel-recebimento">
+    <div class="card" style="border:1px solid rgba(0,229,176,.25)">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📦 Recebimento e Liberação para Cirurgia</div>
+          <div class="page-sub" style="font-size:11px;margin-top:2px">Registra a chegada física do material, revalida <b>ANVISA</b> e o <b>vencimento do lote</b> na entrada, e libera — ou bloqueia — para a cirurgia. O cirurgião só opera com material confirmado em mãos e válido.</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoRecebimento()">+ Registrar Recebimento</button>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Protocolo / Paciente</th><th>Material</th><th>Lote / Série</th><th>Validade</th><th>ANVISA</th><th>Status</th><th></th></tr></thead>
+            <tbody id="recebBody"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="panel-implantaveis">
     <div class="card">
       <div class="card-header">
@@ -542,7 +565,109 @@ function setTab(tab) {
   if (tab === 'procedimentos') carregarProcedimentos();
   if (tab === 'cotacoes') carregarCotacoes();
   if (tab === 'previsibilidade') carregarPrevisibilidade();
+  if (tab === 'recebimento') carregarRecebimentos();
   if (tab === 'painel') carregarEconomia();
+}
+
+/* ── Recebimento e Liberação para Cirurgia ──────────────────────────────── */
+async function carregarRecebimentos(){
+  var body=document.getElementById('recebBody');
+  if(!body) return;
+  try{
+    var r=await fetch('/api/hospital/opme/recebimentos',{credentials:'include',headers:headers()});
+    var d=await r.json();
+    var lista=d.recebimentos||[];
+    if(!lista.length){ body.innerHTML='<tr><td colspan="7" class="empty">Nenhum recebimento registrado. Clique em “Registrar Recebimento” quando o material chegar.</td></tr>'; return; }
+    body.innerHTML=lista.map(function(x){
+      var badge = x.status==='liberado' ? '<span class="badge badge-ok">✓ Liberado p/ cirurgia</span>'
+                : x.status==='bloqueado' ? '<span class="badge badge-err">✕ Bloqueado</span>'
+                : '<span class="badge">Consumido</span>';
+      var anv = x.anvisa_ok ? '<span class="badge badge-ok">ok</span>'
+              : '<span class="itens-mini">'+esc(x.anvisa_situacao||'não verif.')+'</span>';
+      var acao = x.status==='bloqueado'
+        ? '<button class="btn btn-ghost btn-sm" onclick="liberarRecebimento('+x.id+')" title="Liberar manualmente com justificativa">Liberar</button>'
+        : '';
+      var motivo = (x.status==='bloqueado'&&x.motivo_bloqueio) ? '<div class="itens-mini" style="color:#ff6b6b">'+esc(x.motivo_bloqueio)+'</div>' : '';
+      return '<tr><td><strong>'+esc(x.protocolo)+'</strong><br><span class="itens-mini">'+esc(x.paciente_nome)+'</span></td>'
+        +'<td>'+esc(x.opme_descricao)+'<br><span class="itens-mini">qtd: '+x.quantidade_recebida+(x.fornecedor?(' · '+esc(x.fornecedor)):'')+'</span></td>'
+        +'<td>'+esc(x.lote||'—')+'<br><span class="itens-mini">'+esc(x.numero_serie||'—')+'</span></td>'
+        +'<td>'+fmtData(x.validade)+'</td>'
+        +'<td>'+anv+'</td>'
+        +'<td>'+badge+motivo+'</td>'
+        +'<td>'+acao+'</td></tr>';
+    }).join('');
+    var nBloq=lista.filter(function(x){return x.status==='bloqueado';}).length;
+    var pill=document.getElementById('pillReceb');
+    if(nBloq>0){ pill.textContent=nBloq; pill.style.display=''; } else pill.style.display='none';
+  }catch(e){ body.innerHTML='<tr><td colspan="7" class="empty">Erro ao carregar recebimentos.</td></tr>'; }
+}
+
+async function abrirNovoRecebimento(){
+  // autorizações aprovadas/parciais são as candidatas a receber material
+  var aprovadas = autCache.filter(function(a){return a.status==='aprovada'||a.status==='parcial';});
+  var optsAut = aprovadas.map(function(a){ return '<option value="'+a.id+'">'+esc(a.numero_protocolo)+' — '+esc(a.paciente_nome)+'</option>'; }).join('');
+  var optsOpme = catalogoCache.filter(function(c){return c.ativo;}).map(function(c){ return '<option value="'+c.id+'">'+esc(c.descricao)+'</option>'; }).join('');
+  if(!aprovadas.length){ toast('Não há autorização aprovada para receber material ainda.', false); return; }
+  var h = '<div class="form-group"><label>Autorização aprovada <span class="req-mark">*</span></label><select id="rAut"><option value="">— selecione —</option>'+optsAut+'</select></div>'
+    + '<div class="form-group"><label>Material recebido <span class="req-mark">*</span></label><select id="rOpme"><option value="">— selecione —</option>'+optsOpme+'</select></div>'
+    + '<div class="form-row">'
+    +   '<div class="form-group"><label>Quantidade recebida</label><input type="number" id="rQtd" value="1" min="1"></div>'
+    +   '<div class="form-group"><label>Validade do lote</label><input type="date" id="rValidade"></div>'
+    + '</div>'
+    + '<div class="form-row">'
+    +   '<div class="form-group"><label>Lote</label><input id="rLote" placeholder="ex: L-2026-08"></div>'
+    +   '<div class="form-group"><label>Nº de série</label><input id="rSerie" placeholder="ex: SN-00123"></div>'
+    + '</div>'
+    + '<div class="form-row">'
+    +   '<div class="form-group"><label>Fornecedor</label><select id="rForn"><option value="">— opcional —</option></select></div>'
+    +   '<div class="form-group"><label>Nota fiscal</label><input id="rNota" placeholder="nº da NF"></div>'
+    + '</div>'
+    + '<div class="alert-box ab-info" style="margin-top:4px"><div class="ab-title">Validação automática</div>Ao salvar, o sistema revalida o registro ANVISA e o vencimento do lote. Se algo falhar, o material entra <b>bloqueado</b> e não libera a cirurgia até um farmacêutico liberar com justificativa.</div>';
+  abrirModal('Registrar Recebimento de Material',
+    'Confirma a chegada física do OPME e valida antes de liberar para o centro cirúrgico.',
+    h,
+    '<button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="btn btn-primary" onclick="salvarRecebimento()">Registrar e validar</button>');
+  // popula fornecedores (opcional) de forma assíncrona
+  try{
+    var rf=await fetch('/api/hospital/opme/fornecedores?limit=500',{credentials:'include',headers:headers()});
+    var df=await rf.json(); var selF=document.getElementById('rForn');
+    if(selF && (df.fornecedores||[]).length){
+      selF.innerHTML='<option value="">— opcional —</option>'+df.fornecedores.map(function(f){
+        var afe=f.afe_situacao==='ativa'?' ✓AFE':''; return '<option value="'+f.id+'">'+esc(f.razao_social)+afe+'</option>'; }).join('');
+    }
+  }catch(e){}
+}
+
+async function salvarRecebimento(){
+  var aut=document.getElementById('rAut').value, opme=document.getElementById('rOpme').value;
+  if(!aut||!opme) return toast('Selecione a autorização e o material.', false);
+  var payload={
+    autorizacao_id: parseInt(aut), opme_id: parseInt(opme),
+    quantidade_recebida: parseInt(document.getElementById('rQtd').value||'1'),
+    validade: document.getElementById('rValidade').value||null,
+    lote: document.getElementById('rLote').value, numero_serie: document.getElementById('rSerie').value,
+    fornecedor_id: document.getElementById('rForn').value ? parseInt(document.getElementById('rForn').value) : null,
+    nota_fiscal: document.getElementById('rNota').value
+  };
+  var r=await fetch('/api/hospital/opme/recebimentos/',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(payload)});
+  var d=await r.json().catch(function(){return {};});
+  if(!r.ok) return toast(d.erro||'Erro ao registrar', false);
+  fecharModal();
+  if(d.status==='liberado') toast('Material recebido e LIBERADO para cirurgia.', true);
+  else toast('Material recebido, porém BLOQUEADO: '+(d.motivo_bloqueio||'falha na validação'), false);
+  carregarRecebimentos(); carregarKpis();
+}
+
+async function liberarRecebimento(id){
+  var just=prompt('Justificativa para liberar manualmente este material bloqueado (obrigatória):');
+  if(just===null) return;
+  if(!just.trim()) return toast('Justificativa é obrigatória.', false);
+  var r=await fetch('/api/hospital/opme/recebimentos/'+id+'/liberar',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify({justificativa:just.trim()})});
+  var d=await r.json().catch(function(){return {};});
+  if(!r.ok) return toast(d.erro||'Erro ao liberar', false);
+  toast('Material liberado para cirurgia.', true);
+  carregarRecebimentos(); carregarKpis();
 }
 
 /* ── Sobrepreço (mesmo item acima da mediana) ───────────────────────────── */
@@ -646,6 +771,16 @@ async function carregarKpis() {
     } else {
       cardComp.className = 'kpi ok';
       document.getElementById('kpiCompraSub').textContent = 'nenhuma demanda em alta no momento';
+    }
+    var nBloq = d.recebimentos_bloqueados||0, nLib = d.recebimentos_liberados||0;
+    document.getElementById('kpiRecebBloq').textContent = nBloq;
+    var cardReceb = document.getElementById('kpiRecebCard');
+    if (nBloq > 0) {
+      cardReceb.className = 'kpi danger';
+      document.getElementById('kpiRecebSub').textContent = nBloq + ' bloqueado(s) — NÃO liberar cirurgia até revalidar';
+    } else {
+      cardReceb.className = 'kpi ok';
+      document.getElementById('kpiRecebSub').textContent = nLib + ' liberado(s) p/ cirurgia — validado na entrada';
     }
     var pill = document.getElementById('pillJuntas');
     if (d.juntas_medicas_abertas > 0) { pill.textContent = d.juntas_medicas_abertas; pill.style.display=''; }

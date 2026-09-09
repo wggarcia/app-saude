@@ -10608,6 +10608,64 @@ class CotacaoFornecedorOPME(models.Model):
         return f"{self.fornecedor.razao_social}: R$ {self.preco_unitario} ({'válido' if self.valida else 'inválido'})"
 
 
+class RecebimentoOPME(models.Model):
+    """Recebimento físico do material OPME no hospital — a ponte que faltava entre
+    a APROVAÇÃO e o CENTRO CIRÚRGICO.
+
+    A esteira de aprovação garante que o pedido foi bem autorizado, mas não dizia
+    se o material CHEGOU e está VÁLIDO para operar. Este registro fecha o ciclo:
+    lança o que entrou (lote, série, validade, fornecedor, NF), REVALIDA o registro
+    ANVISA na DATA da entrada + o vencimento do lote, e LIBERA — ou BLOQUEIA — o
+    material para a cirurgia. O cirurgião passa a ter, dentro do sistema, a certeza
+    de que o item correto e válido está fisicamente disponível antes de operar.
+
+    Não altera a esteira de aprovação (que segue intacta) — é uma camada adicional
+    do lado da logística/centro cirúrgico."""
+    STATUS = [
+        ("liberado",  "Liberado para cirurgia"),
+        ("bloqueado", "Bloqueado — falha na validação"),
+        ("consumido", "Consumido (implantado)"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="recebimentos_opme")
+    autorizacao      = models.ForeignKey(AutorizacaoOPME, on_delete=models.CASCADE,
+                                          related_name="recebimentos")
+    item             = models.ForeignKey(ItemAutorizacaoOPME, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="recebimentos")
+    opme             = models.ForeignKey(CatalogoOPME, on_delete=models.PROTECT,
+                                          related_name="recebimentos")
+    quantidade_recebida = models.PositiveIntegerField(default=1)
+    lote             = models.CharField(max_length=100, blank=True, default="")
+    numero_serie     = models.CharField(max_length=100, blank=True, default="")
+    validade         = models.DateField(null=True, blank=True,
+                                         verbose_name="Validade do lote recebido")
+    fornecedor       = models.ForeignKey(FornecedorHospital, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="recebimentos_opme")
+    nota_fiscal      = models.CharField(max_length=60, blank=True, default="")
+    # Retrato da validação NA ENTRADA (auditoria: por que liberou/bloqueou).
+    anvisa_situacao  = models.CharField(max_length=40, blank=True, default="")
+    anvisa_ok        = models.BooleanField(default=False)
+    status           = models.CharField(max_length=12, choices=STATUS, default="liberado",
+                                         db_index=True)
+    motivo_bloqueio  = models.TextField(blank=True, default="")
+    recebido_por     = models.CharField(max_length=160, blank=True, default="")
+    recebido_em      = models.DateTimeField(auto_now_add=True)
+    liberado_em      = models.DateTimeField(null=True, blank=True)
+    observacoes      = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Recebimento OPME"
+        verbose_name_plural = "Recebimentos OPME"
+        ordering            = ["-recebido_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["autorizacao", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Recebimento #{self.pk} — {self.opme.descricao} ({self.status})"
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ANVISA — bases públicas de referência (produtos para saúde + AFE)
 # Dados abertos oficiais, GLOBAIS (não por empresa) — como SIGTAP/TUSS.

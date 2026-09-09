@@ -1337,6 +1337,130 @@ class OPMETests(TestCase):
         self.assertIn("alertas_compra_antecipada_top", d)
         self.assertIsInstance(d["alertas_compra_antecipada_top"], list)
 
+    # ── Recebimento e Liberação para Cirurgia ────────────────────────────────
+    def _aut_simples(self, client, opme_id):
+        return client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme_id, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+
+    def test_recebimento_valido_libera_para_cirurgia(self):
+        """Material sem pendência ANVISA e sem lote vencido → LIBERADO."""
+        empresa = _empresa("Hospital Rede", "opme-rec-ok@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Cage lombar", "tipo": "material", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        aut = self._aut_simples(client, opme)
+        r = client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "lote": "L1",
+                  "numero_serie": "SN1", "validade": "2090-01-01"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json()["status"], "liberado")
+
+    def test_recebimento_lote_vencido_bloqueia(self):
+        """Lote com validade no passado → BLOQUEADO (não libera cirurgia)."""
+        empresa = _empresa("Hospital Rede", "opme-rec-venc@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Placa", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        aut = self._aut_simples(client, opme)
+        r = client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2000-01-01"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json()["status"], "bloqueado")
+        self.assertIn("vencido", r.json()["motivo_bloqueio"].lower())
+
+    def test_implante_bloqueado_sem_recebimento_liberado(self):
+        """Trava progressiva: recebimento BLOQUEADO impede registrar implante (409)."""
+        empresa = _empresa("Hospital Rede", "opme-trava@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Haste", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        aut = self._aut_simples(client, opme)
+        client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2000-01-01"},
+            content_type="application/json")
+        r = client.post("/api/hospital/opme/implantaveis/",
+            data={"opme_id": opme, "autorizacao_id": aut, "paciente_nome": "P",
+                  "data_implante": "2026-09-09", "numero_serie": "SN", "lote_fabricante": "L"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+
+    def test_implante_passa_com_recebimento_liberado_e_consome(self):
+        """Com recebimento LIBERADO o implante passa e o recebimento vira consumido."""
+        from api.models import RecebimentoOPME
+        empresa = _empresa("Hospital Rede", "opme-trava-ok@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Haste 2", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        aut = self._aut_simples(client, opme)
+        rec = client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2090-01-01"},
+            content_type="application/json").json()
+        self.assertEqual(rec["status"], "liberado")
+        r = client.post("/api/hospital/opme/implantaveis/",
+            data={"opme_id": opme, "autorizacao_id": aut, "paciente_nome": "P",
+                  "data_implante": "2026-09-09", "numero_serie": "SN", "lote_fabricante": "L"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(RecebimentoOPME.objects.get(id=rec["id"]).status, "consumido")
+
+    def test_implante_legado_sem_autorizacao_nao_e_travado(self):
+        """Regressão: implante SEM autorização vinculada segue funcionando (201)."""
+        empresa = _empresa("Hospital Rede", "opme-legado@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item legado", "tipo": "material", "preco_maximo": 1000},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/implantaveis/",
+            data={"opme_id": opme, "paciente_nome": "P", "data_implante": "2026-09-09",
+                  "numero_serie": "SN", "lote_fabricante": "L"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+
+    def test_liberar_manual_exige_justificativa(self):
+        """Liberar recebimento bloqueado exige justificativa; com ela, libera."""
+        empresa = _empresa("Hospital Rede", "opme-lib@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item", "tipo": "material", "preco_maximo": 1000},
+            content_type="application/json").json()["id"]
+        aut = self._aut_simples(client, opme)
+        rid = client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2000-01-01"},
+            content_type="application/json").json()["id"]
+        r = client.post(f"/api/hospital/opme/recebimentos/{rid}/liberar",
+            data={}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        r = client.post(f"/api/hospital/opme/recebimentos/{rid}/liberar",
+            data={"justificativa": "Conferido manualmente pelo farmacêutico."},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["status"], "liberado")
+
+    def test_recebimento_isolado_por_empresa(self):
+        """LGPD: autorização de outra empresa não pode receber material aqui."""
+        emp_a = _empresa("Hospital A", "opme-rec-a@example.com", "hospital_rede")
+        emp_b = _empresa("Hospital B", "opme-rec-b@example.com", "hospital_rede")
+        ca, cb = _client_for(emp_a), _client_for(emp_b)
+        opme_b = cb.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item B", "tipo": "material", "preco_maximo": 1000},
+            content_type="application/json").json()["id"]
+        aut_b = self._aut_simples(cb, opme_b)
+        opme_a = ca.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item A", "tipo": "material", "preco_maximo": 1000},
+            content_type="application/json").json()["id"]
+        r = ca.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut_b, "opme_id": opme_a},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
     # ── Previsibilidade de consumo ───────────────────────────────────────────
     def test_previsao_serie_crescente_tendencia_alta(self):
         """Motor de previsão: série que sobe → tendência 'alta' e previsão > média histórica."""

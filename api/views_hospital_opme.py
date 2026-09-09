@@ -110,6 +110,11 @@ def _get_junta_model():
     return JuntaMedicaOPME
 
 
+def _get_recebimento_model():
+    from .models import RecebimentoOPME
+    return RecebimentoOPME
+
+
 # Formato real de registro ANVISA: numérico, 10 a 13 dígitos (ex.: produtos para
 # saúde/OPME costumam vir como 8XXXXXXXXXX). Isto é uma checagem de FORMATO —
 # não é uma consulta ao webservice da ANVISA (não há API pública estável e
@@ -2289,6 +2294,196 @@ def api_opme_cotacao_encerrar(request, cotacao_id):
     return JsonResponse(_cotacao_payload(c))
 
 
+# ── Recebimento e Liberação para Cirurgia ───────────────────────────────────────
+# A ponte entre a APROVAÇÃO e o CENTRO CIRÚRGICO. A esteira de aprovação continua
+# intacta; isto é uma camada adicional do lado da logística: registra a chegada
+# física do material, REVALIDA ANVISA + vencimento do lote na entrada, e LIBERA ou
+# BLOQUEIA para a cirurgia — para o cirurgião ter certeza, dentro do sistema, de
+# que o item correto e válido está em mãos antes de operar.
+
+def _recebimento_payload(r):
+    return {
+        "id": r.id,
+        "autorizacao_id": r.autorizacao_id,
+        "protocolo": r.autorizacao.numero_protocolo,
+        "paciente_nome": r.autorizacao.paciente_nome,
+        "opme_id": r.opme_id,
+        "opme_descricao": r.opme.descricao,
+        "quantidade_recebida": r.quantidade_recebida,
+        "lote": r.lote,
+        "numero_serie": r.numero_serie,
+        "validade": r.validade.isoformat() if r.validade else None,
+        "fornecedor": r.fornecedor.razao_social if r.fornecedor else "",
+        "nota_fiscal": r.nota_fiscal,
+        "anvisa_situacao": r.anvisa_situacao,
+        "anvisa_ok": r.anvisa_ok,
+        "status": r.status,
+        "status_display": r.get_status_display(),
+        "motivo_bloqueio": r.motivo_bloqueio,
+        "recebido_por": r.recebido_por,
+        "recebido_em": r.recebido_em.isoformat(),
+        "liberado_em": r.liberado_em.isoformat() if r.liberado_em else None,
+        "observacoes": r.observacoes,
+    }
+
+
+def _validar_recebimento_material(opme, validade):
+    """Valida o material NA ENTRADA. Retorna (anvisa_ok, anvisa_situacao, motivos).
+    Bloqueia se o registro ANVISA está explicitamente vencido/inválido, ou se o
+    lote informado está vencido. NÃO bloqueia por ausência da base ANVISA (não se
+    pode afirmar inválido o que não se consegue verificar — honesto)."""
+    motivos = []
+    st = _anvisa_status(opme.codigo_anvisa)
+    if st is None:
+        anvisa_situacao, anvisa_ok = "não verificada", False
+    elif not st.get("encontrado"):
+        anvisa_situacao, anvisa_ok = "registro não localizado", False
+    else:
+        anvisa_situacao = st.get("situacao") or ""
+        if st.get("vencido"):
+            anvisa_ok = False
+            motivos.append(f"Registro ANVISA vencido (venc. {st.get('data_vencimento')}).")
+        elif not st.get("valido"):
+            anvisa_ok = False
+            motivos.append(f"Registro ANVISA não está 'Válido' (situação: {anvisa_situacao or '—'}).")
+        else:
+            anvisa_ok = True
+    if validade:
+        try:
+            v = validade if isinstance(validade, date) else date.fromisoformat(str(validade))
+            if v < date.today():
+                motivos.append(f"Lote vencido (validade {v.isoformat()}).")
+        except (ValueError, TypeError):
+            motivos.append("Validade do lote em formato inválido (use AAAA-MM-DD).")
+    return anvisa_ok, anvisa_situacao, motivos
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_recebimentos(request):
+    """GET  /api/hospital/opme/recebimentos/ — lista recebimentos (filtros: status, autorizacao_id).
+    POST — registra a chegada física do material:
+      {autorizacao_id, opme_id, item_id?, quantidade_recebida?, lote?, numero_serie?,
+       validade?(AAAA-MM-DD), fornecedor_id?, nota_fiscal?, observacoes?}
+    Revalida ANVISA + vencimento do lote e já grava LIBERADO ou BLOQUEADO."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    CatalogoOPME, AutorizacaoOPME, ItemAutorizacaoOPME, _ = _get_opme_models()
+    RecebimentoOPME = _get_recebimento_model()
+
+    if request.method == "GET":
+        qs = (RecebimentoOPME.objects.filter(empresa=empresa)
+              .select_related("opme", "autorizacao", "fornecedor"))
+        status_f = request.GET.get("status")
+        if status_f:
+            qs = qs.filter(status=status_f)
+        aut_f = request.GET.get("autorizacao_id")
+        if aut_f:
+            qs = qs.filter(autorizacao_id=aut_f)
+        total = qs.count()
+        limite, offset = _paginacao(request)
+        return JsonResponse({
+            "total": total,
+            "recebimentos": [_recebimento_payload(r) for r in qs[offset:offset + limite]],
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+    try:
+        aut = AutorizacaoOPME.objects.get(id=data.get("autorizacao_id"), empresa=empresa)
+    except (AutorizacaoOPME.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({"erro": "Autorização inválida nesta empresa"}, status=400)
+    try:
+        opme = CatalogoOPME.objects.get(id=data.get("opme_id"), empresa=empresa)
+    except (CatalogoOPME.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({"erro": "Item OPME inválido no catálogo"}, status=400)
+
+    item = None
+    if data.get("item_id"):
+        item = ItemAutorizacaoOPME.objects.filter(
+            id=data["item_id"], autorizacao=aut).first()
+
+    try:
+        qtd = max(1, int(data.get("quantidade_recebida", 1) or 1))
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "Quantidade recebida inválida"}, status=400)
+
+    fornecedor = None
+    if data.get("fornecedor_id"):
+        from .models import FornecedorHospital
+        fornecedor = FornecedorHospital.objects.filter(
+            id=data["fornecedor_id"], empresa=empresa).first()
+
+    validade_raw = data.get("validade") or None
+    validade = None
+    if validade_raw:
+        try:
+            validade = date.fromisoformat(str(validade_raw))
+        except (ValueError, TypeError):
+            return JsonResponse(
+                {"erro": "Validade em formato inválido (use AAAA-MM-DD)."}, status=400)
+    anvisa_ok, anvisa_situacao, motivos = _validar_recebimento_material(opme, validade)
+    status = "bloqueado" if motivos else "liberado"
+
+    r = RecebimentoOPME.objects.create(
+        empresa=empresa, autorizacao=aut, item=item, opme=opme,
+        quantidade_recebida=qtd,
+        lote=(data.get("lote") or "").strip(),
+        numero_serie=(data.get("numero_serie") or "").strip(),
+        validade=validade,
+        fornecedor=fornecedor,
+        nota_fiscal=(data.get("nota_fiscal") or "").strip(),
+        anvisa_situacao=anvisa_situacao, anvisa_ok=anvisa_ok,
+        status=status, motivo_bloqueio="\n".join(motivos),
+        recebido_por=_principal_nome(request, empresa),
+        liberado_em=timezone.now() if status == "liberado" else None,
+        observacoes=(data.get("observacoes") or "").strip(),
+    )
+    return JsonResponse(_recebimento_payload(r), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_recebimento_liberar(request, receb_id):
+    """POST — libera manualmente um recebimento BLOQUEADO, com justificativa
+    (ex.: base ANVISA não sincronizada no tenant, conferência manual do
+    farmacêutico). A justificativa fica registrada para auditoria."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    RecebimentoOPME = _get_recebimento_model()
+    try:
+        r = RecebimentoOPME.objects.get(id=receb_id, empresa=empresa)
+    except RecebimentoOPME.DoesNotExist:
+        return JsonResponse({"erro": "Recebimento não encontrado"}, status=404)
+    if r.status == "consumido":
+        return JsonResponse({"erro": "Material já consumido (implantado)"}, status=400)
+
+    data, _erro = _parse_json(request)
+    data = data or {}
+    just = (data.get("justificativa") or "").strip()
+    if not just:
+        return JsonResponse(
+            {"erro": "Justificativa é obrigatória para liberar manualmente um "
+                     "material bloqueado."}, status=400)
+
+    r.status = "liberado"
+    r.liberado_em = timezone.now()
+    quem = _principal_nome(request, empresa)
+    nota = f"[Liberado manualmente por {quem}: {just}]"
+    r.observacoes = (r.observacoes + "\n" + nota).strip() if r.observacoes else nota
+    r.save(update_fields=["status", "liberado_em", "observacoes"])
+    return JsonResponse(_recebimento_payload(r))
+
+
 # ── Esteira do processo (linha do tempo do pedido) ──────────────────────────────
 
 @csrf_exempt
@@ -2494,6 +2689,26 @@ def api_opme_implantaveis(request):
     if not ok_cpf:
         return JsonResponse({"erro": erro_cpf}, status=400)
 
+    # ── Trava de segurança PROGRESSIVA (não quebra fluxo legado) ────────────────
+    # Só entra em ação quando o material JÁ passou pelo módulo de recebimento:
+    # se existe recebimento para (autorização, opme) mas NENHUM liberado, não deixa
+    # registrar o implante — o material não está confirmado válido/em mãos. Se não
+    # há recebimento nenhum (hospital ainda não usa o módulo), segue como antes.
+    receb_liberado = None
+    if autorizacao is not None:
+        RecebimentoOPME = _get_recebimento_model()
+        recs = RecebimentoOPME.objects.filter(autorizacao=autorizacao, opme=opme)
+        if recs.exists():
+            receb_liberado = recs.filter(status="liberado").order_by("id").first()
+            if receb_liberado is None:
+                bloq = recs.filter(status="bloqueado").first()
+                motivo = (bloq.motivo_bloqueio if bloq and bloq.motivo_bloqueio
+                          else "material recebido mas ainda não liberado para cirurgia")
+                return JsonResponse({
+                    "erro": "Não é possível registrar o implante: o material desta "
+                            "autorização não está liberado para cirurgia. " + motivo
+                }, status=409)
+
     impl = ImplantavelRegistro.objects.create(
         empresa=empresa,
         opme=opme,
@@ -2508,6 +2723,11 @@ def api_opme_implantaveis(request):
         hospital=data.get("hospital", ""),
         observacoes=data.get("observacoes", ""),
     )
+    # Fecha o ciclo: o recebimento liberado que abasteceu esta cirurgia vira
+    # "consumido" — some da fila de material disponível e não é reutilizado.
+    if receb_liberado is not None:
+        receb_liberado.status = "consumido"
+        receb_liberado.save(update_fields=["status"])
     return JsonResponse({"id": impl.id}, status=201)
 
 
@@ -2713,6 +2933,12 @@ def api_opme_kpis(request):
     via_rapida_total = aut_qs.filter(via_rapida=True).count()
     via_rapida_pct = round(via_rapida_total / total_aut * 100, 1) if total_aut else 0
 
+    # ── Recebimento → material liberado / bloqueado para cirurgia ───────────
+    RecebimentoOPME = _get_recebimento_model()
+    receb_qs = RecebimentoOPME.objects.filter(empresa=empresa)
+    receb_liberados = receb_qs.filter(status="liberado").count()
+    receb_bloqueados = receb_qs.filter(status="bloqueado").count()
+
     # ── Previsibilidade → alertas de compra antecipada no painel principal ──
     # Demanda em ALTA e previsível: comprar antes evita compra emergencial (a dor
     # da operadora). Antes só aparecia dentro da aba Previsibilidade — agora vira
@@ -2744,6 +2970,9 @@ def api_opme_kpis(request):
         # Previsibilidade — compra antecipada (evita compra emergencial)
         "alertas_compra_antecipada_total": len(alertas_compra),
         "alertas_compra_antecipada_top": alertas_compra[:3],
+        # Recebimento — material liberado / bloqueado para cirurgia
+        "recebimentos_liberados": receb_liberados,
+        "recebimentos_bloqueados": receb_bloqueados,
     })
 
 
