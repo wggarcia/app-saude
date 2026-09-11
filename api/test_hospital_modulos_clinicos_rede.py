@@ -1445,6 +1445,76 @@ class OPMETests(TestCase):
             alertas_triagem=[], alertas_fraude=[], anvisa_ok=True)
         self.assertNotIn("rebaixada", parecer2)
 
+    def test_segregacao_conta_corporativa_nao_trava(self):
+        """Sem usuário nominal (login por conta corporativa) NÃO se bloqueia nada —
+        não dá para afirmar identidade, e travar no escuro pararia a operação."""
+        from api.models import AutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-seg-corp@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item seg", "tipo": "material", "preco_maximo": 2000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        # conta corporativa não grava usuário nominal
+        self.assertIsNone(
+            AutorizacaoOPME.objects.get(id=aut).solicitado_por_usuario_id)
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut}/acao",
+            data={"acao": "aprovar"}, content_type="application/json")
+        self.assertEqual(r.status_code, 200, "sem identidade não pode bloquear")
+
+    def test_segregacao_bloqueia_autoaprovacao(self):
+        """Quem solicitou não autoriza o próprio pedido — nem pela tela de decisão,
+        nem contornando pela esteira."""
+        from api.models import AutorizacaoOPME
+        from api.views_hospital_opme import _bloqueio_segregacao
+        empresa = _empresa("Hospital Rede", "opme-seg-self@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item self", "tipo": "material", "preco_maximo": 2000},
+            content_type="application/json").json()["id"]
+        aut_id = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        aut = AutorizacaoOPME.objects.get(id=aut_id)
+        # simula pedido criado pelo usuário 42
+        aut.solicitado_por_usuario_id = 42
+        aut.save(update_fields=["solicitado_por_usuario_id"])
+
+        class _Req:            # request com principal nominal
+            pass
+        class _Usr:
+            __class__ = type("EmpresaUsuario", (), {})
+        req = _Req()
+        usr = _Usr(); usr.id = 42
+        req.principal = usr
+        self.assertIsNotNone(_bloqueio_segregacao(req, aut),
+                             "mesmo usuário deve ser bloqueado")
+        outro = _Usr(); outro.id = 43
+        req.principal = outro
+        self.assertIsNone(_bloqueio_segregacao(req, aut),
+                          "outro auditor pode autorizar")
+
+    def test_serializer_marca_autorizacao_propria(self):
+        """A tela precisa saber que o pedido é do próprio usuário para esconder o
+        botão de aprovar antes do clique."""
+        empresa = _empresa("Hospital Rede", "opme-seg-ser@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item ser seg", "tipo": "material", "preco_maximo": 2000},
+            content_type="application/json").json()["id"]
+        client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json")
+        lista = client.get("/api/hospital/opme/autorizacoes").json()["autorizacoes"]
+        self.assertIn("autorizacao_propria", lista[0])
+        # conta corporativa: sem identidade, nada é marcado como próprio
+        self.assertFalse(lista[0]["autorizacao_propria"])
+
     def test_aprovar_move_esteira_e_registra_trilha(self):
         """A decisão não pode deixar o pedido travado na auditoria: aprovar avança a
         esteira e grava QUEM decidiu, na trilha."""

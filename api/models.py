@@ -10207,6 +10207,14 @@ class AutorizacaoOPME(models.Model):
     paciente_nome    = models.CharField(max_length=160)
     cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
     medico_solicitante = models.CharField(max_length=150)
+    # Quem REALMENTE criou o pedido (usuário autenticado), diferente do nome digitado
+    # em `medico_solicitante`. É o que permite segregação de função: quem solicita
+    # não pode ser quem autoriza. Nulo quando o acesso foi por conta corporativa
+    # (sem usuário nominal) ou em pedidos criados antes deste controle existir —
+    # nesses casos não há como afirmar identidade, então não se bloqueia nada.
+    solicitado_por_usuario_id = models.PositiveIntegerField(
+        null=True, blank=True, db_index=True,
+        verbose_name="Usuário autenticado que criou a solicitação")
     crm_medico       = models.CharField(max_length=20, blank=True, default="")
     cid10            = models.CharField(max_length=6, blank=True, default="")
     status           = models.CharField(max_length=15, choices=STATUS, default="solicitada")

@@ -1270,10 +1270,21 @@ function verDetalhe(id) {
   // ── Decisão: ler e decidir na MESMA tela ────────────────────────────────────
   // Espelha TRANSICOES_AUTORIZACAO do backend — só oferece o que é permitido para
   // o status atual, em vez de deixar o usuário descobrir no erro 409.
+  // Segregação de função: quem solicitou não autoriza o próprio pedido. O backend
+  // bloqueia (403) de qualquer jeito; aqui a tela explica antes do clique.
+  if (a.autorizacao_propria) {
+    h += '<div class="alert-box ab-info"><div class="ab-title">🔒 Segregação de função</div>'
+       + 'Este pedido foi criado por você. A autorização cabe a outro auditor — '
+       + 'você pode negar ou encaminhar à Junta Médica, mas não aprovar o próprio pedido.</div>';
+  }
+
   var rodape = '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>';
   if (a.status === 'solicitada') {
-    rodape = '<button class="btn btn-ok" onclick="acaoAutorizacao('+a.id+',\'aprovar\')">✓ Aprovar</button>'
-           + '<button class="btn btn-warn" onclick="abrirAprovacaoParcial('+a.id+')">Aprovar parcial</button>'
+    var podeAprovar = !a.autorizacao_propria;
+    rodape = (podeAprovar
+              ? ('<button class="btn btn-ok" onclick="acaoAutorizacao('+a.id+',\'aprovar\')">✓ Aprovar</button>'
+                 + '<button class="btn btn-warn" onclick="abrirAprovacaoParcial('+a.id+')">Aprovar parcial</button>')
+              : '')
            + '<button class="btn btn-danger" onclick="acaoAutorizacao('+a.id+',\'negar\')">✕ Negar</button>'
            + rodape;
   }

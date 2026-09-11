@@ -61,6 +61,38 @@ def _principal_nome(request, empresa):
             or getattr(empresa, "nome", "") or "")
 
 
+def _principal_usuario_id(request):
+    """ID do usuário nominal autenticado, ou None quando o acesso é por conta
+    corporativa (principal = Empresa, sem pessoa identificada).
+
+    Só existe identidade quando o principal é um EmpresaUsuario. Sem isso não é
+    possível afirmar QUEM agiu — e, por consequência, não se aplica segregação de
+    função (melhor não bloquear do que bloquear a pessoa errada)."""
+    principal = getattr(request, "principal", None)
+    if principal is None or principal.__class__.__name__ != "EmpresaUsuario":
+        return None
+    return getattr(principal, "id", None)
+
+
+def _bloqueio_segregacao(request, aut):
+    """Segregação de função: quem SOLICITA não pode AUTORIZAR o próprio pedido.
+
+    Retorna um JsonResponse de bloqueio, ou None quando pode seguir. Só bloqueia
+    quando há identidade nominal nos DOIS lados — sem saber quem é, bloquear no
+    escuro travaria a operação de quem usa conta corporativa e os pedidos criados
+    antes deste controle. Negar o próprio pedido continua permitido (não é risco
+    de governança); o que se impede é aprovar a si mesmo."""
+    quem_id = _principal_usuario_id(request)
+    dono_id = getattr(aut, "solicitado_por_usuario_id", None)
+    if quem_id is None or dono_id is None or quem_id != dono_id:
+        return None
+    return JsonResponse({
+        "erro": "Segregação de função: quem solicitou o material não pode autorizar "
+                "o próprio pedido. Encaminhe a outro auditor.",
+        "codigo": "segregacao_funcao",
+    }, status=403)
+
+
 def _parse_json(request):
     """Parse seguro do corpo. Retorna (data, erro_response). Um dos dois é None."""
     try:
@@ -669,6 +701,7 @@ def api_opme_autorizacoes(request):
         total = qs.count()
         limite, offset = _paginacao(request)
         qs = qs.order_by("-solicitado_em")[offset:offset + limite]
+        _uid_atual = _principal_usuario_id(request)
         return JsonResponse({
             "total": total,
             "offset": offset,
@@ -680,6 +713,12 @@ def api_opme_autorizacoes(request):
                     "paciente_nome": a.paciente_nome,
                     "cpf_paciente": a.cpf_paciente,
                     "medico_solicitante": a.medico_solicitante,
+                    # Segregação de função: quando o pedido é do próprio usuário
+                    # logado, a tela esconde os botões de autorizar (o backend
+                    # bloqueia de qualquer forma — isto evita o clique inútil).
+                    "autorizacao_propria": bool(
+                        _uid_atual is not None
+                        and a.solicitado_por_usuario_id == _uid_atual),
                     "crm_medico": a.crm_medico,
                     "cid10": a.cid10,
                     "procedimento_tuss": a.procedimento_tuss,
@@ -786,6 +825,8 @@ def api_opme_autorizacoes(request):
                 crm_medico=data.get("crm_medico", ""),
                 cid10=data.get("cid10", ""),
                 procedimento_tuss=procedimento_tuss,
+                # Identidade real de quem criou — base da segregação de função.
+                solicitado_por_usuario_id=_principal_usuario_id(request),
                 urgente=bool(data.get("urgente", False)),
                 justificativa=data.get("justificativa", ""),
                 numero_protocolo="",  # preenchido abaixo a partir do PK (race-free)
@@ -1073,6 +1114,12 @@ def api_opme_autorizacao_acao(request, aut_id):
                     f"'{aut.get_status_display()}'.",
             "status_atual": aut.status,
         }, status=409)
+
+    # Segregação de função: solicitante não autoriza o próprio pedido.
+    if nova_acao in ("aprovar", "parcial"):
+        bloqueio = _bloqueio_segregacao(request, aut)
+        if bloqueio is not None:
+            return bloqueio
 
     # Negar/cancelar exige motivo registrado (compliance ANS).
     observacao = (data.get("observacao") or "").strip()
@@ -2673,6 +2720,13 @@ def api_opme_esteira(request, aut_id):
         return JsonResponse({"erro": "Pedido já concluído — esteira encerrada."}, status=409)
 
     if acao == "avancar":
+        # Avançar para "cotacao" APROVA o pedido (ver abaixo). Esse caminho também
+        # precisa respeitar a segregação de função — senão bastaria usar a esteira
+        # para contornar o bloqueio da tela de decisão.
+        if (_proxima_etapa(aut.etapa) == "cotacao" and aut.status == "solicitada"):
+            bloqueio = _bloqueio_segregacao(request, aut)
+            if bloqueio is not None:
+                return bloqueio
         # conclui a etapa atual e passa para a próxima
         _registrar_etapa(aut, aut.etapa, "concluida", responsavel=quem, observacao=obs)
         prox = _proxima_etapa(aut.etapa)
