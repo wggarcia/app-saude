@@ -1327,6 +1327,274 @@ class OPMETests(TestCase):
         self.assertEqual(float(item.preco_negociado), 9500.0)
         self.assertEqual(float(item.preco_solicitado), 12000.0)
 
+    def test_junta_acatar_alternativa_troca_material_e_gera_economia(self):
+        """A junta precisa FECHAR O LAÇO: acatar a alternativa troca o material no
+        pedido, grava a economia e libera a autorização."""
+        from api.models import ItemAutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-junta-loop@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        caro = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Cara não homologada", "tipo": "protese", "fabricante": "X",
+                  "grupo_equivalencia": "GJ", "preco_maximo": 30000, "homologado": False},
+            content_type="application/json").json()["id"]
+        barata = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Equivalente homologada", "tipo": "protese", "fabricante": "Y",
+                  "grupo_equivalencia": "GJ", "preco_maximo": 20000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "justificativa": "Indicação técnica.",
+                  "itens": [{"opme_id": caro, "quantidade": 1, "preco_solicitado": 30000}]},
+            content_type="application/json").json()["id"]
+        item_id = ItemAutorizacaoOPME.objects.get(autorizacao_id=aut).id
+        junta = client.post(f"/api/hospital/opme/autorizacoes/{aut}/juntas",
+            data={"motivo_divergencia": "Existe equivalente homologada mais barata.",
+                  "item_id": item_id},
+            content_type="application/json").json()["id"]
+        r = client.put(f"/api/hospital/opme/juntas/{junta}",
+            data={"status": "resolvida_operadora", "parecer": "Equivalência clínica confirmada.",
+                  "opme_escolhido_id": barata},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        # material trocado e economia medida
+        self.assertIn("material_trocado", d)
+        self.assertEqual(d["material_trocado"]["economia"], 10000.0)
+        it = ItemAutorizacaoOPME.objects.get(id=item_id)
+        self.assertEqual(it.opme_id, barata)
+        self.assertEqual(it.substituido_de_id, caro)
+        self.assertEqual(float(it.economia_aplicada), 10000.0)
+        # o pedido foi liberado — não ficou esperando cliques
+        self.assertEqual(d["autorizacao_status"], "aprovada")
+        self.assertEqual(d["autorizacao_etapa"], "cotacao")
+        # a etapa 'junta' saiu de "em andamento"
+        est = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        concl = [h for h in est["historico"]
+                 if h["etapa"] == "junta" and h["situacao"] == "concluida"]
+        self.assertTrue(concl, "a etapa junta deve ficar concluída")
+
+    def test_junta_a_favor_do_medico_mantem_material_e_libera(self):
+        """Decidiu a favor do médico: material é MANTIDO e o pedido segue."""
+        from api.models import ItemAutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-junta-med@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Escolha do médico", "tipo": "protese", "preco_maximo": 15000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        junta = client.post(f"/api/hospital/opme/autorizacoes/{aut}/juntas",
+            data={"motivo_divergencia": "Operadora sugere outra marca."},
+            content_type="application/json").json()["id"]
+        r = client.put(f"/api/hospital/opme/juntas/{junta}",
+            data={"status": "resolvida_medico", "parecer": "Mantida a indicação do assistente."},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertNotIn("material_trocado", d)
+        self.assertEqual(d["autorizacao_status"], "aprovada")
+        it = ItemAutorizacaoOPME.objects.get(autorizacao_id=aut)
+        self.assertEqual(it.opme_id, opme)          # material do médico preservado
+        self.assertIsNone(it.substituido_de_id)
+
+    def test_junta_troca_sem_ganho_nao_infla_economia(self):
+        """Se a alternativa acatada não é mais barata, não inventa economia."""
+        from api.models import ItemAutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-junta-zero@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        a1 = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item A", "tipo": "protese", "grupo_equivalencia": "GZ",
+                  "preco_maximo": 10000}, content_type="application/json").json()["id"]
+        a2 = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item B", "tipo": "protese", "grupo_equivalencia": "GZ",
+                  "preco_maximo": 12000}, content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": a1, "quantidade": 1, "preco_solicitado": 10000}]},
+            content_type="application/json").json()["id"]
+        item_id = ItemAutorizacaoOPME.objects.get(autorizacao_id=aut).id
+        junta = client.post(f"/api/hospital/opme/autorizacoes/{aut}/juntas",
+            data={"motivo_divergencia": "Divergência de marca.", "item_id": item_id},
+            content_type="application/json").json()["id"]
+        client.put(f"/api/hospital/opme/juntas/{junta}",
+            data={"status": "resolvida_operadora", "opme_escolhido_id": a2},
+            content_type="application/json")
+        it = ItemAutorizacaoOPME.objects.get(id=item_id)
+        self.assertEqual(it.opme_id, a2)
+        self.assertIsNone(it.economia_aplicada)   # troca mais cara não vira "economia"
+
+    def test_parecer_ia_explica_o_rebaixamento(self):
+        """A IA não pode parecer contraditória: quando o modelo tendia a aprovar e a
+        governança rebaixou, o parecer precisa dizer isso em palavras."""
+        from api.views_hospital_opme import _auditoria_ia_completa
+        empresa = _empresa("Hospital Rede", "opme-ia-ovr@example.com", "hospital_rede")
+        # com ressalva de triagem, a decisão cai para revisão
+        dec, score, _just, parecer = _auditoria_ia_completa(
+            empresa, "30715016", ["Placa X"], "M43.16", False,
+            alertas_triagem=["'Placa X' NÃO consta na lista padronizada."],
+            alertas_fraude=[], anvisa_ok=True)
+        self.assertEqual(dec, "revisao")
+        self.assertLessEqual(score, 0.5)
+        self.assertIn("REVISAR", parecer)
+        self.assertIn("Ressalvas", parecer)
+        # sem ressalva nenhuma o parecer não fala em rebaixamento
+        dec2, _s2, _j2, parecer2 = _auditoria_ia_completa(
+            empresa, "30715016", ["Placa X"], "M43.16", False,
+            alertas_triagem=[], alertas_fraude=[], anvisa_ok=True)
+        self.assertNotIn("rebaixada", parecer2)
+
+    def test_aprovar_move_esteira_e_registra_trilha(self):
+        """A decisão não pode deixar o pedido travado na auditoria: aprovar avança a
+        esteira e grava QUEM decidiu, na trilha."""
+        empresa = _empresa("Hospital Rede", "opme-dec-apr@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item dec", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 2}]},
+            content_type="application/json").json()["id"]
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut}/acao",
+            data={"acao": "aprovar"}, content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["novo_status"], "aprovada")
+        # a esteira saiu da auditoria — não ficou travada
+        self.assertEqual(d["etapa"], "cotacao")
+        est = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(est["etapa_atual"], "cotacao")
+        # a trilha registra a decisão com responsável
+        historico = est["historico"]
+        aprovacoes = [h for h in historico if "Aprovado" in (h.get("observacao") or "")]
+        self.assertTrue(aprovacoes, "a trilha deve registrar quem aprovou")
+        self.assertTrue(aprovacoes[0]["responsavel"])
+
+    def test_negar_exige_motivo_e_encerra_com_trilha(self):
+        """Negar sem motivo é recusado; com motivo, o motivo entra na trilha."""
+        empresa = _empresa("Hospital Rede", "opme-dec-neg@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item neg", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut}/acao",
+            data={"acao": "negar"}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut}/acao",
+            data={"acao": "negar", "observacao": "Material sem indicação para o CID."},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["novo_status"], "negada")
+        est = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        reprov = [h for h in est["historico"] if h["situacao"] == "reprovada"]
+        self.assertTrue(reprov)
+        self.assertIn("indicação", reprov[0]["observacao"])
+
+    def test_aprovacao_parcial_pela_api_reduz_quantidade(self):
+        """Aprovação parcial (antes inalcançável pela tela) aprova item a item."""
+        from api.models import ItemAutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-dec-par@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item parcial", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        criado = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 4}]},
+            content_type="application/json").json()
+        aut = criado["id"]
+        item_id = ItemAutorizacaoOPME.objects.get(autorizacao_id=aut).id
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut}/acao",
+            data={"acao": "parcial",
+                  "itens": [{"id": item_id, "quantidade_aprovada": 2,
+                             "motivo_negativa": "Reduzido conforme protocolo."}]},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["novo_status"], "parcial")
+        it = ItemAutorizacaoOPME.objects.get(id=item_id)
+        self.assertEqual(it.quantidade_aprovada, 2)
+        self.assertEqual(it.quantidade, 4)
+
+    def test_parcial_nao_aprova_mais_que_solicitado(self):
+        """Regressão: não dá para aprovar quantidade maior que a pedida."""
+        from api.models import ItemAutorizacaoOPME
+        empresa = _empresa("Hospital Rede", "opme-dec-par2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item p2", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 2}]},
+            content_type="application/json").json()["id"]
+        item_id = ItemAutorizacaoOPME.objects.get(autorizacao_id=aut).id
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut}/acao",
+            data={"acao": "parcial",
+                  "itens": [{"id": item_id, "quantidade_aprovada": 99}]},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        # rollback: nada foi alterado
+        it = ItemAutorizacaoOPME.objects.get(id=item_id)
+        self.assertEqual(it.quantidade_aprovada, 0)
+
+    def test_preco_negociado_aparece_no_serializer_da_autorizacao(self):
+        """O preço negociado precisa chegar na tela — é o que torna o ciclo visível
+        (o que foi pedido × o que foi realmente pago)."""
+        empresa = _empresa("Hospital Rede", "opme-ser-neg@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Parafuso ser", "tipo": "material", "preco_maximo": 4000},
+            content_type="application/json").json()["id"]
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1, "preco_solicitado": 4000}]},
+            content_type="application/json").json()["id"]
+        f1 = self._forn(client, "Forn Ser")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1, "autorizacao_id": aut},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 3100},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        lista = client.get("/api/hospital/opme/autorizacoes").json()["autorizacoes"]
+        alvo = [a for a in lista if a["id"] == aut][0]
+        self.assertEqual(alvo["itens"][0]["preco_negociado"], 3100.0)
+        # a trilha é preservada: o que o médico pediu continua lá
+        self.assertEqual(alvo["itens"][0]["preco_solicitado"], 4000.0)
+
+    def test_mediana_usa_preco_negociado_e_nao_infla(self):
+        """Integridade da alavanca de sobrepreço: a mediana histórica tem que usar o
+        preço REALMENTE pago, não o pedido — senão fica inflada e a alavanca mente."""
+        from api.models import ItemAutorizacaoOPME
+        from api.views_hospital_opme import _mediana_preco_praticado
+        empresa = _empresa("Hospital Rede", "opme-med-neg@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Placa med", "tipo": "material", "preco_maximo": 10000},
+            content_type="application/json").json()["id"]
+        # 3 pedidos com preço solicitado alto (mínimo de amostra p/ mediana)
+        for _ in range(3):
+            client.post("/api/hospital/opme/autorizacoes/",
+                data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                      "itens": [{"opme_id": opme, "quantidade": 1, "preco_solicitado": 9000}]},
+                content_type="application/json")
+        med_antes, n = _mediana_preco_praticado(empresa, opme)
+        self.assertEqual(med_antes, 9000.0)
+        self.assertEqual(n, 3)
+        # negociação real derruba o preço dos 3 itens para 5000
+        ItemAutorizacaoOPME.objects.filter(
+            autorizacao__empresa=empresa, opme_id=opme).update(preco_negociado=5000)
+        med_depois, _n2 = _mediana_preco_praticado(empresa, opme)
+        self.assertEqual(med_depois, 5000.0)
+
     def test_kpis_expoem_alerta_compra_antecipada(self):
         """O painel principal (KPIs) expõe a contagem de alertas de compra
         antecipada — antes só existia dentro da aba Previsibilidade."""

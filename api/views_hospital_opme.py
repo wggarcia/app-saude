@@ -398,9 +398,19 @@ def _auditoria_ia_completa(empresa, procedimento_tuss, descricao_itens, cid10,
                    "registro ANVISA válido e sem padrão atípico. "
                    "Elegível para Via Rápida (pré-aprovação automática).")
     elif ressalvas:
+        # Quando o modelo tendia a aprovar mas a governança rebaixou, o parecer diz
+        # isso explicitamente. Sem essa frase, quem lê a trilha vê a decisão final
+        # ("REVISAR") ao lado do sinal cru do modelo ("recomendada 92%") e conclui,
+        # erradamente, que a IA se contradisse.
+        override = ""
+        if ml_dec == "aprovada":
+            override = (f" O modelo estatístico tendia a APROVAR "
+                        f"({round((ml_score or 0) * 100)}% de confiança), mas a decisão "
+                        f"foi rebaixada pelas ressalvas acima — a regra de governança "
+                        f"prevalece sobre o modelo.")
         parecer = ("PARECER DA IA — " + ("NEGAR" if decisao == "negada" else "REVISAR")
                    + ". Ressalvas: " + "; ".join(ressalvas)
-                   + ". Encaminhado à auditoria humana.")
+                   + "." + override + " Encaminhado à auditoria humana.")
     else:
         parecer = ("PARECER DA IA — REVISAR. Sem ressalvas objetivas, mas o "
                    "modelo não teve confiança suficiente para aprovação automática. "
@@ -704,6 +714,11 @@ def api_opme_autorizacoes(request):
                             "quantidade_aprovada": it.quantidade_aprovada,
                             "preco_solicitado": (float(it.preco_solicitado)
                                                  if it.preco_solicitado else None),
+                            # Preço realmente negociado na cotação (leilão). Quando
+                            # presente, é o custo REAL do item — o que o faturamento
+                            # deve usar e o que alimenta a mediana honesta.
+                            "preco_negociado": (float(it.preco_negociado)
+                                                if it.preco_negociado else None),
                             "fora_padrao": it.fora_padrao,
                             "alerta_triagem": it.alerta_triagem,
                             "status": it.status,
@@ -1106,10 +1121,33 @@ def api_opme_autorizacao_acao(request, aut_id):
                 aut.itens.all().update(status="aprovado", quantidade_aprovada=F("quantidade"))
             elif nova_acao == "negar":
                 aut.itens.all().update(status="negado", quantidade_aprovada=0)
+
+            # ── A decisão precisa MOVER a esteira e deixar trilha ────────────────
+            # Sem isto o pedido ficava "aprovada" mas travado eternamente na etapa
+            # de auditoria, e a trilha não registrava QUEM decidiu O QUÊ e POR QUÊ.
+            quem = aut.respondido_por
+            if nova_acao in ("aprovar", "parcial"):
+                rotulo = ("Aprovado" if nova_acao == "aprovar"
+                          else "Aprovado parcialmente")
+                nota = f"{rotulo} por {quem}." + (f" {observacao}" if observacao else "")
+                # conclui a etapa em que a decisão foi tomada e a própria autorização
+                if aut.etapa not in ("cotacao", "dispensacao", "implante",
+                                     "rastreabilidade", "faturamento", "concluido"):
+                    _registrar_etapa(aut, aut.etapa, "concluida",
+                                     responsavel=quem, observacao=nota)
+                    if aut.etapa != "autorizacao":
+                        _registrar_etapa(aut, "autorizacao", "concluida",
+                                         responsavel=quem, observacao=nota)
+                    aut.etapa = "cotacao"
+                    _registrar_etapa(aut, "cotacao", "em_andamento", responsavel=quem)
+                    aut.save(update_fields=["etapa"])
+            else:  # negar / cancelar — encerra a esteira registrando o motivo
+                _registrar_etapa(aut, aut.etapa, "reprovada",
+                                 responsavel=quem, observacao=observacao)
     except _AcaoInvalida as e:
         return JsonResponse({"erro": "Aprovação parcial inválida", "detalhes": e.erros}, status=400)
 
-    return JsonResponse({"ok": True, "novo_status": aut.status})
+    return JsonResponse({"ok": True, "novo_status": aut.status, "etapa": aut.etapa})
 
 
 # ── Junta Médica/Odontológica (RN nº 424/2017 — ANS) ────────────────────────────
@@ -1233,7 +1271,81 @@ def api_opme_junta_detalhe(request, junta_id):
     if "parecer" in data:
         junta.parecer = data["parecer"]
     junta.save()
-    return JsonResponse({"ok": True, "status": junta.status})
+
+    # ── A decisão da Junta precisa FECHAR O LAÇO ────────────────────────────────
+    # Antes, resolver a junta só mudava o objeto junta: o material não era trocado
+    # quando se acatava a alternativa, o pedido continuava parado esperando os
+    # mesmos cliques, a etapa "junta" nunca saía de "em andamento" e a economia
+    # dessa decisão nunca chegava à Torre. Agora a resolução é a decisão.
+    extra = {}
+    if novo_status in ("resolvida_medico", "resolvida_operadora"):
+        CatalogoOPME, _AutMdl, _ItemMdl, _Impl = _get_opme_models()
+        aut = junta.autorizacao
+        quem = junta.resolvida_por or _principal_nome(request, empresa)
+        with transaction.atomic():
+            # 1) Acatou a alternativa → troca o material e mede a economia REAL.
+            escolhido_id = data.get("opme_escolhido_id")
+            if novo_status == "resolvida_operadora" and escolhido_id:
+                item = junta.item or aut.itens.first()
+                try:
+                    novo = CatalogoOPME.objects.get(
+                        id=escolhido_id, empresa=empresa, ativo=True)
+                except (CatalogoOPME.DoesNotExist, ValueError, TypeError):
+                    return JsonResponse(
+                        {"erro": "Material escolhido inválido ou indisponível."}, status=400)
+                if item is not None and novo.id != item.opme_id:
+                    antigo = item.opme
+                    preco_antigo = (float(item.preco_solicitado)
+                                    if item.preco_solicitado is not None
+                                    else (float(antigo.preco_maximo)
+                                          if antigo.preco_maximo else None))
+                    preco_novo = float(novo.preco_maximo) if novo.preco_maximo else None
+                    economia = None
+                    if preco_antigo is not None and preco_novo is not None:
+                        economia = round((preco_antigo - preco_novo) * item.quantidade, 2)
+                        if economia <= 0:
+                            economia = None   # troca sem ganho não infla a Torre
+                    item.substituido_de = antigo
+                    item.opme = novo
+                    if preco_novo is not None:
+                        item.preco_solicitado = preco_novo
+                    item.economia_aplicada = economia
+                    item.fora_padrao = False
+                    item.alerta_triagem = ""
+                    item.save(update_fields=[
+                        "substituido_de", "opme", "preco_solicitado",
+                        "economia_aplicada", "fora_padrao", "alerta_triagem"])
+                    extra["material_trocado"] = {
+                        "de": antigo.descricao, "para": novo.descricao,
+                        "economia": economia,
+                    }
+
+            # 2) A resolução da junta É a decisão regulatória: destrava o pedido.
+            nota = ("Junta Médica (RN 424): "
+                    + ("mantida a indicação do médico assistente."
+                       if novo_status == "resolvida_medico"
+                       else "acatada a alternativa da operadora.")
+                    + (f" {junta.parecer}" if junta.parecer else ""))
+            _registrar_etapa(aut, "junta", "concluida", responsavel=quem, observacao=nota)
+            if aut.status == "solicitada":
+                aut.status = "aprovada"
+                aut.respondido_por = quem
+                aut.respondido_em = timezone.now()
+                aut.observacao_auditoria = nota
+                aut.itens.all().update(
+                    status="aprovado", quantidade_aprovada=F("quantidade"))
+                if aut.etapa in ("solicitacao", "analise_adm", "auditoria",
+                                 "junta", "autorizacao"):
+                    _registrar_etapa(aut, "autorizacao", "concluida",
+                                     responsavel=quem, observacao=nota)
+                    aut.etapa = "cotacao"
+                    _registrar_etapa(aut, "cotacao", "em_andamento", responsavel=quem)
+                aut.save(update_fields=["status", "respondido_por", "respondido_em",
+                                        "observacao_auditoria", "etapa"])
+                extra["autorizacao_status"] = aut.status
+                extra["autorizacao_etapa"] = aut.etapa
+
+    return JsonResponse({"ok": True, "status": junta.status, **extra})
 
 
 @require_http_methods(["GET"])

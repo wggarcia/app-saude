@@ -938,23 +938,57 @@ async function abrirNovaCotacao() {
   } catch(e){}
   if (!cat.length) { toast('Cadastre itens no catálogo antes de cotar.', false); return; }
   var opts = cat.map(function(o){ return '<option value="'+o.id+'" data-teto="'+(o.preco_maximo||'')+'">'+esc(o.descricao)+(o.preco_maximo?(' — teto '+money(o.preco_maximo)):'')+'</option>'; }).join('');
+  // guarda p/ alternar entre catálogo completo (avulsa) e itens do pedido vinculado
+  window._ncOptsFull = opts; window._ncCat = cat;
+  // Pedidos que ainda vão comprar material. Vincular é o que faz o preço negociado
+  // voltar para o item — sem vínculo o custo real nunca chega ao pedido.
+  var autOpts = (autCache||[]).filter(function(a){
+      return (a.status==='aprovada'||a.status==='parcial'||a.status==='solicitada') && (a.itens||[]).length;
+    }).map(function(a){
+      return '<option value="'+a.id+'">'+esc(a.numero_protocolo)+' — '+esc(a.paciente_nome)+'</option>';
+    }).join('');
   var html = '<div class="form-grid">'
-    + '<label>Material do catálogo<select id="ncOpme" onchange="ncSyncTeto()">'+opts+'</select></label>'
+    + '<label>Pedido vinculado<select id="ncAut" onchange="ncOnAut()"><option value="">— sem vínculo (cotação avulsa) —</option>'+autOpts+'</select></label>'
+    + '<label>Material<select id="ncOpme" onchange="ncSyncTeto()">'+opts+'</select></label>'
     + '<label>Quantidade<input id="ncQtd" type="number" min="1" value="1"></label>'
     + '<label>Preço de referência (teto)<input id="ncRef" type="number" step="0.01" placeholder="usa o teto do catálogo"></label>'
-    + '</div><div class="itens-mini" style="margin-top:6px">A economia será medida contra este preço de referência. Deixe em branco para usar o teto do catálogo.</div>';
-  abrirModal('Nova cotação (leilão reverso)', '', html,
+    + '</div>'
+    + '<div class="alert-box ab-info" style="margin-top:8px"><div class="ab-title">Por que vincular ao pedido</div>'
+    + 'Com vínculo, o preço vencedor <b>volta para o item do pedido</b> — é isso que dá ao faturamento o custo real e mantém a mediana de preço honesta. Sem vínculo, a economia entra na Torre mas não chega ao pedido.</div>';
+  abrirModal('Nova cotação competitiva', '', html,
     '<button class="btn btn-ok" onclick="criarCotacao()">Abrir cotação</button>', false);
   setTimeout(ncSyncTeto, 30);
 }
-function ncSyncTeto(){
+// Ao vincular um pedido, o material passa a ser escolhido DENTRO dele. Isso evita o
+// caso silencioso em que o preço negociado não grava porque o material escolhido não
+// pertence à autorização (o writeback casa autorizacao_id + opme_id).
+function ncOnAut(){
+  var autId=(document.getElementById('ncAut')||{}).value||'';
   var sel=document.getElementById('ncOpme'); if(!sel) return;
-  var teto=sel.options[sel.selectedIndex].getAttribute('data-teto');
+  if(!autId){ sel.innerHTML = window._ncOptsFull||''; ncSyncTeto(); return; }
+  var a=(autCache||[]).filter(function(x){ return String(x.id)===String(autId); })[0];
+  if(!a){ sel.innerHTML = window._ncOptsFull||''; ncSyncTeto(); return; }
+  sel.innerHTML = (a.itens||[]).map(function(it){
+    var c=(window._ncCat||[]).filter(function(x){ return x.id===it.opme_id; })[0];
+    var teto=(c&&c.preco_maximo)?c.preco_maximo:'';
+    return '<option value="'+it.opme_id+'" data-teto="'+teto+'" data-qtd="'+(it.quantidade||1)+'">'
+         + esc(it.opme_descricao)+(teto?(' — teto '+money(teto)):'')+'</option>';
+  }).join('');
+  ncSyncTeto();
+}
+function ncSyncTeto(){
+  var sel=document.getElementById('ncOpme'); if(!sel||!sel.options.length) return;
+  var opt=sel.options[sel.selectedIndex]; if(!opt) return;
+  var teto=opt.getAttribute('data-teto');
   var ref=document.getElementById('ncRef'); if(ref && !ref.value && teto) ref.placeholder='teto do catálogo: '+money(parseFloat(teto));
+  var dq=opt.getAttribute('data-qtd');
+  if(dq){ var q=document.getElementById('ncQtd'); if(q) q.value=dq; }
 }
 async function criarCotacao(){
   var body={ opme_id: parseInt(document.getElementById('ncOpme').value,10),
              quantidade: parseInt(document.getElementById('ncQtd').value||'1',10) };
+  var autSel=document.getElementById('ncAut');
+  if(autSel && autSel.value) body.autorizacao_id=parseInt(autSel.value,10);
   var ref=document.getElementById('ncRef').value; if(ref) body.preco_referencia=parseFloat(ref);
   try{
     var r=await fetch('/api/hospital/opme/cotacoes/',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(body)});
@@ -1169,11 +1203,34 @@ function verDetalhe(id) {
        + 'Passou em todas as validações automáticas (triagem + ANVISA + IA + fraude). '
        + '<b>Não entrou na fila de auditoria</b> — economia de dias no processo.</div>';
   }
+  // ── Auditoria da IA ─────────────────────────────────────────────────────────
+  // A decisão final e a leitura crua do modelo NÃO são a mesma coisa: quando há
+  // ressalva (triagem/fraude/ANVISA), a governança REBAIXA o que o modelo sugeriu.
+  // Antes as duas apareciam lado a lado sem explicação e pareciam se contradizer
+  // ("REVISAR 50%" logo acima de "recomendada 92,5%"). Agora a hierarquia é
+  // explícita: decisão em cima, motivo no meio, sinal bruto embaixo e rotulado.
   if (a.ia_parecer_auditoria || a.ia_decisao) {
-    h += '<div class="alert-box ab-info"><div class="ab-title">🤖 Auditoria da IA</div>'
-       + (a.ia_parecer_auditoria ? ('<strong>'+esc(a.ia_parecer_auditoria)+'</strong><br>') : '')
-       + (a.ia_decisao ? ('Decisão: '+esc(a.ia_decisao.toUpperCase())+' — confiança '+Math.round((a.ia_score||0)*100)+'%<br>') : '')
-       + esc(a.ia_justificativa||'') + '</div>';
+    var _dec = (a.ia_decisao||'').toLowerCase();
+    var _rot = {aprovada:'APROVAR', revisao:'REVISAR', negada:'NEGAR'}[_dec] || _dec.toUpperCase();
+    var _cor = _dec==='aprovada' ? 'var(--ok)' : (_dec==='negada' ? 'var(--danger)' : 'var(--warn)');
+    var _ressalvas = ((a.alertas_triagem||[]).length + (a.alertas_fraude||[]).length) > 0;
+    h += '<div class="alert-box ab-info"><div class="ab-title">🤖 Auditoria da IA</div>';
+    if (a.ia_decisao) {
+      h += '<div style="font-size:15px;font-weight:800;color:'+_cor+'">Decisão da IA: '+esc(_rot)
+         + ' <span style="font-weight:400;font-size:12px;opacity:.75">(confiança '
+         + Math.round((a.ia_score||0)*100)+'%)</span></div>';
+    }
+    if (a.ia_parecer_auditoria) {
+      h += '<div style="margin-top:6px">'+esc(a.ia_parecer_auditoria)+'</div>';
+    }
+    if (a.ia_justificativa) {
+      h += '<div class="itens-mini" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'
+         + (_ressalvas
+              ? '<b>Leitura isolada do modelo estatístico</b> — <i>rebaixada acima pelas ressalvas</i>: '
+              : '<b>Leitura do modelo estatístico:</b> ')
+         + esc(a.ia_justificativa) + '</div>';
+    }
+    h += '</div>';
   }
   if (a.ia_recomendacao && a.ia_recomendacao.para_descricao) {
     var rc = a.ia_recomendacao;
@@ -1192,7 +1249,13 @@ function verDetalhe(id) {
         var qt = it.quantidade + (it.quantidade_aprovada && it.quantidade_aprovada!=it.quantidade ? (' (aprov. '+it.quantidade_aprovada+')') : '');
         return '<tr><td>'+esc(it.opme_descricao)+(it.alerta_triagem?('<div class="itens-mini">'+esc(it.alerta_triagem)+'</div>'):'')
              + (it.substituido_de?('<div class="itens-mini">substituiu: '+esc(it.substituido_de)+'</div>'):'')
-             + '</td><td class="itens-mini">'+esc(it.fabricante||'—')+'</td><td class="num">'+esc(qt)+'</td><td class="num">'+money(it.preco_solicitado)+'</td><td>'+sit+'</td></tr>';
+             + '</td><td class="itens-mini">'+esc(it.fabricante||'—')+'</td><td class="num">'+esc(qt)+'</td><td class="num">'+money(it.preco_solicitado)
+             // Preço negociado na cotação = custo REAL. Mostra os dois lado a lado:
+             // preserva a trilha (o que foi pedido × o que foi pago).
+             + (it.preco_negociado!=null
+                 ? ('<div class="itens-mini" style="color:var(--ok)">negociado: '+money(it.preco_negociado)+'</div>')
+                 : '')
+             + '</td><td>'+sit+'</td></tr>';
        }).join('') + '</tbody></table></div></div>';
 
   h += '<div class="alert-box ab-info" style="background:rgba(255,255,255,.02);border-color:var(--border);color:var(--text)">'
@@ -1204,7 +1267,16 @@ function verDetalhe(id) {
        + '</div>';
   }
 
+  // ── Decisão: ler e decidir na MESMA tela ────────────────────────────────────
+  // Espelha TRANSICOES_AUTORIZACAO do backend — só oferece o que é permitido para
+  // o status atual, em vez de deixar o usuário descobrir no erro 409.
   var rodape = '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>';
+  if (a.status === 'solicitada') {
+    rodape = '<button class="btn btn-ok" onclick="acaoAutorizacao('+a.id+',\'aprovar\')">✓ Aprovar</button>'
+           + '<button class="btn btn-warn" onclick="abrirAprovacaoParcial('+a.id+')">Aprovar parcial</button>'
+           + '<button class="btn btn-danger" onclick="acaoAutorizacao('+a.id+',\'negar\')">✕ Negar</button>'
+           + rodape;
+  }
   if (a.alertas_triagem && a.alertas_triagem.length) {
     rodape = '<button class="btn btn-warn" onclick="abrirFormJunta('+a.id+')">⚖️ Abrir Junta Médica (RN 424)</button>' + rodape;
   }
@@ -1223,6 +1295,56 @@ async function acaoAutorizacao(id, acao) {
   abrirModal(titulos[acao]||'Ação', '', corpo,
     '<button class="btn btn-ghost" onclick="fecharModal()">Voltar</button>'
     + '<button class="btn '+(acao==='aprovar'?'btn-ok':'btn-danger')+'" onclick="confirmarAcao('+id+',\''+acao+'\')">Confirmar</button>');
+}
+
+// Aprovação parcial: aprova item a item, com quantidade e motivo por item. O
+// backend já validava tudo isso (quantidade ≤ solicitada, rollback atômico) — só
+// não havia tela para alcançá-lo.
+function abrirAprovacaoParcial(id) {
+  var a = (autCache||[]).filter(function(x){ return x.id===id; })[0];
+  if (!a) return toast('Autorização não encontrada', false);
+  var linhas = (a.itens||[]).map(function(it){
+    return '<tr><td>'+esc(it.opme_descricao)
+         + '<div class="itens-mini">solicitado: '+it.quantidade+'</div></td>'
+         + '<td><input type="number" min="0" max="'+it.quantidade+'" value="'+it.quantidade+'" '
+         +   'id="pqQtd'+it.id+'" data-item="'+it.id+'" data-max="'+it.quantidade+'" style="width:80px"></td>'
+         + '<td><input id="pqMot'+it.id+'" placeholder="motivo, se negar/reduzir"></td></tr>';
+  }).join('');
+  var corpo = '<div class="alert-box ab-warn"><div class="ab-title">Aprovação parcial</div>'
+    + 'Ajuste a quantidade aprovada de cada item. Zero nega o item. O motivo fica na trilha de auditoria.</div>'
+    + '<div class="table-wrap"><table><thead><tr><th>Item</th><th>Aprovar qtd</th><th>Motivo</th></tr></thead>'
+    + '<tbody>'+linhas+'</tbody></table></div>'
+    + '<div class="form-group" style="margin-top:8px"><label>Observação geral da decisão</label>'
+    + '<textarea id="pqObs" rows="2" placeholder="Contexto da decisão (opcional)"></textarea></div>';
+  abrirModal('Aprovação parcial — '+esc(a.numero_protocolo), '', corpo,
+    '<button class="btn btn-ghost" onclick="fecharModal()">Voltar</button>'
+    + '<button class="btn btn-warn" onclick="confirmarParcial('+id+')">Confirmar parcial</button>', true);
+}
+
+async function confirmarParcial(id) {
+  var itens = [];
+  var inputs = document.querySelectorAll('[id^="pqQtd"]');
+  for (var i=0;i<inputs.length;i++){
+    var el=inputs[i];
+    var itemId=parseInt(el.getAttribute('data-item'),10);
+    var max=parseInt(el.getAttribute('data-max'),10);
+    var q=parseInt(el.value||'0',10);
+    if(isNaN(q)||q<0) return toast('Quantidade inválida em um dos itens', false);
+    if(q>max) return toast('Quantidade aprovada não pode exceder a solicitada', false);
+    itens.push({ id:itemId, quantidade_aprovada:q,
+                 motivo_negativa:(document.getElementById('pqMot'+itemId)||{}).value||'' });
+  }
+  if(!itens.length) return toast('Nenhum item para aprovar', false);
+  var payload={ acao:'parcial', itens:itens,
+                observacao:(document.getElementById('pqObs')||{}).value||'' };
+  try{
+    var r=await fetch('/api/hospital/opme/autorizacoes/'+id+'/acao',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(payload)});
+    var d=await r.json().catch(function(){return {};});
+    if(!r.ok) return toast(d.erro||((d.detalhes||[]).join(' · '))||'Erro', false);
+    fecharModal();
+    toast('Aprovação parcial registrada', true);
+    carregarAutorizacoes(); carregarKpis(); carregarEconomia();
+  }catch(e){ toast('Erro de conexão', false); }
 }
 
 async function confirmarAcao(id, acao) {
@@ -1351,6 +1473,7 @@ function abrirNovaSolicitacao() {
   +   '<button class="btn btn-ghost btn-sm" onclick="addLinhaMaterial()">+ Adicionar outro material</button>'
   + '</div>'
   + '<div class="fieldset-step"><div class="step-label"><span class="step-num">4</span> Justificativa clínica</div>'
+  +   '<div id="motivosTriagem"></div>'
   +   '<div class="form-group"><label>Justificativa <span id="justObrig" style="display:none" class="req-mark">* obrigatória — há material fora do padrão (RN 424/ANS)</span></label>'
   +     '<textarea id="oJustificativa" rows="3" placeholder="Descreva a indicação clínica…"></textarea></div>'
   + '</div>';
@@ -1383,6 +1506,8 @@ function aoTrocarProcedimento() {
       : '';
   }
   document.querySelectorAll('.mat-linha').forEach(function(l){ preencherSelectMaterial(l.dataset.idx); });
+  // trocar o procedimento muda o que é padronizado → reavalia a exigência
+  atualizarAvisoJustificativa();
 }
 
 function preencherSelectMaterial(idx) {
@@ -1415,7 +1540,7 @@ function addLinhaMaterial() {
   div.dataset.idx = idx;
   div.innerHTML = '<div class="mat-top">'
     + '<div class="form-group"><label>Material <span class="req-mark">*</span></label><select id="matOpme'+idx+'" onchange="aoEscolherMaterial('+idx+')"></select></div>'
-    + '<div class="form-group"><label>Qtd</label><input type="number" id="matQtd'+idx+'" value="1" min="1"></div>'
+    + '<div class="form-group"><label>Qtd</label><input type="number" id="matQtd'+idx+'" value="1" min="1" onchange="atualizarAvisoJustificativa()"></div>'
     + '<div class="form-group"><label>Preço solicitado (R$)</label><input type="number" step="0.01" id="matPreco'+idx+'" onchange="aoEscolherMaterial('+idx+')" placeholder="0,00"></div>'
     + '<div class="form-group"><button class="btn btn-ghost btn-sm" onclick="removerLinha('+idx+')" title="Remover material">✕</button></div>'
     + '</div><div class="mat-sub" id="matSub'+idx+'"></div>'
@@ -1592,10 +1717,66 @@ function trocarMaterial(idx, novoId, precoAntigo, precoNovo) {
   toast('Material trocado — economia de '+money((precoAntigo-precoNovo)*qtd), true);
 }
 
+// Espelha as regras de _triar_item() do backend a partir do que a tela já tem
+// (catalogoCache + procCache). Antes isto procurava qualquer .badge-danger dentro
+// de #matLinhas, o que dava:
+//   • falso NEGATIVO no caso mais comum — material fora da lista padronizada do
+//     procedimento não gera badge, então o aviso não acendia e o médico só
+//     descobria a exigência no erro 400, depois de enviar;
+//   • falso POSITIVO — o selo ANVISA de uma ALTERNATIVA sugerida também é
+//     badge-danger e fazia exigir justificativa sem motivo.
+// Retorna a lista de motivos (mesma base que o backend usa para exigir justificativa).
+function motivosTriagemLocal() {
+  var motivos = [];
+  var perm = materiaisPermitidos();               // itens padronizados do procedimento
+  var mapa = null, temPref = false;
+  if (perm) {
+    mapa = {};
+    perm.forEach(function(p){ mapa[p.opme_id] = p; if (p.preferencial) temPref = true; });
+  }
+  document.querySelectorAll('.mat-linha').forEach(function(l){
+    var idx = l.dataset.idx;
+    var sel = document.getElementById('matOpme'+idx);
+    if (!sel || !sel.value) return;
+    var id = parseInt(sel.value, 10);
+    var cat = (catalogoCache||[]).filter(function(c){ return c.id === id; })[0];
+    if (!cat) return;
+    var nome = cat.descricao;
+    var qtd = parseInt((document.getElementById('matQtd'+idx)||{}).value || '1', 10);
+    var precoStr = (document.getElementById('matPreco'+idx)||{}).value;
+    var preco = precoStr ? parseFloat(precoStr) : null;
+
+    if (!cat.homologado) motivos.push("'"+nome+"' não está homologado pela operadora.");
+    if (preco != null && cat.preco_maximo != null && preco > cat.preco_maximo)
+      motivos.push("'"+nome+"' com preço acima do teto ("+money(cat.preco_maximo)+").");
+    if (mapa) {
+      var regra = mapa[id];
+      if (!regra) {
+        motivos.push("'"+nome+"' não consta na lista padronizada deste procedimento.");
+      } else {
+        if (qtd > regra.quantidade_maxima)
+          motivos.push("'"+nome+"': quantidade "+qtd+" acima do máximo padronizado ("+regra.quantidade_maxima+").");
+        if (!regra.preferencial && temPref)
+          motivos.push("'"+nome+"' não é o material preferencial do procedimento.");
+      }
+    }
+  });
+  return motivos;
+}
+
 function atualizarAvisoJustificativa() {
-  var temFora = !!document.querySelector('#matLinhas .badge-danger');
+  var motivos = motivosTriagemLocal();
   var el = document.getElementById('justObrig');
-  if (el) el.style.display = temFora ? '' : 'none';
+  if (el) el.style.display = motivos.length ? '' : 'none';
+  // Mostra POR QUE a justificativa é exigida — o médico não deve ter que adivinhar.
+  var cx = document.getElementById('motivosTriagem');
+  if (cx) {
+    cx.innerHTML = motivos.length
+      ? ('<div class="alert-box ab-warn" style="margin-top:6px"><div class="ab-title">Justificativa obrigatória — RN 424/ANS</div>'
+         + '<ul style="margin:4px 0 0 16px">' + motivos.map(function(m){ return '<li>'+esc(m)+'</li>'; }).join('') + '</ul>'
+         + '<div class="itens-mini" style="margin-top:6px">Você <b>pode</b> pedir este material. A norma só exige que a indicação clínica fique registrada.</div></div>')
+      : '';
+  }
 }
 
 async function salvarAutorizacao() {
@@ -1652,7 +1833,35 @@ async function salvarAutorizacao() {
         '<button class="btn btn-primary" onclick="fecharModal()">Entendi</button>');
       toast('⚡ '+d.numero_protocolo+' pré-aprovado na hora (Via Rápida)', true);
     } else if (d.alertas_triagem && d.alertas_triagem.length) {
-      toast('Solicitação '+d.numero_protocolo+' criada com '+d.alertas_triagem.length+' alerta(s) — foi p/ auditoria', false);
+      // Antes: um toast de 4,5s dizendo só QUANTOS alertas havia — os alertas vinham
+      // completos no JSON e eram descartados. O médico ficava sem saber o que fazer.
+      // Agora ele vê exatamente o que foi apontado e o que acontece a seguir.
+      var listaAl = d.alertas_triagem.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('');
+      var alt = '';
+      if (d.marcas_alternativas && Object.keys(d.marcas_alternativas).length) {
+        var blocos = [];
+        Object.keys(d.marcas_alternativas).forEach(function(k){
+          (d.marcas_alternativas[k]||[]).forEach(function(m){
+            blocos.push('<li>'+esc(m.descricao||'')+(m.fabricante?(' — '+esc(m.fabricante)):'')
+              + (m.preco_maximo!=null?(' · '+money(m.preco_maximo)):'')+'</li>');
+          });
+        });
+        if (blocos.length) {
+          alt = '<div class="alert-box ab-info"><div class="ab-title">Alternativas equivalentes disponíveis (RN 424)</div>'
+              + '<ul style="margin:4px 0 0 16px">'+blocos.join('')+'</ul>'
+              + '<div class="itens-mini" style="margin-top:6px">Você não é obrigado a trocar. São opções do mesmo grupo de equivalência clínica.</div></div>';
+        }
+      }
+      abrirModal('Solicitação registrada — '+esc(d.numero_protocolo),
+        'Seguiu para auditoria técnica',
+        '<div class="alert-box ab-warn"><div class="ab-title">O que a triagem apontou</div>'
+        + '<ul style="margin:4px 0 0 16px">'+listaAl+'</ul></div>'
+        + alt
+        + '<div class="alert-box ab-info"><div class="ab-title">O que acontece agora</div>'
+        + 'Seu pedido <b>foi registrado normalmente</b> e está na fila de auditoria técnica. '
+        + 'A justificativa clínica que você escreveu segue junto. Se houver divergência técnica, '
+        + 'o caso vai à Junta Médica (RN 424) — onde a sua indicação pode prevalecer.</div>',
+        '<button class="btn btn-primary" onclick="fecharModal()">Entendi</button>');
     } else {
       toast('Solicitação '+d.numero_protocolo+' criada'+(eco>0?(' — economia de '+money(eco)):''), true);
     }
@@ -1739,16 +1948,44 @@ function verJunta(id) {
              h, rodape, true);
 }
 
-async function resolverJunta(id, status) {
+async function resolverJunta(id, status, opmeEscolhidoId) {
   var parecer = (document.getElementById('juntaParecer')||{}).value || '';
+  // Acatar a alternativa exige dizer QUAL — senão a decisão não troca material
+  // nenhum e a junta vira burocracia sem efeito.
+  if (status === 'resolvida_operadora' && !opmeEscolhidoId) {
+    var j = (juntasCache||[]).filter(function(x){ return x.id===id; })[0];
+    var marcas = (j && j.marcas_alternativas_oferecidas) || [];
+    if (marcas.length) {
+      var opts = marcas.map(function(m){
+        return '<option value="'+(m.id||'')+'">'+esc(m.descricao||'')
+             + (m.fabricante?(' — '+esc(m.fabricante)):'')
+             + (m.preco_maximo!=null?(' · '+money(m.preco_maximo)):'')+'</option>';
+      }).join('');
+      abrirModal('Acatar alternativa — qual material?',
+        'A troca é aplicada ao pedido e a economia entra na Torre.',
+        '<div class="form-group"><label>Material acatado pela junta</label>'
+        + '<select id="jaEscolha">'+opts+'</select></div>'
+        + '<div class="itens-mini">O material original fica registrado como substituído — a trilha preserva os dois.</div>',
+        '<button class="btn btn-ghost" onclick="fecharModal()">Voltar</button>'
+        + '<button class="btn btn-ok" onclick="resolverJunta('+id+',\'resolvida_operadora\',parseInt((document.getElementById(\'jaEscolha\')||{}).value||0,10))">Confirmar troca</button>');
+      return;
+    }
+  }
+  var payload = { status: status, parecer: parecer };
+  if (opmeEscolhidoId) payload.opme_escolhido_id = opmeEscolhidoId;
   try {
     var r = await fetch('/api/hospital/opme/juntas/'+id, { method:'PUT', credentials:'include', headers: headers(),
-      body: JSON.stringify({ status: status, parecer: parecer }) });
+      body: JSON.stringify(payload) });
     var d = await r.json().catch(function(){return {};});
     if (!r.ok) return toast(d.erro||'Erro', false);
     fecharModal();
-    toast('Junta Médica atualizada', true);
-    carregarJuntas(); carregarKpis();
+    if (d.material_trocado) {
+      toast('Junta resolvida — material trocado para '+d.material_trocado.para
+            + (d.material_trocado.economia?(' (economia '+money(d.material_trocado.economia)+')'):''), true);
+    } else {
+      toast('Junta Médica resolvida — pedido liberado para aquisição', true);
+    }
+    carregarJuntas(); carregarKpis(); carregarAutorizacoes(); carregarEconomia();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
