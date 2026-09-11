@@ -1417,6 +1417,19 @@ function montarEsteira(d) {
           + '</div>';
       }).join('') + '</div>';
 
+  // Etapas que a esteira conclui SOZINHA quando o evento real acontece
+  // (cotação encerrada, material liberado, implante registrado). O botão manual
+  // vira fallback — não é preciso reclicar um fato que o sistema já registra.
+  var etapasAuto = {cotacao:'ao encerrar a cotação vinculada',
+                    dispensacao:'ao liberar o material no Recebimento',
+                    implante:'ao registrar o implantável',
+                    rastreabilidade:'junto com o registro do implantável'};
+  var dicaAuto = etapasAuto[d.etapa_atual]
+    ? '<div class="alert-box ab-info" style="margin-bottom:10px"><div class="ab-title">↻ Avanço automático</div>'
+      + 'Esta etapa é concluída sozinha '+esc(etapasAuto[d.etapa_atual])+'. '
+      + 'O botão abaixo é só para avançar manualmente, se necessário.</div>'
+    : '';
+
   // ações conforme etapa atual
   var rodape = '<button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>';
   if (d.etapa_atual !== 'concluido' && d.status !== 'negada') {
@@ -1427,7 +1440,7 @@ function montarEsteira(d) {
   }
   document.getElementById('modalTitulo').innerHTML = 'Esteira do pedido';
   document.getElementById('modalSub').innerHTML = 'Etapa atual: <b>'+esc(d.etapa_atual_label)+'</b>';
-  document.getElementById('modalCorpo').innerHTML = vr + regua + tl;
+  document.getElementById('modalCorpo').innerHTML = vr + dicaAuto + regua + tl;
   document.getElementById('modalRodape').innerHTML = rodape;
 }
 

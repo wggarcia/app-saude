@@ -340,6 +340,32 @@ def _proxima_etapa(etapa_atual):
     return ETAPAS_ORDEM[i + 1] if i + 1 < len(ETAPAS_ORDEM) else None
 
 
+def _avancar_esteira_por_evento(aut, de_etapa, responsavel, observacao=""):
+    """Avança a esteira automaticamente quando um EVENTO REAL do sistema conclui
+    uma etapa: cotação encerrada, material liberado, implante registrado.
+
+    Antes, a esteira era 100% manual — o gestor tinha de reclicar 'avançar' um fato
+    que o próprio software já registrara noutro lugar (a cotação, o recebimento, o
+    implante). Aqui o evento move a esteira sozinho.
+
+    Idempotente e conservador: só age se a autorização estiver EXATAMENTE na etapa
+    `de_etapa` (se já passou, não faz nada; se está atrás, também não — o evento
+    pode ter chegado fora de ordem e não se deve pular etapas). Nunca retrocede,
+    nunca conclui o pedido inteiro (faturamento segue manual). Retorna a etapa
+    resultante, ou None se nada mudou."""
+    if aut is None or aut.etapa != de_etapa:
+        return None
+    prox = _proxima_etapa(de_etapa)
+    if not prox or prox == "concluido":
+        return None
+    _registrar_etapa(aut, de_etapa, "concluida", responsavel=responsavel,
+                     observacao=observacao)
+    aut.etapa = prox
+    _registrar_etapa(aut, prox, "em_andamento", responsavel="Sistema (evento)")
+    aut.save(update_fields=["etapa"])
+    return prox
+
+
 def _melhor_custo_beneficio(empresa, opme_item, preco_ref):
     """Melhor alternativa de MESMA QUALIDADE e menor custo, não só a mais barata.
     Qualidade = homologada + registro ANVISA válido (não vencido) + mesmo grupo
@@ -2449,6 +2475,12 @@ def api_opme_cotacao_encerrar(request, cotacao_id):
         (ItemMdl.objects
             .filter(autorizacao_id=c.autorizacao_id, opme_id=c.opme_id)
             .update(preco_negociado=vencedor.preco_unitario))
+        # Evento: a cotação encerrada conclui a etapa de aquisição da esteira.
+        aut = c.autorizacao
+        nota = (f"Cotação #{c.pk} encerrada — vencedor "
+                f"{vencedor.fornecedor.razao_social} a R$ {vencedor.preco_unitario}.")
+        _avancar_esteira_por_evento(
+            aut, "cotacao", responsavel=_principal_nome(request, empresa), observacao=nota)
 
     return JsonResponse(_cotacao_payload(c))
 
@@ -2603,6 +2635,12 @@ def api_opme_recebimentos(request):
         liberado_em=timezone.now() if status == "liberado" else None,
         observacoes=(data.get("observacoes") or "").strip(),
     )
+    # Evento: material liberado conclui a etapa de recebimento/dispensação.
+    # (Bloqueado não avança — a esteira espera a liberação, manual ou automática.)
+    if status == "liberado":
+        _avancar_esteira_por_evento(
+            aut, "dispensacao", responsavel=r.recebido_por,
+            observacao=f"Material recebido e liberado (lote {r.lote or '—'}).")
     return JsonResponse(_recebimento_payload(r), status=201)
 
 
@@ -2640,6 +2678,10 @@ def api_opme_recebimento_liberar(request, receb_id):
     nota = f"[Liberado manualmente por {quem}: {just}]"
     r.observacoes = (r.observacoes + "\n" + nota).strip() if r.observacoes else nota
     r.save(update_fields=["status", "liberado_em", "observacoes"])
+    # Liberação manual também conclui a etapa de dispensação da esteira.
+    _avancar_esteira_por_evento(
+        r.autorizacao, "dispensacao", responsavel=quem,
+        observacao="Material liberado manualmente para cirurgia.")
     return JsonResponse(_recebimento_payload(r))
 
 
@@ -2894,6 +2936,19 @@ def api_opme_implantaveis(request):
     if receb_liberado is not None:
         receb_liberado.status = "consumido"
         receb_liberado.save(update_fields=["status"])
+    # Evento: o registro do implante conclui a etapa 'implante' E a
+    # 'rastreabilidade' (o número de série e o lote — dado UDI da RDC 27/2008 —
+    # ficam registrados neste mesmo ato). A esteira para em 'faturamento', que
+    # segue manual. Só age se houver autorização vinculada e ela estiver na etapa.
+    if autorizacao is not None:
+        quem_impl = _principal_nome(request, empresa)
+        nota_impl = (f"Implante registrado — série {numero_serie}, "
+                     f"lote {lote_fabricante} (rastreabilidade ANVISA RDC 27/2008).")
+        if _avancar_esteira_por_evento(autorizacao, "implante",
+                                       responsavel=quem_impl, observacao=nota_impl):
+            _avancar_esteira_por_evento(autorizacao, "rastreabilidade",
+                                        responsavel=quem_impl,
+                                        observacao="Rastreabilidade UDI registrada no implante.")
     return JsonResponse({"id": impl.id}, status=201)
 
 

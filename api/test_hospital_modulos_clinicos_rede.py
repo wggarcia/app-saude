@@ -1445,6 +1445,137 @@ class OPMETests(TestCase):
             alertas_triagem=[], alertas_fraude=[], anvisa_ok=True)
         self.assertNotIn("rebaixada", parecer2)
 
+    def _levar_ate_cotacao(self, client, opme):
+        """Cria um pedido e o leva (aprovando) até a etapa 'cotacao'."""
+        aut = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1, "preco_solicitado": 5000}]},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/autorizacoes/{aut}/acao",
+            data={"acao": "aprovar"}, content_type="application/json")
+        return aut
+
+    def test_cotacao_encerrada_avanca_esteira(self):
+        """Evento: encerrar a cotação vinculada conclui a etapa 'cotacao' sozinha."""
+        empresa = _empresa("Hospital Rede", "opme-ev-cot@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item ev1", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        aut = self._levar_ate_cotacao(client, opme)
+        est = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(est["etapa_atual"], "cotacao")
+        f1 = self._forn(client, "Forn ev1")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1, "autorizacao_id": aut},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 4000},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        est2 = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(est2["etapa_atual"], "dispensacao")
+
+    def test_recebimento_liberado_avanca_esteira(self):
+        """Evento: material liberado conclui a etapa 'dispensacao' sozinha."""
+        empresa = _empresa("Hospital Rede", "opme-ev-rec@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item ev2", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        aut = self._levar_ate_cotacao(client, opme)
+        # avança cotacao->dispensacao via cotação encerrada
+        f1 = self._forn(client, "Forn ev2")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1, "autorizacao_id": aut},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 4000},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        # recebe e libera (validade futura → liberado)
+        client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2090-01-01",
+                  "lote": "L-ev2"}, content_type="application/json")
+        est = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(est["etapa_atual"], "implante")
+
+    def test_recebimento_bloqueado_nao_avanca_esteira(self):
+        """Evento negativo: material bloqueado NÃO avança a esteira."""
+        empresa = _empresa("Hospital Rede", "opme-ev-blq@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item ev3", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        aut = self._levar_ate_cotacao(client, opme)
+        f1 = self._forn(client, "Forn ev3")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1, "autorizacao_id": aut},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 4000},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        # lote vencido → bloqueado
+        client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2000-01-01"},
+            content_type="application/json")
+        est = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(est["etapa_atual"], "dispensacao")  # não avançou
+
+    def test_implante_avanca_ate_faturamento(self):
+        """Evento: registrar o implante conclui 'implante' e 'rastreabilidade',
+        parando em 'faturamento' (que segue manual)."""
+        empresa = _empresa("Hospital Rede", "opme-ev-imp@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item ev4", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        aut = self._levar_ate_cotacao(client, opme)
+        f1 = self._forn(client, "Forn ev4")
+        cid = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1, "autorizacao_id": aut},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 4000},
+            content_type="application/json")
+        client.post(f"/api/hospital/opme/cotacoes/{cid}/encerrar",
+            data={}, content_type="application/json")
+        client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2090-01-01"},
+            content_type="application/json")
+        # registra implante → deve ir de 'implante' a 'faturamento'
+        r = client.post("/api/hospital/opme/implantaveis/",
+            data={"opme_id": opme, "autorizacao_id": aut, "paciente_nome": "P",
+                  "data_implante": "2026-09-11", "numero_serie": "SN-ev4",
+                  "lote_fabricante": "L-ev4"}, content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        est = client.get(f"/api/hospital/opme/autorizacoes/{aut}/esteira").json()
+        self.assertEqual(est["etapa_atual"], "faturamento")
+
+    def test_avanco_por_evento_e_idempotente(self):
+        """Um evento fora de ordem não pula etapas nem retrocede."""
+        from api.models import AutorizacaoOPME
+        from api.views_hospital_opme import _avancar_esteira_por_evento
+        empresa = _empresa("Hospital Rede", "opme-ev-idem@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item ev5", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        aut_id = self._levar_ate_cotacao(client, opme)
+        aut = AutorizacaoOPME.objects.get(id=aut_id)   # etapa = cotacao
+        # evento de dispensação chegando enquanto ainda está em cotacao: não age
+        self.assertIsNone(_avancar_esteira_por_evento(aut, "dispensacao", "x"))
+        self.assertEqual(aut.etapa, "cotacao")
+        # evento correto avança uma única etapa
+        self.assertEqual(_avancar_esteira_por_evento(aut, "cotacao", "x"), "dispensacao")
+        # repetir o mesmo evento não avança de novo
+        self.assertIsNone(_avancar_esteira_por_evento(aut, "cotacao", "x"))
+        self.assertEqual(aut.etapa, "dispensacao")
+
     def test_segregacao_conta_corporativa_nao_trava(self):
         """Sem usuário nominal (login por conta corporativa) NÃO se bloqueia nada —
         não dá para afirmar identidade, e travar no escuro pararia a operação."""
