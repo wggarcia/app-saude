@@ -32,6 +32,21 @@ def _client_for(empresa):
     return client
 
 
+def _client_usuario(empresa, usuario):
+    """Client autenticado como um EmpresaUsuario nominal (não a conta corporativa),
+    para testar segregação de visão gerência × usuário clínico comum."""
+    client = Client()
+    payload = {
+        "empresa_id": empresa.id,
+        "principal_kind": "usuario_empresa",
+        "principal_id": usuario.id,
+        "session_key": empresa.sessao_ativa_chave,
+        "exp": timezone.now() + timedelta(hours=1),
+    }
+    client.cookies["auth_token"] = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+    return client
+
+
 def _empresa(nome, email, pacote_codigo):
     return Empresa.objects.create(
         nome=nome,
@@ -1444,6 +1459,34 @@ class OPMETests(TestCase):
             empresa, "30715016", ["Placa X"], "M43.16", False,
             alertas_triagem=[], alertas_fraude=[], anvisa_ok=True)
         self.assertNotIn("rebaixada", parecer2)
+
+    def test_ranking_nominal_de_medicos_so_para_gerencia(self):
+        """LGPD/ética: o ranking nominal de solicitantes fora do padrão não pode
+        vazar para um usuário clínico comum. Conta corporativa (gerência) vê."""
+        empresa = _empresa("Hospital Rede", "opme-rank-ger@example.com", "hospital_rede")
+        client = _client_for(empresa)   # conta corporativa = gerência
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Cara", "tipo": "protese", "homologado": False,
+                  "preco_maximo": 9000}, content_type="application/json").json()["id"]
+        client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr. Fulano",
+                  "justificativa": "indicado", "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json")
+        eco = client.get("/api/hospital/opme/economia").json()
+        # gerência (conta corporativa) vê o ranking nominal
+        self.assertTrue(any(r.get("medico_solicitante") for r in eco["ranking_fora_padrao"]))
+
+        # usuário clínico comum (não gerência) → ranking vem VAZIO
+        from api.models import EmpresaUsuario
+        usr = EmpresaUsuario.objects.create(
+            empresa=empresa, nome="Enf. Clínico", email="enf-seg@ex.com",
+            senha="x", perfil="tecnico_sesmt", ativo=True, is_admin=False)
+        c2 = _client_usuario(empresa, usr)
+        eco2 = c2.get("/api/hospital/opme/economia")
+        # se o usuário nominal conseguir abrir o módulo, o ranking tem que vir vazio;
+        # se o RBAC barrar (403), a exposição também não ocorre — ambos são OK.
+        if eco2.status_code == 200:
+            self.assertEqual(eco2.json()["ranking_fora_padrao"], [])
 
     def _levar_ate_cotacao(self, client, opme):
         """Cria um pedido e o leva (aprovando) até a etapa 'cotacao'."""

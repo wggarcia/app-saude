@@ -202,7 +202,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div class="kpi warn"><div class="kpi-val" id="kpiPendentes">—</div><div class="kpi-lbl">Pendentes</div><div class="kpi-sub" id="kpiAtrasadasSub">—</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiForaPadrao">—</div><div class="kpi-lbl">Fora do Padrão (triagem)</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiJuntas">—</div><div class="kpi-lbl">Juntas Médicas Abertas</div><div class="kpi-sub">RN 424/2017 — ANS</div></div>
-    <div class="kpi danger"><div class="kpi-val" id="kpiFraude">—</div><div class="kpi-lbl">Médicos c/ Padrão Atípico</div><div class="kpi-sub">últimos 30 dias</div></div>
+    <div class="kpi danger" id="kpiFraudeCard"><div class="kpi-val" id="kpiFraude">—</div><div class="kpi-lbl">Médicos c/ Padrão Atípico</div><div class="kpi-sub">últimos 30 dias</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiAnvisaVencido">—</div><div class="kpi-lbl">Registros ANVISA Vencidos</div></div>
     <div class="kpi ok" id="kpiCompraCard" style="cursor:pointer" onclick="setTab('previsibilidade')" title="Ver Previsibilidade"><div class="kpi-val" id="kpiCompraAntecipada">—</div><div class="kpi-lbl">Comprar Antecipado</div><div class="kpi-sub" id="kpiCompraSub">demanda em alta — evita compra emergencial</div></div>
     <div class="kpi ok" id="kpiRecebCard" style="cursor:pointer" onclick="setTab('recebimento')" title="Ver Recebimento"><div class="kpi-val" id="kpiRecebBloq">—</div><div class="kpi-lbl">Material Bloqueado</div><div class="kpi-sub" id="kpiRecebSub">liberado p/ cirurgia — validação na entrada</div></div>
@@ -289,7 +289,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardRanking">
       <div class="card-header"><div class="card-title">🔺 Solicitantes com mais pedidos fora do padrão (90 dias)</div></div>
       <div class="card-body" id="rankingBox"><div class="empty">Carregando…</div></div>
     </div>
@@ -520,6 +520,16 @@ tr:hover td{background:rgba(0,194,255,.03)}
 
 <script>
 /* ── infra ─────────────────────────────────────────────────────────── */
+// Segregação de visão: gerência vê vigilância nominal sobre médicos; usuário
+// clínico comum não. O backend já protege o DADO (rankings voltam vazios); isto
+// esconde os cards para não mostrar caixa vazia. Conta corporativa = gerência.
+var OPME_IS_GERENCIA = {{ opme_is_gerencia|yesno:"true,false" }};
+function aplicarSegregacaoVisao(){
+  if (OPME_IS_GERENCIA) return;
+  ['cardRanking','kpiFraudeCard'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';
+  });
+}
 function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
 function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
 function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4500); }
@@ -2513,6 +2523,7 @@ async function salvarImplante() {
 
 /* ── boot ──────────────────────────────────────────────────────────── */
 async function carregarTudo() {
+  aplicarSegregacaoVisao();
   await carregarCatalogo();
   await carregarProcedimentos();
   carregarKpis(); carregarAutorizacoes(); carregarEconomia();

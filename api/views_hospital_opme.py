@@ -122,7 +122,14 @@ def _paginacao(request, limite_padrao=100, limite_max=500):
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_opme_page(request):
-    return render(request, "hospital_opme.html")
+    # Gerência vê o painel de gestão (Torre de Economia, ranking de solicitantes,
+    # KPIs de padrão atípico); usuário clínico comum não deve ver vigilância
+    # nominal sobre médicos nem dados de custo/paciente de colegas. A conta
+    # corporativa (usada na demo) é gerência — nada muda ali.
+    from .access_control import principal_e_gerencia
+    return render(request, "hospital_opme.html", {
+        "opme_is_gerencia": principal_e_gerencia(request),
+    })
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -1574,13 +1581,20 @@ def api_opme_economia(request):
         ref = date(ref.year - 1, 12, 1) if ref.month == 1 else date(ref.year, ref.month - 1, 1)
     serie.reverse()
 
-    # Ranking de solicitantes por volume fora do padrão (últimos 90 dias).
-    ranking = list(
-        AutorizacaoOPME.objects.filter(
-            empresa=empresa, itens__fora_padrao=True,
-            solicitado_em__gte=timezone.now() - timedelta(days=90),
-        ).values("medico_solicitante").annotate(n=Count("id", distinct=True)).order_by("-n")[:5]
-    )
+    # Ranking NOMINAL de solicitantes por volume fora do padrão (90 dias).
+    # É vigilância sobre médicos — só gerência pode ver. Usuário clínico comum
+    # recebe lista vazia (não expõe colegas). A conta corporativa é gerência.
+    from .access_control import principal_e_gerencia
+    if principal_e_gerencia(request):
+        ranking = list(
+            AutorizacaoOPME.objects.filter(
+                empresa=empresa, itens__fora_padrao=True,
+                solicitado_em__gte=timezone.now() - timedelta(days=90),
+            ).values("medico_solicitante").annotate(
+                n=Count("id", distinct=True)).order_by("-n")[:5]
+        )
+    else:
+        ranking = []
 
     # ── Alavanca: cotação competitiva (leilão reverso) ──────────────────────────
     # Economia comprovada = soma do custo evitado nas cotações encerradas com
@@ -1802,9 +1816,14 @@ def api_opme_sobrepreco(request):
             "pct_acima": round((float(it.preco_solicitado) / float(it.mediana_referencia) - 1) * 100),
         })
     lista.sort(key=lambda x: x["excesso_evitavel"], reverse=True)
-    ranking_ord = sorted(
-        ({"medico_solicitante": k, "excesso": round(v, 2)} for k, v in ranking.items()),
-        key=lambda x: x["excesso"], reverse=True)[:5]
+    # Ranking nominal de solicitantes: vigilância — só gerência.
+    from .access_control import principal_e_gerencia
+    if principal_e_gerencia(request):
+        ranking_ord = sorted(
+            ({"medico_solicitante": k, "excesso": round(v, 2)} for k, v in ranking.items()),
+            key=lambda x: x["excesso"], reverse=True)[:5]
+    else:
+        ranking_ord = []
     return JsonResponse({
         "total_evitavel": round(total_evitavel, 2),
         "itens": lista[:20],
