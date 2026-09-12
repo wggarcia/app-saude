@@ -189,12 +189,12 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <div class="kpi-lbl">⚡ Auto-aprovados (Via Rápida)</div>
       <div class="kpi-sub" id="kpiViaRapidaSub">pré-aprovados pela IA, sem fila</div>
     </div>
-    <div class="kpi ok">
+    <div class="kpi ok" id="kpiEconomiaCard">
       <div class="kpi-val" id="kpiEconomia">—</div>
       <div class="kpi-lbl">Economia Comprovada</div>
       <div class="kpi-sub" id="kpiEconomiaSub">substituições aceitas</div>
     </div>
-    <div class="kpi warn">
+    <div class="kpi warn" id="kpiPotencialCard">
       <div class="kpi-val" id="kpiPotencial">—</div>
       <div class="kpi-lbl">Economia Possível (em aberto)</div>
       <div class="kpi-sub">pedidos pendentes fora do padrão</div>
@@ -544,9 +544,18 @@ tr:hover td{background:rgba(0,194,255,.03)}
 var OPME_IS_GERENCIA = {{ opme_is_gerencia|yesno:"true,false" }};
 function aplicarSegregacaoVisao(){
   if (OPME_IS_GERENCIA) return;
-  ['cardRanking','kpiFraudeCard'].forEach(function(id){
+  // Não-gerência (médico solicitante / auxiliar administrativo) não vê vigilância
+  // nominal de médicos, card anti-fraude nem o Painel de Custo estratégico
+  // (Torre de Economia + economia agregada). Decisão de produto: custo/ranking é
+  // governança — exclusivo de admin/gestor. O médico ainda vê a própria fila
+  // (filtrada no backend); o auxiliar vê a fila inteira p/ cotar e receber.
+  ['cardRanking','kpiFraudeCard','kpiEconomiaCard','kpiPotencialCard'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.style.display='none';
   });
+  var tabPainel=document.querySelector('.tab-btn[data-tab="painel"]');
+  if(tabPainel) tabPainel.style.display='none';
+  var panelPainel=document.getElementById('panel-painel');
+  if(panelPainel && panelPainel.classList.contains('active')) setTab('autorizacoes');
 }
 function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
 function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }

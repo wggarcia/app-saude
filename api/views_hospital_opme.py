@@ -93,6 +93,35 @@ def _bloqueio_segregacao(request, aut):
     }, status=403)
 
 
+def _medico_restrito(request):
+    """True quando o principal é um médico solicitante (perfil 'medico') que não
+    é gerência — deve ver e agir apenas sobre os PRÓPRIOS pedidos.
+
+    Decisão de produto: LGPD + 'a IA gerencia, não vigia o médico'. O médico não
+    enxerga a fila dos colegas nem os dados de paciente de terceiros. Gestão
+    (admin/gestor) e o auxiliar administrativo — que precisa analisar, cotar e
+    receber a fila inteira — continuam vendo tudo."""
+    from .access_control import principal_e_gerencia, _perfil_usuario
+    if principal_e_gerencia(request):
+        return False
+    return _perfil_usuario(getattr(request, "principal", None)) == "medico"
+
+
+def _bloqueio_acesso_pedido(request, aut):
+    """LGPD: médico solicitante só acessa os próprios pedidos. Retorna um 404
+    (não 403 — não revela a existência do pedido/paciente de um colega) quando
+    o médico tenta alcançar um pedido de outro, ou None quando pode seguir.
+
+    Sem identidade nominal do médico não há como afirmar a propriedade, então
+    também bloqueia (fail-closed) — o médico restrito sempre tem id."""
+    if not _medico_restrito(request):
+        return None
+    uid = _principal_usuario_id(request)
+    if uid is not None and getattr(aut, "solicitado_por_usuario_id", None) == uid:
+        return None
+    return JsonResponse({"erro": "Não encontrada"}, status=404)
+
+
 def _parse_json(request):
     """Parse seguro do corpo. Retorna (data, erro_response). Um dos dois é None."""
     try:
@@ -731,6 +760,11 @@ def api_opme_autorizacoes(request):
         if q:
             qs = qs.filter(Q(paciente_nome__icontains=q) | Q(numero_protocolo__icontains=q)
                            | Q(cpf_paciente=q))
+        # LGPD: o médico solicitante vê apenas os próprios pedidos. Gestão e o
+        # auxiliar administrativo veem a fila inteira (ver _medico_restrito).
+        if _medico_restrito(request):
+            _uid = _principal_usuario_id(request)
+            qs = qs.filter(solicitado_por_usuario_id=_uid) if _uid is not None else qs.none()
         total = qs.count()
         limite, offset = _paginacao(request)
         qs = qs.order_by("-solicitado_em")[offset:offset + limite]
@@ -1122,6 +1156,11 @@ def api_opme_autorizacao_acao(request, aut_id):
     except AutorizacaoOPME.DoesNotExist:
         return JsonResponse({"erro": "Não encontrada"}, status=404)
 
+    # LGPD: médico só alcança os próprios pedidos (404 no acesso cruzado).
+    bloqueio = _bloqueio_acesso_pedido(request, aut)
+    if bloqueio is not None:
+        return bloqueio
+
     if request.method == "GET":
         return JsonResponse({"status": aut.status, "observacao": aut.observacao_auditoria})
 
@@ -1261,6 +1300,11 @@ def api_opme_autorizacao_juntas(request, aut_id):
         aut = AutorizacaoOPME.objects.get(id=aut_id, empresa=empresa)
     except AutorizacaoOPME.DoesNotExist:
         return JsonResponse({"erro": "Autorização não encontrada"}, status=404)
+
+    # LGPD: médico só alcança os próprios pedidos (404 no acesso cruzado).
+    bloqueio = _bloqueio_acesso_pedido(request, aut)
+    if bloqueio is not None:
+        return bloqueio
 
     if request.method == "GET":
         juntas = aut.juntas_medicas.all()

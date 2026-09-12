@@ -1610,6 +1610,100 @@ class OPMETests(TestCase):
         if eco2.status_code == 200:
             self.assertEqual(eco2.json()["ranking_fora_padrao"], [])
 
+    def test_medico_ve_apenas_os_proprios_pedidos(self):
+        """LGPD: o médico solicitante (perfil 'medico') enxerga apenas os pedidos
+        que ele mesmo criou — não a fila dos colegas. Gestão vê tudo."""
+        from api.models import EmpresaUsuario
+        empresa = _empresa("Hospital Rede", "opme-med-scope@example.com", "hospital_rede")
+        ger = _client_for(empresa)  # conta corporativa = gerência
+        opme = ger.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        # pedido criado pela conta corporativa (sem médico nominal dono)
+        ger.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P Corp", "medico_solicitante": "Dr Corp",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json")
+
+        medA = EmpresaUsuario.objects.create(empresa=empresa, nome="Dr A",
+            email="dra@ex.com", senha="x", perfil="medico", ativo=True,
+            sessao_ativa_chave=empresa.sessao_ativa_chave)
+        medB = EmpresaUsuario.objects.create(empresa=empresa, nome="Dr B",
+            email="drb@ex.com", senha="x", perfil="medico", ativo=True,
+            sessao_ativa_chave=empresa.sessao_ativa_chave)
+        cA = _client_usuario(empresa, medA)
+        cB = _client_usuario(empresa, medB)
+
+        # médico A cria o próprio pedido
+        rA = cA.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P de A", "medico_solicitante": "Dr A",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json")
+        self.assertEqual(rA.status_code, 201)
+        aut_a = rA.json()["id"]
+
+        # A vê só o próprio (1), não o da conta corporativa
+        lst_a = cA.get("/api/hospital/opme/autorizacoes/").json()
+        self.assertEqual(lst_a["total"], 1)
+        self.assertEqual(lst_a["autorizacoes"][0]["id"], aut_a)
+
+        # B (médico) não criou nada → vê 0, mesmo existindo 2 pedidos no hospital
+        lst_b = cB.get("/api/hospital/opme/autorizacoes/").json()
+        self.assertEqual(lst_b["total"], 0)
+
+        # gerência vê todos (2)
+        lst_g = ger.get("/api/hospital/opme/autorizacoes/").json()
+        self.assertEqual(lst_g["total"], 2)
+
+    def test_medico_nao_acessa_pedido_de_colega(self):
+        """LGPD: médico recebe 404 (não 403 — não revela a existência) ao tentar
+        alcançar o pedido de um colega pela ação ou pela junta; o dono acessa."""
+        from api.models import EmpresaUsuario
+        empresa = _empresa("Hospital Rede", "opme-med-cross@example.com", "hospital_rede")
+        ger = _client_for(empresa)
+        opme = ger.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        medA = EmpresaUsuario.objects.create(empresa=empresa, nome="Dr A",
+            email="dra2@ex.com", senha="x", perfil="medico", ativo=True,
+            sessao_ativa_chave=empresa.sessao_ativa_chave)
+        medB = EmpresaUsuario.objects.create(empresa=empresa, nome="Dr B",
+            email="drb2@ex.com", senha="x", perfil="medico", ativo=True,
+            sessao_ativa_chave=empresa.sessao_ativa_chave)
+        cA = _client_usuario(empresa, medA)
+        cB = _client_usuario(empresa, medB)
+        aut_a = cA.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P de A", "medico_solicitante": "Dr A",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        # B tenta ver a ação do pedido de A → 404
+        self.assertEqual(cB.get(f"/api/hospital/opme/autorizacoes/{aut_a}/acao").status_code, 404)
+        # B tenta ver as juntas do pedido de A → 404
+        self.assertEqual(cB.get(f"/api/hospital/opme/autorizacoes/{aut_a}/juntas").status_code, 404)
+        # o próprio dono (A) acessa normalmente
+        self.assertEqual(cA.get(f"/api/hospital/opme/autorizacoes/{aut_a}/acao").status_code, 200)
+
+    def test_auxiliar_administrativo_ve_fila_inteira(self):
+        """O auxiliar administrativo (perfil 'auxiliar') precisa da fila inteira
+        para analisar, cotar e receber — não é restringido como o médico."""
+        from api.models import EmpresaUsuario
+        empresa = _empresa("Hospital Rede", "opme-aux@example.com", "hospital_rede")
+        ger = _client_for(empresa)
+        opme = ger.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        ger.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P1", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json")
+        aux = EmpresaUsuario.objects.create(empresa=empresa, nome="Aux",
+            email="aux@ex.com", senha="x", perfil="auxiliar", ativo=True,
+            sessao_ativa_chave=empresa.sessao_ativa_chave)
+        cAux = _client_usuario(empresa, aux)
+        lst = cAux.get("/api/hospital/opme/autorizacoes/")
+        self.assertEqual(lst.status_code, 200)
+        self.assertEqual(lst.json()["total"], 1)
+
     def _levar_ate_cotacao(self, client, opme):
         """Cria um pedido e o leva (aprovando) até a etapa 'cotacao'."""
         aut = client.post("/api/hospital/opme/autorizacoes/",
