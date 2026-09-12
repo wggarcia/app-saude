@@ -1460,6 +1460,73 @@ class OPMETests(TestCase):
             alertas_triagem=[], alertas_fraude=[], anvisa_ok=True)
         self.assertNotIn("rebaixada", parecer2)
 
+    def test_seed_previsibilidade_demo_eleva_o_score(self):
+        """O seed de demonstração deve popular histórico suficiente para a
+        previsibilidade sair de 'dados insuficientes' para um score alto — e ser
+        idempotente e reversível."""
+        from django.core.management import call_command
+        from api.models import (Empresa, CatalogoOPME, OPMEProcedimento,
+                                AutorizacaoOPME)
+        from django.contrib.auth.hashers import make_password
+        # tenant de demonstração com o catálogo/procedimentos que o seed espera
+        empresa = Empresa.objects.create(
+            nome="Hospital Demo Prev", email="demo.hospital-prev@soluscrt.com",
+            senha=make_password("x"), ativo=True, pacote_codigo="hospital_rede")
+        for desc, preco in [("Prótese Total de Quadril Não Cimentada — Linha Standard", 8900),
+                            ("Sistema de Fixação Pedicular Titânio — 4 parafusos", 15400)]:
+            CatalogoOPME.objects.create(empresa=empresa, descricao=desc, tipo="material",
+                                        preco_maximo=preco, homologado=True, ativo=True)
+        OPMEProcedimento.objects.create(empresa=empresa, codigo_tuss="30729068",
+                                        descricao="Artroplastia de Quadril")
+        OPMEProcedimento.objects.create(empresa=empresa, codigo_tuss="30715016",
+                                        descricao="Artrodese Toracolombar")
+
+        call_command("seed_opme_previsibilidade_demo", "--apply",
+                     "--empresa-id", str(empresa.id))
+        n1 = AutorizacaoOPME.objects.filter(
+            empresa=empresa, paciente_nome__startswith="[DEMO-PREV]").count()
+        self.assertEqual(n1, sum([3,3,3,4,4,5,6,7,9,11,13,16]) + sum([4,5,4,5,5,4,5,5,4,5,5,5]))
+
+        # especialidade foi setada nos procedimentos (dimensão da métrica Unimed)
+        self.assertEqual(
+            OPMEProcedimento.objects.get(empresa=empresa, codigo_tuss="30729068").especialidade,
+            "Ortopedia — Quadril")
+
+        # a previsibilidade agora tem base real (score > 0, meses de histórico ≥ 6)
+        client = _client_for(empresa)
+        prev = client.get("/api/hospital/opme/previsibilidade/?dim=procedimento&historico=12").json()
+        self.assertGreaterEqual(prev["previsibilidade_media"], 40)
+        grupo_quadril = [g for g in prev["grupos"] if g["label"] == "30729068"][0]
+        self.assertGreaterEqual(grupo_quadril["meses_historico"], 6)
+        self.assertEqual(grupo_quadril["tendencia"], "alta")   # série crescente
+        # gera alerta de compra antecipada
+        self.assertTrue(prev["alertas_compra_antecipada"])
+
+        # idempotência: rodar de novo não duplica
+        call_command("seed_opme_previsibilidade_demo", "--apply",
+                     "--empresa-id", str(empresa.id))
+        n2 = AutorizacaoOPME.objects.filter(
+            empresa=empresa, paciente_nome__startswith="[DEMO-PREV]").count()
+        self.assertEqual(n1, n2)
+
+        # reversível
+        call_command("seed_opme_previsibilidade_demo", "--apply", "--clear",
+                     "--empresa-id", str(empresa.id))
+        self.assertEqual(0, AutorizacaoOPME.objects.filter(
+            empresa=empresa, paciente_nome__startswith="[DEMO-PREV]").count())
+
+    def test_seed_previsibilidade_recusa_tenant_nao_demo(self):
+        """Trava de segurança: o seed recusa escrever em conta que não é demo."""
+        from django.core.management import call_command, CommandError
+        from api.models import Empresa
+        from django.contrib.auth.hashers import make_password
+        real = Empresa.objects.create(
+            nome="Hospital Real", email="contato@hospitalreal.com.br",
+            senha=make_password("x"), ativo=True, pacote_codigo="hospital_rede")
+        with self.assertRaises(CommandError):
+            call_command("seed_opme_previsibilidade_demo", "--apply",
+                         "--empresa-id", str(real.id))
+
     def test_ia_nao_treina_nas_proprias_aprovacoes_via_rapida(self):
         """A IA não pode aprender com as próprias auto-aprovações (retroalimentação):
         o dataset de treino exclui as autorizações via_rapida=True."""
