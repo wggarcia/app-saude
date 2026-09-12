@@ -242,10 +242,17 @@ class SimMortalidadeGovernoTests(TestCase):
 
         resp = client.post(f"/api/governo/sim/obitos/{obito_id}/transmitir", data="{}", content_type="application/json")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()["status_transmissao"], "transmitido")
+        # Honestidade (commit f318854, 31/08): o SIM/DATASUS não tem API pública de
+        # recepção — a transmissão oficial é upload no SCNS/DATASUS. "transmitir"
+        # FINALIZA a DO e a coloca em fila: marca "aguardando_transmissao", nunca
+        # "transmitido" (seria mentira num sistema de óbito). Esta asserção guarda
+        # contra reintroduzir o stub deceptivo que a auditoria de governo removeu.
+        self.assertEqual(resp.json()["status_transmissao"], "aguardando_transmissao")
 
         kpis = client.get("/api/governo/sim/kpis").json()
-        self.assertEqual(kpis["transmitidos"], 1)
+        # o óbito saiu de "pendente", mas NÃO virou "transmitido" — a confirmação
+        # real vem do SCNS/DATASUS, fora do sistema.
+        self.assertEqual(kpis["transmitidos"], 0)
         self.assertEqual(kpis["pendentes_transmissao"], 0)
 
 
