@@ -10604,6 +10604,11 @@ class CotacaoFornecedorOPME(models.Model):
                                             help_text="Registro do produto válido (ou não informado)")
     valida           = models.BooleanField(default=False, db_index=True,
                                             help_text="Elegível a vencer (AFE ativa + ANVISA ok)")
+    # Quem REGISTROU o lance no sistema (o fornecedor não tem acesso próprio; a
+    # proposta é digitada por dentro). Sem isto não há como provar, numa auditoria
+    # de compra, quem atribuiu aquele preço ao fornecedor X.
+    registrado_por   = models.CharField(max_length=160, blank=True, default="",
+                                        verbose_name="Registrado por (operador)")
     criado_em        = models.DateTimeField(auto_now_add=True)
 
     class Meta:

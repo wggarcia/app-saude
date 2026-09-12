@@ -1161,6 +1161,27 @@ class OPMETests(TestCase):
             data={"razao_social": razao, "cnpj": cnpj},
             content_type="application/json").json()["id"]
 
+    def test_lance_registra_autoria_e_prazo_vencido(self):
+        """Auditoria da cotação: o lance grava QUEM registrou; cotação aberta com
+        prazo passado é sinalizada como vencida."""
+        empresa = _empresa("Hospital Rede", "opme-cot-aud@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Placa aud", "tipo": "material", "preco_maximo": 5000},
+            content_type="application/json").json()["id"]
+        f1 = self._forn(client, "Forn Aud")
+        # cotação com prazo no passado
+        cot = client.post("/api/hospital/opme/cotacoes/",
+            data={"opme_id": opme, "quantidade": 1, "prazo_ate": "2020-01-01"},
+            content_type="application/json").json()
+        self.assertTrue(cot["prazo_vencido"])   # aberta + prazo passado
+        cid = cot["id"]
+        client.post(f"/api/hospital/opme/cotacoes/{cid}",
+            data={"fornecedor_id": f1, "preco_unitario": 4000},
+            content_type="application/json")
+        det = client.get(f"/api/hospital/opme/cotacoes/{cid}").json()
+        self.assertTrue(det["lances"][0]["registrado_por"])   # autoria gravada
+
     def test_cotacao_menor_lance_valido_vence_e_grava_economia(self):
         """Leilão reverso: menor lance vence e a economia comprovada = teto − vencedor."""
         empresa = _empresa("Hospital Rede", "opme-cot@example.com", "hospital_rede")

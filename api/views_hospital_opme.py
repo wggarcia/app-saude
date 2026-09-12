@@ -2267,6 +2267,9 @@ def _cotacao_payload(c):
         "status": c.status,
         "status_display": c.get_status_display(),
         "prazo_ate": c.prazo_ate.isoformat() if c.prazo_ate else None,
+        # cotação aberta com prazo já vencido = precisa de ação (encerrar/prorrogar)
+        "prazo_vencido": bool(c.status == "aberta" and c.prazo_ate
+                              and c.prazo_ate < date.today()),
         "economia_obtida": float(c.economia_obtida) if c.economia_obtida else None,
         "economia_prevista": economia_prevista,
         "menor_lance_valido": menor_valido,
@@ -2288,6 +2291,8 @@ def _cotacao_payload(c):
                 "valida": l.valida,
                 "vencedor": (l.id == c.vencedora_id),
                 "observacao": l.observacao,
+                "registrado_por": l.registrado_por,
+                "criado_em": l.criado_em.isoformat(),
             }
             for l in lances
         ],
@@ -2354,10 +2359,19 @@ def api_opme_cotacoes(request):
         except (AutorizacaoOPME.DoesNotExist, ValueError, TypeError):
             return JsonResponse({"erro": "Autorização vinculada inválida"}, status=400)
 
+    # prazo_ate → date real (string ISO fica string no objeto em memória e quebra
+    # a comparação de 'prazo_vencido' no payload).
+    prazo_ate = data.get("prazo_ate") or None
+    if prazo_ate:
+        try:
+            prazo_ate = date.fromisoformat(str(prazo_ate))
+        except (ValueError, TypeError):
+            return JsonResponse({"erro": "Prazo em formato inválido (use AAAA-MM-DD)."}, status=400)
+
     c = CotacaoOPME.objects.create(
         empresa=empresa, opme=opme, autorizacao=autorizacao,
         quantidade=quantidade, preco_referencia=preco_ref,
-        prazo_ate=data.get("prazo_ate") or None,
+        prazo_ate=prazo_ate,
         criado_por=_principal_nome(request, empresa),
     )
     return JsonResponse(_cotacao_payload(c), status=201)
@@ -2423,6 +2437,7 @@ def api_opme_cotacao_lances(request, cotacao_id):
         registro_anvisa=registro, prazo_entrega_dias=prazo,
         observacao=data.get("observacao", ""),
         afe_ativa=afe_ativa, anvisa_valido=anvisa_valido, valida=valida,
+        registrado_por=_principal_nome(request, empresa),   # trilha de auditoria
     )
     aviso = None
     if not valida:

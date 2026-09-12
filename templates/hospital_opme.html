@@ -962,6 +962,7 @@ async function abrirNovaCotacao() {
     + '<label>Material<select id="ncOpme" onchange="ncSyncTeto()">'+opts+'</select></label>'
     + '<label>Quantidade<input id="ncQtd" type="number" min="1" value="1"></label>'
     + '<label>Preço de referência (teto)<input id="ncRef" type="number" step="0.01" placeholder="usa o teto do catálogo"></label>'
+    + '<label>Prazo p/ receber lances<input id="ncPrazo" type="date"></label>'
     + '</div>'
     + '<div class="alert-box ab-info" style="margin-top:8px"><div class="ab-title">Por que vincular ao pedido</div>'
     + 'Com vínculo, o preço vencedor <b>volta para o item do pedido</b> — é isso que dá ao faturamento o custo real e mantém a mediana de preço honesta. Sem vínculo, a economia entra na Torre mas não chega ao pedido.</div>';
@@ -1000,6 +1001,7 @@ async function criarCotacao(){
   var autSel=document.getElementById('ncAut');
   if(autSel && autSel.value) body.autorizacao_id=parseInt(autSel.value,10);
   var ref=document.getElementById('ncRef').value; if(ref) body.preco_referencia=parseFloat(ref);
+  var prazo=(document.getElementById('ncPrazo')||{}).value; if(prazo) body.prazo_ate=prazo;
   try{
     var r=await fetch('/api/hospital/opme/cotacoes/',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(body)});
     var d=await r.json();
@@ -1029,12 +1031,20 @@ function montarCotacao(c){
     return '<tr'+(l.vencedor?' style="background:rgba(0,229,176,.08)"':'')+'><td>'+esc(l.fornecedor)+'<div class="itens-mini">'+esc(l.cnpj||'')+'</div></td>'
       + '<td class="num"><strong>'+money(l.preco_unitario)+'</strong></td>'
       + '<td class="itens-mini">'+esc(l.marca_ofertada||'—')+(l.prazo_entrega_dias?(' · '+l.prazo_entrega_dias+'d'):'')+'</td>'
-      + '<td>'+tag+'</td></tr>';
+      + '<td>'+tag
+      // autoria do lance — o fornecedor não tem acesso próprio, a proposta é
+      // registrada por dentro; mostrar quem registrou dá lastro de auditoria.
+      + (l.registrado_por?('<div class="itens-mini">registrado por '+esc(l.registrado_por)+'</div>'):'')
+      + '</td></tr>';
   }).join('') : '<tr><td colspan="4" class="empty">Nenhum lance ainda.</td></tr>';
 
-  var resumo = '<div class="alert-box '+(c.economia_obtida?'ab-ok':'')+'" style="margin-bottom:10px">'
+  var prazoTxt = c.prazo_ate
+    ? (' · Prazo: <strong'+(c.prazo_vencido?' style="color:var(--danger)"':'')+'>'+fmtData(c.prazo_ate)
+       + (c.prazo_vencido?' ⚠ vencido':'')+'</strong>')
+    : '';
+  var resumo = '<div class="alert-box '+(c.economia_obtida?'ab-ok':(c.prazo_vencido?'ab-warn':''))+'" style="margin-bottom:10px">'
     + '<div class="ab-title">'+esc(c.opme_descricao)+' × '+c.quantidade+'</div>'
-    + 'Referência (teto): <strong>'+ref+'</strong>'
+    + 'Referência (teto): <strong>'+ref+'</strong>' + prazoTxt
     + (c.menor_lance_valido!=null?(' · Menor lance válido: <strong>'+money(c.menor_lance_valido)+'</strong>'):'')
     + (c.economia_obtida!=null?(' · <strong style="color:var(--ok)">Economia comprovada: '+money(c.economia_obtida)+'</strong>')
        :(c.economia_prevista!=null?(' · <span style="color:var(--warn)">Economia prevista: '+money(c.economia_prevista)+'</span>'):''))
