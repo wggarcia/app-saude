@@ -85,11 +85,27 @@ class Command(BaseCommand):
         from api.models import (Empresa, CatalogoOPME, OPMEProcedimento,
                                 AutorizacaoOPME, ItemAutorizacaoOPME)
 
+        # Conexão OWNER: bypassa o RLS. A conexão padrão usa o papel restrito e,
+        # sob RLS sem app.empresa_id setado, não enxerga nenhuma linha — foi o que
+        # fez o lookup do catálogo falhar em produção. Mas usar um 2º alias só faz
+        # sentido quando ele é um papel REALMENTE distinto (produção, users
+        # diferentes no mesmo Postgres). Em SQLite/dev, onde "owner" só espelha a
+        # "default", abrir uma 2ª conexão no mesmo arquivo trava o SQLite — então
+        # ali usamos a própria "default" (não há RLS a contornar de qualquer forma).
+        from django.db import connections
+        _d = connections["default"].settings_dict
+        if "sqlite" in _d.get("ENGINE", ""):
+            DB = "default"                      # dev/test: sem RLS, e não toca owner
+        else:
+            _o = connections["owner"].settings_dict if "owner" in connections else _d
+            # papel realmente distinto (produção) → owner p/ bypassar RLS
+            DB = "owner" if _d.get("USER") != _o.get("USER") else "default"
+
         # ── Alvo explícito e validado (nunca roda no escuro) ────────────────────
         if opts["empresa_id"]:
-            empresa = Empresa.objects.filter(id=opts["empresa_id"]).first()
+            empresa = Empresa.objects.using(DB).filter(id=opts["empresa_id"]).first()
         else:
-            empresa = Empresa.objects.filter(email=opts["email"]).first()
+            empresa = Empresa.objects.using(DB).filter(email=opts["email"]).first()
         if not empresa:
             raise CommandError("Tenant de demonstração não encontrado — verifique --email/--empresa-id.")
         # Trava de segurança: só age em conta claramente de demonstração.
@@ -101,7 +117,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Tenant alvo: #{empresa.id} {empresa.email} ({empresa.nome})")
 
         # ── Limpeza do lote anterior (idempotência) ─────────────────────────────
-        antigos = AutorizacaoOPME.objects.filter(
+        antigos = AutorizacaoOPME.objects.using(DB).filter(
             empresa=empresa, paciente_nome__startswith=TAG)
         n_antigos = antigos.count()
         self.stdout.write(f"Lote [DEMO-PREV] existente: {n_antigos} pedido(s).")
@@ -117,14 +133,14 @@ class Command(BaseCommand):
         # ── Resolve catálogo + procedimentos ────────────────────────────────────
         plano = []
         for p in PADROES:
-            opme = (CatalogoOPME.objects.filter(
+            opme = (CatalogoOPME.objects.using(DB).filter(
                         empresa=empresa, descricao__icontains=p["match"]).first()
-                    or CatalogoOPME.objects.filter(
+                    or CatalogoOPME.objects.using(DB).filter(
                         empresa=empresa, descricao=p["opme"]).first())
             if not opme:
                 raise CommandError(
                     f"Catálogo não tem item '{p['match']}' no tenant demo — rode o seed base primeiro.")
-            proc = OPMEProcedimento.objects.filter(
+            proc = OPMEProcedimento.objects.using(DB).filter(
                 empresa=empresa, codigo_tuss=p["tuss"]).first()
             total = sum(p["serie"])
             plano.append((p, opme, proc, total))
@@ -137,7 +153,9 @@ class Command(BaseCommand):
             return
 
         # ── Aplica ──────────────────────────────────────────────────────────────
-        with transaction.atomic():
+        # Tudo pela conexão OWNER: o comando é cross-tenant/admin e a conexão
+        # padrão (papel restrito) não enxerga linha nenhuma sob RLS sem contexto.
+        with transaction.atomic(using=DB):
             antigos.delete()   # recria do zero → idempotente
             meses = _primeiro_dia_meses_atras(12)
             criados = 0
@@ -145,14 +163,14 @@ class Command(BaseCommand):
                 # especialidade no procedimento faz a dimensão 'especialidade' funcionar
                 if proc and proc.especialidade != p["especialidade"]:
                     proc.especialidade = p["especialidade"]
-                    proc.save(update_fields=["especialidade"])
+                    proc.save(using=DB, update_fields=["especialidade"])
                 seq = 0
                 for (ano, mes), qtd_mes in zip(meses, p["serie"]):
                     for _ in range(qtd_mes):
                         seq += 1
                         dia = 5 + (seq % 20)   # espalha dentro do mês
                         quando = timezone.make_aware(datetime(ano, mes, dia, 10, 0))
-                        aut = AutorizacaoOPME.objects.create(
+                        aut = AutorizacaoOPME.objects.using(DB).create(
                             empresa=empresa,
                             paciente_nome=f"{TAG} Paciente {p['chave']}-{ano}{mes:02d}-{seq}",
                             medico_solicitante="Dr. Demonstração",
@@ -163,9 +181,9 @@ class Command(BaseCommand):
                         )
                         aut.numero_protocolo = f"OPME-{ano}-{aut.pk:06d}"
                         # backdate: solicitado_em é auto_now_add → só via update()
-                        AutorizacaoOPME.objects.filter(pk=aut.pk).update(
+                        AutorizacaoOPME.objects.using(DB).filter(pk=aut.pk).update(
                             solicitado_em=quando, numero_protocolo=aut.numero_protocolo)
-                        ItemAutorizacaoOPME.objects.create(
+                        ItemAutorizacaoOPME.objects.using(DB).create(
                             autorizacao=aut, opme=opme, quantidade=1,
                             quantidade_aprovada=1, status="aprovado",
                             preco_solicitado=opme.preco_maximo)
