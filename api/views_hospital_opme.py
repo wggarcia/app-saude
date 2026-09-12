@@ -402,6 +402,54 @@ def _avancar_esteira_por_evento(aut, de_etapa, responsavel, observacao=""):
     return prox
 
 
+def _norm_cid(codigo):
+    """Normaliza um CID-10 para comparação: maiúsculas, só alfanumérico
+    (remove ponto). 'M16.1' → 'M161'; prefixo 'M16' → 'M16'."""
+    return "".join(ch for ch in (codigo or "").upper() if ch.isalnum())
+
+
+def _avaliar_adequacao_clinica(procedimento_tuss, cid10):
+    """CAMADA 1 · Adequação clínica. Cruza o PROCEDIMENTO (TUSS) com o CID-10 na
+    base de indicação (IndicacaoClinicaOPME, fonte diretriz) e devolve
+    (status, evidencia). Julga só o ATO (a cirurgia é indicada pro quadro?),
+    nunca o material (isso é a Camada 2).
+
+    Regras:
+      • sem procedimento ou sem CID → 'nao_avaliado' (não dá pra julgar);
+      • procedimento sem base cadastrada → 'nao_avaliado' (honesto: não finge
+        veredito e NÃO penaliza a Via Rápida);
+      • CID casa com uma indicação → verde/amarelo/vermelho conforme o nível
+        (usa o prefixo de CID mais específico que casar);
+      • procedimento tem base, mas nenhum CID casa → 'vermelho' (o diagnóstico
+        não sustenta o procedimento).
+    NUNCA lança e NUNCA bloqueia — só classifica. Quem decide é o médico."""
+    from .models import IndicacaoClinicaOPME
+    proc = (procedimento_tuss or "").strip()
+    cid = _norm_cid(cid10)
+    if not proc or not cid:
+        return "nao_avaliado", "Procedimento ou CID não informado — adequação não avaliada."
+    rows = list(IndicacaoClinicaOPME.objects.filter(procedimento_tuss=proc, ativo=True))
+    if not rows:
+        return "nao_avaliado", "Sem base de indicação cadastrada para este procedimento."
+    # escolhe o casamento de CID mais ESPECÍFICO (prefixo mais longo)
+    best, best_len = None, -1
+    for r in rows:
+        p = _norm_cid(r.cid10_prefixo)
+        if p and cid.startswith(p) and len(p) > best_len:
+            best, best_len = r, len(p)
+    if best is None:
+        return "vermelho", ("O CID informado não consta entre as indicações da diretriz "
+                            "para este procedimento — revisar a indicação clínica.")
+    fonte = best.fonte or "Diretriz clínica"
+    if best.nivel == "indicado":
+        return "verde", f"{fonte}: indicação estabelecida para {best.cid10_prefixo}."
+    if best.nivel == "condicional":
+        criterio = best.criterio or "confirmar critério clínico da diretriz"
+        return "amarelo", f"{fonte}: indicação condicional — {criterio}."
+    return "vermelho", (f"{fonte}: procedimento não indicado para {best.cid10_prefixo}. "
+                        f"{best.criterio}").strip()
+
+
 def _melhor_custo_beneficio(empresa, opme_item, preco_ref):
     """Melhor alternativa de MESMA QUALIDADE e menor custo, não só a mais barata.
     Qualidade = homologada + registro ANVISA válido (não vencido) + mesmo grupo
@@ -804,6 +852,10 @@ def api_opme_autorizacoes(request):
                     "ia_justificativa": a.ia_justificativa,
                     "ia_parecer_auditoria": a.ia_parecer_auditoria,
                     "ia_recomendacao": a.ia_recomendacao or {},
+                    "adequacao_status": a.adequacao_status,
+                    "adequacao_status_display": a.get_adequacao_status_display(),
+                    "adequacao_evidencia": a.adequacao_evidencia,
+                    "adequacao_confirmada": a.adequacao_confirmada,
                     "via_rapida": a.via_rapida,
                     "solicitado_em": a.solicitado_em.isoformat(),
                     "respondido_em": a.respondido_em.isoformat() if a.respondido_em else None,
@@ -1072,13 +1124,26 @@ def api_opme_autorizacoes(request):
                                         "de_descricao": opme_obj.descricao, **mcb}
                         break
 
+            # ── CAMADA 1 · Adequação clínica (aditiva; não toca a Camada 2) ──
+            # Julga se o PROCEDIMENTO é indicado para o CID, contra a base de
+            # diretrizes. Só grava o veredito — não altera triagem/IA de material.
+            adequacao_status, adequacao_evidencia = _avaliar_adequacao_clinica(
+                procedimento_tuss, aut.cid10)
+            aut.adequacao_status = adequacao_status
+            aut.adequacao_evidencia = adequacao_evidencia
+
             # ── VIA RÁPIDA: pré-aprovação automática se TUDO passou ─────────
+            # A Camada 1 entra como mais um sinal: a Via Rápida NÃO dispara quando
+            # a indicação está ativamente em dúvida (amarelo/vermelho). Quando não
+            # há base para o procedimento ('nao_avaliado') NÃO penaliza — mantém o
+            # comportamento anterior (não bloqueia o que a Camada 1 não avaliou).
             elegivel_via_rapida = (
                 ia_dec == "aprovada"
                 and not alertas_triagem
                 and not alertas_fraude
                 and anvisa_ok is True
                 and (ia_score or 0) >= IA_SCORE_MINIMO_VIA_RAPIDA
+                and adequacao_status in ("verde", "nao_avaliado")
             )
 
             aut.alertas_triagem = alertas_triagem
@@ -1137,6 +1202,13 @@ def api_opme_autorizacoes(request):
                "justificativa": aut.ia_justificativa,
                "parecer": aut.ia_parecer_auditoria},
         "recomendacao": aut.ia_recomendacao or {},
+        # CAMADA 1 · adequação clínica (o ATO), separada da governança de material
+        "adequacao": {
+            "status": aut.adequacao_status,
+            "status_display": aut.get_adequacao_status_display(),
+            "evidencia": aut.adequacao_evidencia,
+            "confirmada": aut.adequacao_confirmada,
+        },
     }, status=201)
 
 
@@ -1282,6 +1354,76 @@ TRANSICOES_JUNTA = {
     "resolvida_operadora": set(),
     "cancelada":           set(),
 }
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_autorizacao_adequacao(request, aut_id):
+    """POST /api/hospital/opme/autorizacoes/<id>/adequacao/ — CAMADA 1.
+
+    O médico CONFIRMA a indicação clínica do pedido (o ATO). Reavalia contra a
+    base de diretrizes (que pode ter mudado), grava o veredito + a confirmação e
+    registra a trilha. NUNCA bloqueia: um veredito amarelo/vermelho segue com a
+    justificativa clínica do médico (RN 424) — a decisão do procedimento é dele.
+    Não toca em nada da Camada 2 (material)."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _c, AutorizacaoOPME, _i, _r = _get_opme_models()
+    try:
+        aut = AutorizacaoOPME.objects.get(id=aut_id, empresa=empresa)
+    except AutorizacaoOPME.DoesNotExist:
+        return JsonResponse({"erro": "Não encontrada"}, status=404)
+
+    # LGPD: médico solicitante só age no próprio pedido.
+    bloqueio = _bloqueio_acesso_pedido(request, aut)
+    if bloqueio is not None:
+        return bloqueio
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+    justificativa = (data.get("justificativa") or "").strip()
+
+    status, evidencia = _avaliar_adequacao_clinica(aut.procedimento_tuss, aut.cid10)
+    # Indicação em dúvida (amarelo/vermelho) exige justificativa clínica do médico
+    # (RN 424) — mas NÃO bloqueia: só orienta a registrar o raciocínio.
+    if status in ("amarelo", "vermelho") and not justificativa:
+        return JsonResponse({
+            "erro": "Indicação em revisão: registre a justificativa clínica para "
+                    "confirmar (RN 424/ANS). O pedido não é bloqueado.",
+            "codigo": "adequacao_requer_justificativa",
+            "adequacao_status": status,
+            "adequacao_evidencia": evidencia,
+        }, status=400)
+
+    aut.adequacao_status = status
+    aut.adequacao_evidencia = (
+        f"{evidencia}\nConfirmação clínica: {justificativa}".strip()
+        if justificativa else evidencia)
+    aut.adequacao_confirmada = True
+    aut.adequacao_confirmada_por = _principal_nome(request, empresa)
+    aut.adequacao_confirmada_em = timezone.now()
+    aut.save(update_fields=[
+        "adequacao_status", "adequacao_evidencia", "adequacao_confirmada",
+        "adequacao_confirmada_por", "adequacao_confirmada_em"])
+
+    _registrar_etapa(
+        aut, "auditoria", "em_andamento",
+        responsavel=_principal_nome(request, empresa), papel="Médico assistente",
+        observacao=f"Adequação clínica confirmada ({aut.get_adequacao_status_display()}). "
+                   f"{justificativa}".strip())
+
+    return JsonResponse({
+        "ok": True,
+        "adequacao_status": aut.adequacao_status,
+        "adequacao_status_display": aut.get_adequacao_status_display(),
+        "adequacao_evidencia": aut.adequacao_evidencia,
+        "adequacao_confirmada": True,
+    })
 
 
 @csrf_exempt

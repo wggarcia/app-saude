@@ -1318,6 +1318,23 @@ async function carregarAutorizacoes() {
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
 }
 
+async function confirmarAdequacao(id) {
+  // CAMADA 1 · o médico confirma a indicação clínica. Amarelo/vermelho exigem
+  // justificativa (RN 424) — mas o pedido NUNCA é bloqueado.
+  var ta = document.getElementById('adqJust'+id);
+  var just = ta ? (ta.value||'').trim() : '';
+  try {
+    var r = await fetch('/api/hospital/opme/autorizacoes/'+id+'/adequacao/', {
+      method:'POST', credentials:'include', headers: headers(),
+      body: JSON.stringify({ justificativa: just }) });
+    var d = await r.json().catch(function(){return {};});
+    if (!r.ok) return toast(d.erro||'Erro ao confirmar a indicação', false);
+    toast('Indicação clínica confirmada', true);
+    fecharModal();
+    carregarAutorizacoes();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
 function verDetalhe(id) {
   var a = autCache.filter(function(x){ return x.id === id; })[0];
   if (!a) return;
@@ -1330,6 +1347,30 @@ function verDetalhe(id) {
     + '<div class="detail-item"><div class="dl">Procedimento TUSS</div><div class="dv">'+esc(a.procedimento_tuss||'—')+'</div></div>'
     + '<div class="detail-item"><div class="dl">Validade</div><div class="dv">'+fmtData(a.validade_ate)+'</div></div>'
     + '</div>';
+
+  // ── CAMADA 1 · Adequação clínica (o ATO — antes da governança de material) ──
+  // Julga só se o PROCEDIMENTO é indicado para o CID (base de diretrizes).
+  // Nunca bloqueia: amarelo/vermelho pedem justificativa clínica do médico.
+  if (a.adequacao_status) {
+    var _adq = {
+      verde:        {cls:'ab-ok',     tit:'✓ Adequação clínica — indicação clara'},
+      amarelo:      {cls:'ab-warn',   tit:'⚠ Adequação clínica — revisar indicação'},
+      vermelho:     {cls:'ab-danger', tit:'⚠ Adequação clínica — indicação frágil'},
+      nao_avaliado: {cls:'ab-info',   tit:'Adequação clínica — sem base para este procedimento'}
+    }[a.adequacao_status] || {cls:'ab-info', tit:'Adequação clínica'};
+    h += '<div class="alert-box '+_adq.cls+'"><div class="ab-title">'+_adq.tit+'</div>';
+    if (a.adequacao_evidencia) h += '<div>'+esc(a.adequacao_evidencia)+'</div>';
+    if (a.adequacao_confirmada) {
+      h += '<div class="itens-mini" style="margin-top:6px">Indicação confirmada pelo médico assistente.</div>';
+    } else if (a.adequacao_status !== 'nao_avaliado') {
+      if (a.adequacao_status !== 'verde') {
+        h += '<div class="form-group" style="margin-top:8px"><label>Justificativa clínica (RN 424)</label>'
+           + '<textarea id="adqJust'+a.id+'" rows="2" placeholder="Fundamente a indicação clínica…"></textarea></div>';
+      }
+      h += '<div style="margin-top:6px"><button class="btn btn-sm" onclick="confirmarAdequacao('+a.id+')">Confirmar indicação (médico)</button></div>';
+    }
+    h += '</div>';
+  }
 
   if (a.alertas_triagem && a.alertas_triagem.length) {
     h += '<div class="alert-box ab-danger"><div class="ab-title">⚠ Triagem automática — fora do padrão</div><ul>'
@@ -1985,13 +2026,23 @@ async function salvarAutorizacao() {
     fecharModal();
     carregarAutorizacoes(); carregarKpis(); carregarEconomia();
     var eco = itens.reduce(function(s,i){ return s + (i.substituido_de_id && i.preco_substituido ? (i.preco_substituido-(i.preco_solicitado||0))*i.quantidade : 0); }, 0);
+    // CAMADA 1 · banner de adequação clínica (o ATO), mostrado ao criar o pedido.
+    var _aq = d.adequacao || {};
+    var adqHtml = '';
+    if (_aq.status && _aq.status !== 'nao_avaliado') {
+      var _am = { verde:['ab-ok','✓ Adequação clínica — indicação clara'],
+                  amarelo:['ab-warn','⚠ Adequação clínica — revisar indicação'],
+                  vermelho:['ab-danger','⚠ Adequação clínica — indicação frágil'] }[_aq.status];
+      if (_am) adqHtml = '<div class="alert-box '+_am[0]+'"><div class="ab-title">'+_am[1]+'</div>'+esc(_aq.evidencia||'')+'</div>';
+    }
     if (d.via_rapida) {
       // Pré-aprovação instantânea — destaque forte (é o diferencial).
       var rec = (d.recomendacao && d.recomendacao.para_descricao)
         ? ('\n\n💡 A IA ainda sugere: trocar por '+d.recomendacao.para_descricao+' e economizar '+money(d.recomendacao.economia)+'.') : '';
       abrirModal('⚡ Pré-aprovado na hora — Via Rápida',
         'Protocolo '+esc(d.numero_protocolo),
-        '<div class="alert-box ab-ok"><div class="ab-title">✓ APROVADO AUTOMATICAMENTE pela IA</div>'
+        adqHtml
+        + '<div class="alert-box ab-ok"><div class="ab-title">✓ APROVADO AUTOMATICAMENTE pela IA</div>'
         + 'O pedido passou em todas as validações — material homologado, registro ANVISA válido, '
         + 'dentro do teto e do procedimento padronizado, sem padrão atípico. '
         + '<b>Não entrou na fila de auditoria: aprovação na hora, não em dias.</b></div>'
@@ -2021,13 +2072,23 @@ async function salvarAutorizacao() {
       }
       abrirModal('Solicitação registrada — '+esc(d.numero_protocolo),
         'Seguiu para auditoria técnica',
-        '<div class="alert-box ab-warn"><div class="ab-title">O que a triagem apontou</div>'
+        adqHtml
+        + '<div class="alert-box ab-warn"><div class="ab-title">O que a triagem apontou</div>'
         + '<ul style="margin:4px 0 0 16px">'+listaAl+'</ul></div>'
         + alt
         + '<div class="alert-box ab-info"><div class="ab-title">O que acontece agora</div>'
         + 'Seu pedido <b>foi registrado normalmente</b> e está na fila de auditoria técnica. '
         + 'A justificativa clínica que você escreveu segue junto. Se houver divergência técnica, '
         + 'o caso vai à Junta Médica (RN 424) — onde a sua indicação pode prevalecer.</div>',
+        '<button class="btn btn-primary" onclick="fecharModal()">Entendi</button>');
+    } else if (adqHtml && _aq.status !== 'verde') {
+      // Sem alertas de material, mas a indicação clínica (Camada 1) pede atenção.
+      abrirModal('Solicitação registrada — '+esc(d.numero_protocolo),
+        'Reveja a indicação clínica',
+        adqHtml
+        + '<div class="alert-box ab-info"><div class="ab-title">O que acontece agora</div>'
+        + 'O pedido <b>foi registrado normalmente</b> (o médico nunca é bloqueado). '
+        + 'Abra o pedido para confirmar a indicação com a justificativa clínica (RN 424).</div>',
         '<button class="btn btn-primary" onclick="fecharModal()">Entendi</button>');
     } else {
       toast('Solicitação '+d.numero_protocolo+' criada'+(eco>0?(' — economia de '+money(eco)):''), true);

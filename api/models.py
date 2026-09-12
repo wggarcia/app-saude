@@ -10195,6 +10195,27 @@ class AutorizacaoOPME(models.Model):
     ia_parecer_auditoria = models.TextField(blank=True, default="")
     ia_recomendacao      = models.JSONField(default=dict, blank=True,
                                             help_text="Substituição sugerida (mesma qualidade, menor custo)")
+    # ── CAMADA 1 · Adequação clínica (ADITIVA; não substitui a governança de
+    # material da Camada 2). Responde "o procedimento é indicado para o CID?"
+    # cruzando com a base de indicação (IndicacaoClinicaOPME, fonte diretriz).
+    # verde=indicação clara · amarelo=condicional/revisar · vermelho=frágil ·
+    # nao_avaliado=sem base para o procedimento (honesto — NÃO penaliza a Via
+    # Rápida). Quem CONFIRMA a indicação é o médico; 🔴 nunca bloqueia (RN 424).
+    ADEQUACAO = [
+        ("verde",        "Indicação clara"),
+        ("amarelo",      "Revisar indicação"),
+        ("vermelho",     "Indicação frágil"),
+        ("nao_avaliado", "Sem base de indicação"),
+    ]
+    adequacao_status = models.CharField(max_length=12, choices=ADEQUACAO,
+                                        default="nao_avaliado", db_index=True,
+                                        verbose_name="Adequação clínica (Camada 1)")
+    adequacao_evidencia = models.TextField(blank=True, default="",
+                                           help_text="Diretriz/critério que embasa o veredito de indicação")
+    adequacao_confirmada = models.BooleanField(default=False,
+                                               help_text="Médico confirmou a indicação clínica")
+    adequacao_confirmada_por = models.CharField(max_length=160, blank=True, default="")
+    adequacao_confirmada_em = models.DateTimeField(null=True, blank=True)
     # Via Rápida: pré-aprovação automática quando o pedido passa em TODAS as
     # validações (triagem + fraude + ANVISA + IA). Pula a fila de auditoria.
     via_rapida       = models.BooleanField(default=False, db_index=True,
@@ -10288,6 +10309,48 @@ class EtapaHistoricoOPME(models.Model):
 
     def __str__(self):
         return f"{self.autorizacao_id} — {self.etapa} ({self.situacao})"
+
+
+class IndicacaoClinicaOPME(models.Model):
+    """CAMADA 1 · Base de indicação clínica (fonte A: diretrizes públicas).
+
+    Referência NACIONAL — SEM empresa, igual a TerminologiaTuss e
+    RegistroAnvisaProdutoSaude: legível por todos os tenants e fora da RLS (a
+    RLS só cobre tabelas com empresa_id). Cruza um procedimento (TUSS) com o
+    CID-10 para dizer se a cirurgia é INDICADA para aquele quadro — a pergunta
+    exclusiva da Camada 1 (o ATO), distinta da governança de MATERIAL (Camada 2).
+
+    Uma futura camada por operadora (fonte B: as regras da própria Unimed) pode
+    entrar como override em cima desta, sem quebrar nada — a avaliação passaria
+    a preferir a regra do tenant e cair nesta base nacional como padrão."""
+    NIVEL = [
+        ("indicado",     "Indicado"),
+        ("condicional",  "Condicional (exige critério)"),
+        ("nao_indicado", "Não indicado"),
+    ]
+    procedimento_tuss      = models.CharField(max_length=10, db_index=True,
+                                              verbose_name="Procedimento TUSS/SIGTAP")
+    procedimento_descricao = models.CharField(max_length=200, blank=True, default="")
+    especialidade          = models.CharField(max_length=80, blank=True, default="", db_index=True)
+    cid10_prefixo          = models.CharField(max_length=6, db_index=True,
+                                              verbose_name="CID-10 (código ou prefixo, ex.: M16)")
+    nivel                  = models.CharField(max_length=14, choices=NIVEL, default="indicado")
+    criterio               = models.TextField(blank=True, default="",
+                                              help_text="Critério da diretriz (para nível condicional)")
+    fonte                  = models.CharField(max_length=160, blank=True, default="",
+                                              help_text="Diretriz/evidência de referência")
+    ativo                  = models.BooleanField(default=True)
+    atualizado_em          = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Indicação clínica OPME"
+        verbose_name_plural = "Indicações clínicas OPME"
+        ordering            = ["procedimento_tuss", "cid10_prefixo"]
+        unique_together     = [["procedimento_tuss", "cid10_prefixo"]]
+        indexes             = [models.Index(fields=["procedimento_tuss", "cid10_prefixo"])]
+
+    def __str__(self):
+        return f"{self.procedimento_tuss} × {self.cid10_prefixo} — {self.nivel}"
 
 
 class ModeloIAArea(models.Model):

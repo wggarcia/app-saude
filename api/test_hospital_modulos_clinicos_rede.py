@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from .models import (
     Empresa, CatalogoOPME, AutorizacaoOPME, ImplantavelRegistro, ProtocoloOncologico,
+    IndicacaoClinicaOPME,
 )
 
 
@@ -2485,3 +2486,140 @@ class OPMETests(TestCase):
         self.assertEqual(lever["potencial"], 2000.0)
         # estimativa NÃO entra no potencial "duro" da Torre
         self.assertEqual(eco["torre_estimativa_total"], 2000.0)
+
+
+class CamadaUmAdequacaoClinicaTests(TestCase):
+    """CAMADA 1 · Adequação clínica (o ATO). Julga se o procedimento é indicado
+    para o CID, sem tocar na governança de material (Camada 2). Nunca bloqueia."""
+
+    TUSS = "30731000"          # artroplastia total de quadril (exemplo)
+    CID_OK = "M16.1"           # coxartrose primária → indicação canônica
+    CID_RUIM = "M54.5"         # lombalgia → não sustenta prótese de quadril
+
+    def _hospital(self, email):
+        return _empresa("Hospital Camada1", email, "hospital_rede")
+
+    def _seed_indicacao(self):
+        IndicacaoClinicaOPME.objects.create(
+            procedimento_tuss=self.TUSS, procedimento_descricao="Artroplastia de quadril",
+            especialidade="Ortopedia — Quadril", cid10_prefixo="M16",
+            nivel="indicado", fonte="Diretriz SBOT")
+
+    def _catalogo(self, client):
+        return client.post("/api/hospital/opme/catalogo/",
+                           data={"descricao": "Prótese de Quadril", "tipo": "protese"},
+                           content_type="application/json").json()["id"]
+
+    def _pedir(self, client, item_id, cid, tuss=None, **extra):
+        body = {"paciente_nome": "Paciente C1", "medico_solicitante": "Dr. C1",
+                "cid10": cid, "procedimento_tuss": tuss if tuss is not None else self.TUSS,
+                "itens": [{"opme_id": item_id, "quantidade": 1}]}
+        body.update(extra)
+        return client.post("/api/hospital/opme/autorizacoes/",
+                           data=body, content_type="application/json")
+
+    # ── a lógica de avaliação ────────────────────────────────────────────────
+    def test_verde_quando_cid_casa_indicacao(self):
+        self._seed_indicacao()
+        client = _client_for(self._hospital("c1-verde@example.com"))
+        r = self._pedir(client, self._catalogo(client), self.CID_OK)
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["adequacao"]["status"], "verde")
+
+    def test_vermelho_quando_cid_nao_sustenta_procedimento(self):
+        self._seed_indicacao()
+        client = _client_for(self._hospital("c1-vermelho@example.com"))
+        r = self._pedir(client, self._catalogo(client), self.CID_RUIM, justificativa="quadro atípico")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["adequacao"]["status"], "vermelho")
+
+    def test_amarelo_quando_indicacao_condicional(self):
+        IndicacaoClinicaOPME.objects.create(
+            procedimento_tuss=self.TUSS, cid10_prefixo="M16", nivel="condicional",
+            criterio="após falha do tratamento conservador", fonte="Diretriz SBOT")
+        client = _client_for(self._hospital("c1-amarelo@example.com"))
+        r = self._pedir(client, self._catalogo(client), self.CID_OK, justificativa="tratamento prévio falhou")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["adequacao"]["status"], "amarelo")
+
+    def test_nao_avaliado_sem_base(self):
+        """Sem base para o procedimento → nao_avaliado (honesto, não finge)."""
+        client = _client_for(self._hospital("c1-sembase@example.com"))
+        r = self._pedir(client, self._catalogo(client), self.CID_OK)
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["adequacao"]["status"], "nao_avaliado")
+
+    # ── interação com a Via Rápida (não penaliza o que não avaliou) ───────────
+    def test_via_rapida_nao_penalizada_quando_sem_base(self):
+        """Regressão crítica: sem base de indicação, a Camada 1 NÃO deve travar a
+        Via Rápida — preserva o comportamento anterior da Camada 2."""
+        empresa = self._hospital("c1-vr-sembase@example.com")
+        client = _client_for(empresa)
+        # material homologado + ANVISA válida → via rápida elegível
+        item = client.post("/api/hospital/opme/catalogo/",
+                           data={"descricao": "Prótese OK", "tipo": "protese",
+                                 "homologado": True, "codigo_anvisa": "80044680371"},
+                           content_type="application/json").json()["id"]
+        r = self._pedir(client, item, self.CID_OK)
+        self.assertEqual(r.status_code, 201, r.content)
+        # sem base → nao_avaliado; a via rápida decide pelos critérios de material
+        self.assertEqual(r.json()["adequacao"]["status"], "nao_avaliado")
+
+    def test_via_rapida_bloqueada_quando_indicacao_vermelha(self):
+        """Indicação frágil (vermelho) NÃO pode auto-aprovar por Via Rápida."""
+        IndicacaoClinicaOPME.objects.create(
+            procedimento_tuss=self.TUSS, cid10_prefixo="M16", nivel="nao_indicado",
+            fonte="Diretriz SBOT")
+        empresa = self._hospital("c1-vr-vermelho@example.com")
+        client = _client_for(empresa)
+        item = client.post("/api/hospital/opme/catalogo/",
+                           data={"descricao": "Prótese OK", "tipo": "protese",
+                                 "homologado": True, "codigo_anvisa": "80044680371"},
+                           content_type="application/json").json()["id"]
+        r = self._pedir(client, item, self.CID_OK, justificativa="quadro atípico")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["adequacao"]["status"], "vermelho")
+        self.assertFalse(r.json()["via_rapida"])
+
+    # ── confirmação da indicação pelo médico (nunca bloqueia) ────────────────
+    def test_medico_confirma_indicacao_verde(self):
+        self._seed_indicacao()
+        client = _client_for(self._hospital("c1-confirma@example.com"))
+        aut_id = self._pedir(client, self._catalogo(client), self.CID_OK).json()["id"]
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut_id}/adequacao/",
+                        data={}, content_type="application/json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(r.json()["adequacao_confirmada"])
+
+    def test_confirmacao_vermelha_exige_justificativa_mas_nao_bloqueia(self):
+        IndicacaoClinicaOPME.objects.create(
+            procedimento_tuss=self.TUSS, cid10_prefixo="M16", nivel="nao_indicado",
+            fonte="Diretriz SBOT")
+        client = _client_for(self._hospital("c1-just@example.com"))
+        aut_id = self._pedir(client, self._catalogo(client), self.CID_OK,
+                             justificativa="pedido inicial").json()["id"]
+        # sem justificativa na confirmação → 400 orientando (não bloqueia o pedido)
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut_id}/adequacao/",
+                        data={}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "adequacao_requer_justificativa")
+        # com justificativa clínica → confirma (a decisão do procedimento é do médico)
+        r = client.post(f"/api/hospital/opme/autorizacoes/{aut_id}/adequacao/",
+                        data={"justificativa": "caso excepcional documentado"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(r.json()["adequacao_confirmada"])
+
+    def test_camada2_intacta_material_continua_avaliado(self):
+        """Garantia de não-regressão: a Camada 2 (governança de material) segue
+        avaliando triagem/alertas normalmente, independente da Camada 1."""
+        self._seed_indicacao()
+        empresa = self._hospital("c1-camada2@example.com")
+        client = _client_for(empresa)
+        # material NÃO homologado → a Camada 2 deve exigir justificativa (RN 424)
+        item = client.post("/api/hospital/opme/catalogo/",
+                           data={"descricao": "Prótese fora", "tipo": "protese",
+                                 "homologado": False},
+                           content_type="application/json").json()["id"]
+        r = self._pedir(client, item, self.CID_OK)  # sem justificativa
+        self.assertEqual(r.status_code, 400)  # Camada 2 barra por falta de justificativa
