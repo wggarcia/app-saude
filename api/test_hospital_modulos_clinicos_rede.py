@@ -1487,6 +1487,11 @@ class OPMETests(TestCase):
             empresa=empresa, paciente_nome__startswith="[DEMO-PREV]").count()
         self.assertEqual(n1, sum([3,3,3,4,4,5,6,7,9,11,13,16]) + sum([4,5,4,5,5,4,5,5,4,5,5,5]))
 
+        # fração via rápida realista (nem 0% nem 100%) — preserva a métrica do painel
+        vr = AutorizacaoOPME.objects.filter(
+            empresa=empresa, paciente_nome__startswith="[DEMO-PREV]", via_rapida=True).count()
+        self.assertTrue(0 < vr < n1, "seed deve ter mistura de via rápida e fila")
+
         # especialidade foi setada nos procedimentos (dimensão da métrica Unimed)
         self.assertEqual(
             OPMEProcedimento.objects.get(empresa=empresa, codigo_tuss="30729068").especialidade,

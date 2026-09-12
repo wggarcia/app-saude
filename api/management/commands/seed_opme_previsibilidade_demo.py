@@ -170,12 +170,19 @@ class Command(BaseCommand):
                         seq += 1
                         dia = 5 + (seq % 20)   # espalha dentro do mês
                         quando = timezone.make_aware(datetime(ano, mes, dia, 10, 0))
+                        # ~58% via rápida: um histórico realista tem essa fração
+                        # auto-aprovada (é o valor do produto). Sem isto, 140 pedidos
+                        # não-via-rápida achatariam a métrica de Via Rápida do painel
+                        # (efeito colateral do seed, não realidade). Não realimenta a
+                        # IA — o dataset de treino já exclui via_rapida.
+                        via = (criados % 12) < 7
                         aut = AutorizacaoOPME.objects.using(DB).create(
                             empresa=empresa,
                             paciente_nome=f"{TAG} Paciente {p['chave']}-{ano}{mes:02d}-{seq}",
                             medico_solicitante="Dr. Demonstração",
                             procedimento_tuss=p["tuss"],
                             status="aprovada",
+                            via_rapida=via,
                             numero_protocolo="",
                             validade_ate=(quando.date() + timedelta(days=90)),
                         )
