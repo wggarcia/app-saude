@@ -1460,6 +1460,35 @@ class OPMETests(TestCase):
             alertas_triagem=[], alertas_fraude=[], anvisa_ok=True)
         self.assertNotIn("rebaixada", parecer2)
 
+    def test_ia_nao_treina_nas_proprias_aprovacoes_via_rapida(self):
+        """A IA não pode aprender com as próprias auto-aprovações (retroalimentação):
+        o dataset de treino exclui as autorizações via_rapida=True."""
+        from api.models import AutorizacaoOPME
+        from api.services.ia_areas import _opme_dataset_real
+        empresa = _empresa("Hospital Rede", "opme-ia-loop@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Item ia", "tipo": "material", "preco_maximo": 3000},
+            content_type="application/json").json()["id"]
+        # decisão HUMANA (aprovada por auditor) — deve entrar no dataset
+        aut_h = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        client.post(f"/api/hospital/opme/autorizacoes/{aut_h}/acao",
+            data={"acao": "aprovar"}, content_type="application/json")
+        # simula uma aprovação da Via Rápida (feita pela IA)
+        aut_vr = client.post("/api/hospital/opme/autorizacoes/",
+            data={"paciente_nome": "P2", "medico_solicitante": "Dr",
+                  "itens": [{"opme_id": opme, "quantidade": 1}]},
+            content_type="application/json").json()["id"]
+        AutorizacaoOPME.objects.filter(id=aut_vr).update(
+            status="aprovada", via_rapida=True)
+
+        n = len(_opme_dataset_real(empresa.id))
+        # apenas a decisão humana entra; a via_rapida fica de fora
+        self.assertEqual(n, 1)
+
     def test_ranking_nominal_de_medicos_so_para_gerencia(self):
         """LGPD/ética: o ranking nominal de solicitantes fora do padrão não pode
         vazar para um usuário clínico comum. Conta corporativa (gerência) vê."""

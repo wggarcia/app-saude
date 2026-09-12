@@ -65,12 +65,20 @@ def _opme_features_de_dict(d):
 
 
 def _opme_dataset_real(empresa_id):
-    """Exemplos rotulados a partir das autorizações OPME já DECIDIDAS da empresa.
-    Ground truth = status resolvido (aprovada/parcial/negada)."""
+    """Exemplos rotulados a partir das autorizações OPME já DECIDIDAS POR HUMANO.
+
+    Ground truth = decisão humana (aprovada/parcial/negada). Exclui as aprovações
+    da Via Rápida (`via_rapida=True`): elas foram feitas PELA PRÓPRIA IA, sem
+    revisão humana — treinar com elas é a IA aprendendo com as próprias decisões
+    (retroalimentação: quanto mais ela auto-aprova, mais confiante fica em
+    auto-aprovar). Os casos limpos já são resolvidos pela regra determinística da
+    Via Rápida (score alto + zero alertas), então não precisam do ML; o modelo
+    deve aprender a imitar o humano justamente nos casos ambíguos que ele revisou."""
     from api.models import AutorizacaoOPME
     exemplos = []
     qs = (AutorizacaoOPME.objects
           .filter(empresa_id=empresa_id, status__in=["aprovada", "parcial", "negada"])
+          .exclude(via_rapida=True)
           .prefetch_related("itens__opme"))
     for a in qs:
         itens = list(a.itens.all())
