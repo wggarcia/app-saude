@@ -42,6 +42,9 @@ echo "==> [4/6] RLS cobertura (self-healing)"
 # nova sem RLS. Idempotente; roda como owner (APP_DATABASE_URL= vazio).
 APP_DATABASE_URL= "$PYTHON_BIN" "$APP_DIR/manage.py" aplicar_rls_cobertura
 
+echo "==> [4b/6] base de indicação clínica OPME (Camada 1, fonte A — idempotente)"
+APP_DATABASE_URL= "$PYTHON_BIN" "$APP_DIR/manage.py" seed_indicacao_clinica_opme
+
 echo "==> [5/6] collectstatic"
 "$PYTHON_BIN" "$APP_DIR/manage.py" collectstatic --noinput --clear
 
