@@ -34,6 +34,9 @@ PADROES = [
     {
         "chave": "quadril",
         "tuss": "30729068",
+        # fragmento distintivo SEM em-dash (evita mismatch de caractere na
+        # descrição longa); "Linha Standard" identifica só o item alvo.
+        "match": "Linha Standard",
         "opme": "Prótese Total de Quadril Não Cimentada — Linha Standard",
         "especialidade": "Ortopedia — Quadril",
         # crescimento acelerado → tendência 'alta' (calibrado no motor real:
@@ -43,6 +46,7 @@ PADROES = [
     {
         "chave": "coluna",
         "tuss": "30715016",
+        "match": "4 parafusos",
         "opme": "Sistema de Fixação Pedicular Titânio — 4 parafusos",
         "especialidade": "Coluna",
         "serie": [4, 5, 4, 5, 5, 4, 5, 5, 4, 5, 5, 5],     # estável
@@ -113,11 +117,13 @@ class Command(BaseCommand):
         # ── Resolve catálogo + procedimentos ────────────────────────────────────
         plano = []
         for p in PADROES:
-            opme = CatalogoOPME.objects.filter(
-                empresa=empresa, descricao=p["opme"]).first()
+            opme = (CatalogoOPME.objects.filter(
+                        empresa=empresa, descricao__icontains=p["match"]).first()
+                    or CatalogoOPME.objects.filter(
+                        empresa=empresa, descricao=p["opme"]).first())
             if not opme:
                 raise CommandError(
-                    f"Catálogo não tem '{p['opme']}' no tenant demo — rode o seed base primeiro.")
+                    f"Catálogo não tem item '{p['match']}' no tenant demo — rode o seed base primeiro.")
             proc = OPMEProcedimento.objects.filter(
                 empresa=empresa, codigo_tuss=p["tuss"]).first()
             total = sum(p["serie"])
