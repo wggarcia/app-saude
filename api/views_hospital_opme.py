@@ -3054,14 +3054,20 @@ def _calc_previsibilidade(empresa, dim="procedimento", meses_frente=3, historico
         })
     grupos.sort(key=lambda x: x["total_previsto"], reverse=True)
 
-    # Alertas de compra antecipada: demanda em ALTA e com previsibilidade razoável
-    # (não faz sentido "comprar antes" o que é errático). Ordena por volume previsto.
+    # Alertas de compra antecipada: o sinal ACIONÁVEL é a demanda em ALTA — é aí
+    # que comprar antes evita a compra emergencial. A previsibilidade entra só como
+    # piso contra ruído PURO (série errática sem direção), não como exigência de
+    # estabilidade: uma série que sobe de forma consistente tem, por natureza,
+    # variação maior (logo previsibilidade menor) — exigir ≥40 excluía justamente
+    # os itens crescentes, que são o alvo do alerta. Piso 30 pega a alta real e
+    # descarta o caos. Ordena por volume previsto.
+    ALERTA_PREV_MIN = 30
     alertas_compra = [
         {"label": gr["label"], "previsao": gr["previsao"],
          "total_previsto": gr["total_previsto"], "previsibilidade": gr["previsibilidade"],
          "consumo_medio_mensal": gr["consumo_medio_mensal"]}
         for gr in grupos
-        if gr["tendencia"] == "alta" and gr["previsibilidade"] >= 40
+        if gr["tendencia"] == "alta" and gr["previsibilidade"] >= ALERTA_PREV_MIN
     ][:10]
 
     rotulos_hist = [_rotulo_mes(a, m) for (a, m) in seq]
