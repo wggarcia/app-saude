@@ -1978,6 +1978,86 @@ class OPMETests(TestCase):
                   "itens": [{"opme_id": opme_id, "quantidade": 1}]},
             content_type="application/json").json()["id"]
 
+    def test_consignacao_entra_como_estoque_sem_paciente(self):
+        """Consignação: material do fornecedor entra sem autorização/paciente, como
+        estoque, e é validado na entrada (ANVISA/lote)."""
+        empresa = _empresa("Hospital Rede", "opme-consig@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Kit consignado", "tipo": "material", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/recebimentos/",
+            data={"consignado": True, "opme_id": opme, "quantidade_recebida": 4,
+                  "lote": "L-CONS", "validade": "2090-01-01"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        d = r.json()
+        self.assertEqual(d["status"], "consignado")
+        self.assertTrue(d["consignado"])
+        self.assertIsNone(d["autorizacao_id"])
+        self.assertEqual(d["paciente_nome"], "(estoque em consignação)")
+
+    def test_consignacao_lote_vencido_bloqueia(self):
+        """A validação de entrada vale também para consignação."""
+        empresa = _empresa("Hospital Rede", "opme-consig-v@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Kit venc", "tipo": "material", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        r = client.post("/api/hospital/opme/recebimentos/",
+            data={"consignado": True, "opme_id": opme, "validade": "2000-01-01"},
+            content_type="application/json").json()
+        self.assertEqual(r["status"], "bloqueado")
+
+    def test_consignacao_consumir_vira_faturavel(self):
+        """Consumir consignação (implantada) → 'consumido', vinculando a cirurgia."""
+        empresa = _empresa("Hospital Rede", "opme-consig-c@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Kit cons2", "tipo": "material", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        aut = self._aut_simples(client, opme)
+        rid = client.post("/api/hospital/opme/recebimentos/",
+            data={"consignado": True, "opme_id": opme, "validade": "2090-01-01"},
+            content_type="application/json").json()["id"]
+        r = client.post(f"/api/hospital/opme/recebimentos/{rid}/acao",
+            data={"acao": "consumir", "autorizacao_id": aut},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["status"], "consumido")
+        self.assertEqual(d["autorizacao_id"], aut)
+
+    def test_consignacao_devolver_nao_fatura(self):
+        """Devolver consignação não usada → 'devolvido' (não vira custo)."""
+        empresa = _empresa("Hospital Rede", "opme-consig-d@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Kit cons3", "tipo": "material", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        rid = client.post("/api/hospital/opme/recebimentos/",
+            data={"consignado": True, "opme_id": opme, "validade": "2090-01-01"},
+            content_type="application/json").json()["id"]
+        r = client.post(f"/api/hospital/opme/recebimentos/{rid}/acao",
+            data={"acao": "devolver"}, content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["status"], "devolvido")
+
+    def test_acao_consignacao_recusa_recebimento_normal(self):
+        """A ação de consignação não age sobre recebimento comum (de pedido)."""
+        empresa = _empresa("Hospital Rede", "opme-consig-n@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        opme = client.post("/api/hospital/opme/catalogo/",
+            data={"descricao": "Kit normal", "tipo": "material", "preco_maximo": 8000},
+            content_type="application/json").json()["id"]
+        aut = self._aut_simples(client, opme)
+        rid = client.post("/api/hospital/opme/recebimentos/",
+            data={"autorizacao_id": aut, "opme_id": opme, "validade": "2090-01-01"},
+            content_type="application/json").json()["id"]
+        r = client.post(f"/api/hospital/opme/recebimentos/{rid}/acao",
+            data={"acao": "devolver"}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
     def test_recebimento_valido_libera_para_cirurgia(self):
         """Material sem pendência ANVISA e sem lote vencido → LIBERADO."""
         empresa = _empresa("Hospital Rede", "opme-rec-ok@example.com", "hospital_rede")

@@ -2530,8 +2530,11 @@ def _recebimento_payload(r):
     return {
         "id": r.id,
         "autorizacao_id": r.autorizacao_id,
-        "protocolo": r.autorizacao.numero_protocolo,
-        "paciente_nome": r.autorizacao.paciente_nome,
+        # consignado não tem paciente/autorização — é estoque do fornecedor
+        "protocolo": (r.autorizacao.numero_protocolo if r.autorizacao_id else "—"),
+        "paciente_nome": (r.autorizacao.paciente_nome if r.autorizacao_id
+                          else "(estoque em consignação)"),
+        "consignado": r.consignado,
         "opme_id": r.opme_id,
         "opme_descricao": r.opme.descricao,
         "quantidade_recebida": r.quantidade_recebida,
@@ -2619,17 +2622,21 @@ def api_opme_recebimentos(request):
     data, erro = _parse_json(request)
     if erro:
         return erro
-    try:
-        aut = AutorizacaoOPME.objects.get(id=data.get("autorizacao_id"), empresa=empresa)
-    except (AutorizacaoOPME.DoesNotExist, ValueError, TypeError):
-        return JsonResponse({"erro": "Autorização inválida nesta empresa"}, status=400)
+    # Consignação: material do fornecedor entra como ESTOQUE, sem paciente/autorização.
+    consignado = bool(data.get("consignado", False))
+    aut = None
+    if not consignado:
+        try:
+            aut = AutorizacaoOPME.objects.get(id=data.get("autorizacao_id"), empresa=empresa)
+        except (AutorizacaoOPME.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({"erro": "Autorização inválida nesta empresa"}, status=400)
     try:
         opme = CatalogoOPME.objects.get(id=data.get("opme_id"), empresa=empresa)
     except (CatalogoOPME.DoesNotExist, ValueError, TypeError):
         return JsonResponse({"erro": "Item OPME inválido no catálogo"}, status=400)
 
     item = None
-    if data.get("item_id"):
+    if aut and data.get("item_id"):
         item = ItemAutorizacaoOPME.objects.filter(
             id=data["item_id"], autorizacao=aut).first()
 
@@ -2653,10 +2660,17 @@ def api_opme_recebimentos(request):
             return JsonResponse(
                 {"erro": "Validade em formato inválido (use AAAA-MM-DD)."}, status=400)
     anvisa_ok, anvisa_situacao, motivos = _validar_recebimento_material(opme, validade)
-    status = "bloqueado" if motivos else "liberado"
+    # Validação ANVISA/lote vale para os dois regimes. Sem pendência: material
+    # consignado entra como ESTOQUE ("consignado"); material de pedido entra
+    # "liberado" para a cirurgia. Com pendência: "bloqueado" nos dois casos.
+    if motivos:
+        status = "bloqueado"
+    else:
+        status = "consignado" if consignado else "liberado"
 
     r = RecebimentoOPME.objects.create(
         empresa=empresa, autorizacao=aut, item=item, opme=opme,
+        consignado=consignado,
         quantidade_recebida=qtd,
         lote=(data.get("lote") or "").strip(),
         numero_serie=(data.get("numero_serie") or "").strip(),
@@ -2669,8 +2683,8 @@ def api_opme_recebimentos(request):
         liberado_em=timezone.now() if status == "liberado" else None,
         observacoes=(data.get("observacoes") or "").strip(),
     )
-    # Evento: material liberado conclui a etapa de recebimento/dispensação.
-    # (Bloqueado não avança — a esteira espera a liberação, manual ou automática.)
+    # Evento: material liberado (de pedido) conclui a etapa de recebimento. Material
+    # consignado é estoque — não pertence a nenhum pedido, então não move esteira.
     if status == "liberado":
         _avancar_esteira_por_evento(
             aut, "dispensacao", responsavel=r.recebido_por,
@@ -2717,6 +2731,63 @@ def api_opme_recebimento_liberar(request, receb_id):
         r.autorizacao, "dispensacao", responsavel=quem,
         observacao="Material liberado manualmente para cirurgia.")
     return JsonResponse(_recebimento_payload(r))
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.opme")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_opme_recebimento_acao(request, receb_id):
+    """POST /api/hospital/opme/recebimentos/<id>/acao — ações sobre estoque
+    CONSIGNADO: {acao: "consumir"|"devolver", autorizacao_id?}.
+
+    Consignação = material do fornecedor no hospital, faturado só quando usado.
+      - consumir: foi implantado numa cirurgia → vira 'consumido' (agora é
+        faturável). Pode vincular a autorização/paciente da cirurgia.
+      - devolver: não foi usado → volta ao fornecedor ('devolvido').
+    Só age sobre item em consignação; nunca inventa custo (a consignação só vira
+    custo quando consumida)."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    RecebimentoOPME = _get_recebimento_model()
+    _Cat, AutorizacaoOPME, _Item, _Impl = _get_opme_models()
+    try:
+        r = RecebimentoOPME.objects.get(id=receb_id, empresa=empresa)
+    except RecebimentoOPME.DoesNotExist:
+        return JsonResponse({"erro": "Recebimento não encontrado"}, status=404)
+    if r.status != "consignado":
+        return JsonResponse(
+            {"erro": "Ação disponível apenas para material em consignação."}, status=400)
+
+    data, _erro = _parse_json(request)
+    data = data or {}
+    acao = data.get("acao")
+    quem = _principal_nome(request, empresa)
+
+    if acao == "consumir":
+        # vincula à autorização da cirurgia, se informada (fatura o que foi usado)
+        if data.get("autorizacao_id"):
+            aut = AutorizacaoOPME.objects.filter(
+                id=data["autorizacao_id"], empresa=empresa).first()
+            if aut is None:
+                return JsonResponse({"erro": "Autorização inválida nesta empresa"}, status=400)
+            r.autorizacao = aut
+        r.status = "consumido"
+        nota = f"[Consumido em cirurgia por {quem} — consignação faturável]"
+        r.observacoes = (r.observacoes + "\n" + nota).strip() if r.observacoes else nota
+        r.save(update_fields=["status", "autorizacao", "observacoes"])
+        return JsonResponse(_recebimento_payload(r))
+
+    if acao == "devolver":
+        r.status = "devolvido"
+        nota = f"[Devolvido ao fornecedor por {quem} — não faturado]"
+        r.observacoes = (r.observacoes + "\n" + nota).strip() if r.observacoes else nota
+        r.save(update_fields=["status", "observacoes"])
+        return JsonResponse(_recebimento_payload(r))
+
+    return JsonResponse({"erro": f"Ação inválida: {acao}"}, status=400)
 
 
 # ── Esteira do processo (linha do tempo do pedido) ──────────────────────────────

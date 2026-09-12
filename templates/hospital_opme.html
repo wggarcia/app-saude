@@ -485,6 +485,24 @@ tr:hover td{background:rgba(0,194,255,.03)}
         </div>
       </div>
     </div>
+
+    <div class="card" style="border:1px solid rgba(217,180,60,.25)">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🤝 Estoque em Consignação</div>
+          <div class="page-sub" style="font-size:11px;margin-top:2px">Material do fornecedor fisicamente no hospital, <b>faturado só quando implantado</b> (regime dominante de OPME no Brasil). Validado na entrada; consumir na cirurgia torna faturável, devolver não gera custo.</div>
+        </div>
+        <button class="btn btn-warn btn-sm" onclick="abrirNovaConsignacao()">+ Receber Consignação</button>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Material</th><th>Qtd</th><th>Lote / Série</th><th>Validade</th><th>Fornecedor</th><th>Status</th><th></th></tr></thead>
+            <tbody id="consigBody"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="tab-panel" id="panel-implantaveis">
@@ -575,7 +593,7 @@ function setTab(tab) {
   if (tab === 'procedimentos') carregarProcedimentos();
   if (tab === 'cotacoes') carregarCotacoes();
   if (tab === 'previsibilidade') carregarPrevisibilidade();
-  if (tab === 'recebimento') carregarRecebimentos();
+  if (tab === 'recebimento') { carregarRecebimentos(); carregarConsignacao(); }
   if (tab === 'painel') carregarEconomia();
 }
 
@@ -586,7 +604,8 @@ async function carregarRecebimentos(){
   try{
     var r=await fetch('/api/hospital/opme/recebimentos',{credentials:'include',headers:headers()});
     var d=await r.json();
-    var lista=d.recebimentos||[];
+    // recebimentos de pedido (não-consignados) — a consignação tem card próprio
+    var lista=(d.recebimentos||[]).filter(function(x){return !x.consignado;});
     if(!lista.length){ body.innerHTML='<tr><td colspan="7" class="empty">Nenhum recebimento registrado. Clique em “Registrar Recebimento” quando o material chegar.</td></tr>'; return; }
     body.innerHTML=lista.map(function(x){
       var badge = x.status==='liberado' ? '<span class="badge badge-ok">✓ Liberado p/ cirurgia</span>'
@@ -610,6 +629,101 @@ async function carregarRecebimentos(){
     var pill=document.getElementById('pillReceb');
     if(nBloq>0){ pill.textContent=nBloq; pill.style.display=''; } else pill.style.display='none';
   }catch(e){ body.innerHTML='<tr><td colspan="7" class="empty">Erro ao carregar recebimentos.</td></tr>'; }
+}
+
+/* ── Consignação: estoque do fornecedor, faturado só quando implantado ──── */
+async function carregarConsignacao(){
+  var body=document.getElementById('consigBody');
+  if(!body) return;
+  try{
+    var r=await fetch('/api/hospital/opme/recebimentos?status=consignado',{credentials:'include',headers:headers()});
+    var d=await r.json();
+    var lista=(d.recebimentos||[]);
+    if(!lista.length){ body.innerHTML='<tr><td colspan="7" class="empty">Nenhum material em consignação. Clique em “Receber Consignação” quando o fornecedor deixar o kit.</td></tr>'; return; }
+    body.innerHTML=lista.map(function(x){
+      var anv = x.anvisa_ok ? '' : '<div class="itens-mini">ANVISA: '+esc(x.anvisa_situacao||'não verif.')+'</div>';
+      return '<tr><td>'+esc(x.opme_descricao)+anv+'</td>'
+        +'<td class="num">'+x.quantidade_recebida+'</td>'
+        +'<td>'+esc(x.lote||'—')+'<br><span class="itens-mini">'+esc(x.numero_serie||'—')+'</span></td>'
+        +'<td>'+fmtData(x.validade)+'</td>'
+        +'<td class="itens-mini">'+esc(x.fornecedor||'—')+'</td>'
+        +'<td><span class="badge badge-warn">🤝 Em consignação</span></td>'
+        +'<td><button class="btn btn-ok btn-sm" onclick="consumirConsignacao('+x.id+')" title="Foi implantado — torna faturável">Consumir</button> '
+        +'<button class="btn btn-ghost btn-sm" onclick="devolverConsignacao('+x.id+')" title="Devolver ao fornecedor">Devolver</button></td></tr>';
+    }).join('');
+  }catch(e){ body.innerHTML='<tr><td colspan="7" class="empty">Erro ao carregar consignação.</td></tr>'; }
+}
+
+async function abrirNovaConsignacao(){
+  var optsOpme = catalogoCache.filter(function(c){return c.ativo;}).map(function(c){ return '<option value="'+c.id+'">'+esc(c.descricao)+'</option>'; }).join('');
+  if(!optsOpme){ toast('Cadastre itens no catálogo antes.', false); return; }
+  var h = '<div class="alert-box ab-warn" style="margin-bottom:6px"><div class="ab-title">Material em consignação</div>'
+    + 'Entrada de material do fornecedor SEM paciente. Fica em estoque, validado, e só vira custo quando consumido numa cirurgia.</div>'
+    + '<div class="form-group"><label>Material <span class="req-mark">*</span></label><select id="cgOpme"><option value="">— selecione —</option>'+optsOpme+'</select></div>'
+    + '<div class="form-row">'
+    +   '<div class="form-group"><label>Quantidade</label><input type="number" id="cgQtd" value="1" min="1"></div>'
+    +   '<div class="form-group"><label>Validade do lote</label><input type="date" id="cgValidade"></div>'
+    + '</div>'
+    + '<div class="form-row">'
+    +   '<div class="form-group"><label>Lote</label><input id="cgLote"></div>'
+    +   '<div class="form-group"><label>Nº de série</label><input id="cgSerie"></div>'
+    + '</div>'
+    + '<div class="form-group"><label>Fornecedor</label><select id="cgForn"><option value="">— opcional —</option></select></div>';
+  abrirModal('Receber Consignação', 'Estoque do fornecedor — faturado só quando usado.', h,
+    '<button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="btn btn-warn" onclick="salvarConsignacao()">Registrar consignação</button>');
+  try{
+    var rf=await fetch('/api/hospital/opme/fornecedores?limit=500',{credentials:'include',headers:headers()});
+    var df=await rf.json(); var selF=document.getElementById('cgForn');
+    if(selF && (df.fornecedores||[]).length){
+      selF.innerHTML='<option value="">— opcional —</option>'+df.fornecedores.map(function(f){ return '<option value="'+f.id+'">'+esc(f.razao_social)+'</option>'; }).join('');
+    }
+  }catch(e){}
+}
+
+async function salvarConsignacao(){
+  var opme=document.getElementById('cgOpme').value;
+  if(!opme) return toast('Selecione o material.', false);
+  var payload={ consignado:true, opme_id:parseInt(opme),
+    quantidade_recebida:parseInt(document.getElementById('cgQtd').value||'1'),
+    validade:document.getElementById('cgValidade').value||null,
+    lote:document.getElementById('cgLote').value, numero_serie:document.getElementById('cgSerie').value,
+    fornecedor_id:document.getElementById('cgForn').value?parseInt(document.getElementById('cgForn').value):null };
+  var r=await fetch('/api/hospital/opme/recebimentos/',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(payload)});
+  var d=await r.json().catch(function(){return {};});
+  if(!r.ok) return toast(d.erro||'Erro', false);
+  fecharModal();
+  if(d.status==='bloqueado') toast('Consignação BLOQUEADA: '+(d.motivo_bloqueio||'falha na validação'), false);
+  else toast('Material em consignação registrado.', true);
+  carregarConsignacao(); carregarKpis();
+}
+
+async function consumirConsignacao(id){
+  // vincula à cirurgia (autorização aprovada), se houver
+  var aprovadas=(autCache||[]).filter(function(a){return a.status==='aprovada'||a.status==='parcial';});
+  var opts=aprovadas.map(function(a){return '<option value="'+a.id+'">'+esc(a.numero_protocolo)+' — '+esc(a.paciente_nome)+'</option>';}).join('');
+  var h='<div class="alert-box ab-ok" style="margin-bottom:6px"><div class="ab-title">Consumir consignação</div>Marca o material como implantado — agora é faturável. Vincule à cirurgia, se aplicável.</div>'
+    + '<div class="form-group"><label>Cirurgia / autorização (opcional)</label><select id="cgConsumeAut"><option value="">— sem vínculo —</option>'+opts+'</select></div>';
+  abrirModal('Consumir consignação','',h,
+    '<button class="btn btn-ghost" onclick="fecharModal()">Voltar</button>'
+    +'<button class="btn btn-ok" onclick="confirmarConsumo('+id+')">Confirmar consumo</button>');
+}
+async function confirmarConsumo(id){
+  var aut=(document.getElementById('cgConsumeAut')||{}).value;
+  var payload={acao:'consumir'}; if(aut) payload.autorizacao_id=parseInt(aut);
+  var r=await fetch('/api/hospital/opme/recebimentos/'+id+'/acao',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify(payload)});
+  var d=await r.json().catch(function(){return {};});
+  if(!r.ok) return toast(d.erro||'Erro', false);
+  fecharModal(); toast('Consignação consumida — agora faturável.', true);
+  carregarConsignacao(); carregarKpis();
+}
+async function devolverConsignacao(id){
+  if(!confirm('Devolver este material ao fornecedor? Não será faturado.')) return;
+  var r=await fetch('/api/hospital/opme/recebimentos/'+id+'/acao',{method:'POST',credentials:'include',headers:headers(),body:JSON.stringify({acao:'devolver'})});
+  var d=await r.json().catch(function(){return {};});
+  if(!r.ok) return toast(d.erro||'Erro', false);
+  toast('Material devolvido ao fornecedor.', true);
+  carregarConsignacao();
 }
 
 async function abrirNovoRecebimento(){

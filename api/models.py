@@ -10635,14 +10635,23 @@ class RecebimentoOPME(models.Model):
     Não altera a esteira de aprovação (que segue intacta) — é uma camada adicional
     do lado da logística/centro cirúrgico."""
     STATUS = [
+        ("consignado", "Em consignação (estoque do fornecedor)"),
         ("liberado",  "Liberado para cirurgia"),
         ("bloqueado", "Bloqueado — falha na validação"),
         ("consumido", "Consumido (implantado)"),
+        ("devolvido", "Devolvido ao fornecedor"),
     ]
     empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
                                           related_name="recebimentos_opme")
+    # Nulável por causa da CONSIGNAÇÃO: o regime dominante de OPME no Brasil é o
+    # fornecedor deixar o material fisicamente no hospital ANTES de existir paciente,
+    # e faturar só o que for implantado. Nesse caso o recebimento é estoque
+    # consignado (sem autorização) até ser consumido numa cirurgia ou devolvido.
     autorizacao      = models.ForeignKey(AutorizacaoOPME, on_delete=models.CASCADE,
+                                          null=True, blank=True,
                                           related_name="recebimentos")
+    # True = material em regime de consignação (do fornecedor, ainda não faturado).
+    consignado       = models.BooleanField(default=False, db_index=True)
     item             = models.ForeignKey(ItemAutorizacaoOPME, on_delete=models.SET_NULL,
                                           null=True, blank=True, related_name="recebimentos")
     opme             = models.ForeignKey(CatalogoOPME, on_delete=models.PROTECT,
