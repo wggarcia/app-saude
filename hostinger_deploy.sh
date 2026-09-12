@@ -32,14 +32,20 @@ echo "==> [2/5] pip install"
 "$PYTHON_BIN" -m pip install --quiet --upgrade pip
 "$PYTHON_BIN" -m pip install --quiet --no-cache-dir -r "$APP_DIR/requirements.txt"
 
-echo "==> [3/5] migrate"
+echo "==> [3/6] migrate"
 # APP_DATABASE_URL= força uso do usuário owner (bypassa RLS) igual ao Render preDeployCommand
 APP_DATABASE_URL= "$PYTHON_BIN" "$APP_DIR/manage.py" migrate --noinput
 
-echo "==> [4/5] collectstatic"
+echo "==> [4/6] RLS cobertura (self-healing)"
+# Re-aplica a policy tenant_isolation em toda tabela api_* com empresa_id NOT NULL
+# que ainda não tenha — impede drift quando uma migration cria tabela de tenant
+# nova sem RLS. Idempotente; roda como owner (APP_DATABASE_URL= vazio).
+APP_DATABASE_URL= "$PYTHON_BIN" "$APP_DIR/manage.py" aplicar_rls_cobertura
+
+echo "==> [5/6] collectstatic"
 "$PYTHON_BIN" "$APP_DIR/manage.py" collectstatic --noinput --clear
 
-echo "==> [5/5] restart service"
+echo "==> [6/6] restart service"
 systemctl restart soluscrt
 
 echo ""
