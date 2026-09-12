@@ -216,9 +216,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# APP_DATABASE_URL  → usuário restrito soluscrt_app (sujeito ao RLS, para queries da app)
-# DATABASE_URL      → usuário superuser / dono do banco (bypassa RLS, usado em migrations
-#                     e cron jobs que não passam pelo EmpresaMiddleware)
+# APP_DATABASE_URL  → papel RESTRITO da app (NÃO é dono das tabelas → sujeito ao RLS).
+#                     Vira a conexão "default", usada nas queries de tenant. Sob RLS,
+#                     sem app.empresa_id setado, não enxerga nenhuma linha.
+# DATABASE_URL      → papel DONO do banco (bypassa o RLS por ser dono). Vira a conexão
+#                     "owner", usada em migrations, cron jobs e lookups pré-tenant
+#                     (login) que não passam pelo EmpresaMiddleware.
+#
+# ⚠️  O papel restrito é identificado pela FUNÇÃO (não-dono), não pelo nome: o nome
+# literal difere por ambiente — no VPS o restrito é `soluscrt` e o dono `soluscrt_app`;
+# no Render a atribuição é a oposta. O que importa é APP_DATABASE_URL=restrito(não-dono)
+# e DATABASE_URL=dono. Ver scripts/rls_enforce_fix.sql.
 #
 # Se APP_DATABASE_URL não estiver definida (cron jobs, preDeployCommand com override),
 # o Django usa DATABASE_URL normalmente — sem quebrar nada.
