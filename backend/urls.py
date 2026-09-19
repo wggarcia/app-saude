@@ -417,6 +417,11 @@ from api.views_espirometria import (
     api_espirometria_kpis, api_espirometrias, api_espirometria_detalhe,
     api_espirometria_historico, sst_espirometria_page,
 )
+from api.views_ordem_servico import (
+    api_ordens_servico_kpis, api_ordens_servico, api_ordem_servico_detalhe,
+    api_ordem_servico_ciencias, api_ordem_servico_pdf, sst_ordem_servico_page,
+    os_ciencia_page, api_os_ciencia_publico,
+)
 from api.views_biometria import (
     api_biometria_cadastrar, api_biometria_detalhe,
     api_biometria_confirmar_entrega, api_biometria_kpis,
@@ -3176,6 +3181,16 @@ urlpatterns = [
     path('api/sst/audiometria/funcionario/<int:funcionario_id>/historico/', api_audiometria_historico),
     path('api/sst/audiometria/<int:aud_id>/', api_audiometria_detalhe),
     path('api/sst/audiometria/<int:aud_id>/pdf/', api_audiometria_pdf),
+
+    # ── Ordem de Serviço de SST — NR-01 ───────────────────────────────────────
+    path('sst/ordens-servico/', sst_ordem_servico_page),
+    path('api/sst/ordens-servico/kpis/', api_ordens_servico_kpis),
+    path('api/sst/ordens-servico/', api_ordens_servico),
+    path('api/sst/ordens-servico/<int:os_id>/', api_ordem_servico_detalhe),
+    path('api/sst/ordens-servico/<int:os_id>/pdf/', api_ordem_servico_pdf),
+    path('api/sst/ordens-servico/<int:os_id>/ciencias/', api_ordem_servico_ciencias),
+    path('os/ciencia/<str:token>/', os_ciencia_page),
+    path('api/os/ciencia/<str:token>/', api_os_ciencia_publico),
 
     # ── Espirometria Ocupacional — NR-07 ──────────────────────────────────────
     path('sst/espirometria/', sst_espirometria_page),

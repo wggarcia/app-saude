@@ -34,6 +34,7 @@ _SST_PROFISSIONAL = _SST_BASE + [
     "sst.pgr_ppra",         # PGR / PPRA / PCMSO automático
     "sst.audiometria",      # Audiometria ocupacional + PCA (NR-07) com interpretação automática
     "sst.espirometria",     # Espirometria ocupacional (NR-07) com interpretação automática
+    "sst.ordem_servico",    # Ordem de Serviço de SST (NR-01) + ciência do trabalhador por link
     "sst.epi_offline",      # Entrega de EPI offline (campo sem internet) + sincronização
     "sst.documentos_versao",# Documentos SST versionados (GED do SST) + assinatura
 ]

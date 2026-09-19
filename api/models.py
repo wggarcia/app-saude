@@ -15759,3 +15759,57 @@ class Espirometria(models.Model):
 
     def __str__(self):
         return f"Espirometria {self.data_exame} — {self.funcionario.nome}"
+
+
+# ── Ordem de Serviço de SST (NR-01, item 1.4.1 'b') ─────────────────────────────
+
+class OrdemServicoSST(models.Model):
+    """Ordem de Serviço de Segurança e Saúde (NR-01): documento por função que
+    informa ao trabalhador os riscos, medidas de prevenção, EPIs obrigatórios e
+    procedimentos seguros. Emitida por função/cargo; o trabalhador dá ciência."""
+    STATUS = [("vigente", "Vigente"), ("revisao", "Em Revisão"), ("arquivada", "Arquivada")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="ordens_servico_sst")
+    titulo = models.CharField(max_length=200)
+    funcao = models.CharField(max_length=160, verbose_name="Função / cargo")
+    setor = models.CharField(max_length=120, blank=True)
+    descricao_atividade = models.TextField(blank=True, verbose_name="Descrição das atividades")
+    riscos = models.TextField(blank=True, verbose_name="Riscos ocupacionais")
+    medidas_preventivas = models.TextField(blank=True, verbose_name="Medidas de prevenção")
+    epis_obrigatorios = models.TextField(blank=True, verbose_name="EPIs obrigatórios")
+    procedimentos_seguranca = models.TextField(blank=True, verbose_name="Procedimentos seguros de trabalho")
+    condutas_proibidas = models.TextField(blank=True, verbose_name="Condutas proibidas")
+    responsavel = models.CharField(max_length=200, blank=True)
+    versao = models.PositiveIntegerField(default=1)
+    data_emissao = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="vigente")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"]), models.Index(fields=["empresa", "funcao"])]
+
+    def __str__(self):
+        return f"OS {self.funcao} v{self.versao} — {self.empresa.nome}"
+
+
+class OrdemServicoCiencia(models.Model):
+    """Ciência do trabalhador a uma Ordem de Serviço (assinatura/aceite por link)."""
+    ordem = models.ForeignKey(OrdemServicoSST, on_delete=models.CASCADE, related_name="ciencias")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="ciencias_os")
+    token = models.CharField(max_length=64, blank=True, db_index=True)
+    assinado = models.BooleanField(default=False)
+    assinatura_base64 = models.TextField(blank=True, default="")
+    data_ciencia = models.DateTimeField(null=True, blank=True)
+    ip = models.CharField(max_length=64, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        constraints = [
+            models.UniqueConstraint(fields=["ordem", "funcionario"], name="uniq_ciencia_os"),
+        ]
+
+    def __str__(self):
+        return f"Ciência OS {self.ordem_id} — {self.funcionario.nome}"

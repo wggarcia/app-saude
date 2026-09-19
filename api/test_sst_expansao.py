@@ -6,7 +6,7 @@ from django.test import TestCase
 from api.models import (
     Empresa, FuncionarioSST, EleicaoCIPA, CandidatoCIPA, VotanteCIPA, VotoCIPA,
     SincronizacaoEPIOffline, EPIItem, EntregaEPI, ClienteConsultoriaSST,
-    TokenIntegracaoSST,
+    TokenIntegracaoSST, OrdemServicoSST, OrdemServicoCiencia,
 )
 
 
@@ -85,3 +85,19 @@ class IntegracaoTokenTest(_Base):
         )
         self.assertNotIn(valor, t.token_hash)
         self.assertEqual(t.token_hash, hashlib.sha256(valor.encode()).hexdigest())
+
+
+class OrdemServicoTest(_Base):
+    def test_ciencia_unica_por_trabalhador(self):
+        o = OrdemServicoSST.objects.create(empresa=self.emp, titulo="OS", funcao="Soldador")
+        OrdemServicoCiencia.objects.create(ordem=o, funcionario=self.f1)
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                OrdemServicoCiencia.objects.create(ordem=o, funcionario=self.f1)
+
+    def test_contagem_assinadas(self):
+        o = OrdemServicoSST.objects.create(empresa=self.emp, titulo="OS", funcao="Op")
+        OrdemServicoCiencia.objects.create(ordem=o, funcionario=self.f1, assinado=True)
+        OrdemServicoCiencia.objects.create(ordem=o, funcionario=self.f2, assinado=False)
+        self.assertEqual(o.ciencias.filter(assinado=True).count(), 1)
+        self.assertEqual(o.ciencias.count(), 2)

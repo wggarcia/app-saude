@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>Ciência — Ordem de Serviço · SoloCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--line:rgba(255,255,255,.08);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:640px;margin:0 auto;padding:34px 18px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.brand .ic{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;color:#0a0e1a}
+.brand b{font-size:.95rem}.brand span{font-size:.68rem;color:var(--muted);display:block}
+h1{font-size:1.25rem;font-weight:800;margin-bottom:2px}
+.sub{color:var(--muted);font-size:.82rem;margin-bottom:18px}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-bottom:10px}
+.sec h3{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:6px}
+.sec p{font-size:.85rem;line-height:1.5;white-space:pre-wrap}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a1018;font-weight:800;font-size:.92rem;cursor:pointer;margin-top:14px}
+.btn:disabled{opacity:.5}
+.chk{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:.82rem;color:var(--muted)}
+.chk input{margin-top:3px}
+.msg{padding:40px;text-align:center;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.ok{color:var(--teal)}.err{color:#f87171}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="ic">S</div><div><b>SoloCRT SST</b><span>Ordem de Serviço — NR-01</span></div></div>
+  {% if invalido %}
+    <div class="msg err">⚠️ Link inválido ou expirado. Solicite um novo ao SESMT/RH.</div>
+  {% else %}
+    <h1>{{ os_titulo }}</h1>
+    <div class="sub">Função: <strong>{{ funcao }}</strong> · Trabalhador: <strong>{{ funcionario }}</strong></div>
+    <div id="conteudo"><div class="msg">Carregando...</div></div>
+  {% endif %}
+</div>
+{% if not invalido %}
+<script>
+const TOKEN="{{ token|escapejs }}";
+function sec(t,c){return c?`<div class="sec"><h3>${t}</h3><p>${c.replace(/</g,"&lt;")}</p></div>`:"";}
+async function carregar(){
+  try{
+    const r=await fetch(`/api/os/ciencia/${TOKEN}/`,{credentials:'include'});
+    const d=await r.json();
+    if(!r.ok){document.getElementById("conteudo").innerHTML=`<div class="msg err">${d.erro||"Erro"}</div>`;return;}
+    if(d.ja_assinou){document.getElementById("conteudo").innerHTML=`<div class="msg ok">✅ Você já deu ciência a esta Ordem de Serviço.</div>`;return;}
+    const o=d.os;
+    document.getElementById("conteudo").innerHTML=
+      sec("Descrição das atividades",o.descricao_atividade)+sec("Riscos ocupacionais",o.riscos)+
+      sec("Medidas de prevenção",o.medidas_preventivas)+sec("EPIs obrigatórios",o.epis_obrigatorios)+
+      sec("Procedimentos seguros",o.procedimentos_seguranca)+sec("Condutas proibidas",o.condutas_proibidas)+
+      `<label class="chk"><input type="checkbox" id="ok" onchange="document.getElementById('btn').disabled=!this.checked"> Declaro que li, compreendi e estou ciente dos riscos, medidas e procedimentos desta Ordem de Serviço.</label>
+       <button class="btn" id="btn" disabled onclick="assinar()">Confirmar ciência</button>`;
+  }catch(e){document.getElementById("conteudo").innerHTML=`<div class="msg err">Erro ao carregar.</div>`;}
+}
+async function assinar(){
+  document.getElementById("btn").disabled=true;
+  try{const r=await fetch(`/api/os/ciencia/${TOKEN}/`,{method:"POST",credentials:'include',headers:{"Content-Type":"application/json"},body:JSON.stringify({})});
+    const d=await r.json();
+    document.getElementById("conteudo").innerHTML=d.ok?`<div class="msg ok">✅ ${d.msg}</div>`:`<div class="msg err">${d.erro||"Erro"}</div>`;
+  }catch(e){document.getElementById("conteudo").innerHTML=`<div class="msg err">Erro de conexão.</div>`;}
+}
+carregar();
+</script>
+{% endif %}
+</body>
+</html>

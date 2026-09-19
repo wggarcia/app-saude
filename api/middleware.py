@@ -219,6 +219,8 @@ class EmpresaMiddleware:
             "/api/integracao-sst/",  # API de integração ERP/RH/Folha — auth própria via token no header
             "/cipa/votar/",        # Votação CIPA — página pública do eleitor (token no URL)
             "/api/cipa/votar/",    # Votação CIPA — API pública do voto secreto (token no URL)
+            "/os/ciencia/",        # Ordem de Serviço — página pública de ciência do trabalhador (token)
+            "/api/os/ciencia/",    # Ordem de Serviço — API pública de ciência (token no URL)
             "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",
