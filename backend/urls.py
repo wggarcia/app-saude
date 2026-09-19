@@ -382,6 +382,41 @@ from api.views_cipa import (
     api_cipa_kpis,
     sst_cipa_page,
 )
+from api.views_audiometria import (
+    api_audiometria_kpis, api_audiometrias, api_audiometria_detalhe,
+    api_audiometria_historico, api_audiometria_pdf,
+    api_pca, api_pca_detalhe,
+    sst_audiometria_page,
+)
+from api.views_cipa_eleicao import (
+    api_cipa_eleicoes, api_cipa_eleicao_detalhe, api_cipa_candidatos,
+    api_cipa_candidato_detalhe, api_cipa_votar, api_cipa_apurar,
+    api_cipa_resultado, sst_cipa_eleicao_page,
+    api_cipa_votantes, cipa_votar_page, api_cipa_votar_publico,
+)
+from api.views_grupo_focal import (
+    api_grupos_focais, api_grupo_focal_detalhe, api_grupo_focal_fatores,
+    api_grupo_focal_fator_detalhe, sst_grupo_focal_page,
+)
+from api.views_sec_portal import (
+    api_sec_clientes, api_sec_cliente_detalhe, api_sec_cliente_documentos,
+    api_sec_compartilhamento_detalhe, sst_sec_gestao_page,
+    portal_sec_page, api_portal_sec_documentos,
+)
+from api.views_epi_offline import (
+    api_epi_offline_pacote, api_epi_offline_sync, sst_epi_offline_page,
+)
+from api.views_integracao_sst import (
+    api_integracao_tokens, api_integracao_token_detalhe, sst_integracao_page,
+    api_integracao_funcionarios, api_integracao_asos,
+)
+from api.views_doc_sst_versao import (
+    api_doc_sst_versoes, api_doc_sst_versao_detalhe,
+)
+from api.views_espirometria import (
+    api_espirometria_kpis, api_espirometrias, api_espirometria_detalhe,
+    api_espirometria_historico, sst_espirometria_page,
+)
 from api.views_biometria import (
     api_biometria_cadastrar, api_biometria_detalhe,
     api_biometria_confirmar_entrega, api_biometria_kpis,
@@ -3131,6 +3166,68 @@ urlpatterns = [
     path('api/sst/cipa/comissoes/<int:comissao_id>/reunioes/', api_cipa_reunioes),
     path('api/sst/cipa/reunioes/<int:reuniao_id>/', api_cipa_reuniao_detalhe),
     path('api/sst/cipa/reunioes/<int:reuniao_id>/ata/pdf/', api_cipa_ata_pdf),
+
+    # ── Audiometria Ocupacional + PCA — NR-07 ─────────────────────────────────
+    path('sst/audiometria/', sst_audiometria_page),
+    path('api/sst/audiometria/kpis/', api_audiometria_kpis),
+    path('api/sst/audiometria/', api_audiometrias),
+    path('api/sst/audiometria/pca/', api_pca),
+    path('api/sst/audiometria/pca/<int:pca_id>/', api_pca_detalhe),
+    path('api/sst/audiometria/funcionario/<int:funcionario_id>/historico/', api_audiometria_historico),
+    path('api/sst/audiometria/<int:aud_id>/', api_audiometria_detalhe),
+    path('api/sst/audiometria/<int:aud_id>/pdf/', api_audiometria_pdf),
+
+    # ── Espirometria Ocupacional — NR-07 ──────────────────────────────────────
+    path('sst/espirometria/', sst_espirometria_page),
+    path('api/sst/espirometria/kpis/', api_espirometria_kpis),
+    path('api/sst/espirometria/', api_espirometrias),
+    path('api/sst/espirometria/funcionario/<int:funcionario_id>/historico/', api_espirometria_historico),
+    path('api/sst/espirometria/<int:esp_id>/', api_espirometria_detalhe),
+
+    # ── CIPA — Votação Eletrônica (NR-05) ─────────────────────────────────────
+    path('sst/cipa/eleicao/', sst_cipa_eleicao_page),
+    path('api/sst/cipa/eleicoes/', api_cipa_eleicoes),
+    path('api/sst/cipa/eleicoes/<int:eleicao_id>/', api_cipa_eleicao_detalhe),
+    path('api/sst/cipa/eleicoes/<int:eleicao_id>/candidatos/', api_cipa_candidatos),
+    path('api/sst/cipa/eleicoes/<int:eleicao_id>/votar/', api_cipa_votar),
+    path('api/sst/cipa/eleicoes/<int:eleicao_id>/apurar/', api_cipa_apurar),
+    path('api/sst/cipa/eleicoes/<int:eleicao_id>/resultado/', api_cipa_resultado),
+    path('api/sst/cipa/candidatos/<int:candidato_id>/', api_cipa_candidato_detalhe),
+    path('api/sst/cipa/eleicoes/<int:eleicao_id>/votantes/', api_cipa_votantes),
+    path('cipa/votar/<str:token>/', cipa_votar_page),
+    path('api/cipa/votar/<str:token>/', api_cipa_votar_publico),
+
+    # ── Grupo Focal Psicossocial (NR-01) ──────────────────────────────────────
+    path('sst/psicossocial/grupos-focais/', sst_grupo_focal_page),
+    path('api/sst/psicossocial/grupos-focais/', api_grupos_focais),
+    path('api/sst/psicossocial/grupos-focais/<int:grupo_id>/', api_grupo_focal_detalhe),
+    path('api/sst/psicossocial/grupos-focais/<int:grupo_id>/fatores/', api_grupo_focal_fatores),
+    path('api/sst/psicossocial/fatores/<int:fator_id>/', api_grupo_focal_fator_detalhe),
+
+    # ── Portal do Cliente (SEC) ───────────────────────────────────────────────
+    path('sst/sec/', sst_sec_gestao_page),
+    path('api/sst/sec/clientes/', api_sec_clientes),
+    path('api/sst/sec/clientes/<int:cliente_id>/', api_sec_cliente_detalhe),
+    path('api/sst/sec/clientes/<int:cliente_id>/documentos/', api_sec_cliente_documentos),
+    path('api/sst/sec/compartilhamentos/<int:comp_id>/', api_sec_compartilhamento_detalhe),
+    path('portal-sec/<str:token>/', portal_sec_page),
+    path('api/portal-sec/<str:token>/documentos/', api_portal_sec_documentos),
+
+    # ── EPI Offline ───────────────────────────────────────────────────────────
+    path('sst/epi/offline/', sst_epi_offline_page),
+    path('api/sst/epi/offline/pacote/', api_epi_offline_pacote),
+    path('api/sst/epi/offline/sync/', api_epi_offline_sync),
+
+    # ── API de Integração (ERP/RH/Folha) ──────────────────────────────────────
+    path('sst/integracao/', sst_integracao_page),
+    path('api/sst/integracao/tokens/', api_integracao_tokens),
+    path('api/sst/integracao/tokens/<int:token_id>/', api_integracao_token_detalhe),
+    path('api/integracao-sst/funcionarios/', api_integracao_funcionarios),
+    path('api/integracao-sst/asos/', api_integracao_asos),
+
+    # ── Documento SST versionado (GED do SST) ─────────────────────────────────
+    path('api/sst/documentos/<int:doc_id>/versoes/', api_doc_sst_versoes),
+    path('api/sst/documentos/versoes/<int:versao_id>/', api_doc_sst_versao_detalhe),
 
     # ── Biometria Foto-confirmação (legado) ───────────────────────────────────
     path('sst/biometria/', sst_biometria_page),

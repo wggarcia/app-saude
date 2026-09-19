@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>Portal do Cliente · SoloCRT SST</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--line:rgba(255,255,255,.08);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:820px;margin:0 auto;padding:40px 18px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+.brand .ic{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;color:#0a0e1a}
+.brand b{font-size:1rem}.brand span{font-size:.7rem;color:var(--muted);display:block}
+h1{font-size:1.4rem;font-weight:800;margin-bottom:4px}
+.sub{color:var(--muted);font-size:.85rem;margin-bottom:24px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:12px 16px;text-align:left;font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--line)}
+.tbl td{padding:13px 16px;font-size:.85rem;border-bottom:1px solid var(--line)}.tbl tr:last-child td{border-bottom:none}
+.badge{display:inline-flex;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;text-transform:uppercase;background:rgba(0,201,167,.12);color:var(--teal)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.err{padding:40px;text-align:center;color:#f87171}
+.foot{margin-top:20px;font-size:.72rem;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="ic">S</div><div><b>SoloCRT SST</b><span>Portal do Cliente</span></div></div>
+  {% if invalido %}
+    <div class="card"><div class="err">⚠️ Link inválido ou acesso desativado.<br>Solicite um novo link à sua consultoria de SST.</div></div>
+  {% else %}
+    <h1 id="titCliente">{{ nome_cliente }}</h1>
+    <div class="sub">Documentos de SST compartilhados por <strong>{{ consultoria }}</strong></div>
+    <div class="card"><div id="lista"><div class="empty">Carregando documentos...</div></div></div>
+    <div class="foot">Acesso seguro por token · Documentos protegidos conforme a LGPD</div>
+  {% endif %}
+</div>
+{% if not invalido %}
+<script>
+const TOKEN="{{ token|escapejs }}";
+async function carregar(){
+  try{
+    const r=await fetch(`/api/portal-sec/${TOKEN}/documentos/`,{credentials:'include'});
+    if(!r.ok){document.getElementById("lista").innerHTML=`<div class="err">Acesso indisponível.</div>`;return;}
+    const d=await r.json();
+    if(!d.documentos||!d.documentos.length){document.getElementById("lista").innerHTML=`<div class="empty">Nenhum documento compartilhado ainda.</div>`;return;}
+    document.getElementById("lista").innerHTML=`<table class="tbl"><thead><tr><th>Documento</th><th>Tipo</th><th>Compartilhado</th><th>Situação</th></tr></thead><tbody>
+      ${d.documentos.map(x=>`<tr><td><strong>${x.titulo}</strong></td><td>${x.tipo}</td><td>${x.compartilhado_em}</td><td>${x.status?`<span class="badge">${x.status}</span>`:'—'}</td></tr>`).join("")}
+    </tbody></table>`;
+  }catch(e){document.getElementById("lista").innerHTML=`<div class="err">Erro ao carregar.</div>`;}
+}
+carregar();
+</script>
+{% endif %}
+</body>
+</html>

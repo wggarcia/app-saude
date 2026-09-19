@@ -15,6 +15,8 @@
     {% if pf_ver_aso %}
     <a class="sb-link {% if p == '/sst/asos/' %}active{% endif %}" href="/sst/asos/" data-sst-severity="attention"><span class="sb-icon">📋</span><span>ASO e Pedidos</span><span class="sb-badge" data-sst-badge="asos_vencidos|asos_vencendo_30d"></span></a>
     <a class="sb-link {% if p == '/sst/exames/' %}active{% endif %}" href="/sst/exames/" data-sst-severity="critical"><span class="sb-icon">🔬</span><span>Exames</span><span class="sb-badge" data-sst-badge="exames_atrasados"></span></a>
+    <a class="sb-link {% if p == '/sst/audiometria/' %}active{% endif %}" href="/sst/audiometria/" data-sst-severity="attention"><span class="sb-icon">👂</span><span>Audiometria · PCA</span><span class="sb-badge" data-sst-badge="audiometria_retestes"></span></a>
+    <a class="sb-link {% if p == '/sst/espirometria/' %}active{% endif %}" href="/sst/espirometria/" data-sst-severity="attention"><span class="sb-icon">🫁</span><span>Espirometria</span></a>
     {% endif %}
     {% if pf_ver_agenda %}
     <a class="sb-link {% if p == '/sst/exames/agendar/' %}active{% endif %}" href="/sst/exames/agendar/"><span class="sb-icon">📅</span><span>Agendamentos</span></a>
@@ -57,6 +59,7 @@
     {% if pf_ver_riscos %}
     <a class="sb-link {% if p == '/sst/riscos/' %}active{% endif %}" href="/sst/riscos/"><span class="sb-icon">🔴</span><span>Riscos e PGR</span></a>
     <a class="sb-link {% if p == '/sst/epis/' %}active{% endif %}" href="/sst/epis/" data-sst-severity="attention"><span class="sb-icon">🦺</span><span>EPI e EPC</span><span class="sb-badge" data-sst-badge="epis_sem_entrega"></span></a>
+    <a class="sb-link {% if p == '/sst/epi/offline/' %}active{% endif %}" href="/sst/epi/offline/"><span class="sb-icon">📴</span><span>EPI Offline</span></a>
     <a class="sb-link {% if p == '/sst/treinamentos/' %}active{% endif %}" href="/sst/treinamentos/" data-sst-severity="attention"><span class="sb-icon">🎓</span><span>Treinamentos NR</span><span class="sb-badge" data-sst-badge="treinamentos_vencidos"></span></a>
     <a class="sb-link {% if p == '/sst/curso-interno/' %}active{% endif %}" href="/sst/curso-interno/"><span class="sb-icon">🖥️</span><span>Treinamento Interno</span></a>
     {% endif %}
@@ -64,6 +67,7 @@
     <a class="sb-link {% if p == '/sst/saude-comunicacao/' %}active{% endif %}" href="/sst/saude-comunicacao/"><span class="sb-icon">💚</span><span>Saúde & Comunicação</span></a>
     <a class="sb-link {% if p == '/sst/bem-estar/' %}active{% endif %}" href="/sst/bem-estar/"><span class="sb-icon">❤️</span><span>Bem-estar da Equipe</span></a>
     <a class="sb-link {% if p == '/sst/psicossocial/' %}active{% endif %}" href="/sst/psicossocial/" data-sst-severity="attention"><span class="sb-icon">🧠</span><span>Psicossocial NR-01</span><span class="sb-badge" data-sst-badge="psicossocial_ativas"></span></a>
+    <a class="sb-link {% if p == '/sst/psicossocial/grupos-focais/' %}active{% endif %}" href="/sst/psicossocial/grupos-focais/"><span class="sb-icon">👥</span><span>Grupo Focal NR-01</span></a>
     {% endif %}
     <a class="sb-link {% if '/sst/comunicacao/' in p %}active{% endif %}" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação SST</span></a>
   </div>
@@ -81,11 +85,14 @@
     <a class="sb-link {% if p == '/sst/conformidade/' %}active{% endif %}" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span><span class="sb-badge" data-sst-badge="conformidade_indice" data-sst-format="pct"></span></a>
     <a class="sb-link {% if p == '/sst/pgr/' %}active{% endif %}" href="/sst/pgr/"><span class="sb-icon">📄</span><span>PGR / PCMSO</span></a>
     <a class="sb-link {% if p == '/sst/cipa/' %}active{% endif %}" href="/sst/cipa/"><span class="sb-icon">🛡️</span><span>CIPA — NR-5</span></a>
+    <a class="sb-link {% if p == '/sst/cipa/eleicao/' %}active{% endif %}" href="/sst/cipa/eleicao/"><span class="sb-icon">🗳️</span><span>CIPA — Votação</span></a>
     <a class="sb-link {% if p == '/sst/biometria/' %}active{% endif %}" href="/sst/biometria/"><span class="sb-icon">👁️</span><span>Biometria EPI</span></a>
     <a class="sb-link {% if p == '/sst/laudos/' %}active{% endif %}" href="/sst/laudos/"><span class="sb-icon">🩺</span><span>Laudos Técnicos</span><span class="sb-badge" data-sst-badge="laudos_pendentes"></span></a>
     <a class="sb-link {% if p == '/sst/laboratorios/' %}active{% endif %}" href="/sst/laboratorios/"><span class="sb-icon">🧪</span><span>Laboratórios</span><span class="sb-badge" data-sst-badge="laboratorio_alertas"></span></a>
     <a class="sb-link {% if p == '/sst/rede-credenciada/' %}active{% endif %}" href="/sst/rede-credenciada/"><span class="sb-icon">🏥</span><span>Rede Credenciada</span></a>
     <a class="sb-link {% if p == '/sst/multi-unidade/' %}active{% endif %}" href="/sst/multi-unidade/"><span class="sb-icon">🏢</span><span>Multi-Unidade</span></a>
+    <a class="sb-link {% if p == '/sst/sec/' %}active{% endif %}" href="/sst/sec/"><span class="sb-icon">🔗</span><span>Portal do Cliente</span></a>
+    <a class="sb-link {% if p == '/sst/integracao/' %}active{% endif %}" href="/sst/integracao/"><span class="sb-icon">🔌</span><span>Integração ERP/RH</span></a>
     {% if mostrar_aba_gerencia %}
     <a class="sb-link {% if '/gerencia/' in p %}active{% endif %}" href="/gerencia/"><span class="sb-icon">🧭</span><span>Gerência Executiva</span></a>
     {% endif %}

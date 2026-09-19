@@ -1428,6 +1428,96 @@ class ExameOcupacional(models.Model):
         return f"{self.tipo_exame} — {self.funcionario.nome}"
 
 
+class ProgramaConservacaoAuditiva(models.Model):
+    """PCA — Programa de Conservação Auditiva (NR-07). Vincula audiometrias
+    alteradas às medidas de controle de ruído adotadas pela empresa."""
+    STATUS = [("ativo", "Ativo"), ("revisao", "Em Revisão"), ("encerrado", "Encerrado")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pcas")
+    ano = models.PositiveIntegerField(verbose_name="Ano-base")
+    vigencia_inicio = models.DateField(null=True, blank=True)
+    vigencia_fim = models.DateField(null=True, blank=True)
+    medidas_engenharia = models.TextField(blank=True, verbose_name="Medidas de engenharia (controle de ruído na fonte)")
+    medidas_administrativas = models.TextField(blank=True, verbose_name="Medidas administrativas (rodízio, pausas)")
+    medidas_epi = models.TextField(blank=True, verbose_name="Proteção auditiva (EPI) adotada")
+    responsavel = models.CharField(max_length=200, blank=True)
+    conselho = models.CharField(max_length=40, blank=True, verbose_name="Registro do responsável (CRM/CRFa)")
+    status = models.CharField(max_length=20, choices=STATUS, default="ativo")
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-ano"]
+        indexes = [models.Index(fields=["empresa", "ano"])]
+
+    def __str__(self):
+        return f"PCA {self.ano} — {self.empresa.nome}"
+
+
+class Audiometria(models.Model):
+    """Audiometria ocupacional (NR-07) com interpretação automática e comparação
+    sequencial. Limiares e interpretação em JSON; anamnese é dado de saúde (LGPD)."""
+    TIPO = [
+        ("referencia", "Referência (base)"),
+        ("sequencial", "Sequencial (periódica)"),
+        ("retorno", "Retorno ao Trabalho"),
+        ("demissional", "Demissional"),
+    ]
+    CLASSIFICACAO = [
+        ("normal", "Normal"),
+        ("sugestivo_pair", "Sugestivo de PAIR"),
+        ("alterada_nao_pair", "Alterada (não-PAIR)"),
+        ("indeterminado", "Indeterminado"),
+    ]
+    CLASSIFICACAO_SEQUENCIAL = [
+        ("referencia", "Referência"),
+        ("estavel", "Estável"),
+        ("desencadeamento", "Desencadeamento"),
+        ("agravamento", "Agravamento"),
+        ("melhora", "Melhora"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="audiometrias")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="audiometrias")
+    exame_ocupacional = models.ForeignKey(
+        ExameOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="audiometrias"
+    )
+    aso = models.ForeignKey(ASOOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="audiometrias")
+    pca = models.ForeignKey(
+        ProgramaConservacaoAuditiva, on_delete=models.SET_NULL, null=True, blank=True, related_name="audiometrias"
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO, default="sequencial")
+    data_exame = models.DateField()
+    # limiares: {"od_aerea": {"500": 10, ...}, "oe_aerea": {...}, "od_ossea": {...}, "oe_ossea": {...}}
+    limiares = models.JSONField(default=dict, blank=True)
+    anamnese_auricular = EncryptedTextField(blank=True)  # LGPD: histórico auditivo (saúde)
+    repouso_acustico_horas = models.PositiveIntegerField(default=14, verbose_name="Repouso acústico (horas)")
+    responsavel = models.CharField(max_length=200, blank=True, verbose_name="Fonoaudiólogo/Médico responsável")
+    conselho = models.CharField(max_length=40, blank=True, verbose_name="Registro (CRFa/CRM)")
+
+    # Campos calculados pelo motor de interpretação (audiometria_interpretacao.py)
+    classificacao = models.CharField(max_length=20, choices=CLASSIFICACAO, default="indeterminado")
+    classificacao_sequencial = models.CharField(max_length=20, choices=CLASSIFICACAO_SEQUENCIAL, default="referencia")
+    sugestivo_pair = models.BooleanField(default=False)
+    reteste_indicado = models.BooleanField(default=False)
+    interpretacao = models.JSONField(default=dict, blank=True)  # cache do laudo automático
+    resultado_resumo = models.TextField(blank=True)
+    observacoes = EncryptedTextField(blank=True)  # LGPD: observação clínica
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_exame"]
+        indexes = [
+            models.Index(fields=["empresa", "funcionario", "data_exame"]),
+            models.Index(fields=["empresa", "classificacao"]),
+            models.Index(fields=["empresa", "reteste_indicado"]),
+        ]
+
+    def __str__(self):
+        return f"Audiometria {self.data_exame} — {self.funcionario.nome}"
+
+
 class CATOcupacional(models.Model):
     TIPO = [("tipico", "Típico"), ("trajeto", "De Trajeto"), ("doenca", "Doença Ocupacional")]
     STATUS_ESOCIAL = [
@@ -15319,3 +15409,353 @@ class ConvenioPacienteTotem(models.Model):
 
     def __str__(self):
         return f"{self.operadora or 'sem operadora'} — {self.numero_carteirinha or 's/ carteirinha'}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SST — Expansão competitiva (aditivos; não alteram modelos existentes)
+# Módulos: CIPA Votação Eletrônica · Grupo Focal NR-01 · Portal do Cliente (SEC)
+#          · EPI Offline · API de Integração · GED versionado
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── CIPA — Votação Eletrônica (NR-05) ──────────────────────────────────────────
+
+class EleicaoCIPA(models.Model):
+    """Processo eleitoral eletrônico da CIPA — inscrição, votação e apuração online."""
+    STATUS = [
+        ("inscricoes", "Inscrições Abertas"),
+        ("votacao", "Votação Aberta"),
+        ("apurada", "Apurada"),
+        ("encerrada", "Encerrada"),
+    ]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="eleicoes_cipa")
+    comissao = models.ForeignKey(
+        ComissaoCIPA, on_delete=models.SET_NULL, null=True, blank=True, related_name="eleicoes"
+    )
+    titulo = models.CharField(max_length=200)
+    num_vagas = models.PositiveSmallIntegerField(default=1, verbose_name="Vagas de titulares")
+    inscricao_inicio = models.DateField(null=True, blank=True)
+    inscricao_fim = models.DateField(null=True, blank=True)
+    votacao_inicio = models.DateTimeField(null=True, blank=True)
+    votacao_fim = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="inscricoes")
+    apurada_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"Eleição CIPA {self.titulo} — {self.empresa.nome}"
+
+
+class CandidatoCIPA(models.Model):
+    """Candidato inscrito em uma eleição da CIPA."""
+    eleicao = models.ForeignKey(EleicaoCIPA, on_delete=models.CASCADE, related_name="candidatos")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="candidaturas_cipa")
+    numero = models.PositiveSmallIntegerField(default=0, verbose_name="Número na urna")
+    proposta = models.TextField(blank=True)
+    deferido = models.BooleanField(default=True, verbose_name="Inscrição deferida")
+    votos = models.PositiveIntegerField(default=0, verbose_name="Votos apurados (cache)")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["numero", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["eleicao", "funcionario"], name="uniq_candidato_eleicao"),
+        ]
+
+    def __str__(self):
+        return f"Candidato {self.numero} — {self.funcionario.nome}"
+
+
+class VotanteCIPA(models.Model):
+    """Registro de aptidão/participação do eleitor. Separado do voto para garantir
+    sigilo: sabe-se QUEM votou, nunca EM QUEM (voto secreto)."""
+    eleicao = models.ForeignKey(EleicaoCIPA, on_delete=models.CASCADE, related_name="votantes")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="participacoes_cipa")
+    token = models.CharField(max_length=64, blank=True, db_index=True, help_text="Token do link individual de votação")
+    votou = models.BooleanField(default=False)
+    votou_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["eleicao", "funcionario"], name="uniq_votante_eleicao"),
+        ]
+
+    def __str__(self):
+        return f"Votante {self.funcionario.nome} — {'votou' if self.votou else 'pendente'}"
+
+
+class VotoCIPA(models.Model):
+    """Cédula anônima — vincula-se apenas ao candidato, nunca ao eleitor."""
+    eleicao = models.ForeignKey(EleicaoCIPA, on_delete=models.CASCADE, related_name="votos")
+    candidato = models.ForeignKey(CandidatoCIPA, on_delete=models.CASCADE, related_name="votos_recebidos")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["eleicao", "candidato"])]
+
+
+# ── Grupo Focal Psicossocial (NR-01) ───────────────────────────────────────────
+
+class GrupoFocalPsicossocial(models.Model):
+    """Grupo focal para identificação de fatores de risco psicossocial (NR-01),
+    complementar às avaliações individuais existentes."""
+    STATUS = [("planejado", "Planejado"), ("realizado", "Realizado"), ("consolidado", "Consolidado")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="grupos_focais")
+    avaliacao = models.ForeignKey(
+        "AvaliacaoPsicossocial", on_delete=models.SET_NULL, null=True, blank=True, related_name="grupos_focais"
+    )
+    titulo = models.CharField(max_length=200)
+    data = models.DateField(null=True, blank=True)
+    facilitador = models.CharField(max_length=200, blank=True)
+    setor_alvo = models.CharField(max_length=120, blank=True)
+    num_participantes = models.PositiveSmallIntegerField(default=0)
+    roteiro = models.TextField(blank=True, verbose_name="Roteiro / perguntas norteadoras")
+    achados = models.TextField(blank=True, verbose_name="Achados consolidados")
+    plano_acao = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="planejado")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data", "-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"Grupo Focal {self.titulo} — {self.empresa.nome}"
+
+
+class FatorPsicossocialGrupoFocal(models.Model):
+    """Fator de risco psicossocial identificado num grupo focal (NR-01)."""
+    CATEGORIA = [
+        ("organizacao", "Organização do trabalho"),
+        ("sobrecarga", "Sobrecarga / ritmo"),
+        ("relacoes", "Relações interpessoais"),
+        ("assedio", "Assédio moral/sexual"),
+        ("autonomia", "Falta de autonomia"),
+        ("reconhecimento", "Falta de reconhecimento"),
+        ("jornada", "Jornada / turnos"),
+        ("outro", "Outro"),
+    ]
+    GRAVIDADE = [("baixa", "Baixa"), ("media", "Média"), ("alta", "Alta"), ("critica", "Crítica")]
+
+    grupo = models.ForeignKey(GrupoFocalPsicossocial, on_delete=models.CASCADE, related_name="fatores")
+    categoria = models.CharField(max_length=20, choices=CATEGORIA)
+    descricao = models.TextField()
+    gravidade = models.CharField(max_length=10, choices=GRAVIDADE, default="media")
+    medida_recomendada = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-gravidade", "id"]
+
+    def __str__(self):
+        return f"{self.get_categoria_display()} ({self.gravidade})"
+
+
+# ── Portal do Cliente (SEC) — consultoria SST × empresa-cliente ─────────────────
+
+class ClienteConsultoriaSST(models.Model):
+    """Empresa-cliente de uma consultoria de SST. Recebe acesso ao portal para
+    visualizar seus documentos, sem virar tenant. Isolado por empresa (consultoria)."""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="clientes_consultoria")
+    nome_cliente = models.CharField(max_length=200)
+    cnpj_cliente = models.CharField(max_length=18, blank=True)
+    email_contato = models.EmailField(blank=True)
+    token_acesso = models.CharField(max_length=64, unique=True, db_index=True)
+    pode_baixar = models.BooleanField(default=True, verbose_name="Pode baixar documentos")
+    ativo = models.BooleanField(default=True)
+    ultimo_acesso = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome_cliente"]
+        indexes = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"Cliente {self.nome_cliente} — {self.empresa.nome}"
+
+
+class CompartilhamentoSEC(models.Model):
+    """Documento SST compartilhado com um cliente da consultoria via portal SEC."""
+    cliente = models.ForeignKey(ClienteConsultoriaSST, on_delete=models.CASCADE, related_name="documentos")
+    documento = models.ForeignKey(
+        DocumentoSST, on_delete=models.CASCADE, null=True, blank=True, related_name="compartilhamentos_sec"
+    )
+    laudo = models.ForeignKey(
+        "LaudoTecnicoSST", on_delete=models.CASCADE, null=True, blank=True, related_name="compartilhamentos_sec"
+    )
+    titulo = models.CharField(max_length=200)
+    compartilhado_em = models.DateTimeField(auto_now_add=True)
+    visualizado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-compartilhado_em"]
+        indexes = [models.Index(fields=["cliente"])]
+
+    def __str__(self):
+        return f"SEC: {self.titulo} → {self.cliente.nome_cliente}"
+
+
+class AcessoSECLog(models.Model):
+    """Auditoria de acesso ao portal do cliente (LGPD)."""
+    cliente = models.ForeignKey(ClienteConsultoriaSST, on_delete=models.CASCADE, related_name="acessos")
+    ip = models.CharField(max_length=64, blank=True)
+    acao = models.CharField(max_length=60, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+
+# ── EPI Offline — sincronização idempotente ────────────────────────────────────
+
+class SincronizacaoEPIOffline(models.Model):
+    """Entrega de EPI registrada offline (campo sem internet) e sincronizada depois.
+    Idempotente pelo uuid gerado no cliente — reenvio não duplica."""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="sync_epi_offline")
+    uuid_cliente = models.CharField(max_length=64, unique=True, db_index=True)
+    entrega = models.ForeignKey(
+        EntregaEPI, on_delete=models.SET_NULL, null=True, blank=True, related_name="origem_offline"
+    )
+    payload = models.JSONField(default=dict, blank=True)
+    processado = models.BooleanField(default=False)
+    erro = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "processado"])]
+
+    def __str__(self):
+        return f"SyncEPI {self.uuid_cliente} — {'ok' if self.processado else 'pendente'}"
+
+
+# ── API de Integração (ERP / RH / Folha) ───────────────────────────────────────
+
+class TokenIntegracaoSST(models.Model):
+    """Token de API para integração com ERP/RH/Folha externos. Armazena apenas o
+    hash do token (o valor em claro só aparece na criação)."""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="tokens_integracao")
+    nome = models.CharField(max_length=120, verbose_name="Nome/descrição da integração")
+    token_hash = models.CharField(max_length=128, db_index=True)
+    prefixo = models.CharField(max_length=12, blank=True, help_text="Primeiros caracteres, para identificação")
+    ativo = models.BooleanField(default=True)
+    ultimo_uso = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"Token {self.nome} ({self.prefixo}…) — {self.empresa.nome}"
+
+
+class LogIntegracaoSST(models.Model):
+    """Log de chamadas da API de integração (auditoria e depuração)."""
+    token = models.ForeignKey(TokenIntegracaoSST, on_delete=models.CASCADE, related_name="logs")
+    endpoint = models.CharField(max_length=120)
+    metodo = models.CharField(max_length=10, blank=True)
+    status_code = models.PositiveSmallIntegerField(default=0)
+    registros = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["token", "criado_em"])]
+
+
+# ── Documento SST versionado + assinatura (GED do SST) ─────────────────────────
+
+class VersaoDocumentoSST(models.Model):
+    """Versão de um DocumentoSST — controle de versão + vínculo de assinatura.
+    Mantém o isolamento de segmento (usa DocumentoSST, não o GED do Governo).
+    Aditivo: não altera DocumentoSST nem AssinaturaDocumentoSST."""
+    documento = models.ForeignKey(DocumentoSST, on_delete=models.CASCADE, related_name="versoes")
+    versao = models.PositiveIntegerField(default=1)
+    arquivo = models.FileField(upload_to="sst_doc_versoes/%Y/%m/", null=True, blank=True)
+    nome_arquivo_original = models.CharField(max_length=255, blank=True, default="")
+    hash_sha256 = models.CharField(max_length=64, blank=True, default="")
+    tamanho_bytes = models.PositiveIntegerField(default=0)
+    autor = models.CharField(max_length=160, blank=True, default="")
+    nota = models.CharField(max_length=255, blank=True, default="", verbose_name="Nota da versão")
+    assinado = models.BooleanField(default=False)
+    assinatura = models.ForeignKey(
+        "AssinaturaDocumentoSST", on_delete=models.SET_NULL, null=True, blank=True, related_name="versoes_sst"
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-versao"]
+        constraints = [
+            models.UniqueConstraint(fields=["documento", "versao"], name="uniq_versao_doc_sst"),
+        ]
+
+    def __str__(self):
+        return f"{self.documento_id} v{self.versao}"
+
+
+# ── Espirometria ocupacional (NR-07) ────────────────────────────────────────────
+
+class Espirometria(models.Model):
+    """Espirometria ocupacional com interpretação automática (obstrutivo/restritivo/
+    misto) e comparação sequencial do VEF1. Motor em espirometria_interpretacao.py."""
+    TIPO = [
+        ("referencia", "Referência (base)"),
+        ("sequencial", "Sequencial (periódica)"),
+        ("retorno", "Retorno ao Trabalho"),
+        ("demissional", "Demissional"),
+    ]
+    PADRAO = [
+        ("normal", "Normal"),
+        ("obstrutivo", "Obstrutivo"),
+        ("restritivo", "Restritivo (sugestivo)"),
+        ("misto", "Misto"),
+        ("indeterminado", "Indeterminado"),
+    ]
+    SEQUENCIAL = [
+        ("referencia", "Referência"),
+        ("estavel", "Estável"),
+        ("declinio", "Declínio funcional"),
+        ("melhora", "Melhora"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="espirometrias")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="espirometrias")
+    exame_ocupacional = models.ForeignKey(
+        ExameOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="espirometrias"
+    )
+    aso = models.ForeignKey(ASOOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="espirometrias")
+    tipo = models.CharField(max_length=20, choices=TIPO, default="sequencial")
+    data_exame = models.DateField()
+    cvf = models.FloatField(null=True, blank=True, verbose_name="CVF (litros)")
+    vef1 = models.FloatField(null=True, blank=True, verbose_name="VEF1 (litros)")
+    vef1_cvf = models.FloatField(null=True, blank=True, verbose_name="VEF1/CVF (fração)")
+    cvf_prev = models.FloatField(null=True, blank=True, verbose_name="CVF (% do previsto)")
+    vef1_prev = models.FloatField(null=True, blank=True, verbose_name="VEF1 (% do previsto)")
+    responsavel = models.CharField(max_length=200, blank=True)
+    conselho = models.CharField(max_length=40, blank=True)
+
+    padrao = models.CharField(max_length=20, choices=PADRAO, default="indeterminado")
+    grau = models.CharField(max_length=30, blank=True)
+    classificacao_sequencial = models.CharField(max_length=20, choices=SEQUENCIAL, default="referencia")
+    declinio_indicado = models.BooleanField(default=False)
+    interpretacao = models.JSONField(default=dict, blank=True)
+    resultado_resumo = models.TextField(blank=True)
+    observacoes = EncryptedTextField(blank=True)  # LGPD: observação clínica
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_exame"]
+        indexes = [
+            models.Index(fields=["empresa", "funcionario", "data_exame"]),
+            models.Index(fields=["empresa", "padrao"]),
+        ]
+
+    def __str__(self):
+        return f"Espirometria {self.data_exame} — {self.funcionario.nome}"

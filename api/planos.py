@@ -32,12 +32,18 @@ _SST_PROFISSIONAL = _SST_BASE + [
     "sst.cipa",             # CIPA — Comissão Interna de Prevenção de Acidentes
     "sst.biometria",        # Biometria Facial para confirmação de entrega de EPI
     "sst.pgr_ppra",         # PGR / PPRA / PCMSO automático
+    "sst.audiometria",      # Audiometria ocupacional + PCA (NR-07) com interpretação automática
+    "sst.espirometria",     # Espirometria ocupacional (NR-07) com interpretação automática
+    "sst.epi_offline",      # Entrega de EPI offline (campo sem internet) + sincronização
+    "sst.documentos_versao",# Documentos SST versionados (GED do SST) + assinatura
 ]
 _SST_ENTERPRISE = _SST_PROFISSIONAL + [
     "sst.multi_unidade",    # Múltiplas unidades/filiais
     "sst.laudos_tecnicos",  # Laudos técnicos (LTCat, LTIP)
     "sst.rbac",             # Governança RBAC de usuários
     "sst.assistente_ia",    # Assistente IA (RAG) — perguntas em linguagem natural
+    "sst.portal_cliente",   # Portal do Cliente (SEC) — consultoria compartilha docs com empresa-cliente
+    "sst.integracao_api",   # API de integração com ERP/RH/Folha externos
 ]
 _SST_CORPORATIVO = _SST_ENTERPRISE + [
     "sst.turnos",                   # Gestão de turnos

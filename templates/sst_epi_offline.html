@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>SoloCRT · EPI Offline</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% include "partials/sst_modulo_css.html" %}
+{% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+<div class="toast" id="toast"></div>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main class="main">
+    <div>
+      <div class="page-eyebrow">SST · EPI · Campo</div>
+      <div class="page-title">Entrega de EPI Offline</div>
+      <div class="page-sub">Registre entregas de EPI em campo mesmo sem internet. Baixe o pacote (catálogo + funcionários), registre as entregas na fila local do dispositivo e sincronize quando houver conexão — sem duplicar (idempotente por UUID).</div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Conexão</div><div class="kpi-val" id="kConn" style="font-size:1rem;padding-top:6px">—</div></div>
+      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Fila local</div><div class="kpi-val" id="kFila">0</div></div>
+      <div class="kpi-card" style="--kc:var(--teal)"><div class="kpi-label">Pacote offline</div><div class="kpi-val" id="kPac" style="font-size:1rem;padding-top:6px">—</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Passo 1 · Preparar</h3><button class="btn-teal" onclick="baixarPacote()">Baixar pacote offline</button></div>
+      <div style="padding:14px 16px;font-size:.8rem;color:var(--muted)">Baixe o catálogo de EPIs e a lista de funcionários para o dispositivo. Depois disso, o registro funciona sem internet.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Passo 2 · Registrar entrega (offline)</h3></div>
+      <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label>Funcionário</label><select id="eFunc"><option value="">Baixe o pacote primeiro</option></select></div>
+        <div class="field"><label>EPI</label><select id="eEpi"><option value="">Baixe o pacote primeiro</option></select></div>
+        <div class="field"><label>Data</label><input type="date" id="eData"></div>
+        <div class="field"><label>Quantidade</label><input type="number" id="eQtd" value="1" min="1"></div>
+      </div>
+      <div style="padding:0 16px 16px"><button class="btn-teal" onclick="registrarLocal()">Adicionar à fila local</button></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Passo 3 · Sincronizar</h3><button class="btn-teal" onclick="sincronizar()">Sincronizar fila</button></div>
+      <div id="filaList"><div class="empty-state">Fila vazia.</div></div>
+    </div>
+  </main>
+</div>
+<script>
+const KEY="sst_epi_fila_v1",PKEY="sst_epi_pacote_v1";
+function auth(){return sessionStorage.getItem("auth_token")||sessionStorage.getItem("token")||"";}
+function headers(){const h={"Content-Type":"application/json"};const t=auth();if(t)h["Authorization"]="Bearer "+t;return h;}
+function toast(m,ok=true){const e=document.getElementById("toast");e.textContent=m;e.className="toast "+(ok?"ok":"err")+" show";setTimeout(()=>e.className="toast",4000);}
+function uuid(){return 'xxxxxxxxyxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);})+Date.now();}
+function getFila(){try{return JSON.parse(localStorage.getItem(KEY)||"[]");}catch(e){return [];}}
+function setFila(f){try{localStorage.setItem(KEY,JSON.stringify(f));}catch(e){}}
+function getPac(){try{return JSON.parse(localStorage.getItem(PKEY)||"null");}catch(e){return null;}}
+function updConn(){document.getElementById("kConn").textContent=navigator.onLine?"Online":"Offline";document.getElementById("kConn").style.color=navigator.onLine?"var(--green)":"var(--amber)";}
+function render(){
+  const f=getFila();document.getElementById("kFila").textContent=f.length;
+  const pac=getPac();document.getElementById("kPac").textContent=pac?("OK · "+pac.gerado_em):"não baixado";
+  document.getElementById("filaList").innerHTML=f.length?`<table class="tbl"><thead><tr><th>Funcionário</th><th>EPI</th><th>Data</th><th>Qtd</th><th>Status</th></tr></thead><tbody>
+    ${f.map(x=>`<tr><td>${x.funcionario_nome||x.funcionario_id}</td><td>${x.epi_nome||x.epi_id}</td><td>${x.data_entrega}</td><td>${x.quantidade}</td><td><span class="badge b-amarelo">pendente</span></td></tr>`).join("")}
+  </tbody></table>`:`<div class="empty-state">Fila vazia.</div>`;
+  if(pac){
+    const sf=document.getElementById("eFunc"),se=document.getElementById("eEpi");
+    if(sf.options.length<=1){sf.innerHTML='<option value="">Selecione…</option>'+pac.funcionarios.map(x=>`<option value="${x.id}">${x.nome}</option>`).join("");}
+    if(se.options.length<=1){se.innerHTML='<option value="">Selecione…</option>'+pac.epis.map(x=>`<option value="${x.id}">${x.nome}</option>`).join("");}
+  }
+}
+async function baixarPacote(){
+  try{const r=await fetch("/api/sst/epi/offline/pacote/",{credentials:'include',headers:headers()});
+    if(!r.ok){toast("Erro ao baixar pacote ("+r.status+")",false);return;}
+    const d=await r.json();localStorage.setItem(PKEY,JSON.stringify(d));toast("Pacote baixado — pronto p/ uso offline");render();
+  }catch(e){toast("Erro de conexão",false);}
+}
+function registrarLocal(){
+  const fid=document.getElementById("eFunc").value,eid=document.getElementById("eEpi").value;
+  const data=document.getElementById("eData").value||new Date().toISOString().slice(0,10);
+  if(!fid||!eid){toast("Selecione funcionário e EPI.",false);return;}
+  const pac=getPac()||{funcionarios:[],epis:[]};
+  const fn=(pac.funcionarios.find(x=>x.id==fid)||{}).nome,en=(pac.epis.find(x=>x.id==eid)||{}).nome;
+  const f=getFila();f.push({uuid:uuid(),funcionario_id:Number(fid),epi_id:Number(eid),funcionario_nome:fn,epi_nome:en,data_entrega:data,quantidade:Number(document.getElementById("eQtd").value||1)});
+  setFila(f);toast("Entrega adicionada à fila local");render();
+}
+async function sincronizar(){
+  const f=getFila();if(!f.length){toast("Fila vazia.",false);return;}
+  if(!navigator.onLine){toast("Sem internet — tente novamente quando online.",false);return;}
+  try{const r=await fetch("/api/sst/epi/offline/sync/",{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify({entregas:f})});
+    const d=await r.json();
+    if(d.ok){setFila([]);toast(`Sincronizado: ${d.criados} criadas, ${d.duplicados} já existiam, ${d.erros} erros`);render();}
+    else toast(d.erro||"Erro ao sincronizar",false);
+  }catch(e){toast("Erro de conexão",false);}
+}
+window.addEventListener("online",updConn);window.addEventListener("offline",updConn);
+document.getElementById("eData").value=new Date().toISOString().slice(0,10);
+updConn();render();
+</script>
+</body>
+</html>

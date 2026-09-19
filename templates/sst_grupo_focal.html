@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>SoloCRT · Grupo Focal NR-01</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% include "partials/sst_modulo_css.html" %}
+{% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+<div class="toast" id="toast"></div>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main class="main">
+    <div>
+      <div class="page-eyebrow">SST · Psicossocial · NR-01</div>
+      <div class="page-title">Grupo Focal Psicossocial</div>
+      <div class="page-sub">Escuta estruturada em grupo para identificar fatores de risco psicossocial (organização do trabalho, sobrecarga, relações, assédio), consolidando achados e plano de ação para o inventário de riscos da NR-01.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Grupos Focais</h3><button class="btn-teal" onclick="criar()">+ Novo Grupo Focal</button></div>
+      <div id="lista"><div class="loading"><div class="spinner"></div> Carregando...</div></div>
+    </div>
+    <div class="panel" id="detPanel" style="display:none">
+      <div class="panel-header"><h3 id="detTit">—</h3><button class="btn-ghost" onclick="addFator()">+ Fator identificado</button></div>
+      <div id="det"></div>
+    </div>
+  </main>
+</div>
+<script>
+let ativo=null;
+function auth(){return sessionStorage.getItem("auth_token")||sessionStorage.getItem("token")||"";}
+function headers(){const h={"Content-Type":"application/json"};const t=auth();if(t)h["Authorization"]="Bearer "+t;return h;}
+function toast(m,ok=true){const e=document.getElementById("toast");e.textContent=m;e.className="toast "+(ok?"ok":"err")+" show";setTimeout(()=>e.className="toast",4000);}
+function grav(g){const m={baixa:"b-cinza",media:"b-amarelo",alta:"b-vermelho",critica:"b-vermelho"};return `<span class="badge ${m[g]||'b-cinza'}">${g}</span>`;}
+function st(s){const m={planejado:"b-amarelo",realizado:"b-azul",consolidado:"b-verde"};return `<span class="badge ${m[s]||'b-cinza'}">${s}</span>`;}
+async function carregar(){
+  try{const r=await fetch("/api/sst/psicossocial/grupos-focais/",{credentials:'include',headers:headers()});
+  if(!r.ok){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro ou sem permissão (${r.status}).</div>`;return;}
+  const d=await r.json();
+  if(!d.grupos.length){document.getElementById("lista").innerHTML=`<div class="empty-state">Nenhum grupo focal. Crie o primeiro.</div>`;return;}
+  document.getElementById("lista").innerHTML=`<table class="tbl"><thead><tr><th>Título</th><th>Data</th><th>Setor</th><th>Participantes</th><th>Fatores</th><th>Status</th><th></th></tr></thead><tbody>
+    ${d.grupos.map(g=>`<tr><td><strong>${g.titulo}</strong></td><td>${g.data||"—"}</td><td>${g.setor_alvo||"—"}</td><td>${g.num_participantes}</td><td>${g.total_fatores}</td><td>${st(g.status)}</td><td><button class="btn-ghost" onclick="abrir(${g.id},'${g.titulo.replace(/'/g,"")}')">Fatores</button></td></tr>`).join("")}
+  </tbody></table>`;}catch(e){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro.</div>`;}
+}
+async function abrir(id,tit){
+  ativo=id;document.getElementById("detTit").textContent="Fatores — "+tit;document.getElementById("detPanel").style.display="block";
+  const r=await fetch(`/api/sst/psicossocial/grupos-focais/${id}/`,{credentials:'include',headers:headers()});
+  const d=await r.json();
+  const fs=d.fatores||[];
+  document.getElementById("det").innerHTML=fs.length?`<table class="tbl"><thead><tr><th>Categoria</th><th>Descrição</th><th>Gravidade</th><th>Medida</th><th></th></tr></thead><tbody>
+    ${fs.map(f=>`<tr><td>${f.categoria_label}</td><td>${f.descricao}</td><td>${grav(f.gravidade)}</td><td style="font-size:.72rem;color:var(--muted)">${f.medida_recomendada||"—"}</td><td><button class="btn-ghost" onclick="delFator(${f.id})">×</button></td></tr>`).join("")}
+  </tbody></table>`:`<div class="empty-state">Nenhum fator registrado neste grupo.</div>`;
+  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+function criar(){
+  const t=prompt("Título do grupo focal:");if(!t)return;
+  const setor=prompt("Setor alvo:","")||"";
+  const data=prompt("Data (YYYY-MM-DD):","")||"";
+  fetch("/api/sst/psicossocial/grupos-focais/",{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify({titulo:t,setor_alvo:setor,data:data||null})})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Grupo focal criado!");carregar();}else toast(d.erro||"Erro",false);}).catch(()=>toast("Erro de conexão",false));
+}
+function addFator(){
+  if(!ativo)return;
+  const cat=prompt("Categoria (organizacao/sobrecarga/relacoes/assedio/autonomia/reconhecimento/jornada/outro):","organizacao");if(!cat)return;
+  const desc=prompt("Descrição do fator:");if(!desc)return;
+  const g=prompt("Gravidade (baixa/media/alta/critica):","media")||"media";
+  const med=prompt("Medida recomendada:","")||"";
+  fetch(`/api/sst/psicossocial/grupos-focais/${ativo}/fatores/`,{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify({categoria:cat,descricao:desc,gravidade:g,medida_recomendada:med})})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Fator adicionado!");abrir(ativo,document.getElementById("detTit").textContent.replace("Fatores — ",""));carregar();}else toast(d.erro||"Erro",false);}).catch(()=>toast("Erro de conexão",false));
+}
+function delFator(id){
+  if(!confirm("Remover este fator?"))return;
+  fetch(`/api/sst/psicossocial/fatores/${id}/`,{method:"DELETE",credentials:'include',headers:headers()})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Removido");abrir(ativo,document.getElementById("detTit").textContent.replace("Fatores — ",""));carregar();}else toast(d.erro||"Erro",false);});
+}
+carregar();
+</script>
+</body>
+</html>

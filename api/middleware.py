@@ -214,6 +214,11 @@ class EmpresaMiddleware:
             "/api/paciente/",      # Portal do Paciente — APIs com auth própria via Bearer (só Hospital)
             "/exame-compartilhado/",  # exame compartilhado pelo paciente via link assinado (sem login)
             "/api/sst/psicossocial/responder/",  # resposta pública do colaborador (token no URL)
+            "/portal-sec/",        # Portal do Cliente SEC — página pública da consultoria (token no URL)
+            "/api/portal-sec/",    # Portal do Cliente SEC — APIs públicas via token
+            "/api/integracao-sst/",  # API de integração ERP/RH/Folha — auth própria via token no header
+            "/cipa/votar/",        # Votação CIPA — página pública do eleitor (token no URL)
+            "/api/cipa/votar/",    # Votação CIPA — API pública do voto secreto (token no URL)
             "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",

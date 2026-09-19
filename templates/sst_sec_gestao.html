@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>SoloCRT · Portal do Cliente (SEC)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% include "partials/sst_modulo_css.html" %}
+{% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+<div class="toast" id="toast"></div>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main class="main">
+    <div>
+      <div class="page-eyebrow">SST · Consultoria</div>
+      <div class="page-title">Portal do Cliente (SEC)</div>
+      <div class="page-sub">Compartilhe documentos de SST com suas empresas-clientes por um portal com link próprio — sem custo por usuário. O cliente acessa por token, visualiza (e baixa, se permitido) seus documentos e laudos.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>Clientes</h3><button class="btn-teal" onclick="criar()">+ Novo Cliente</button></div>
+      <div id="lista"><div class="loading"><div class="spinner"></div> Carregando...</div></div>
+    </div>
+    <div class="panel" id="detPanel" style="display:none">
+      <div class="panel-header"><h3 id="detTit">—</h3>
+        <div>
+          <button class="btn-ghost" onclick="copiarLink()">Copiar link do portal</button>
+          <button class="btn-ghost" onclick="compartilhar()">+ Compartilhar documento</button>
+        </div>
+      </div>
+      <div id="det"></div>
+    </div>
+  </main>
+</div>
+<script>
+let ativo=null,ativoLink="";
+function auth(){return sessionStorage.getItem("auth_token")||sessionStorage.getItem("token")||"";}
+function headers(){const h={"Content-Type":"application/json"};const t=auth();if(t)h["Authorization"]="Bearer "+t;return h;}
+function toast(m,ok=true){const e=document.getElementById("toast");e.textContent=m;e.className="toast "+(ok?"ok":"err")+" show";setTimeout(()=>e.className="toast",4000);}
+async function carregar(){
+  try{const r=await fetch("/api/sst/sec/clientes/",{credentials:'include',headers:headers()});
+  if(!r.ok){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro ou sem permissão (${r.status}). Requer plano Enterprise.</div>`;return;}
+  const d=await r.json();
+  if(!d.clientes.length){document.getElementById("lista").innerHTML=`<div class="empty-state">Nenhum cliente. Cadastre a primeira empresa-cliente.</div>`;return;}
+  document.getElementById("lista").innerHTML=`<table class="tbl"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Documentos</th><th>Baixar</th><th>Status</th><th></th></tr></thead><tbody>
+    ${d.clientes.map(c=>`<tr><td><strong>${c.nome_cliente}</strong></td><td>${c.cnpj_cliente||"—"}</td><td>${c.total_documentos}</td><td>${c.pode_baixar?'<span class="badge b-verde">Sim</span>':'<span class="badge b-cinza">Não</span>'}</td><td>${c.ativo?'<span class="badge b-verde">Ativo</span>':'<span class="badge b-cinza">Inativo</span>'}</td><td><button class="btn-ghost" onclick="abrir(${c.id},'${c.nome_cliente.replace(/'/g,"")}','${c.portal_url}')">Gerenciar</button></td></tr>`).join("")}
+  </tbody></table>`;}catch(e){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro.</div>`;}
+}
+async function abrir(id,nome,link){
+  ativo=id;ativoLink=link;document.getElementById("detTit").textContent="Documentos — "+nome;document.getElementById("detPanel").style.display="block";
+  const r=await fetch(`/api/sst/sec/clientes/${id}/`,{credentials:'include',headers:headers()});
+  const d=await r.json();
+  const docs=d.documentos||[];
+  document.getElementById("det").innerHTML=`<div style="padding:12px 16px;font-size:.75rem;color:var(--muted)">Link do portal: <span style="color:var(--teal)">${link}</span></div>`+
+    (docs.length?`<table class="tbl"><thead><tr><th>Documento</th><th>Compartilhado</th><th>Visualizado</th><th></th></tr></thead><tbody>
+    ${docs.map(s=>`<tr><td>${s.titulo}</td><td>${s.compartilhado_em?.substring(0,10)||"—"}</td><td>${s.visualizado_em?s.visualizado_em.substring(0,10):'—'}</td><td><button class="btn-ghost" onclick="delComp(${s.id})">×</button></td></tr>`).join("")}
+  </tbody></table>`:`<div class="empty-state">Nenhum documento compartilhado com este cliente.</div>`);
+  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+function criar(){
+  const n=prompt("Nome da empresa-cliente:");if(!n)return;
+  const cnpj=prompt("CNPJ (opcional):","")||"";
+  fetch("/api/sst/sec/clientes/",{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify({nome_cliente:n,cnpj_cliente:cnpj})})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Cliente criado! Link do portal gerado.");carregar();}else toast(d.erro||"Erro",false);}).catch(()=>toast("Erro de conexão",false));
+}
+function compartilhar(){
+  if(!ativo)return;
+  const did=prompt("ID do DocumentoSST a compartilhar (ou deixe vazio p/ laudo):","");
+  const lid=did?"":prompt("ID do Laudo Técnico a compartilhar:","");
+  if(!did&&!lid){toast("Informe um documento ou laudo.",false);return;}
+  const body=did?{documento_id:Number(did)}:{laudo_id:Number(lid)};
+  fetch(`/api/sst/sec/clientes/${ativo}/documentos/`,{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify(body)})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Documento compartilhado!");abrir(ativo,document.getElementById("detTit").textContent.replace("Documentos — ",""),ativoLink);carregar();}else toast(d.erro||"Erro",false);}).catch(()=>toast("Erro de conexão",false));
+}
+function delComp(id){
+  if(!confirm("Remover compartilhamento?"))return;
+  fetch(`/api/sst/sec/compartilhamentos/${id}/`,{method:"DELETE",credentials:'include',headers:headers()})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Removido");abrir(ativo,document.getElementById("detTit").textContent.replace("Documentos — ",""),ativoLink);carregar();}});
+}
+function copiarLink(){if(!ativoLink)return;navigator.clipboard.writeText(ativoLink).then(()=>toast("Link copiado!")).catch(()=>toast(ativoLink));}
+carregar();
+</script>
+</body>
+</html>

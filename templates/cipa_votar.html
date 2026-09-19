@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>Votação CIPA · SoloCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--line:rgba(255,255,255,.08);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:560px;margin:0 auto;padding:40px 18px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.brand .ic{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;color:#0a0e1a}
+.brand b{font-size:.95rem}.brand span{font-size:.68rem;color:var(--muted);display:block}
+h1{font-size:1.3rem;font-weight:800;margin-bottom:4px}
+.sub{color:var(--muted);font-size:.82rem;margin-bottom:22px}
+.cand{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+.cand:hover{border-color:var(--teal)}
+.cand.sel{border-color:var(--teal);background:rgba(0,201,167,.08)}
+.cand .num{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.06);display:grid;place-items:center;font-weight:900;flex-shrink:0}
+.cand .nm{font-weight:700}.cand .cg{font-size:.72rem;color:var(--muted)}
+.cand .pr{font-size:.75rem;color:var(--muted);margin-top:3px}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a1018;font-weight:800;font-size:.9rem;cursor:pointer;margin-top:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.msg{padding:40px;text-align:center;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.ok{color:var(--teal)}.err{color:#f87171}
+.secret{font-size:.72rem;color:var(--muted);text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="ic">S</div><div><b>SoloCRT SST</b><span>Votação CIPA — NR-05</span></div></div>
+  {% if invalido %}
+    <div class="msg err">⚠️ Link de votação inválido ou expirado.<br>Solicite um novo link ao RH/SESMT.</div>
+  {% else %}
+    <h1>{{ eleicao_titulo }}</h1>
+    <div class="sub">Eleitor: <strong>{{ eleitor }}</strong></div>
+    <div id="conteudo"><div class="msg">Carregando candidatos...</div></div>
+    <div class="secret">🔒 Seu voto é secreto. Registramos apenas que você votou, nunca em quem.</div>
+  {% endif %}
+</div>
+{% if not invalido %}
+<script>
+const TOKEN="{{ token|escapejs }}";let escolhido=null;
+async function carregar(){
+  try{
+    const r=await fetch(`/api/cipa/votar/${TOKEN}/`,{credentials:'include'});
+    const d=await r.json();
+    if(!r.ok){document.getElementById("conteudo").innerHTML=`<div class="msg err">${d.erro||"Erro"}</div>`;return;}
+    if(d.ja_votou){document.getElementById("conteudo").innerHTML=`<div class="msg ok">✅ Você já votou nesta eleição.<br>Obrigado por participar!</div>`;return;}
+    if(d.status!=="votacao"){document.getElementById("conteudo").innerHTML=`<div class="msg">A votação não está aberta no momento.</div>`;return;}
+    if(!d.candidatos||!d.candidatos.length){document.getElementById("conteudo").innerHTML=`<div class="msg">Nenhum candidato disponível.</div>`;return;}
+    document.getElementById("conteudo").innerHTML=
+      d.candidatos.map(c=>`<div class="cand" data-id="${c.id}" onclick="sel(${c.id})"><div class="num">${c.numero}</div><div><div class="nm">${c.funcionario_nome}</div><div class="cg">${c.funcionario_cargo||""}</div>${c.proposta?`<div class="pr">${c.proposta}</div>`:""}</div></div>`).join("")+
+      `<button class="btn" id="btnVotar" disabled onclick="votar()">Confirmar voto</button>`;
+  }catch(e){document.getElementById("conteudo").innerHTML=`<div class="msg err">Erro ao carregar.</div>`;}
+}
+function sel(id){escolhido=id;document.querySelectorAll(".cand").forEach(el=>el.classList.toggle("sel",el.dataset.id==id));document.getElementById("btnVotar").disabled=false;}
+async function votar(){
+  if(!escolhido)return;
+  if(!confirm("Confirmar seu voto? Não poderá ser alterado."))return;
+  document.getElementById("btnVotar").disabled=true;
+  try{
+    const r=await fetch(`/api/cipa/votar/${TOKEN}/`,{method:"POST",credentials:'include',headers:{"Content-Type":"application/json"},body:JSON.stringify({candidato_id:escolhido})});
+    const d=await r.json();
+    if(d.ok){document.getElementById("conteudo").innerHTML=`<div class="msg ok">✅ ${d.msg}</div>`;}
+    else{document.getElementById("conteudo").innerHTML=`<div class="msg err">${d.erro||"Erro ao votar"}</div>`;}
+  }catch(e){document.getElementById("conteudo").innerHTML=`<div class="msg err">Erro de conexão.</div>`;}
+}
+carregar();
+</script>
+{% endif %}
+</body>
+</html>
