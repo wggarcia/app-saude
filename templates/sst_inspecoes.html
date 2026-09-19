@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>SoloCRT · Inspeções de Segurança</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% include "partials/sst_modulo_css.html" %}
+<style>
+.bar{height:8px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;min-width:80px}
+.bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--teal),#0077ff)}
+</style>
+{% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+<div class="toast" id="toast"></div>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main class="main">
+    <div>
+      <div class="page-eyebrow">SST · Conformidade · Inspeções</div>
+      <div class="page-title">Inspeções de Segurança</div>
+      <div class="page-sub">Inspeções com checklist de itens conforme/não-conforme, índice de conformidade automático e plano de ação para as não-conformidades, com criticidade, responsável e prazo.</div>
+    </div>
+    <div class="kpi-strip" id="kpiStrip"><div class="kpi-card"><div class="kpi-label">Carregando</div><div class="kpi-val">—</div></div></div>
+    <div class="panel">
+      <div class="panel-header"><h3>Inspeções</h3><button class="btn-teal" onclick="criar()">+ Nova Inspeção</button></div>
+      <div id="lista"><div class="loading"><div class="spinner"></div> Carregando...</div></div>
+    </div>
+    <div class="panel" id="detPanel" style="display:none">
+      <div class="panel-header"><h3 id="detTit">—</h3><button class="btn-ghost" onclick="addItem()">+ Item de checklist</button></div>
+      <div id="det"></div>
+    </div>
+  </main>
+</div>
+<script>
+let ativo=null;
+function auth(){return sessionStorage.getItem("auth_token")||sessionStorage.getItem("token")||"";}
+function headers(){const h={"Content-Type":"application/json"};const t=auth();if(t)h["Authorization"]="Bearer "+t;return h;}
+function toast(m,ok=true){const e=document.getElementById("toast");e.textContent=m;e.className="toast "+(ok?"ok":"err")+" show";setTimeout(()=>e.className="toast",4000);}
+function st(s){const m={planejada:"b-amarelo",realizada:"b-azul",concluida:"b-verde"};return `<span class="badge ${m[s]||'b-cinza'}">${s}</span>`;}
+function conf(c){const m={conforme:"b-verde",nao_conforme:"b-vermelho",na:"b-cinza"};return `<span class="badge ${m[c]||'b-cinza'}">${(c||"").replace("_"," ")}</span>`;}
+function crit(c){const m={baixa:"b-cinza",media:"b-amarelo",alta:"b-vermelho"};return `<span class="badge ${m[c]||'b-cinza'}">${c}</span>`;}
+function idx(v){if(v===null||v===undefined)return "—";return `<div style="display:flex;align-items:center;gap:8px"><div class="bar"><span style="width:${v}%"></span></div><span>${v}%</span></div>`;}
+async function loadKpis(){
+  try{const r=await fetch("/api/sst/inspecoes/kpis/",{credentials:'include',headers:headers()});
+  if(!r.ok){document.getElementById("kpiStrip").innerHTML=`<div style="padding:14px;color:var(--amber);border:1px solid var(--amber);border-radius:10px">Requer plano Profissional (${r.status}).</div>`;return;}
+  const d=await r.json();
+  document.getElementById("kpiStrip").innerHTML=`
+    <div class="kpi-card" style="--kc:var(--teal)"><div class="kpi-label">Inspeções</div><div class="kpi-val">${d.total}</div></div>
+    <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Planejadas</div><div class="kpi-val">${d.planejadas}</div></div>
+    <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Não conformidades</div><div class="kpi-val">${d.nao_conformidades}</div></div>
+    <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Ações pendentes</div><div class="kpi-val">${d.acoes_pendentes}</div></div>`;
+  }catch(e){}
+}
+async function loadLista(){
+  try{const r=await fetch("/api/sst/inspecoes/",{credentials:'include',headers:headers()});
+  if(!r.ok){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro (${r.status}).</div>`;return;}
+  const d=await r.json();
+  if(!d.inspecoes.length){document.getElementById("lista").innerHTML=`<div class="empty-state">Nenhuma inspeção. Crie a primeira.</div>`;return;}
+  document.getElementById("lista").innerHTML=`<table class="tbl"><thead><tr><th>Título</th><th>Área</th><th>Data</th><th>Conformidade</th><th>NCs</th><th>Status</th><th></th></tr></thead><tbody>
+    ${d.inspecoes.map(i=>`<tr><td><strong>${i.titulo}</strong></td><td>${i.area||"—"}</td><td>${i.data_inspecao||"—"}</td><td>${idx(i.indice_conformidade)}</td><td>${i.nao_conformidades}</td><td>${st(i.status)}</td><td><button class="btn-ghost" onclick="abrirDet(${i.id},'${i.titulo.replace(/'/g,"")}')">Checklist</button></td></tr>`).join("")}
+  </tbody></table>`;}catch(e){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro.</div>`;}
+}
+async function abrirDet(id,tit){
+  ativo=id;document.getElementById("detTit").textContent="Checklist — "+tit;document.getElementById("detPanel").style.display="block";
+  const r=await fetch(`/api/sst/inspecoes/${id}/`,{credentials:'include',headers:headers()});const d=await r.json();
+  const itens=d.itens||[];
+  const head=`<div style="padding:10px 16px;font-size:.8rem">Índice de conformidade: <strong>${d.indice_conformidade===null?"—":d.indice_conformidade+"%"}</strong></div>`;
+  document.getElementById("det").innerHTML=head+((itens.length)?`<table class="tbl"><thead><tr><th>Item</th><th>Situação</th><th>Criticidade</th><th>Ação corretiva</th><th>Prazo</th><th></th></tr></thead><tbody>
+    ${itens.map(i=>`<tr><td>${i.descricao}</td><td>${conf(i.conforme)}</td><td>${crit(i.criticidade)}</td><td style="font-size:.74rem">${i.acao_corretiva||"—"}</td><td>${i.prazo||"—"}</td><td><button class="btn-ghost" onclick="delItem(${i.id})">×</button></td></tr>`).join("")}
+  </tbody></table>`:`<div class="empty-state">Sem itens. Adicione itens ao checklist.</div>`);
+  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+function criar(){
+  const t=prompt("Título da inspeção:");if(!t)return;
+  const area=prompt("Área/tipo (ex: NR-12 máquinas, NR-35 altura):","")||"";
+  const data=prompt("Data (YYYY-MM-DD):","")||"";
+  fetch("/api/sst/inspecoes/",{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify({titulo:t,area,data_inspecao:data||null})})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Inspeção criada!");loadKpis();loadLista();}else toast(d.erro||"Erro",false);}).catch(()=>toast("Erro de conexão",false));
+}
+function addItem(){
+  if(!ativo)return;
+  const desc=prompt("Descrição do item a verificar:");if(!desc)return;
+  const c=prompt("Situação (conforme/nao_conforme/na):","conforme")||"conforme";
+  const cr=prompt("Criticidade (baixa/media/alta):","media")||"media";
+  const acao=c==="nao_conforme"?(prompt("Ação corretiva:","")||""):"";
+  const prazo=c==="nao_conforme"?(prompt("Prazo (YYYY-MM-DD):","")||""):"";
+  fetch(`/api/sst/inspecoes/${ativo}/itens/`,{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify({descricao:desc,conforme:c,criticidade:cr,acao_corretiva:acao,prazo:prazo||null})})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Item adicionado!");abrirDet(ativo,document.getElementById("detTit").textContent.replace("Checklist — ",""));loadKpis();loadLista();}else toast(d.erro||"Erro",false);}).catch(()=>toast("Erro de conexão",false));
+}
+function delItem(id){
+  if(!confirm("Remover item?"))return;
+  fetch(`/api/sst/inspecoes/itens/${id}/`,{method:"DELETE",credentials:'include',headers:headers()})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Removido");abrirDet(ativo,document.getElementById("detTit").textContent.replace("Checklist — ",""));loadKpis();loadLista();}});
+}
+(async()=>{await Promise.all([loadKpis(),loadLista()]);})();
+</script>
+</body>
+</html>

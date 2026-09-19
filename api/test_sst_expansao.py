@@ -8,6 +8,7 @@ from api.models import (
     SincronizacaoEPIOffline, EPIItem, EntregaEPI, ClienteConsultoriaSST,
     TokenIntegracaoSST, OrdemServicoSST, OrdemServicoCiencia,
     InvestigacaoAcidente, AcaoCorretivaAcidente,
+    InspecaoSeguranca, ItemInspecao,
 )
 
 
@@ -126,3 +127,22 @@ class InvestigacaoAcidenteTest(_Base):
     def test_isolamento_por_empresa(self):
         i = InvestigacaoAcidente.objects.create(empresa=self.emp, titulo="X")
         self.assertFalse(InvestigacaoAcidente.objects.filter(id=i.id, empresa=self.outra).exists())
+
+
+class InspecaoSegurancaTest(_Base):
+    def test_indice_conformidade(self):
+        ins = InspecaoSeguranca.objects.create(empresa=self.emp, titulo="NR-12")
+        ItemInspecao.objects.create(inspecao=ins, descricao="a", conforme="conforme")
+        ItemInspecao.objects.create(inspecao=ins, descricao="b", conforme="conforme")
+        ItemInspecao.objects.create(inspecao=ins, descricao="c", conforme="nao_conforme")
+        ItemInspecao.objects.create(inspecao=ins, descricao="d", conforme="na")  # ignorado no índice
+        self.assertEqual(ins.indice_conformidade, 66.7)  # 2 de 3 avaliáveis
+
+    def test_indice_sem_itens_none(self):
+        ins = InspecaoSeguranca.objects.create(empresa=self.emp, titulo="Vazia")
+        self.assertIsNone(ins.indice_conformidade)
+
+    def test_nao_conformidades_contadas(self):
+        ins = InspecaoSeguranca.objects.create(empresa=self.emp, titulo="X")
+        ItemInspecao.objects.create(inspecao=ins, descricao="a", conforme="nao_conforme")
+        self.assertEqual(ins.itens.filter(conforme="nao_conforme").count(), 1)

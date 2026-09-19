@@ -36,6 +36,7 @@ _SST_PROFISSIONAL = _SST_BASE + [
     "sst.espirometria",     # Espirometria ocupacional (NR-07) com interpretação automática
     "sst.ordem_servico",    # Ordem de Serviço de SST (NR-01) + ciência do trabalhador por link
     "sst.investigacao_acidente",  # Investigação de acidentes (Ishikawa/5 Porquês) + plano de ação
+    "sst.inspecoes",        # Inspeções de segurança / checklists + índice de conformidade
     "sst.epi_offline",      # Entrega de EPI offline (campo sem internet) + sincronização
     "sst.documentos_versao",# Documentos SST versionados (GED do SST) + assinatura
 ]

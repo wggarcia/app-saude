@@ -426,6 +426,10 @@ from api.views_investigacao_acidente import (
     api_investigacoes_kpis, api_investigacoes, api_investigacao_detalhe,
     api_investigacao_acoes, api_investigacao_acao_detalhe, sst_investigacao_page,
 )
+from api.views_inspecoes import (
+    api_inspecoes_kpis, api_inspecoes, api_inspecao_detalhe,
+    api_inspecao_itens, api_inspecao_item_detalhe, sst_inspecoes_page,
+)
 from api.views_biometria import (
     api_biometria_cadastrar, api_biometria_detalhe,
     api_biometria_confirmar_entrega, api_biometria_kpis,
@@ -3185,6 +3189,14 @@ urlpatterns = [
     path('api/sst/audiometria/funcionario/<int:funcionario_id>/historico/', api_audiometria_historico),
     path('api/sst/audiometria/<int:aud_id>/', api_audiometria_detalhe),
     path('api/sst/audiometria/<int:aud_id>/pdf/', api_audiometria_pdf),
+
+    # ── Inspeções de Segurança / Checklists ───────────────────────────────────
+    path('sst/inspecoes/', sst_inspecoes_page),
+    path('api/sst/inspecoes/kpis/', api_inspecoes_kpis),
+    path('api/sst/inspecoes/', api_inspecoes),
+    path('api/sst/inspecoes/itens/<int:item_id>/', api_inspecao_item_detalhe),
+    path('api/sst/inspecoes/<int:insp_id>/', api_inspecao_detalhe),
+    path('api/sst/inspecoes/<int:insp_id>/itens/', api_inspecao_itens),
 
     # ── Investigação de Acidentes (Ishikawa / 5 Porquês) ──────────────────────
     path('sst/investigacoes/', sst_investigacao_page),

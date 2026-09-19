@@ -15876,3 +15876,62 @@ class AcaoCorretivaAcidente(models.Model):
 
     def __str__(self):
         return f"Ação {self.tipo} ({self.status}) — inv {self.investigacao_id}"
+
+
+# ── Inspeções de Segurança / Checklists ─────────────────────────────────────────
+
+class InspecaoSeguranca(models.Model):
+    """Inspeção de segurança com checklist de itens conforme/não-conforme, índice
+    de conformidade e plano de ação para as não-conformidades."""
+    STATUS = [("planejada", "Planejada"), ("realizada", "Realizada"), ("concluida", "Concluída")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="inspecoes_seguranca")
+    titulo = models.CharField(max_length=200)
+    area = models.CharField(max_length=120, blank=True, verbose_name="Área / tipo de inspeção")
+    local = models.CharField(max_length=200, blank=True)
+    data_inspecao = models.DateField(null=True, blank=True)
+    responsavel = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="planejada")
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    @property
+    def indice_conformidade(self):
+        itens = self.itens.all()
+        avaliaveis = [i for i in itens if i.conforme in ("conforme", "nao_conforme")]
+        if not avaliaveis:
+            return None
+        conformes = sum(1 for i in avaliaveis if i.conforme == "conforme")
+        return round(100.0 * conformes / len(avaliaveis), 1)
+
+    def __str__(self):
+        return f"Inspeção {self.titulo} — {self.empresa.nome}"
+
+
+class ItemInspecao(models.Model):
+    """Item de checklist de uma inspeção de segurança."""
+    CONFORME = [("conforme", "Conforme"), ("nao_conforme", "Não Conforme"), ("na", "Não Aplicável")]
+    CRITICIDADE = [("baixa", "Baixa"), ("media", "Média"), ("alta", "Alta")]
+    STATUS_ACAO = [("pendente", "Pendente"), ("em_andamento", "Em Andamento"), ("concluida", "Concluída")]
+
+    inspecao = models.ForeignKey(InspecaoSeguranca, on_delete=models.CASCADE, related_name="itens")
+    descricao = models.CharField(max_length=300)
+    conforme = models.CharField(max_length=15, choices=CONFORME, default="conforme")
+    criticidade = models.CharField(max_length=10, choices=CRITICIDADE, default="media")
+    observacao = models.TextField(blank=True)
+    acao_corretiva = models.TextField(blank=True)
+    responsavel_acao = models.CharField(max_length=200, blank=True)
+    prazo = models.DateField(null=True, blank=True)
+    status_acao = models.CharField(max_length=15, choices=STATUS_ACAO, default="pendente")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.descricao} ({self.conforme})"
