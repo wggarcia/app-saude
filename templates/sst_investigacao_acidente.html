@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>SoloCRT · Investigação de Acidentes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% include "partials/sst_modulo_css.html" %}
+<style>
+.modal-bg{position:fixed;inset:0;background:rgba(4,8,16,.7);backdrop-filter:blur(4px);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:34px 16px;overflow-y:auto}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;width:100%;max-width:820px;padding:22px}
+.modal h2{font-size:1.05rem;font-weight:800;margin-bottom:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ishi-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px}
+.ishi-cat{background:var(--bg);border:1px solid var(--line2);border-radius:9px;padding:10px}
+.ishi-cat h4{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--teal);margin-bottom:6px}
+.ishi-cat textarea{width:100%;min-height:56px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:6px;padding:6px;font-size:.76rem;font-family:inherit;resize:vertical}
+.porques input{margin-bottom:6px}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+@media(max-width:700px){.row2{grid-template-columns:1fr}.ishi-grid{grid-template-columns:1fr}}
+</style>
+{% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+<div class="toast" id="toast"></div>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main class="main">
+    <div>
+      <div class="page-eyebrow">SST · Acidentes · Causa-raiz</div>
+      <div class="page-title">Investigação de Acidentes</div>
+      <div class="page-sub">Análise de causa-raiz de acidentes e incidentes com diagrama de Ishikawa (6M), 5 Porquês e plano de ação corretiva/preventiva com prazos. Vincula-se às CATs registradas.</div>
+    </div>
+    <div class="kpi-strip" id="kpiStrip"><div class="kpi-card"><div class="kpi-label">Carregando</div><div class="kpi-val">—</div></div></div>
+    <div class="panel">
+      <div class="panel-header"><h3>Investigações</h3><button class="btn-teal" onclick="abrir()">+ Nova Investigação</button></div>
+      <div id="lista"><div class="loading"><div class="spinner"></div> Carregando...</div></div>
+    </div>
+    <div class="panel" id="detPanel" style="display:none">
+      <div class="panel-header"><h3 id="detTit">—</h3><button class="btn-ghost" onclick="addAcao()">+ Ação corretiva</button></div>
+      <div id="det"></div>
+    </div>
+  </main>
+</div>
+<div class="modal-bg" id="modalBg"><div class="modal">
+  <h2>Nova Investigação de Acidente</h2>
+  <div class="row2">
+    <div class="field"><label>Título</label><input type="text" id="fTitulo"></div>
+    <div class="field"><label>Data da ocorrência</label><input type="date" id="fData"></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label>Local</label><input type="text" id="fLocal"></div>
+    <div class="field"><label>Responsável pela investigação</label><input type="text" id="fResp"></div>
+  </div>
+  <div class="field"><label>Descrição do evento</label><textarea id="fDesc"></textarea></div>
+  <div class="field"><label>Diagrama de Ishikawa — causas por categoria (6M)</label>
+    <div class="ishi-grid">
+      <div class="ishi-cat"><h4>Método</h4><textarea data-m="metodo" placeholder="uma causa por linha"></textarea></div>
+      <div class="ishi-cat"><h4>Máquina</h4><textarea data-m="maquina"></textarea></div>
+      <div class="ishi-cat"><h4>Mão de obra</h4><textarea data-m="mao_de_obra"></textarea></div>
+      <div class="ishi-cat"><h4>Material</h4><textarea data-m="material"></textarea></div>
+      <div class="ishi-cat"><h4>Meio ambiente</h4><textarea data-m="meio_ambiente"></textarea></div>
+      <div class="ishi-cat"><h4>Medição</h4><textarea data-m="medicao"></textarea></div>
+    </div>
+  </div>
+  <div class="field porques"><label>5 Porquês</label>
+    <input type="text" id="p1" placeholder="Por quê? (1)"><input type="text" id="p2" placeholder="Por quê? (2)">
+    <input type="text" id="p3" placeholder="Por quê? (3)"><input type="text" id="p4" placeholder="Por quê? (4)">
+    <input type="text" id="p5" placeholder="Por quê? (5)">
+  </div>
+  <div class="field"><label>Causa-raiz identificada</label><textarea id="fRaiz"></textarea></div>
+  <div class="modal-actions"><button class="btn-ghost" onclick="fechar()">Cancelar</button><button class="btn-teal" onclick="salvar()">Salvar</button></div>
+</div></div>
+<script>
+let ativo=null;
+function auth(){return sessionStorage.getItem("auth_token")||sessionStorage.getItem("token")||"";}
+function headers(){const h={"Content-Type":"application/json"};const t=auth();if(t)h["Authorization"]="Bearer "+t;return h;}
+function toast(m,ok=true){const e=document.getElementById("toast");e.textContent=m;e.className="toast "+(ok?"ok":"err")+" show";setTimeout(()=>e.className="toast",4000);}
+function st(s){const m={aberta:"b-amarelo",em_analise:"b-azul",concluida:"b-verde"};return `<span class="badge ${m[s]||'b-cinza'}">${(s||"").replace("_"," ")}</span>`;}
+function stA(s){const m={pendente:"b-amarelo",em_andamento:"b-azul",concluida:"b-verde"};return `<span class="badge ${m[s]||'b-cinza'}">${(s||"").replace("_"," ")}</span>`;}
+async function loadKpis(){
+  try{const r=await fetch("/api/sst/investigacoes/kpis/",{credentials:'include',headers:headers()});
+  if(!r.ok){document.getElementById("kpiStrip").innerHTML=`<div style="padding:14px;color:var(--amber);border:1px solid var(--amber);border-radius:10px">Requer plano Profissional (${r.status}).</div>`;return;}
+  const d=await r.json();
+  document.getElementById("kpiStrip").innerHTML=`
+    <div class="kpi-card" style="--kc:var(--teal)"><div class="kpi-label">Investigações</div><div class="kpi-val">${d.total}</div></div>
+    <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Abertas</div><div class="kpi-val">${d.abertas}</div></div>
+    <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Ações pendentes</div><div class="kpi-val">${d.acoes_pendentes}</div></div>
+    <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Ações concluídas</div><div class="kpi-val">${d.acoes_concluidas}</div></div>`;
+  }catch(e){}
+}
+async function loadLista(){
+  try{const r=await fetch("/api/sst/investigacoes/",{credentials:'include',headers:headers()});
+  if(!r.ok){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro (${r.status}).</div>`;return;}
+  const d=await r.json();
+  if(!d.investigacoes.length){document.getElementById("lista").innerHTML=`<div class="empty-state">Nenhuma investigação. Registre a primeira.</div>`;return;}
+  document.getElementById("lista").innerHTML=`<table class="tbl"><thead><tr><th>Título</th><th>Data</th><th>Método</th><th>Ações</th><th>Status</th><th></th></tr></thead><tbody>
+    ${d.investigacoes.map(i=>`<tr><td><strong>${i.titulo}</strong></td><td>${i.data_ocorrencia||"—"}</td><td>${i.metodo.replace("_"," ")}</td><td>${i.acoes_concluidas}/${i.acoes_total}</td><td>${st(i.status)}</td><td><button class="btn-ghost" onclick="abrirDet(${i.id},'${i.titulo.replace(/'/g,"")}')">Ações</button></td></tr>`).join("")}
+  </tbody></table>`;}catch(e){document.getElementById("lista").innerHTML=`<div class="empty-state">⚠️ Erro.</div>`;}
+}
+async function abrirDet(id,tit){
+  ativo=id;document.getElementById("detTit").textContent="Plano de ação — "+tit;document.getElementById("detPanel").style.display="block";
+  const r=await fetch(`/api/sst/investigacoes/${id}/`,{credentials:'include',headers:headers()});const d=await r.json();
+  const raiz=d.causa_raiz?`<div style="padding:10px 16px;font-size:.8rem"><strong>Causa-raiz:</strong> <span style="color:var(--muted)">${d.causa_raiz}</span></div>`:"";
+  const acoes=d.acoes||[];
+  document.getElementById("det").innerHTML=raiz+((acoes.length)?`<table class="tbl"><thead><tr><th>Ação</th><th>Tipo</th><th>Responsável</th><th>Prazo</th><th>Status</th><th></th></tr></thead><tbody>
+    ${acoes.map(a=>`<tr><td>${a.descricao}</td><td>${a.tipo}</td><td>${a.responsavel||"—"}</td><td>${a.prazo||"—"}</td><td>${stA(a.status)}</td><td>${a.status!=='concluida'?`<button class="btn-ghost" onclick="concluir(${a.id})">Concluir</button>`:""} <button class="btn-ghost" onclick="delAcao(${a.id})">×</button></td></tr>`).join("")}
+  </tbody></table>`:`<div class="empty-state">Nenhuma ação. Adicione ações corretivas/preventivas.</div>`);
+  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+function abrir(){["fTitulo","fData","fLocal","fResp","fDesc","fRaiz","p1","p2","p3","p4","p5"].forEach(i=>document.getElementById(i).value="");document.querySelectorAll(".ishi-cat textarea").forEach(t=>t.value="");document.getElementById("modalBg").classList.add("show");}
+function fechar(){document.getElementById("modalBg").classList.remove("show");}
+async function salvar(){
+  const g=id=>document.getElementById(id).value;
+  if(!g("fTitulo")){toast("Título obrigatório.",false);return;}
+  const ishikawa={};document.querySelectorAll(".ishi-cat textarea").forEach(t=>{const v=t.value.trim();if(v)ishikawa[t.dataset.m]=v.split("\n").map(s=>s.trim()).filter(Boolean);});
+  const porques=["p1","p2","p3","p4","p5"].map(g).filter(Boolean);
+  const body={titulo:g("fTitulo"),data_ocorrencia:g("fData")||null,local:g("fLocal"),responsavel:g("fResp"),descricao:g("fDesc"),metodo:"ambos",ishikawa,cinco_porques:porques,causa_raiz:g("fRaiz")};
+  try{const r=await fetch("/api/sst/investigacoes/",{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify(body)});const d=await r.json();
+  if(d.ok){toast("Investigação registrada!");fechar();loadKpis();loadLista();}else toast(d.erro||"Erro",false);}catch(e){toast("Erro de conexão",false);}
+}
+function addAcao(){
+  if(!ativo)return;
+  const desc=prompt("Descrição da ação:");if(!desc)return;
+  const tipo=prompt("Tipo (corretiva/preventiva):","corretiva")||"corretiva";
+  const resp=prompt("Responsável:","")||"";const prazo=prompt("Prazo (YYYY-MM-DD):","")||"";
+  fetch(`/api/sst/investigacoes/${ativo}/acoes/`,{method:"POST",credentials:'include',headers:headers(),body:JSON.stringify({descricao:desc,tipo,responsavel:resp,prazo:prazo||null})})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Ação adicionada!");abrirDet(ativo,document.getElementById("detTit").textContent.replace("Plano de ação — ",""));loadKpis();}else toast(d.erro||"Erro",false);}).catch(()=>toast("Erro de conexão",false));
+}
+function concluir(id){
+  fetch(`/api/sst/investigacoes/acoes/${id}/`,{method:"PATCH",credentials:'include',headers:headers(),body:JSON.stringify({status:"concluida"})})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Ação concluída!");abrirDet(ativo,document.getElementById("detTit").textContent.replace("Plano de ação — ",""));loadKpis();}else toast(d.erro||"Erro",false);});
+}
+function delAcao(id){
+  if(!confirm("Remover ação?"))return;
+  fetch(`/api/sst/investigacoes/acoes/${id}/`,{method:"DELETE",credentials:'include',headers:headers()})
+    .then(r=>r.json()).then(d=>{if(d.ok){toast("Removida");abrirDet(ativo,document.getElementById("detTit").textContent.replace("Plano de ação — ",""));loadKpis();}});
+}
+document.getElementById("modalBg").addEventListener("click",e=>{if(e.target.id==="modalBg")fechar();});
+(async()=>{await Promise.all([loadKpis(),loadLista()]);})();
+</script>
+</body>
+</html>

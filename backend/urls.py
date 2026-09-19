@@ -422,6 +422,10 @@ from api.views_ordem_servico import (
     api_ordem_servico_ciencias, api_ordem_servico_pdf, sst_ordem_servico_page,
     os_ciencia_page, api_os_ciencia_publico,
 )
+from api.views_investigacao_acidente import (
+    api_investigacoes_kpis, api_investigacoes, api_investigacao_detalhe,
+    api_investigacao_acoes, api_investigacao_acao_detalhe, sst_investigacao_page,
+)
 from api.views_biometria import (
     api_biometria_cadastrar, api_biometria_detalhe,
     api_biometria_confirmar_entrega, api_biometria_kpis,
@@ -3181,6 +3185,14 @@ urlpatterns = [
     path('api/sst/audiometria/funcionario/<int:funcionario_id>/historico/', api_audiometria_historico),
     path('api/sst/audiometria/<int:aud_id>/', api_audiometria_detalhe),
     path('api/sst/audiometria/<int:aud_id>/pdf/', api_audiometria_pdf),
+
+    # ── Investigação de Acidentes (Ishikawa / 5 Porquês) ──────────────────────
+    path('sst/investigacoes/', sst_investigacao_page),
+    path('api/sst/investigacoes/kpis/', api_investigacoes_kpis),
+    path('api/sst/investigacoes/', api_investigacoes),
+    path('api/sst/investigacoes/acoes/<int:acao_id>/', api_investigacao_acao_detalhe),
+    path('api/sst/investigacoes/<int:inv_id>/', api_investigacao_detalhe),
+    path('api/sst/investigacoes/<int:inv_id>/acoes/', api_investigacao_acoes),
 
     # ── Ordem de Serviço de SST — NR-01 ───────────────────────────────────────
     path('sst/ordens-servico/', sst_ordem_servico_page),

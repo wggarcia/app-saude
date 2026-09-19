@@ -7,6 +7,7 @@ from api.models import (
     Empresa, FuncionarioSST, EleicaoCIPA, CandidatoCIPA, VotanteCIPA, VotoCIPA,
     SincronizacaoEPIOffline, EPIItem, EntregaEPI, ClienteConsultoriaSST,
     TokenIntegracaoSST, OrdemServicoSST, OrdemServicoCiencia,
+    InvestigacaoAcidente, AcaoCorretivaAcidente,
 )
 
 
@@ -101,3 +102,27 @@ class OrdemServicoTest(_Base):
         OrdemServicoCiencia.objects.create(ordem=o, funcionario=self.f2, assinado=False)
         self.assertEqual(o.ciencias.filter(assinado=True).count(), 1)
         self.assertEqual(o.ciencias.count(), 2)
+
+
+class InvestigacaoAcidenteTest(_Base):
+    def test_ishikawa_e_porques_persistem(self):
+        i = InvestigacaoAcidente.objects.create(
+            empresa=self.emp, titulo="Queda", metodo="ambos",
+            ishikawa={"mao_de_obra": ["sem treinamento"], "material": ["piso molhado"]},
+            cinco_porques=["escorregou", "piso molhado", "vazamento", "cano velho", "sem manutenção"],
+            causa_raiz="Falta de manutenção preventiva",
+        )
+        i.refresh_from_db()
+        self.assertEqual(i.ishikawa["material"], ["piso molhado"])
+        self.assertEqual(len(i.cinco_porques), 5)
+
+    def test_kpi_acoes(self):
+        i = InvestigacaoAcidente.objects.create(empresa=self.emp, titulo="Ev")
+        AcaoCorretivaAcidente.objects.create(investigacao=i, descricao="a1", status="concluida")
+        AcaoCorretivaAcidente.objects.create(investigacao=i, descricao="a2", status="pendente")
+        self.assertEqual(i.acoes.count(), 2)
+        self.assertEqual(i.acoes.filter(status="concluida").count(), 1)
+
+    def test_isolamento_por_empresa(self):
+        i = InvestigacaoAcidente.objects.create(empresa=self.emp, titulo="X")
+        self.assertFalse(InvestigacaoAcidente.objects.filter(id=i.id, empresa=self.outra).exists())

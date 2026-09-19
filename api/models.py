@@ -15813,3 +15813,66 @@ class OrdemServicoCiencia(models.Model):
 
     def __str__(self):
         return f"Ciência OS {self.ordem_id} — {self.funcionario.nome}"
+
+
+# ── Investigação de Acidentes (Ishikawa / 5 Porquês) ────────────────────────────
+
+class InvestigacaoAcidente(models.Model):
+    """Investigação de causa-raiz de acidente/incidente, com diagrama de Ishikawa
+    (6M) e/ou 5 Porquês, e plano de ação corretiva/preventiva. Liga-se à CAT."""
+    METODO = [("ishikawa", "Ishikawa (6M)"), ("cinco_porques", "5 Porquês"), ("ambos", "Ambos")]
+    STATUS = [
+        ("aberta", "Aberta"),
+        ("em_analise", "Em Análise"),
+        ("concluida", "Concluída"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="investigacoes_acidente")
+    cat = models.ForeignKey(
+        CATOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="investigacoes"
+    )
+    funcionario = models.ForeignKey(
+        FuncionarioSST, on_delete=models.SET_NULL, null=True, blank=True, related_name="investigacoes_acidente"
+    )
+    titulo = models.CharField(max_length=200)
+    data_ocorrencia = models.DateField(null=True, blank=True)
+    local = models.CharField(max_length=200, blank=True)
+    descricao = models.TextField(blank=True, verbose_name="Descrição do evento")
+    metodo = models.CharField(max_length=20, choices=METODO, default="ishikawa")
+    # Ishikawa: {"metodo":[...],"maquina":[...],"mao_de_obra":[...],"material":[...],"meio_ambiente":[...],"medicao":[...]}
+    ishikawa = models.JSONField(default=dict, blank=True)
+    # 5 Porquês: ["porque1","porque2",...]
+    cinco_porques = models.JSONField(default=list, blank=True)
+    causa_raiz = models.TextField(blank=True)
+    responsavel = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="aberta")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"Investigação {self.titulo} — {self.empresa.nome}"
+
+
+class AcaoCorretivaAcidente(models.Model):
+    """Ação corretiva/preventiva de uma investigação (plano de ação 5W2H simplificado)."""
+    TIPO = [("corretiva", "Corretiva"), ("preventiva", "Preventiva")]
+    STATUS = [("pendente", "Pendente"), ("em_andamento", "Em Andamento"), ("concluida", "Concluída")]
+
+    investigacao = models.ForeignKey(InvestigacaoAcidente, on_delete=models.CASCADE, related_name="acoes")
+    descricao = models.TextField()
+    tipo = models.CharField(max_length=12, choices=TIPO, default="corretiva")
+    responsavel = models.CharField(max_length=200, blank=True)
+    prazo = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS, default="pendente")
+    concluida_em = models.DateField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["prazo", "id"]
+
+    def __str__(self):
+        return f"Ação {self.tipo} ({self.status}) — inv {self.investigacao_id}"
