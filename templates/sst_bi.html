@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+{% include "_favicon.html" %}
+<meta charset="UTF-8">
+<title>SoloCRT · BI / Indicadores SST</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% include "partials/sst_modulo_css.html" %}
+<style>
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.mini{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:13px 14px;position:relative;overflow:hidden}
+.mini::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal));opacity:.7}
+.mini .l{font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.mini .v{font-size:1.5rem;font-weight:900;line-height:1}
+.sect-title{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin:6px 2px 2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.two{grid-template-columns:1fr}}
+.chartbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.chartbox h3{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px}
+</style>
+{% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+<div class="toast" id="toast"></div>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main class="main">
+    <div>
+      <div class="page-eyebrow">SST · Indicadores</div>
+      <div class="page-title">Painel de BI — SST</div>
+      <div class="page-sub">Visão executiva consolidada de todos os módulos de SST: conformidade, saúde ocupacional, acidentes, inspeções, treinamentos e gestão — em tempo real.</div>
+    </div>
+    <div id="conteudo"><div class="loading"><div class="spinner"></div> Carregando indicadores...</div></div>
+  </main>
+</div>
+<script>
+function auth(){return sessionStorage.getItem("auth_token")||sessionStorage.getItem("token")||"";}
+function headers(){const h={"Content-Type":"application/json"};const t=auth();if(t)h["Authorization"]="Bearer "+t;return h;}
+function mini(l,v,cor){return `<div class="mini" style="--kc:${cor}"><div class="l">${l}</div><div class="v">${v}</div></div>`;}
+function donut(pct){
+  if(pct===null||pct===undefined)return `<div style="color:var(--muted);font-size:.85rem">Sem inspeções avaliadas ainda.</div>`;
+  const r=52,c=2*Math.PI*r,off=c*(1-pct/100);
+  const cor=pct>=85?"#22c55e":(pct>=60?"#f59e0b":"#ef4444");
+  return `<svg viewBox="0 0 140 140" style="width:150px;height:150px">
+    <circle cx="70" cy="70" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="14"/>
+    <circle cx="70" cy="70" r="${r}" fill="none" stroke="${cor}" stroke-width="14" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 70 70)"/>
+    <text x="70" y="66" text-anchor="middle" fill="var(--text)" font-size="26" font-weight="800">${pct}%</text>
+    <text x="70" y="86" text-anchor="middle" fill="var(--muted)" font-size="9">conformidade</text>
+  </svg>`;
+}
+function bars(serie){
+  if(!serie||!serie.length)return `<div style="color:var(--muted);font-size:.85rem">Sem dados.</div>`;
+  const max=Math.max(1,...serie.map(s=>s.valor));const W=serie.length*54,H=150,bw=30;
+  let b="";serie.forEach((s,i)=>{const h=Math.round((s.valor/max)*110);const x=i*54+12;const y=120-h;
+    b+=`<rect x="${x}" y="${y}" width="${bw}" height="${h||2}" rx="4" fill="url(#g)"/>
+        <text x="${x+bw/2}" y="${y-4}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="700">${s.valor}</text>
+        <text x="${x+bw/2}" y="138" text-anchor="middle" fill="var(--muted)" font-size="8">${s.mes}</text>`;});
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00c9a7"/><stop offset="1" stop-color="#0077ff"/></linearGradient></defs>${b}</svg>`;
+}
+async function carregar(){
+  try{
+    const r=await fetch("/api/sst/bi/indicadores/",{credentials:'include',headers:headers()});
+    if(!r.ok){const e=await r.json().catch(()=>({}));
+      document.getElementById("conteudo").innerHTML=`<div class="empty-state">${e.upgrade_necessario?"🔒 Requer plano Enterprise.":"⚠️ Erro ("+r.status+")."}</div>`;return;}
+    const d=await r.json();
+    const p=d.pessoas,s=d.saude,a=d.acidentes,c=d.conformidade,g=d.gestao;
+    document.getElementById("conteudo").innerHTML=`
+      <div class="sect-title">Pessoas & Documentos</div>
+      <div class="grid-cards">
+        ${mini("Funcionários ativos",p.funcionarios_ativos,"var(--teal)")}
+        ${mini("ASOs vencidos",p.asos_vencidos,"var(--red)")}
+        ${mini("ASOs vencendo (30d)",p.asos_vencendo_30d,"var(--amber)")}
+        ${mini("Exames vencidos",p.exames_vencidos,"var(--red)")}
+      </div>
+      <div class="sect-title">Saúde Ocupacional</div>
+      <div class="grid-cards">
+        ${mini("Audiometria — PAIR",s.audiometria_pair,"var(--red)")}
+        ${mini("Audiometria — retestes",s.audiometria_retestes,"var(--amber)")}
+        ${mini("Espirometria alteradas",s.espirometria_alteradas,"var(--amber)")}
+        ${mini("Psicossocial ativas",g.psicossocial_ativas,"var(--purple)")}
+      </div>
+      <div class="two" style="margin-top:6px">
+        <div class="chartbox"><h3>Acidentes (CAT) por mês</h3>${bars(a.serie_mensal)}
+          <div style="display:flex;gap:18px;margin-top:12px;font-size:.75rem;color:var(--muted)">
+            <span>Ano: <strong style="color:var(--text)">${a.cats_ano}</strong></span>
+            <span>Investigações abertas: <strong style="color:var(--text)">${a.investigacoes_abertas}</strong></span>
+            <span>Ações pendentes: <strong style="color:var(--text)">${a.acoes_pendentes}</strong></span>
+          </div>
+        </div>
+        <div class="chartbox"><h3>Conformidade média (inspeções)</h3>
+          <div style="display:flex;align-items:center;gap:20px">${donut(c.conformidade_media)}
+            <div style="font-size:.8rem;line-height:2">
+              <div>Inspeções: <strong>${c.inspecoes_total}</strong></div>
+              <div>Não conformidades: <strong style="color:#f87171">${c.nao_conformidades}</strong></div>
+              <div>Treinamentos vencidos: <strong style="color:#fbbf24">${c.treinamentos_vencidos}</strong></div>
+              <div>Ciências de OS pendentes: <strong style="color:#fbbf24">${c.os_ciencias_pendentes}</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sect-title">Gestão</div>
+      <div class="grid-cards">
+        ${mini("CIPA ativa",g.cipa_ativa?"Sim":"Não",g.cipa_ativa?"var(--green)":"var(--amber)")}
+        ${mini("Não conformidades",c.nao_conformidades,"var(--red)")}
+        ${mini("CATs no ano",a.cats_ano,"var(--amber)")}
+        ${mini("Ações pendentes",a.acoes_pendentes,"var(--red)")}
+      </div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:14px">Atualizado em ${d.gerado_em}</div>`;
+  }catch(e){document.getElementById("conteudo").innerHTML=`<div class="empty-state">⚠️ Erro ao carregar indicadores.</div>`;}
+}
+carregar();
+</script>
+</body>
+</html>

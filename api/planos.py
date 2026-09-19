@@ -47,6 +47,7 @@ _SST_ENTERPRISE = _SST_PROFISSIONAL + [
     "sst.assistente_ia",    # Assistente IA (RAG) — perguntas em linguagem natural
     "sst.portal_cliente",   # Portal do Cliente (SEC) — consultoria compartilha docs com empresa-cliente
     "sst.integracao_api",   # API de integração com ERP/RH/Folha externos
+    "sst.bi",               # Painel de BI / Indicadores SST consolidado
 ]
 _SST_CORPORATIVO = _SST_ENTERPRISE + [
     "sst.turnos",                   # Gestão de turnos

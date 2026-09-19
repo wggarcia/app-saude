@@ -99,6 +99,7 @@
     {% if mostrar_aba_gerencia %}
     <a class="sb-link {% if '/gerencia/' in p %}active{% endif %}" href="/gerencia/"><span class="sb-icon">🧭</span><span>Gerência Executiva</span></a>
     {% endif %}
+    <a class="sb-link {% if p == '/sst/bi/' %}active{% endif %}" href="/sst/bi/"><span class="sb-icon">📊</span><span>BI / Indicadores</span></a>
     <a class="sb-link {% if p == '/sst/relatorios/' %}active{% endif %}" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
   </div>
 </details>

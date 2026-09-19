@@ -430,6 +430,7 @@ from api.views_inspecoes import (
     api_inspecoes_kpis, api_inspecoes, api_inspecao_detalhe,
     api_inspecao_itens, api_inspecao_item_detalhe, sst_inspecoes_page,
 )
+from api.views_bi_sst import api_bi_indicadores, sst_bi_page
 from api.views_biometria import (
     api_biometria_cadastrar, api_biometria_detalhe,
     api_biometria_confirmar_entrega, api_biometria_kpis,
@@ -3189,6 +3190,10 @@ urlpatterns = [
     path('api/sst/audiometria/funcionario/<int:funcionario_id>/historico/', api_audiometria_historico),
     path('api/sst/audiometria/<int:aud_id>/', api_audiometria_detalhe),
     path('api/sst/audiometria/<int:aud_id>/pdf/', api_audiometria_pdf),
+
+    # ── BI / Indicadores SST consolidado ──────────────────────────────────────
+    path('sst/bi/', sst_bi_page),
+    path('api/sst/bi/indicadores/', api_bi_indicadores),
 
     # ── Inspeções de Segurança / Checklists ───────────────────────────────────
     path('sst/inspecoes/', sst_inspecoes_page),
