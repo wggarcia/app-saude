@@ -104,7 +104,11 @@ Separe com exatamente:
             legenda = titulo
         return {"titulo": titulo, "legenda": legenda}
     except Exception as exc:
-        logger.error("instagram_service: erro ao gerar conteúdo segmento=%s: %s", segmento, exc)
+        from .email_ai import _e_indisponibilidade_ia
+        if _e_indisponibilidade_ia(exc):
+            logger.warning("instagram_service: IA indisponível (billing/quota) segmento=%s: %s", segmento, exc)
+        else:
+            logger.error("instagram_service: erro ao gerar conteúdo segmento=%s: %s", segmento, exc)
         raise
 
 

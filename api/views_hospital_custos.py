@@ -531,6 +531,10 @@ def api_custos_margem_ia_analise(request):
         analise = json.loads(raw)
         analise["fonte"] = "ia"
         return JsonResponse({"analise": analise})
-    except Exception:
-        logger.exception("IA de margem DRG %s/%s — caindo em fallback por regras", codigo, competencia)
+    except Exception as exc:
+        from .email_ai import _e_indisponibilidade_ia
+        if _e_indisponibilidade_ia(exc):
+            logger.warning("IA de margem DRG %s/%s — IA indisponível (billing/quota), fallback por regras: %s", codigo, competencia, exc)
+        else:
+            logger.exception("IA de margem DRG %s/%s — caindo em fallback por regras", codigo, competencia)
         return JsonResponse({"analise": _margem_causa_fallback(codigo, competencia, linha, por_categoria)})

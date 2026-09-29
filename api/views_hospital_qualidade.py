@@ -405,6 +405,10 @@ def api_qualidade_ia_analise(request, pk):
         analise = json.loads(raw)
         analise["fonte"] = "ia"
         return JsonResponse({"analise": analise})
-    except Exception:
-        logger.exception("IA análise NSP pk=%s — caindo em fallback por regras", pk)
+    except Exception as exc:
+        from .email_ai import _e_indisponibilidade_ia
+        if _e_indisponibilidade_ia(exc):
+            logger.warning("IA análise NSP pk=%s — IA indisponível (billing/quota), fallback por regras: %s", pk, exc)
+        else:
+            logger.exception("IA análise NSP pk=%s — caindo em fallback por regras", pk)
         return JsonResponse({"analise": _analise_causa_raiz_fallback(inc)})

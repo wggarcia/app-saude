@@ -151,7 +151,11 @@ Separe com exatamente:
         return {"assunto": assunto, "corpo_html": corpo_html, "corpo_texto": corpo_texto}
 
     except Exception as exc:
-        logger.error("trial_nurture: erro ao gerar tema=%s empresa=%s: %s", tema, empresa.id, exc)
+        from .email_ai import _e_indisponibilidade_ia
+        if _e_indisponibilidade_ia(exc):
+            logger.warning("trial_nurture: IA indisponível (billing/quota) tema=%s empresa=%s: %s", tema, empresa.id, exc)
+        else:
+            logger.error("trial_nurture: erro ao gerar tema=%s empresa=%s: %s", tema, empresa.id, exc)
         raise
 
 

@@ -561,8 +561,12 @@ def paciente_exame_explicar(request, pk):
         if not texto:
             return JsonResponse(_explicar_fallback(nomes, r.laudo, r.resultados_json))
         return JsonResponse({"explicacao": texto, "fonte": "ia"})
-    except Exception:
-        logger.exception("IA explicar exame paciente pk=%s — fallback por regras", pk)
+    except Exception as exc:
+        from .email_ai import _e_indisponibilidade_ia
+        if _e_indisponibilidade_ia(exc):
+            logger.warning("IA explicar exame paciente pk=%s — IA indisponível (billing/quota), fallback por regras: %s", pk, exc)
+        else:
+            logger.exception("IA explicar exame paciente pk=%s — fallback por regras", pk)
         return JsonResponse(_explicar_fallback(nomes, r.laudo, r.resultados_json))
 
 
