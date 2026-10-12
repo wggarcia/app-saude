@@ -172,6 +172,15 @@ _PANORAMA_CACHE_PAYLOAD_KEY = "epidemiologia:panorama:payload"
 # atualiza sozinho a cada 30s (dashboard_governo.html), então isso cobre o
 # pior caso sem sobrecarregar o banco (a query custa 4-9s sem cache).
 _CACHE_TTL_SECONDS = 8
+# Stale-while-revalidate: depois do TTL curto acima, a última cópia boa (da MESMA
+# versão de cache) ainda é servida na hora enquanto UMA thread recalcula em segundo
+# plano. Sem isso, com o app atualizando a cada 30s e a query custando 4-18s, quase
+# todo pedido pagava o recálculo inteiro (visto no Sentry: /api/epidemiologia 5-19s).
+# Teto de idade: acima dele recalcula de forma síncrona, como antes.
+_PANORAMA_STALE_MAX_S = 900
+_PANORAMA_STALE_KEY = "epidemiologia:panorama:stale"
+_PANORAMA_REFRESH_LOCK_KEY = "epidemiologia:panorama:refresh_lock"
+_PANORAMA_REFRESH_LOCAL = {"running": False}
 _PUBLIC_EMPRESA_CACHE = {"obj": None, "loaded": False, "next_retry": 0.0, "use_owner": True}
 _EMPRESA_MISS_RETRY_S = 30  # retry interval when empresa not found (cold-start guard)
 
@@ -1376,6 +1385,54 @@ def _aggregate_overview(layers, empresa_pub=None):
     return overview
 
 
+def _panorama_stale(current_version, now):
+    """Última cópia boa da MESMA versão e com idade dentro do teto, ou None.
+    Procura primeiro na memória do worker e depois no Redis (compartilhado)."""
+    if (
+        _PANORAMA_CACHE["payload"] is not None
+        and _PANORAMA_CACHE.get("version") == current_version
+        and now - _PANORAMA_CACHE["created_at"] < _PANORAMA_STALE_MAX_S
+    ):
+        return _PANORAMA_CACHE["payload"]
+    try:
+        reg = cache.get(f"{_PANORAMA_STALE_KEY}:{current_version}")
+    except Exception:
+        reg = None
+    if reg and now - reg.get("t", 0) < _PANORAMA_STALE_MAX_S:
+        return reg.get("p")
+    return None
+
+
+def _refresh_panorama_background(current_version):
+    """Recalcula o panorama numa thread, no máximo uma por vez (trava local + trava
+    no Redis entre workers). Falha só gera log — o pedido já foi respondido."""
+    import threading
+
+    if _PANORAMA_REFRESH_LOCAL["running"]:
+        return
+    try:
+        if not cache.add(f"{_PANORAMA_REFRESH_LOCK_KEY}:{current_version}", 1, 60):
+            return  # outro worker já está recalculando
+    except Exception:
+        pass
+    _PANORAMA_REFRESH_LOCAL["running"] = True
+
+    def _run():
+        try:
+            _compute_and_cache_panorama(current_version, time())
+        except Exception:
+            logger.warning("panorama: recálculo em segundo plano falhou", exc_info=True)
+        finally:
+            _PANORAMA_REFRESH_LOCAL["running"] = False
+            try:
+                from django.db import connections
+                connections.close_all()
+            except Exception:
+                pass
+
+    threading.Thread(target=_run, name="panorama-refresh", daemon=True).start()
+
+
 def build_panorama_payload():
     now = time()
     current_version = _current_panorama_cache_version()
@@ -1397,6 +1454,19 @@ def build_panorama_payload():
         _PANORAMA_CACHE["version"] = current_version
         return cached
 
+    # TTL vencido: serve a última cópia boa já e recalcula em segundo plano.
+    # Versão diferente (clear_panorama_cache) NUNCA cai aqui: recalcula na hora.
+    if not _TESTING:
+        stale = _panorama_stale(current_version, now)
+        if stale is not None:
+            _refresh_panorama_background(current_version)
+            return stale
+
+    return _compute_and_cache_panorama(current_version, now)
+
+
+def _compute_and_cache_panorama(current_version, now):
+    redis_key = f"{_PANORAMA_CACHE_PAYLOAD_KEY}:{current_version}"
     # Todas as queries do panorama usam .using("owner") + .filter(empresa=_empresa_pub)
     # para não depender do RLS (que varia conforme o middleware do gestor logado).
     _empresa_pub = _public_population_empresa()
@@ -1435,6 +1505,11 @@ def build_panorama_payload():
     total_registros = sum(a.get("raw_total_cases", 0) for a in layers.get("bairros", []))
     if total_registros > 0:
         cache.set(redis_key, payload, _CACHE_TTL_SECONDS)
+        try:
+            cache.set(f"{_PANORAMA_STALE_KEY}:{current_version}",
+                      {"t": now, "p": payload}, _PANORAMA_STALE_MAX_S)
+        except Exception:
+            pass
         _PANORAMA_CACHE["created_at"] = now
         _PANORAMA_CACHE["payload"] = payload
         _PANORAMA_CACHE["version"] = current_version

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from time import time
 
+import sys
 import requests
 from django.core.cache import cache
 from django.db.models import Count
@@ -11,6 +13,8 @@ from django.utils import timezone
 
 from .models import FonteOficialAgregado, FonteOficialExecucao, RegistroSintoma
 from .utils_cidades import carregar_base
+
+logger = logging.getLogger(__name__)
 
 
 _CACHE = {"created_at": 0.0, "payload": None}
@@ -602,15 +606,50 @@ def _arboviroses_oficiais(municipios):
     return resultado
 
 
+_STALE_MAX_SECONDS = 6 * 3600
+_REFRESH_LOCAL = {"running": False}
+
+
+def _atualizar_em_segundo_plano():
+    """Recalcula o panorama numa thread (uma por vez). Quem pediu já recebeu a cópia
+    anterior — evita que a primeira chamada após o TTL espere 7-10s nas fontes externas
+    (visto no Sentry em /api/brasil/fontes-oficiais)."""
+    import threading
+
+    if _REFRESH_LOCAL["running"]:
+        return
+    _REFRESH_LOCAL["running"] = True
+
+    def _run():
+        try:
+            _panorama_brasil_calcular(time())
+        except Exception:
+            logger.warning("fontes-oficiais: recálculo em segundo plano falhou", exc_info=True)
+        finally:
+            _REFRESH_LOCAL["running"] = False
+            try:
+                from django.db import connections
+                connections.close_all()
+            except Exception:
+                pass
+
+    threading.Thread(target=_run, name="fontes-oficiais-refresh", daemon=True).start()
+
+
 def panorama_brasil_oficial_payload(force=False):
     now = time()
-    if (
-        not force
-        and _CACHE["payload"] is not None
-        and now - _CACHE["created_at"] < _CACHE_TTL_SECONDS
-    ):
-        return _CACHE["payload"]
+    if not force and _CACHE["payload"] is not None:
+        idade = now - _CACHE["created_at"]
+        if idade < _CACHE_TTL_SECONDS:
+            return _CACHE["payload"]
+        # Vencido: serve a cópia anterior e atualiza em segundo plano (teto: 6h).
+        if idade < _STALE_MAX_SECONDS and "test" not in sys.argv:
+            _atualizar_em_segundo_plano()
+            return _CACHE["payload"]
+    return _panorama_brasil_calcular(now)
 
+
+def _panorama_brasil_calcular(now):
     municipios = _municipios_por_sinal()
     arboviroses = _arboviroses_oficiais(municipios)
     respiratorio = _fetch_infogripe_brasil()

@@ -84,13 +84,34 @@ def listar_tabelas():
     ]
 
 
-def buscar_pagina(tabela, termo="", page=1):
+def _get_com_retry(url, params, tentativas=1, espera=2.0):
+    """GET com nova tentativa em timeout/erro de rede/5xx (backoff 2s, 4s, 8s…).
+    `tentativas=1` = comportamento antigo (busca ao vivo da tela não pode esperar);
+    o sync mensal passa mais tentativas porque a API da ANS oscila."""
+    import time
+    import requests
+    ultimo = None
+    for n in range(max(1, tentativas)):
+        try:
+            resp = _sessao().get(url, params=params, timeout=TIMEOUT)
+            if resp.status_code >= 500:
+                raise requests.HTTPError(f"HTTP {resp.status_code}", response=resp)
+            return resp
+        except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+            ultimo = e
+            if n + 1 < tentativas:
+                logger.warning("ANS TUSS tentativa %d/%d falhou (%s); nova em %.0fs",
+                               n + 1, tentativas, e, espera * (2 ** n))
+                time.sleep(espera * (2 ** n))
+    raise ultimo
+
+
+def buscar_pagina(tabela, termo="", page=1, tentativas=1):
     """GET /concepts/{tabela}?page=N&q=termo — uma página normalizada."""
-    sess = _sessao()
     params = {"page": page}
     if termo:
         params["q"] = termo
-    resp = sess.get(f"{BASE_URL}/concepts/{tabela}", params=params, timeout=TIMEOUT)
+    resp = _get_com_retry(f"{BASE_URL}/concepts/{tabela}", params, tentativas=tentativas)
     resp.raise_for_status()
     dados = resp.json()
     if not isinstance(dados, list):
@@ -125,7 +146,7 @@ def iterar_tabela(tabela, termo="", max_paginas=0):
     while True:
         if max_paginas and page > max_paginas:
             return
-        pagina = buscar_pagina(tabela, termo, page)
+        pagina = buscar_pagina(tabela, termo, page, tentativas=4)
         if not pagina:
             return
         for item in pagina:
