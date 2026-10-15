@@ -1368,7 +1368,9 @@ def _seed_empresa(empresa):
         # Reuniões
         reuniao_realizada = ReuniaoCIPA.objects.create(
             comissao=cipa, tipo="ordinaria",
-            data_reuniao=_datetime.datetime.combine(hoje - timedelta(days=30), _datetime.time(9, 0)),
+            data_reuniao=timezone.make_aware(
+                _datetime.datetime.combine(hoje - timedelta(days=30), _datetime.time(9, 0)),
+                timezone.get_current_timezone()),
             local="Sala de Reuniões — Demo",
             pauta="1. Análise de acidentes\n2. Revisão PGR\n3. Inspeções programadas",
             ata="Reunião realizada com quórum mínimo. Identificados 2 pontos de melhoria.",
@@ -1377,7 +1379,9 @@ def _seed_empresa(empresa):
         criados.append("reuniao_cipa_realizada")
         reuniao_agendada = ReuniaoCIPA.objects.create(
             comissao=cipa, tipo="ordinaria",
-            data_reuniao=_datetime.datetime.combine(hoje + timedelta(days=15), _datetime.time(9, 0)),
+            data_reuniao=timezone.make_aware(
+                _datetime.datetime.combine(hoje + timedelta(days=15), _datetime.time(9, 0)),
+                timezone.get_current_timezone()),
             local="Sala de Reuniões — Demo",
             pauta="1. Relatório de EPIs\n2. Quase-acidentes\n3. SIPAT 2026",
             status="agendada",

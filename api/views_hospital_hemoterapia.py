@@ -17,7 +17,7 @@ import base64
 import json
 import logging
 import xml.etree.ElementTree as ET
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from django.db import transaction
 from django.db.models import Count, Q
@@ -48,6 +48,28 @@ def _hosp(request):
 def _get_hemo_models():
     from .models import BolsaSangue, SolicitacaoHemoterapia, TransfusaoPaciente, ReacaoTransfusional
     return BolsaSangue, SolicitacaoHemoterapia, TransfusaoPaciente, ReacaoTransfusional
+
+
+def _dt_aware(valor):
+    """Converte a data/hora recebida do cliente em datetime com fuso.
+
+    O formulário manda `datetime-local` ("AAAA-MM-DDTHH:MM"), sem fuso. Gravar
+    ingênuo com USE_TZ ativo faz o Django assumir UTC e deslocar em 3h o
+    horário real do evento — numa transfusão ou reação transfusional esse
+    horário é dado clínico (RDC 34/2014). Devolve None se não der para ler.
+    """
+    if not valor:
+        return None
+    if isinstance(valor, datetime):
+        bruto = valor
+    else:
+        try:
+            bruto = datetime.fromisoformat(str(valor))
+        except (ValueError, TypeError):
+            return None
+    if timezone.is_naive(bruto):
+        return timezone.make_aware(bruto, timezone.get_current_timezone())
+    return bruto
 
 
 @ensure_csrf_cookie
@@ -324,7 +346,7 @@ def api_hemo_transfusoes(request):
             solicitacao_id=data.get("solicitacao_id"),
             paciente_nome=data["paciente_nome"],
             cpf_paciente=data.get("cpf_paciente", ""),
-            data_inicio=data.get("data_inicio", timezone.now().isoformat()),
+            data_inicio=_dt_aware(data.get("data_inicio")) or timezone.now(),
             volume_ml=data.get("volume_ml"),
             enfermeiro=data.get("enfermeiro", ""),
             coren=data.get("coren", ""),
@@ -395,7 +417,7 @@ def api_hemo_reacoes(request):
             cpf_paciente=data.get("cpf_paciente", ""),
             tipo_reacao=data["tipo_reacao"],
             gravidade=data["gravidade"],
-            data_reacao=data.get("data_reacao", timezone.now().isoformat()),
+            data_reacao=_dt_aware(data.get("data_reacao")) or timezone.now(),
             descricao=data["descricao"],
             conduta=data.get("conduta", ""),
         )
@@ -593,7 +615,7 @@ def api_hemo_kpis(request):
         empresa=empresa, data_inicio__date__gte=mes_ini
     ).count()
     reacoes_mes = ReacaoTransfusional.objects.filter(
-        empresa=empresa, data_reacao__gte=mes_ini
+        empresa=empresa, data_reacao__date__gte=mes_ini
     ).count()
     graves_nao_notif = ReacaoTransfusional.objects.filter(
         empresa=empresa,

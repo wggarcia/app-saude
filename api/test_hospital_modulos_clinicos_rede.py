@@ -9,6 +9,8 @@ criação via API no tier liberado.
 import warnings
 from datetime import date, datetime, timedelta
 
+import logging
+
 import jwt
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
@@ -243,6 +245,92 @@ class HemoterapiaTests(TestCase):
         reacao = ReacaoTransfusional.objects.get(id=r.json()["id"])
         self.assertIsNotNone(reacao.data_reacao.tzinfo)
         self.assertLess(abs((timezone.now() - reacao.data_reacao).total_seconds()), 120)
+
+
+class FusoHorarioTests(TestCase):
+    """Regressões de datetime sem fuso.
+
+    Com USE_TZ ativo, gravar datetime ingênuo faz o Django assumir UTC e
+    deslocar o horário real em 3h (Brasil é UTC-3). Em evento clínico — uma
+    transfusão, uma reação transfusional — esse horário é dado assistencial.
+    E comparar datetime com fuso contra um sem fuso levanta TypeError.
+    """
+
+    def test_hora_da_reacao_transfusional_e_gravada_com_fuso(self):
+        """RDC 34/2014: a hora da reação é dado clínico. Deslocar 3h muda a
+        relação temporal entre a transfusão e a reação."""
+        from .models import ReacaoTransfusional
+        empresa = _empresa("Hospital Rede", "tz-hemo@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post(
+            "/api/hospital/hemoterapia/reacoes/",
+            data={"paciente_nome": "Paciente Reacao",
+                  "tipo_reacao": "febril", "gravidade": "leve",
+                  "data_reacao": f"{date.today().isoformat()}T14:30",
+                  "descricao": "Febre durante a transfusão"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:300])
+        reacao = ReacaoTransfusional.objects.get(empresa=empresa)
+        self.assertIsNotNone(reacao.data_reacao.tzinfo)
+        local = timezone.localtime(reacao.data_reacao)
+        self.assertEqual((local.hour, local.minute), (14, 30))
+
+    def test_hora_da_transfusao_e_gravada_com_fuso(self):
+        from .models import TransfusaoPaciente, BolsaSangue
+        empresa = _empresa("Hospital Rede", "tz-transf@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        bolsa = BolsaSangue.objects.create(
+            empresa=empresa, codigo_bolsa="B-001", tipo="ch",
+            tipo_abo="O", fator_rh="+", volume_ml=450,
+            validade=date.today() + timedelta(days=30), status="disponivel")
+        r = client.post(
+            "/api/hospital/hemoterapia/transfusoes/",
+            data={"paciente_nome": "Paciente Transf", "bolsa_id": bolsa.id,
+                  "data_inicio": f"{date.today().isoformat()}T08:15"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:300])
+        t = TransfusaoPaciente.objects.get(empresa=empresa)
+        self.assertIsNotNone(t.data_inicio.tzinfo)
+        self.assertEqual(timezone.localtime(t.data_inicio).hour, 8)
+
+    def test_data_invalida_na_reuniao_da_cipa_e_recusada(self):
+        """Antes o valor cru ia direto para o campo; agora é validado."""
+        from .models import ComissaoCIPA
+        empresa = _empresa("Industria", "tz-cipa@example.com",
+                           "empresa_profissional_25")
+        client = _client_for(empresa)
+        comissao = ComissaoCIPA.objects.create(
+            empresa=empresa, mandato_inicio=date.today(),
+            mandato_fim=date.today() + timedelta(days=365), status="ativa")
+        r = client.post(f"/api/sst/cipa/comissoes/{comissao.id}/reunioes/",
+                        data={"data_reuniao": "nao-e-data"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("data_reuniao", r.json()["erro"])
+
+    def test_alertas_do_hospital_nao_morrem_por_comparacao_de_fuso(self):
+        """O BUG QUE ESTAVA VIVO: `registrado_em` (com fuso) era comparado com
+        `datetime.now()` (sem fuso). Isso levanta TypeError, que um
+        `except: pass` engolia — e os SETE alertas do hospital sumiam juntos,
+        sem nada no log. O painel ficava vazio e ninguém sabia por quê."""
+        from .models import (PacienteHospital, InternacaoHospital,
+                             EvolucaoClinica)
+        from .views_alertas import _alertas_hospital
+        empresa = _empresa("Hospital Rede", "tz-alerta@example.com",
+                           "hospital_rede")
+        pac = PacienteHospital.objects.create(empresa=empresa, nome="Internado")
+        inte = InternacaoHospital.objects.create(
+            empresa=empresa, paciente=pac, diagnostico="X", status="ativa")
+        # Uma evolução registrada: é o que fazia a comparação acontecer.
+        EvolucaoClinica.objects.create(internacao=inte, descricao="Evolução de hoje")
+
+        with self.assertLogs("api.views_alertas", level="ERROR") as capturado:
+            _alertas_hospital(empresa, date.today())
+            # Não deve ter logado nada: se logou, a função ainda está quebrando.
+            logging.getLogger("api.views_alertas").error("sentinela")
+        self.assertEqual(
+            [m for m in capturado.output if "sentinela" not in m], [],
+            "a montagem de alertas do hospital levantou exceção")
 
 
 class ObstetricoTests(TestCase):

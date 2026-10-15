@@ -135,7 +135,7 @@ def _extrair_features(dados: dict) -> dict:
     empresa_id = dados.get("empresa_id")
     if beneficiario_plano_id and empresa_id:
         try:
-            ha_12_meses = datetime.now() - timedelta(days=365)
+            ha_12_meses = timezone.now() - timedelta(days=365)
             historico = int(
                 Sinistro.objects.filter(
                     empresa_id=empresa_id,

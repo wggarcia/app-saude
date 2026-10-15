@@ -12,11 +12,16 @@ Varre todos os módulos da empresa autenticada e retorna alertas categorizados:
 Cada alerta tem: modulo, severidade (critico/alerta/info), titulo, descricao, link, criado_em
 """
 
+import logging
 from datetime import date, timedelta, datetime
+
+from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .views_dashboard import _empresa_autenticada
 from .access_control import empresa_tem_feature
+
+logger = logging.getLogger(__name__)
 
 
 def _alerta(modulo, severidade, titulo, descricao, link=""):
@@ -218,7 +223,7 @@ def _alertas_hospital(empresa, hoje):
                 "/hospital/gestao/"))
 
         # Internações ativas há mais de 30 dias sem evolução recente
-        limite_evolucao = datetime.now() - timedelta(days=2)
+        limite_evolucao = timezone.now() - timedelta(days=2)
         internacoes_ativas = InternacaoHospital.objects.filter(
             leito__departamento__empresa=empresa,
             status="ativa",
@@ -267,7 +272,12 @@ def _alertas_hospital(empresa, hoje):
                     "/hospital/gestao/"))
 
     except Exception:
-        pass
+        # Antes isto era um `pass` mudo. Um TypeError de comparação
+        # entre datetime com e sem fuso derrubava a função inteira e
+        # os 7 alertas do hospital sumiam sem deixar rastro. Engolir
+        # para não quebrar o painel é aceitável; engolir SEM LOG não.
+        logger.exception("Falha ao montar alertas do hospital (empresa %s)",
+                         getattr(empresa, "id", None))
     return alertas
 
 

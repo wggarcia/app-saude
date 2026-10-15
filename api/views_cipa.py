@@ -23,6 +23,7 @@ import logging
 from datetime import date, datetime
 
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.db.models import Count, Q
 
@@ -68,6 +69,27 @@ def _json(request):
         return json.loads(request.body)
     except Exception:
         return {}
+
+
+def _dt_aware(valor):
+    """Converte a data/hora recebida do cliente em datetime com fuso.
+
+    O formulário manda `datetime-local` ("AAAA-MM-DDTHH:MM"), sem fuso. Com
+    USE_TZ ativo o Django assumiria UTC e a reunião da CIPA apareceria 3h
+    deslocada na ata e no cálculo da próxima reunião (NR-5).
+    """
+    if not valor:
+        return None
+    if isinstance(valor, datetime):
+        bruto = valor
+    else:
+        try:
+            bruto = datetime.fromisoformat(str(valor))
+        except (ValueError, TypeError):
+            return None
+    if timezone.is_naive(bruto):
+        return timezone.make_aware(bruto, timezone.get_current_timezone())
+    return bruto
 
 
 def _styles():
@@ -329,10 +351,14 @@ def api_cipa_reunioes(request, comissao_id):
             if not data.get("data_reuniao"):
                 return JsonResponse({"erro": "data_reuniao é obrigatória"}, status=400)
 
+            data_reuniao = _dt_aware(data["data_reuniao"])
+            if data_reuniao is None:
+                return JsonResponse({"erro": "data_reuniao inválida (use ISO 8601)"}, status=400)
+
             r = ReuniaoCIPA.objects.create(
                 comissao=comissao,
                 tipo=data.get("tipo", "ordinaria"),
-                data_reuniao=data["data_reuniao"],
+                data_reuniao=data_reuniao,
                 pauta=data.get("pauta", ""),
                 ata=data.get("ata", ""),
                 local=data.get("local", ""),
@@ -380,8 +406,16 @@ def api_cipa_reuniao_detalhe(request, reuniao_id):
         try:
             data = _json(request)
             for field in ("tipo", "data_reuniao", "pauta", "ata", "local", "status"):
-                if field in data:
-                    setattr(r, field, data[field])
+                if field not in data:
+                    continue
+                if field == "data_reuniao":
+                    nova_data = _dt_aware(data[field])
+                    if nova_data is None:
+                        return JsonResponse(
+                            {"erro": "data_reuniao inválida (use ISO 8601)"}, status=400)
+                    r.data_reuniao = nova_data
+                    continue
+                setattr(r, field, data[field])
             r.save()
             return JsonResponse({"ok": True, "data": _reuniao_dict(r)})
         except Exception:
@@ -513,7 +547,6 @@ def api_cipa_kpis(request):
 
     try:
         from .models import ComissaoCIPA, ReuniaoCIPA
-        import datetime
 
         comissao_ativa = ComissaoCIPA.objects.filter(empresa=empresa, status="ativa").first()
         hoje = date.today()
@@ -528,7 +561,7 @@ def api_cipa_kpis(request):
             proxima = ReuniaoCIPA.objects.filter(
                 comissao=comissao_ativa,
                 status="agendada",
-                data_reuniao__gte=datetime.datetime.now()
+                data_reuniao__gte=timezone.now()
             ).order_by("data_reuniao").first()
 
             if proxima:

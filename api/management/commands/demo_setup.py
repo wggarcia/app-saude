@@ -21,6 +21,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 
 
 DEMO_SENHA_ADMIN = "Demo@SST2026"   # SST
@@ -1559,7 +1560,8 @@ class Command(BaseCommand):
             import datetime as _dt
             reuniao1 = ReuniaoCIPA.objects.create(
                 comissao=cipa, tipo="ordinaria",
-                data_reuniao=_dt.datetime(2026, 4, 8, 9, 0),
+                data_reuniao=timezone.make_aware(
+                    _dt.datetime(2026, 4, 8, 9, 0), timezone.get_current_timezone()),
                 local="Sala de Reuniões — Planta Industrial",
                 pauta="1. Análise de acidentes do 1º trimestre\n2. Revisão do PPRA\n3. Inspeções programadas",
                 ata="Reunião ordinária realizada com quórum. Analisados 2 acidentes do período. "
@@ -1568,7 +1570,8 @@ class Command(BaseCommand):
             )
             reuniao2 = ReuniaoCIPA.objects.create(
                 comissao=cipa, tipo="ordinaria",
-                data_reuniao=_dt.datetime(2026, 5, 13, 9, 0),
+                data_reuniao=timezone.make_aware(
+                    _dt.datetime(2026, 5, 13, 9, 0), timezone.get_current_timezone()),
                 local="Sala de Reuniões — Planta Industrial",
                 pauta="1. Relatório de EPIs\n2. Análise de quase-acidentes\n3. Semana SIPAT 2026",
                 status="agendada",
