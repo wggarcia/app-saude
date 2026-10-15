@@ -6,7 +6,8 @@ Cobre, para cada módulo: gate de feature na página (bloqueado no tier base
 hospital_medio, liberado no tier hospital_rede) e um roundtrip básico de
 criação via API no tier liberado.
 """
-from datetime import date, timedelta
+import warnings
+from datetime import date, datetime, timedelta
 
 import jwt
 from django.conf import settings
@@ -16,7 +17,7 @@ from django.utils import timezone
 
 from .models import (
     Empresa, CatalogoOPME, AutorizacaoOPME, ImplantavelRegistro, ProtocoloOncologico,
-    IndicacaoClinicaOPME,
+    IndicacaoClinicaOPME, ReacaoTransfusional, TransfusaoPaciente,
 )
 
 
@@ -133,6 +134,115 @@ class HemoterapiaTests(TestCase):
 
         r = client.get("/api/hospital/hemoterapia/kpis/")
         self.assertEqual(r.status_code, 200)
+
+    def test_horario_da_reacao_nao_desloca_com_use_tz(self):
+        """Regressão: a hora da transfusão/reação é dado clínico (RDC 34/2014).
+
+        O formulário manda `datetime-local` sem fuso. Antes, o valor ingênuo
+        era gravado como se fosse UTC e voltava 3h deslocado em produção
+        (Brasil em UTC-3), além de emitir RuntimeWarning do Django.
+        """
+        empresa = _empresa("Hospital TZ", "hemo-tz@example.com", "hospital_rede")
+        client = _client_for(empresa)
+
+        r = client.post(
+            "/api/hospital/hemoterapia/bolsas/",
+            data={
+                "codigo_bolsa": "BS-TZ-01",
+                "tipo": "ch",
+                "tipo_abo": "A",
+                "fator_rh": "+",
+                "volume_ml": 300,
+                "validade": (date.today() + timedelta(days=20)).isoformat(),
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+        bolsa_id = r.json()["id"]
+
+        # Exatamente o que o <input type="datetime-local"> envia: sem fuso.
+        quando = "2026-03-12T14:30"
+
+        with warnings.catch_warnings(record=True) as capturados:
+            warnings.simplefilter("always")
+
+            r = client.post(
+                "/api/hospital/hemoterapia/transfusoes/",
+                data={
+                    "bolsa_id": bolsa_id,
+                    "paciente_nome": "Paciente TZ",
+                    "data_inicio": quando,
+                    "volume_ml": 300,
+                },
+                content_type="application/json",
+            )
+            self.assertEqual(r.status_code, 201)
+            transfusao_id = r.json()["id"]
+
+            r = client.post(
+                "/api/hospital/hemoterapia/reacoes/",
+                data={
+                    "transfusao_id": transfusao_id,
+                    "paciente_nome": "Paciente TZ",
+                    "tipo_reacao": "febre",
+                    "gravidade": "leve",
+                    "data_reacao": quando,
+                    "descricao": "Pico febril 38,4 °C durante a infusão.",
+                },
+                content_type="application/json",
+            )
+            self.assertEqual(r.status_code, 201)
+            reacao_id = r.json()["id"]
+
+            # O KPI mensal filtra por data_reacao — não pode comparar date com
+            # DateTimeField e disparar o aviso.
+            self.assertEqual(client.get("/api/hospital/hemoterapia/kpis/").status_code, 200)
+
+        ingenuos = [str(w.message) for w in capturados
+                    if "naive datetime" in str(w.message)]
+        self.assertEqual(ingenuos, [], f"datetime ingênuo gravado: {ingenuos}")
+
+        reacao = ReacaoTransfusional.objects.get(id=reacao_id)
+        transfusao = TransfusaoPaciente.objects.get(id=transfusao_id)
+
+        self.assertIsNotNone(reacao.data_reacao.tzinfo)
+        self.assertIsNotNone(transfusao.data_inicio.tzinfo)
+
+        local_reacao = timezone.localtime(reacao.data_reacao)
+        self.assertEqual((local_reacao.hour, local_reacao.minute), (14, 30))
+        self.assertEqual(local_reacao.date(), date(2026, 3, 12))
+
+        local_transfusao = timezone.localtime(transfusao.data_inicio)
+        self.assertEqual((local_transfusao.hour, local_transfusao.minute), (14, 30))
+
+        # E a API devolve o mesmo horário que o cliente mandou.
+        r = client.get("/api/hospital/hemoterapia/reacoes/")
+        self.assertEqual(r.status_code, 200)
+        devolvido = r.json()["reacoes"][0]["data_reacao"]
+        self.assertEqual(timezone.localtime(
+            datetime.fromisoformat(devolvido)).strftime("%Y-%m-%d %H:%M"),
+            "2026-03-12 14:30")
+
+    def test_data_da_reacao_omitida_usa_agora_com_fuso(self):
+        """Sem data_reacao no payload, o default também precisa vir com fuso."""
+        empresa = _empresa("Hospital TZ2", "hemo-tz2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+
+        r = client.post(
+            "/api/hospital/hemoterapia/reacoes/",
+            data={
+                "paciente_nome": "Paciente Sem Data",
+                "tipo_reacao": "alergica_leve",
+                "gravidade": "leve",
+                "descricao": "Urticária localizada.",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+
+        reacao = ReacaoTransfusional.objects.get(id=r.json()["id"])
+        self.assertIsNotNone(reacao.data_reacao.tzinfo)
+        self.assertLess(abs((timezone.now() - reacao.data_reacao).total_seconds()), 120)
 
 
 class ObstetricoTests(TestCase):
@@ -1099,10 +1209,12 @@ class OncologiaTests(TestCase):
         from django.core.management.base import CommandError
         from .models import (CicloQuimioterapia, GuiaOncologica,
                              AdministracaoQuimioterapia,
-                             AvaliacaoRespostaOncologica, PrescricaoQuimioOral)
+                             AvaliacaoRespostaOncologica, PrescricaoQuimioOral,
+                             SeguimentoOncologico)
 
         empresa = _empresa("Hospital Demo", "demo.hospital@exemplo-demo.com",
                            "hospital_rede")
+        client = _client_for(empresa)
         self._protocolo(empresa)
         ProtocoloOncologico.objects.create(
             empresa=empresa, codigo="CARBO-TESTE", nome="Carbo/Taxol",
@@ -1120,6 +1232,12 @@ class OncologiaTests(TestCase):
             AdministracaoQuimioterapia.objects.filter(empresa=empresa).count(), 2)
         self.assertEqual(
             AvaliacaoRespostaOncologica.objects.filter(empresa=empresa).count(), 3)
+        segs = SeguimentoOncologico.objects.filter(empresa=empresa)
+        self.assertEqual(segs.count(), 2)
+        # Um dos dois tem de cair como perdido de seguimento — é o caso que o
+        # seed existe para mostrar.
+        d = client.get("/api/hospital/oncologia/seguimentos").json()
+        self.assertEqual(d["fora_do_radar"], 1)
         oral = PrescricaoQuimioOral.objects.get(empresa=empresa)
         self.assertEqual(oral.dispensacoes.count(), 2)
         self.assertEqual(float(oral.dispensacoes.order_by("-data").first().adesao_pct), 50.0)
@@ -1136,6 +1254,7 @@ class OncologiaTests(TestCase):
         self.assertEqual(
             AdministracaoQuimioterapia.objects.filter(empresa=empresa).count(), 0)
         self.assertEqual(PrescricaoQuimioOral.objects.filter(empresa=empresa).count(), 0)
+        self.assertEqual(SeguimentoOncologico.objects.filter(empresa=empresa).count(), 0)
 
         # Trava de segurança: conta sem "demo" no e-mail é recusada.
         real = _empresa("Hospital Real", "contas@hospital-real.com", "hospital_rede")
@@ -1301,6 +1420,219 @@ class OncologiaTests(TestCase):
         self.assertEqual(d["resumo"]["quimio_oral"], 1)
         ev = [e for e in d["timeline"] if e["tipo"] == "quimio_oral"]
         self.assertIn("Capecitabina", ev[0]["titulo"])
+
+    # ── Seguimento e sobrevida ─────────────────────────────────────────────
+    def _seguimento(self, client, **extra):
+        payload = {
+            "paciente_nome": "Paciente Seguimento",
+            "data_diagnostico": (date.today() - timedelta(days=730)).isoformat(),
+            "data_fim_tratamento": (date.today() - timedelta(days=365)).isoformat(),
+            "cid10_principal": "C50", "periodicidade_meses": 3,
+        }
+        payload.update(extra)
+        return client.post("/api/hospital/oncologia/seguimentos/",
+                           data=payload, content_type="application/json")
+
+    def test_sobrevida_censurada_enquanto_paciente_vivo(self):
+        """Paciente vivo sem recidiva é CENSURADO: conta o tempo observado, mas
+        não conta como desfecho. Tratar censura como evento faz a sobrevida
+        parecer pior do que é."""
+        empresa = _empresa("Hospital Rede", "onco-sg1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._seguimento(client)
+        self.assertEqual(r.status_code, 201)
+        s = r.json()["seguimento"]["sobrevida"]
+        self.assertTrue(s["censurado"])
+        self.assertEqual(s["sobrevida_global_evento"], "censurado")
+        self.assertEqual(s["sobrevida_livre_doenca_evento"], "censurado")
+        # Diagnóstico há 24 meses; o último contato nasce no fim do tratamento (12m atrás).
+        self.assertEqual(s["sobrevida_global_meses"], 12)
+        self.assertEqual(s["sobrevida_livre_doenca_meses"], 0)
+
+    def test_recidiva_exige_tipo_e_data_coerente(self):
+        empresa = _empresa("Hospital Rede", "onco-sg2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        sid = self._seguimento(client).json()["id"]
+        url = f"/api/hospital/oncologia/seguimentos/{sid}/"
+        # Sem tipo
+        r = client.put(url, data={"recidiva": True,
+                                  "data_recidiva": (date.today() - timedelta(days=100)).isoformat()},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "recidiva_sem_tipo")
+        # Antes do fim do tratamento
+        r = client.put(url, data={"recidiva": True, "tipo_recidiva": "local",
+                                  "data_recidiva": (date.today() - timedelta(days=400)).isoformat()},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "recidiva_antes_do_fim")
+        # Válida: fecha a sobrevida livre de doença como EVENTO, não censura
+        r = client.put(url, data={"recidiva": True, "tipo_recidiva": "distante",
+                                  "data_recidiva": (date.today() - timedelta(days=90)).isoformat()},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        s = r.json()["seguimento"]["sobrevida"]
+        self.assertEqual(s["sobrevida_livre_doenca_evento"], "recidiva")
+        self.assertEqual(s["sobrevida_livre_doenca_meses"], 9)
+
+    def test_obito_fecha_a_sobrevida_e_vira_ultimo_contato(self):
+        """Sem isso a sobrevida segue contando tempo de um paciente já falecido."""
+        empresa = _empresa("Hospital Rede", "onco-sg3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        sid = self._seguimento(client).json()["id"]
+        url = f"/api/hospital/oncologia/seguimentos/{sid}/"
+        r = client.put(url, data={"status_vital": "obito"},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 400)   # exige data
+        d_obito = (date.today() - timedelta(days=60)).isoformat()
+        r = client.put(url, data={"status_vital": "obito", "data_obito": d_obito,
+                                  "causa_obito": "neoplasia"},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        seg = r.json()["seguimento"]
+        self.assertFalse(seg["sobrevida"]["censurado"])
+        self.assertEqual(seg["sobrevida"]["sobrevida_global_evento"], "obito")
+        self.assertEqual(seg["data_ultimo_contato"], d_obito)
+        self.assertEqual(seg["situacao"]["situacao"], "obito")
+
+    def test_obito_antes_do_fim_do_tratamento_e_recusado(self):
+        empresa = _empresa("Hospital Rede", "onco-sg4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        sid = self._seguimento(client).json()["id"]
+        r = client.put(f"/api/hospital/oncologia/seguimentos/{sid}/",
+                       data={"status_vital": "obito",
+                             "data_obito": (date.today() - timedelta(days=500)).isoformat()},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "obito_antes_do_fim")
+
+    def test_paciente_sem_contato_sai_do_radar(self):
+        """O paciente que para de vir e ninguém percebe — é o que some em
+        agenda de papel."""
+        empresa = _empresa("Hospital Rede", "onco-sg5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._seguimento(
+            client,
+            data_diagnostico=(date.today() - timedelta(days=1000)).isoformat(),
+            data_fim_tratamento=(date.today() - timedelta(days=800)).isoformat(),
+            data_ultimo_contato=(date.today() - timedelta(days=700)).isoformat())
+        self.assertEqual(r.status_code, 201)
+        d = client.get("/api/hospital/oncologia/seguimentos").json()
+        self.assertEqual(d["fora_do_radar"], 1)
+        sit = d["seguimentos"][0]["situacao"]
+        self.assertTrue(sit["fora_do_radar"])
+        self.assertEqual(sit["situacao"], "perdido")
+        self.assertGreaterEqual(sit["meses_sem_contato"], 12)
+
+    def test_comparecer_tira_do_radar_e_reagenda(self):
+        empresa = _empresa("Hospital Rede", "onco-sg6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        sid = self._seguimento(
+            client,
+            data_diagnostico=(date.today() - timedelta(days=1000)).isoformat(),
+            data_fim_tratamento=(date.today() - timedelta(days=800)).isoformat(),
+            data_ultimo_contato=(date.today() - timedelta(days=700)).isoformat(),
+        ).json()["id"]
+        d = client.get("/api/hospital/oncologia/seguimentos").json()
+        self.assertEqual(d["fora_do_radar"], 1)
+        r = client.post(f"/api/hospital/oncologia/seguimentos/{sid}/consultas/",
+                        data={"data_prevista": date.today().isoformat(),
+                              "compareceu": True, "exames": "TC de tórax",
+                              "profissional": "Dra. Helena"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        seg = r.json()["seguimento"]
+        self.assertEqual(seg["data_ultimo_contato"], date.today().isoformat())
+        self.assertFalse(seg["situacao"]["fora_do_radar"])
+        # Reagendou pelo intervalo do plano (3 meses).
+        self.assertGreater(seg["proxima_avaliacao"], date.today().isoformat())
+        d = client.get("/api/hospital/oncologia/seguimentos").json()
+        self.assertEqual(d["fora_do_radar"], 0)
+
+    def test_falta_nao_pode_ter_data_de_realizacao(self):
+        empresa = _empresa("Hospital Rede", "onco-sg7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        sid = self._seguimento(client).json()["id"]
+        r = client.post(f"/api/hospital/oncologia/seguimentos/{sid}/consultas/",
+                        data={"data_prevista": (date.today()-timedelta(days=10)).isoformat(),
+                              "compareceu": False,
+                              "data_realizada": date.today().isoformat()},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "falta_com_data_realizada")
+
+    def test_falta_conta_como_consulta_perdida(self):
+        empresa = _empresa("Hospital Rede", "onco-sg8@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        sid = self._seguimento(client).json()["id"]
+        client.post(f"/api/hospital/oncologia/seguimentos/{sid}/consultas/",
+                    data={"data_prevista": (date.today()-timedelta(days=30)).isoformat(),
+                          "compareceu": False},
+                    content_type="application/json")
+        d = client.get("/api/hospital/oncologia/seguimentos").json()
+        self.assertEqual(d["seguimentos"][0]["consultas_perdidas"], 1)
+
+    def test_suspeita_de_recidiva_avisa_sem_fechar_desfecho(self):
+        """Suspeita não é diagnóstico: entra como alerta, não entra na sobrevida."""
+        empresa = _empresa("Hospital Rede", "onco-sg9@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        sid = self._seguimento(client).json()["id"]
+        r = client.post(f"/api/hospital/oncologia/seguimentos/{sid}/consultas/",
+                        data={"data_prevista": date.today().isoformat(),
+                              "compareceu": True, "suspeita_recidiva": True,
+                              "achados": "Nódulo novo em TC"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        self.assertIn("Suspeita de recidiva", r.json()["alerta"])
+        self.assertFalse(r.json()["seguimento"]["recidiva"])
+        self.assertEqual(
+            r.json()["seguimento"]["sobrevida"]["sobrevida_livre_doenca_evento"],
+            "censurado")
+
+    def test_diagnostico_depois_do_fim_do_tratamento_e_recusado(self):
+        empresa = _empresa("Hospital Rede", "onco-sg10@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._seguimento(
+            client, data_diagnostico=date.today().isoformat(),
+            data_fim_tratamento=(date.today() - timedelta(days=100)).isoformat())
+        self.assertEqual(r.status_code, 400)
+
+    def test_jornada_termina_no_desfecho_de_longo_prazo(self):
+        """A linha do tempo tem de chegar até o seguimento: sem isso ela para no
+        último ciclo e o desfecho do paciente fica fora da história."""
+        empresa = _empresa("Hospital Rede", "onco-sg-jor@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        self._criar_ciclo(client, protocolo, paciente_nome="Final Oliveira",
+                          cpf_paciente="52998224725",
+                          neutrofilos=2500, plaquetas=220000)
+        sid = self._seguimento(client, paciente_nome="Final Oliveira",
+                               cpf_paciente="52998224725").json()["id"]
+        client.put(f"/api/hospital/oncologia/seguimentos/{sid}/",
+                   data={"recidiva": True, "tipo_recidiva": "local",
+                         "data_recidiva": (date.today()-timedelta(days=30)).isoformat()},
+                   content_type="application/json")
+        d = client.get("/api/hospital/oncologia/jornada?cpf=52998224725").json()
+        self.assertEqual(d["resumo"]["seguimento"], 1)
+        ev = [e for e in d["timeline"] if e["tipo"] == "seguimento"]
+        self.assertEqual(len(ev), 1)
+        self.assertTrue(ev[0]["detalhe"]["recidiva"])
+        self.assertEqual(
+            ev[0]["detalhe"]["sobrevida"]["sobrevida_livre_doenca_evento"], "recidiva")
+
+    def test_seguimento_isolado_por_empresa(self):
+        a = _empresa("Hospital A", "onco-sg-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "onco-sg-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        sid = self._seguimento(ca).json()["id"]
+        self.assertEqual(cb.get("/api/hospital/oncologia/seguimentos").json()["total"], 0)
+        r = cb.put(f"/api/hospital/oncologia/seguimentos/{sid}/",
+                   data={"status_vital": "perdido"}, content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+        r = cb.post(f"/api/hospital/oncologia/seguimentos/{sid}/consultas/",
+                    data={"data_prevista": date.today().isoformat()},
+                    content_type="application/json")
+        self.assertEqual(r.status_code, 404)
 
     def test_cadeia_isolada_por_empresa(self):
         """Hospital A não enxerga nem administra preparo do hospital B."""

@@ -1221,6 +1221,9 @@ from api.views_hospital_oncologia import (
     api_onco_quimio_oral,
     api_onco_quimio_oral_detalhe,
     api_onco_quimio_oral_dispensacoes,
+    api_onco_seguimentos,
+    api_onco_seguimento_detalhe,
+    api_onco_seguimento_consultas,
 )
 from api.views_hospital_manutencao import (
     hospital_manutencao_page,
@@ -3579,6 +3582,12 @@ urlpatterns = [
     path('api/hospital/oncologia/quimio-oral/<int:prescricao_id>/', api_onco_quimio_oral_detalhe),
     path('api/hospital/oncologia/quimio-oral/<int:prescricao_id>/dispensacoes',  api_onco_quimio_oral_dispensacoes),
     path('api/hospital/oncologia/quimio-oral/<int:prescricao_id>/dispensacoes/', api_onco_quimio_oral_dispensacoes),
+    # Seguimento pós-tratamento: recidiva, sobrevida e perda de seguimento
+    path('api/hospital/oncologia/seguimentos',                  api_onco_seguimentos),
+    path('api/hospital/oncologia/seguimentos/',                 api_onco_seguimentos),
+    path('api/hospital/oncologia/seguimentos/<int:seguimento_id>/', api_onco_seguimento_detalhe),
+    path('api/hospital/oncologia/seguimentos/<int:seguimento_id>/consultas',  api_onco_seguimento_consultas),
+    path('api/hospital/oncologia/seguimentos/<int:seguimento_id>/consultas/', api_onco_seguimento_consultas),
     path('api/hospital/oncologia/guias/alertas',                api_onco_guias_alertas),
     path('api/hospital/oncologia/guias/alertas/',               api_onco_guias_alertas),
     path('api/hospital/oncologia/guias',                        api_onco_guias),

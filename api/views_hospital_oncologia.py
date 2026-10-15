@@ -1574,6 +1574,27 @@ def api_onco_jornada(request):
             },
         })
 
+    # Seguimento pós-tratamento — o último capítulo da linha do tempo.
+    from .models import SeguimentoOncologico
+    for sg in _filtro(SeguimentoOncologico).prefetch_related("consultas"):
+        info = _seguimento_dict(sg)
+        eventos.append({
+            "tipo": "seguimento",
+            "data": sg.data_fim_tratamento.isoformat(),
+            "titulo": "Fim do tratamento ativo — entrou em seguimento",
+            "status": info["situacao"]["rotulo"],
+            "detalhe": {
+                "id": sg.id,
+                "status_vital": sg.status_vital,
+                "recidiva": sg.recidiva,
+                "data_recidiva": (sg.data_recidiva.isoformat()
+                                  if sg.data_recidiva else None),
+                "sobrevida": info["sobrevida"],
+                "consultas_perdidas": info["consultas_perdidas"],
+                "fora_do_radar": info["situacao"]["fora_do_radar"],
+            },
+        })
+
     # Radioterapia
     for s in _filtro(SessaoRadioterapia):
         data_ref = s.data_inicio or (s.criado_em.date() if s.criado_em else None)
@@ -1653,6 +1674,7 @@ def api_onco_jornada(request):
             "apac": sum(1 for e in eventos if e["tipo"] == "apac"),
             "administracao": sum(1 for e in eventos if e["tipo"] == "administracao"),
             "quimio_oral": sum(1 for e in eventos if e["tipo"] == "quimio_oral"),
+            "seguimento": sum(1 for e in eventos if e["tipo"] == "seguimento"),
             "resposta": sum(1 for e in eventos if e["tipo"] == "resposta"),
         },
         # Desfecho mais recente do paciente (ignora a basal, que é ponto de partida).
@@ -2934,4 +2956,435 @@ def api_onco_quimio_oral_dispensacoes(request, prescricao_id):
                    f"{ADESAO_LIMITE_BAIXA:.0f}% no intervalo — conversar com o "
                    "paciente antes de atribuir falha ao tratamento."
                    if adesao is not None and adesao < ADESAO_LIMITE_BAIXA else None),
+    }, status=201)
+
+
+# ── Seguimento e sobrevida: o que acontece depois do tratamento ────────────────
+# Aqui a jornada deixava de existir. O paciente terminava a quimioterapia e
+# sumia do sistema — então recidiva não era registrada, sobrevida não era
+# calculável, e "perdido de seguimento" (o paciente que para de vir e ninguém
+# percebe) não tinha nome nem número.
+
+PERDA_SEGUIMENTO_MESES = 12   # sem contato por mais que isto = fora do radar
+
+
+def _get_seguimento_models():
+    from .models import SeguimentoOncologico, ConsultaSeguimento
+    return SeguimentoOncologico, ConsultaSeguimento
+
+
+def _meses_entre(inicio, fim):
+    """Meses completos entre duas datas (aproximação de calendário, não 30 dias)."""
+    if not inicio or not fim:
+        return None
+    meses = (fim.year - inicio.year) * 12 + (fim.month - inicio.month)
+    if fim.day < inicio.day:
+        meses -= 1
+    return max(meses, 0)
+
+
+def _sobrevida(seg, hoje=None):
+    """Sobrevida global e livre de doença, em meses, com o evento que fechou cada uma.
+
+    Em análise de sobrevida, um paciente que ainda não teve o evento é
+    *censurado*: conta o tempo observado, mas não conta como desfecho. Tratar
+    censura como evento é o erro que faz sobrevida parecer pior do que é.
+    """
+    hoje = hoje or date.today()
+    # Último instante em que se sabe algo do paciente.
+    ultimo = seg.data_ultimo_contato or hoje
+    if seg.status_vital == "obito" and seg.data_obito:
+        fim_os, evento_os = seg.data_obito, "obito"
+    else:
+        fim_os, evento_os = ultimo, "censurado"
+
+    inicio_os = seg.data_diagnostico or seg.data_fim_tratamento
+    os_meses = _meses_entre(inicio_os, fim_os)
+
+    # Livre de doença conta a partir do fim do tratamento ativo.
+    if seg.recidiva and seg.data_recidiva:
+        fim_dfs, evento_dfs = seg.data_recidiva, "recidiva"
+    elif seg.status_vital == "obito" and seg.data_obito:
+        fim_dfs, evento_dfs = seg.data_obito, "obito"
+    else:
+        fim_dfs, evento_dfs = ultimo, "censurado"
+    dfs_meses = _meses_entre(seg.data_fim_tratamento, fim_dfs)
+
+    return {
+        "sobrevida_global_meses": os_meses,
+        "sobrevida_global_evento": evento_os,
+        "sobrevida_livre_doenca_meses": dfs_meses,
+        "sobrevida_livre_doenca_evento": evento_dfs,
+        "censurado": evento_os == "censurado",
+        "inicio_contagem": inicio_os.isoformat() if inicio_os else None,
+    }
+
+
+def _situacao_seguimento(seg, hoje=None):
+    """Se o paciente está em dia, atrasado ou já fora do radar."""
+    hoje = hoje or date.today()
+    if seg.status_vital == "obito":
+        return {"situacao": "obito", "rotulo": "Óbito registrado",
+                "meses_sem_contato": None, "atrasado": False, "fora_do_radar": False}
+    ref = seg.data_ultimo_contato or seg.data_fim_tratamento
+    sem_contato = _meses_entre(ref, hoje)
+    fora = sem_contato is not None and sem_contato >= PERDA_SEGUIMENTO_MESES
+    atrasado = bool(seg.proxima_avaliacao and seg.proxima_avaliacao < hoje)
+    if fora or seg.status_vital == "perdido":
+        rotulo, situacao = "Perdido de seguimento", "perdido"
+    elif atrasado:
+        rotulo, situacao = "Consulta de seguimento atrasada", "atrasado"
+    else:
+        rotulo, situacao = "Em seguimento regular", "em_dia"
+    return {
+        "situacao": situacao,
+        "rotulo": rotulo,
+        "meses_sem_contato": sem_contato,
+        "dias_atraso_consulta": ((hoje - seg.proxima_avaliacao).days
+                                 if atrasado else 0),
+        "atrasado": atrasado,
+        "fora_do_radar": fora,
+    }
+
+
+def _seguimento_dict(seg):
+    consultas = list(seg.consultas.all().order_by("-data_prevista"))
+    faltas = sum(1 for c in consultas
+                 if not c.compareceu and c.data_prevista < date.today())
+    return {
+        "id": seg.id,
+        "paciente_nome": seg.paciente_nome,
+        "cpf_paciente": seg.cpf_paciente,
+        "cid10_principal": seg.cid10_principal,
+        "data_diagnostico": (seg.data_diagnostico.isoformat()
+                             if seg.data_diagnostico else None),
+        "data_fim_tratamento": seg.data_fim_tratamento.isoformat(),
+        "intencao_tratamento": seg.intencao_tratamento,
+        "periodicidade_meses": seg.periodicidade_meses,
+        "proxima_avaliacao": (seg.proxima_avaliacao.isoformat()
+                              if seg.proxima_avaliacao else None),
+        "data_ultimo_contato": (seg.data_ultimo_contato.isoformat()
+                                if seg.data_ultimo_contato else None),
+        "status_vital": seg.status_vital,
+        "status_vital_display": seg.get_status_vital_display(),
+        "data_obito": seg.data_obito.isoformat() if seg.data_obito else None,
+        "causa_obito": seg.causa_obito,
+        "causa_obito_display": seg.get_causa_obito_display() if seg.causa_obito else "",
+        "recidiva": seg.recidiva,
+        "data_recidiva": seg.data_recidiva.isoformat() if seg.data_recidiva else None,
+        "tipo_recidiva": seg.tipo_recidiva,
+        "tipo_recidiva_display": (seg.get_tipo_recidiva_display()
+                                  if seg.tipo_recidiva else ""),
+        "medico_responsavel": seg.medico_responsavel,
+        "observacao": seg.observacao,
+        "total_consultas": len(consultas),
+        "consultas_perdidas": faltas,
+        "sobrevida": _sobrevida(seg),
+        "situacao": _situacao_seguimento(seg),
+    }
+
+
+def _consulta_seguimento_dict(c):
+    return {
+        "id": c.id,
+        "seguimento_id": c.seguimento_id,
+        "data_prevista": c.data_prevista.isoformat(),
+        "data_realizada": c.data_realizada.isoformat() if c.data_realizada else None,
+        "compareceu": c.compareceu,
+        "exames": c.exames,
+        "achados": c.achados,
+        "suspeita_recidiva": c.suspeita_recidiva,
+        "profissional": c.profissional,
+    }
+
+
+def _data_ou_erro(valor, campo, obrigatorio=False):
+    """Converte AAAA-MM-DD. Devolve (data, erro_response)."""
+    if valor in (None, ""):
+        if obrigatorio:
+            return None, JsonResponse({"erro": f"{campo} é obrigatória"}, status=400)
+        return None, None
+    try:
+        return datetime.strptime(str(valor)[:10], "%Y-%m-%d").date(), None
+    except (ValueError, TypeError):
+        return None, JsonResponse(
+            {"erro": f"{campo} inválida (use AAAA-MM-DD)"}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_seguimentos(request):
+    """GET/POST /api/hospital/oncologia/seguimentos/ — pós-tratamento."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    SeguimentoOncologico, _ = _get_seguimento_models()
+
+    if request.method == "GET":
+        qs = SeguimentoOncologico.objects.filter(empresa=empresa).prefetch_related(
+            "consultas")
+        status_f = (request.GET.get("status_vital") or "").strip()
+        if status_f:
+            qs = qs.filter(status_vital=status_f)
+        cpf = "".join(filter(str.isdigit, request.GET.get("cpf", "")))[:11]
+        if cpf:
+            qs = qs.filter(cpf_paciente=cpf)
+        if request.GET.get("recidiva") in ("1", "true", "True"):
+            qs = qs.filter(recidiva=True)
+        itens = [_seguimento_dict(s) for s in qs.order_by("-data_fim_tratamento")[:300]]
+
+        vivos = [i for i in itens if i["status_vital"] == "vivo"]
+        dfs = [i["sobrevida"]["sobrevida_livre_doenca_meses"] for i in itens
+               if i["sobrevida"]["sobrevida_livre_doenca_meses"] is not None]
+        return JsonResponse({
+            "total": qs.count(),
+            "seguimentos": itens,
+            # Os três números que a coordenação de oncologia precisa ver:
+            "fora_do_radar": sum(1 for i in itens if i["situacao"]["fora_do_radar"]),
+            "consultas_atrasadas": sum(1 for i in itens if i["situacao"]["atrasado"]),
+            "recidivas": sum(1 for i in itens if i["recidiva"]),
+            "obitos": sum(1 for i in itens if i["status_vital"] == "obito"),
+            "em_seguimento": len(vivos),
+            # Mediana, não média: sobrevida tem cauda longa e a média engana.
+            "mediana_livre_doenca_meses": (
+                sorted(dfs)[len(dfs) // 2] if dfs else None),
+            "limite_perda_meses": PERDA_SEGUIMENTO_MESES,
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    paciente = (data.get("paciente_nome") or "").strip()
+    if not paciente:
+        return JsonResponse({"erro": "Paciente é obrigatório"}, status=400)
+
+    fim_tto, err = _data_ou_erro(data.get("data_fim_tratamento"),
+                                 "data_fim_tratamento", obrigatorio=True)
+    if err:
+        return err
+    diag, err = _data_ou_erro(data.get("data_diagnostico"), "data_diagnostico")
+    if err:
+        return err
+    if diag and diag > fim_tto:
+        return JsonResponse(
+            {"erro": "O diagnóstico não pode ser posterior ao fim do tratamento."},
+            status=400)
+
+    cpf_raw = data.get("cpf_paciente", "")
+    ok_cpf, erro_cpf = validar_cpf_cadastro(cpf_raw, empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
+    cpf = "".join(filter(str.isdigit, cpf_raw))[:11]
+
+    try:
+        periodicidade = int(data.get("periodicidade_meses") or 3)
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "periodicidade_meses deve ser inteiro"}, status=400)
+    if not (1 <= periodicidade <= 24):
+        return JsonResponse(
+            {"erro": "periodicidade_meses deve estar entre 1 e 24"}, status=400)
+
+    proxima, err = _data_ou_erro(data.get("proxima_avaliacao"), "proxima_avaliacao")
+    if err:
+        return err
+    if proxima is None:
+        proxima = fim_tto + timedelta(days=periodicidade * 30)
+
+    ultimo, err = _data_ou_erro(data.get("data_ultimo_contato"), "data_ultimo_contato")
+    if err:
+        return err
+
+    seg = SeguimentoOncologico.objects.create(
+        empresa=empresa, paciente_nome=paciente, cpf_paciente=cpf,
+        identidade=resolver_identidade(empresa, nome=paciente, cpf=cpf_raw),
+        cid10_principal=(data.get("cid10_principal") or "").strip()[:10],
+        data_diagnostico=diag, data_fim_tratamento=fim_tto,
+        intencao_tratamento=(data.get("intencao_tratamento") or "").strip()[:20],
+        periodicidade_meses=periodicidade, proxima_avaliacao=proxima,
+        data_ultimo_contato=ultimo or fim_tto,
+        medico_responsavel=(data.get("medico_responsavel") or "").strip()[:150],
+        observacao=(data.get("observacao") or "").strip())
+    return JsonResponse({"id": seg.id, "seguimento": _seguimento_dict(seg)},
+                        status=201)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_seguimento_detalhe(request, seguimento_id):
+    """PUT /api/hospital/oncologia/seguimentos/<id>/ — recidiva, óbito, contato."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    SeguimentoOncologico, _ = _get_seguimento_models()
+    seg = SeguimentoOncologico.objects.filter(
+        id=seguimento_id, empresa=empresa).prefetch_related("consultas").first()
+    if seg is None:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    campos = []
+
+    # ── Recidiva ───────────────────────────────────────────────────────────
+    if "recidiva" in data:
+        virou_recidiva = bool(data.get("recidiva"))
+        if virou_recidiva:
+            d_rec, err = _data_ou_erro(data.get("data_recidiva"), "data_recidiva",
+                                       obrigatorio=not seg.data_recidiva)
+            if err:
+                return err
+            d_rec = d_rec or seg.data_recidiva
+            if d_rec < seg.data_fim_tratamento:
+                return JsonResponse(
+                    {"erro": "A recidiva não pode ser anterior ao fim do tratamento.",
+                     "codigo": "recidiva_antes_do_fim"}, status=400)
+            tipo = (data.get("tipo_recidiva") or seg.tipo_recidiva or "").strip()
+            if tipo not in dict(SeguimentoOncologico.TIPO_RECIDIVA) or not tipo:
+                return JsonResponse(
+                    {"erro": "Recidiva exige o tipo: local, regional ou distante.",
+                     "codigo": "recidiva_sem_tipo"}, status=400)
+            seg.recidiva, seg.data_recidiva, seg.tipo_recidiva = True, d_rec, tipo
+        else:
+            seg.recidiva, seg.data_recidiva, seg.tipo_recidiva = False, None, ""
+        campos += ["recidiva", "data_recidiva", "tipo_recidiva"]
+
+    # ── Status vital ───────────────────────────────────────────────────────
+    novo_status = (data.get("status_vital") or "").strip()
+    if novo_status and novo_status != seg.status_vital:
+        if novo_status not in dict(SeguimentoOncologico.STATUS_VITAL):
+            return JsonResponse(
+                {"erro": "status_vital inválido",
+                 "validos": [x[0] for x in SeguimentoOncologico.STATUS_VITAL]},
+                status=400)
+        if novo_status == "obito":
+            d_obito, err = _data_ou_erro(data.get("data_obito"), "data_obito",
+                                         obrigatorio=not seg.data_obito)
+            if err:
+                return err
+            d_obito = d_obito or seg.data_obito
+            if d_obito < seg.data_fim_tratamento:
+                return JsonResponse(
+                    {"erro": "A data do óbito não pode ser anterior ao fim do "
+                             "tratamento.", "codigo": "obito_antes_do_fim"}, status=400)
+            causa = (data.get("causa_obito") or seg.causa_obito or "").strip()
+            if causa not in dict(SeguimentoOncologico.CAUSA_OBITO):
+                return JsonResponse(
+                    {"erro": "causa_obito inválida",
+                     "validos": [x[0] for x in SeguimentoOncologico.CAUSA_OBITO]},
+                    status=400)
+            seg.data_obito, seg.causa_obito = d_obito, causa
+            # O óbito também é o último contato: sem isto a sobrevida segue
+            # contando tempo de um paciente que já morreu.
+            seg.data_ultimo_contato = d_obito
+            campos += ["data_obito", "causa_obito", "data_ultimo_contato"]
+        seg.status_vital = novo_status
+        campos.append("status_vital")
+
+    # ── Contato e agenda ───────────────────────────────────────────────────
+    for campo, rotulo in (("data_ultimo_contato", "data_ultimo_contato"),
+                          ("proxima_avaliacao", "proxima_avaliacao")):
+        if campo in data and seg.status_vital != "obito":
+            valor, err = _data_ou_erro(data.get(campo), rotulo)
+            if err:
+                return err
+            setattr(seg, campo, valor)
+            campos.append(campo)
+
+    for campo, limite in (("medico_responsavel", 150), ("observacao", 0)):
+        if campo in data:
+            valor = (data.get(campo) or "").strip()
+            setattr(seg, campo, valor[:limite] if limite else valor)
+            campos.append(campo)
+
+    if campos:
+        seg.save(update_fields=list(dict.fromkeys(campos)))
+    return JsonResponse({"ok": True, "seguimento": _seguimento_dict(seg)})
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_seguimento_consultas(request, seguimento_id):
+    """GET/POST /api/hospital/oncologia/seguimentos/<id>/consultas/"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    SeguimentoOncologico, ConsultaSeguimento = _get_seguimento_models()
+    seg = SeguimentoOncologico.objects.filter(
+        id=seguimento_id, empresa=empresa).first()
+    if seg is None:
+        return JsonResponse({"erro": "Seguimento não encontrado"}, status=404)
+
+    if request.method == "GET":
+        itens = list(seg.consultas.all().order_by("-data_prevista"))
+        return JsonResponse({
+            "seguimento_id": seg.id,
+            "total": len(itens),
+            "consultas": [_consulta_seguimento_dict(c) for c in itens],
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    prevista, err = _data_ou_erro(data.get("data_prevista"), "data_prevista",
+                                  obrigatorio=True)
+    if err:
+        return err
+
+    compareceu = bool(data.get("compareceu"))
+    realizada, err = _data_ou_erro(data.get("data_realizada"), "data_realizada")
+    if err:
+        return err
+    if compareceu and realizada is None:
+        realizada = prevista
+    if not compareceu and realizada is not None:
+        return JsonResponse(
+            {"erro": "Consulta marcada como não comparecida não pode ter data de "
+                     "realização.", "codigo": "falta_com_data_realizada"}, status=400)
+
+    with transaction.atomic():
+        c = ConsultaSeguimento.objects.create(
+            empresa=empresa, seguimento=seg, data_prevista=prevista,
+            data_realizada=realizada, compareceu=compareceu,
+            exames=(data.get("exames") or "").strip(),
+            achados=(data.get("achados") or "").strip(),
+            suspeita_recidiva=bool(data.get("suspeita_recidiva")),
+            profissional=(data.get("profissional") or "").strip()[:150])
+
+        atualizados = []
+        if compareceu and seg.status_vital != "obito":
+            # Comparecer É contato: é o que tira o paciente do "fora do radar".
+            if not seg.data_ultimo_contato or realizada > seg.data_ultimo_contato:
+                seg.data_ultimo_contato = realizada
+                atualizados.append("data_ultimo_contato")
+            # Agenda a próxima pelo intervalo do plano de seguimento.
+            seg.proxima_avaliacao = realizada + timedelta(
+                days=(seg.periodicidade_meses or 3) * 30)
+            atualizados.append("proxima_avaliacao")
+            if seg.status_vital == "perdido":
+                seg.status_vital = "vivo"     # reapareceu
+                atualizados.append("status_vital")
+        if atualizados:
+            seg.save(update_fields=atualizados)
+
+    seg.refresh_from_db()
+    return JsonResponse({
+        "id": c.id,
+        "consulta": _consulta_seguimento_dict(c),
+        "seguimento": _seguimento_dict(seg),
+        "alerta": ("Suspeita de recidiva registrada — confirme o desfecho no "
+                   "seguimento para que entre na sobrevida livre de doença."
+                   if c.suspeita_recidiva and not seg.recidiva else None),
     }, status=201)

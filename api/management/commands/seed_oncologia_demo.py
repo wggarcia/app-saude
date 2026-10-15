@@ -58,7 +58,8 @@ class Command(BaseCommand):
                                 GuiaOncologica, AgendamentoInfusao,
                                 PreparoQuimioterapia, AdministracaoQuimioterapia,
                                 AvaliacaoRespostaOncologica,
-                                PrescricaoQuimioOral, DispensacaoQuimioOral)
+                                PrescricaoQuimioOral, DispensacaoQuimioOral,
+                                SeguimentoOncologico, ConsultaSeguimento)
 
         # Mesma lógica de conexão do seed de OPME: owner só quando é papel
         # realmente distinto (produção com RLS); em SQLite usar 2ª conexão trava.
@@ -91,6 +92,8 @@ class Command(BaseCommand):
             empresa=empresa, paciente_nome__startswith=TAG)
         orais_antigas = PrescricaoQuimioOral.objects.using(DB).filter(
             empresa=empresa, paciente_nome__startswith=TAG)
+        seguimentos_antigos = SeguimentoOncologico.objects.using(DB).filter(
+            empresa=empresa, paciente_nome__startswith=TAG)
         n_antigos = ciclos_antigos.count()
         self.stdout.write(
             f"Lote {TAG} existente: {n_antigos} ciclo(s), {guias_antigas.count()} guia(s), "
@@ -100,6 +103,7 @@ class Command(BaseCommand):
             # Agendamento/preparo/administração caem em cascata pelo ciclo.
             respostas_antigas.delete()
             orais_antigas.delete()     # dispensações caem em cascata
+            seguimentos_antigos.delete()   # consultas caem em cascata
             ciclos_antigos.delete()
             guias_antigas.delete()
 
@@ -309,8 +313,37 @@ class Command(BaseCommand):
                 proxima_retirada=_dias(5), dispensado_por="Farm. Letícia Campos",
                 observacao="Paciente relata náusea; devolveu metade da caixa.")
 
+            # ── Seguimento: o arco completo até o desfecho ────────────────
+            # Um paciente em seguimento regular e um que saiu do radar — o
+            # segundo é o que nenhum sistema do mercado mostra hoje.
+            seg_ok = SeguimentoOncologico.objects.using(DB).create(
+                empresa=empresa, paciente_nome=f"{TAG} Marina Alves",
+                cid10_principal="C50", data_diagnostico=_dias(540),
+                data_fim_tratamento=_dias(120), intencao_tratamento="curativa",
+                periodicidade_meses=3, proxima_avaliacao=_dias(-30),
+                data_ultimo_contato=_dias(30), status_vital="vivo",
+                medico_responsavel="Dra. Helena Duarte")
+            ConsultaSeguimento.objects.using(DB).create(
+                empresa=empresa, seguimento=seg_ok, data_prevista=_dias(30),
+                data_realizada=_dias(30), compareceu=True,
+                exames="Tomografia de tórax e abdome; marcadores tumorais",
+                achados="Sem sinais de doença em atividade.",
+                profissional="Dra. Helena Duarte")
+            seg_perdido = SeguimentoOncologico.objects.using(DB).create(
+                empresa=empresa, paciente_nome=f"{TAG} Rosa Lima",
+                cid10_principal="C56", data_diagnostico=_dias(900),
+                data_fim_tratamento=_dias(600), intencao_tratamento="curativa",
+                periodicidade_meses=6, proxima_avaliacao=_dias(380),
+                data_ultimo_contato=_dias(430), status_vital="vivo",
+                medico_responsavel="Dra. Helena Duarte")
+            ConsultaSeguimento.objects.using(DB).create(
+                empresa=empresa, seguimento=seg_perdido, data_prevista=_dias(380),
+                compareceu=False,
+                achados="Paciente não compareceu; contato telefônico sem sucesso.")
+
         self.stdout.write(self.style.SUCCESS(
             f"OK — lote {TAG} criado: 3 guias, 3 ciclos, 2 reservas de cadeira, "
             f"3 preparos, 2 administrações (1 com extravasamento), 3 avaliações "
-            f"RECIST e 1 prescrição oral com adesão de 50% (retirada atrasada). "
+            f"RECIST, 1 prescrição oral com adesão de 50% (retirada atrasada) "
+            f"e 2 seguimentos (1 regular, 1 perdido de seguimento). "
             f"Reversível: rode com --apply --clear para remover."))

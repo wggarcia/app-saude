@@ -12555,6 +12555,112 @@ class DispensacaoQuimioOral(models.Model):
         return f"{self.prescricao.droga} — {self.data}"
 
 
+class SeguimentoOncologico(models.Model):
+    """O que acontece com o paciente DEPOIS que o tratamento acaba.
+
+    Hoje o sistema sabe o que foi autorizado, o que foi administrado e como o
+    tumor respondeu — e aí o paciente some. Sem esta fase não existe recidiva
+    registrada, não existe sobrevida e não existe "perdido de seguimento", que
+    é o paciente que para de vir e ninguém percebe. É o que fecha a frase
+    "da guia ao desfecho".
+    """
+    STATUS_VITAL = [
+        ("vivo",    "Vivo"),
+        ("obito",   "Óbito"),
+        ("perdido", "Perdido de seguimento"),
+    ]
+    CAUSA_OBITO = [
+        ("",             "Não informada"),
+        ("neoplasia",    "Relacionada à neoplasia"),
+        ("tratamento",   "Relacionada ao tratamento"),
+        ("outra",        "Outra causa"),
+    ]
+    TIPO_RECIDIVA = [
+        ("",         "Sem recidiva"),
+        ("local",    "Local"),
+        ("regional", "Regional"),
+        ("distante", "Metástase à distância"),
+    ]
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="seguimentos_onco")
+    paciente_nome  = models.CharField(max_length=160)
+    cpf_paciente   = models.CharField(max_length=11, blank=True, default="")
+    identidade     = models.ForeignKey("IdentidadePaciente", on_delete=models.SET_NULL,
+                                       null=True, blank=True,
+                                       related_name="seguimentos_onco")
+    cid10_principal = models.CharField(max_length=10, blank=True, default="")
+    # Marcos que ancoram os cálculos de sobrevida.
+    data_diagnostico = models.DateField(null=True, blank=True)
+    data_fim_tratamento = models.DateField(
+        verbose_name="Data de término do tratamento ativo")
+    intencao_tratamento = models.CharField(max_length=20, blank=True, default="")
+    periodicidade_meses = models.PositiveIntegerField(
+        default=3, verbose_name="Intervalo entre consultas de seguimento (meses)")
+    proxima_avaliacao = models.DateField(null=True, blank=True)
+    data_ultimo_contato = models.DateField(
+        null=True, blank=True,
+        help_text="Data em que se teve notícia do paciente pela última vez")
+    status_vital   = models.CharField(max_length=10, choices=STATUS_VITAL,
+                                      default="vivo", db_index=True)
+    data_obito     = models.DateField(null=True, blank=True)
+    causa_obito    = models.CharField(max_length=12, choices=CAUSA_OBITO,
+                                      blank=True, default="")
+    recidiva       = models.BooleanField(default=False, db_index=True)
+    data_recidiva  = models.DateField(null=True, blank=True)
+    tipo_recidiva  = models.CharField(max_length=10, choices=TIPO_RECIDIVA,
+                                      blank=True, default="")
+    medico_responsavel = models.CharField(max_length=150, blank=True, default="")
+    observacao     = models.TextField(blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Seguimento Oncológico"
+        verbose_name_plural = "Seguimentos Oncológicos"
+        ordering            = ["-data_fim_tratamento"]
+        indexes             = [
+            models.Index(fields=["empresa", "status_vital"]),
+            models.Index(fields=["empresa", "proxima_avaliacao"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"Seguimento — {self.paciente_nome} (desde {self.data_fim_tratamento})"
+
+
+class ConsultaSeguimento(models.Model):
+    """Cada consulta de seguimento, com comparecimento registrado.
+
+    O não-comparecimento é o dado que importa: é o primeiro sinal de que o
+    paciente está saindo do radar, e é exatamente o que some em agenda de papel.
+    """
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="consultas_seguimento_onco")
+    seguimento     = models.ForeignKey("SeguimentoOncologico", on_delete=models.CASCADE,
+                                       related_name="consultas")
+    data_prevista  = models.DateField(db_index=True)
+    data_realizada = models.DateField(null=True, blank=True)
+    compareceu     = models.BooleanField(default=False)
+    exames         = models.TextField(blank=True, default="",
+                                      help_text="Exames solicitados/realizados na consulta")
+    achados        = models.TextField(blank=True, default="")
+    # Suspeita levantada na consulta; a confirmação é registrada no seguimento.
+    suspeita_recidiva = models.BooleanField(default=False)
+    profissional   = models.CharField(max_length=150, blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Consulta de Seguimento"
+        verbose_name_plural = "Consultas de Seguimento"
+        ordering            = ["-data_prevista"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_prevista"]),
+            models.Index(fields=["seguimento", "data_prevista"]),
+        ]
+
+    def __str__(self):
+        return f"Consulta {self.data_prevista} — {self.seguimento.paciente_nome}"
+
+
 class AgendamentoInfusao(models.Model):
     """Reserva de cadeira/poltrona na central de infusão para um ciclo.
 

@@ -128,6 +128,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="tab-btn" data-tab="infusao" onclick="setTab('infusao')">Central de Infusão</button>
     <button class="tab-btn" data-tab="oral" onclick="setTab('oral')">Quimioterapia Oral</button>
     <button class="tab-btn" data-tab="respostas" onclick="setTab('respostas')">Resposta ao Tratamento</button>
+    <button class="tab-btn" data-tab="seguimento" onclick="setTab('seguimento')">Seguimento e Sobrevida</button>
     <button class="tab-btn" data-tab="jornada" onclick="setTab('jornada')">Jornada do Paciente</button>
   </div>
 
@@ -503,6 +504,100 @@ tr:hover td{background:rgba(0,194,255,.03)}
     </div>
   </div>
 
+  <div class="tab-panel" id="panel-seguimento">
+    <div id="segAlertaBox"></div>
+    <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
+      <div class="kpi"><div class="kpi-val" id="segEmSeguimento">—</div><div class="kpi-lbl">Em seguimento</div></div>
+      <div class="kpi danger"><div class="kpi-val" id="segForaRadar">—</div><div class="kpi-lbl">Perdidos de seguimento</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="segAtrasadas">—</div><div class="kpi-lbl">Consultas atrasadas</div></div>
+      <div class="kpi danger"><div class="kpi-val" id="segRecidivas">—</div><div class="kpi-lbl">Recidivas</div></div>
+      <div class="kpi ok"><div class="kpi-val" id="segMediana">—</div><div class="kpi-lbl">Mediana livre de doença</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🧬 Seguimento pós-tratamento e sobrevida</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoSeguimento()">+ Iniciar seguimento</button>
+      </div>
+      <div style="padding:12px 20px 0;font-size:12.5px;color:var(--muted)">
+        Aqui a jornada costumava acabar: o paciente terminava o tratamento e sumia do sistema.
+        Esta aba registra recidiva, óbito e, principalmente, quem <strong>parou de vir</strong>.
+        Paciente vivo e sem recidiva entra como <em>censurado</em> no cálculo — conta o tempo observado,
+        mas não conta como desfecho (tratar censura como evento faz a sobrevida parecer pior do que é).
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Fim do tratamento</th><th>Situação</th><th>Último contato</th><th>Próxima consulta</th><th>Livre de doença</th><th>Sobrevida global</th><th>Ação</th></tr></thead>
+        <tbody id="segBody"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formSegCard" style="display:none">
+      <div class="form-card-title">Iniciar seguimento</div>
+      <div class="form-row3">
+        <div class="form-group"><label>Paciente *</label><input id="sgPaciente"></div>
+        <div class="form-group"><label>CPF</label><input id="sgCpf" maxlength="14"></div>
+        <div class="form-group"><label>CID-10</label><input id="sgCid" placeholder="ex.: C50"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Data do diagnóstico</label><input type="date" id="sgDiag"></div>
+        <div class="form-group"><label>Fim do tratamento ativo *</label><input type="date" id="sgFim"></div>
+        <div class="form-group"><label>Intervalo entre consultas (meses)</label><input type="number" id="sgPeriod" value="3" min="1" max="24"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Intenção do tratamento</label>
+          <select id="sgIntencao">
+            <option value="curativa">Curativa</option>
+            <option value="adjuvante">Adjuvante</option>
+            <option value="neoadjuvante">Neoadjuvante</option>
+            <option value="paliativa">Paliativa</option>
+          </select></div>
+        <div class="form-group"><label>Médico responsável</label><input id="sgMedico"></div>
+        <div class="form-group"><label>Último contato (deixe vazio = fim do tratamento)</label><input type="date" id="sgContato"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formSegCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarSeguimento()">Iniciar seguimento</button>
+      </div>
+    </div>
+    <div class="form-card" id="formConsultaCard" style="display:none">
+      <div class="form-card-title">Consulta de seguimento — <span id="csPaciente"></span></div>
+      <div class="form-row3">
+        <div class="form-group"><label>Data prevista *</label><input type="date" id="csPrevista"></div>
+        <div class="form-group"><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" id="csCompareceu" checked> Paciente compareceu</label></div>
+        <div class="form-group"><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" id="csSuspeita"> Suspeita de recidiva</label></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Exames</label><input id="csExames" placeholder="ex.: TC de tórax e abdome, marcadores"></div>
+        <div class="form-group"><label>Achados</label><input id="csAchados"></div>
+      </div>
+      <div class="form-group"><label>Profissional</label><input id="csProf"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formConsultaCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarConsultaSeguimento()">Registrar consulta</button>
+      </div>
+    </div>
+    <div class="form-card" id="formDesfechoCard" style="display:none">
+      <div class="form-card-title">Registrar desfecho — <span id="dfPaciente"></span></div>
+      <div class="form-row3">
+        <div class="form-group"><label>Desfecho</label>
+          <select id="dfTipo" onchange="ajustarCamposDesfecho()">
+            <option value="recidiva">Recidiva confirmada</option>
+            <option value="obito">Óbito</option>
+            <option value="perdido">Marcar como perdido de seguimento</option>
+          </select></div>
+        <div class="form-group" id="grpDataDesfecho"><label>Data *</label><input type="date" id="dfData"></div>
+        <div class="form-group" id="grpDetalheDesfecho"><label>Tipo de recidiva *</label>
+          <select id="dfDetalhe">
+            <option value="local">Local</option>
+            <option value="regional">Regional</option>
+            <option value="distante">Metástase à distância</option>
+          </select></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formDesfechoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarDesfecho()">Registrar desfecho</button>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="panel-jornada">
     <div class="card">
       <div class="card-header">
@@ -560,6 +655,7 @@ function setTab(tab) {
   if (tab === 'respostas') carregarRespostas();
   if (tab === 'infusao') carregarInfusao();
   if (tab === 'oral') carregarOral();
+  if (tab === 'seguimento') carregarSeguimentos();
 }
 
 var statusGuiaMap = {vigente:'badge-ok', vencida:'badge-danger', esgotada:'badge-warn', cancelada:'badge-gray', em_analise:'badge-warn', negada:'badge-danger'};
@@ -629,6 +725,176 @@ async function salvarGuia() {
     ['gNumero','gPaciente','gCpf','gOperadora','gEmissao','gValidade'].forEach(function(id){ document.getElementById(id).value=''; });
     document.getElementById('gCiclos').value='0';
     carregarGuias(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+// ── Seguimento e sobrevida: o que acontece depois do tratamento ────────────
+var segSituacaoMap = {em_dia:'badge-ok', atrasado:'badge-warn',
+                      perdido:'badge-danger', obito:'badge-gray'};
+var seguimentoAtual = null;
+
+async function carregarSeguimentos(){
+  var tbody = document.getElementById('segBody');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/seguimentos', { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    document.getElementById('segEmSeguimento').textContent = d.em_seguimento;
+    document.getElementById('segForaRadar').textContent = d.fora_do_radar;
+    document.getElementById('segAtrasadas').textContent = d.consultas_atrasadas;
+    document.getElementById('segRecidivas').textContent = d.recidivas;
+    document.getElementById('segMediana').textContent =
+      d.mediana_livre_doenca_meses != null ? (d.mediana_livre_doenca_meses + ' meses') : '—';
+    document.getElementById('segAlertaBox').innerHTML = d.fora_do_radar
+      ? '<div class="alerta-box" style="margin-bottom:14px">⚠️ ' + d.fora_do_radar
+        + ' paciente(s) sem contato há ' + d.limite_perda_meses
+        + ' meses ou mais — pararam de vir e ninguém foi atrás.</div>'
+      : '';
+    if (!d.seguimentos.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum paciente em seguimento.</td></tr>'; return; }
+    tbody.innerHTML = d.seguimentos.map(function(g){
+      var sit = g.situacao || {};
+      var selo = '<span class="badge ' + (segSituacaoMap[sit.situacao]||'badge-gray') + '">' + esc(sit.rotulo||'') + '</span>';
+      if (sit.situacao === 'perdido' && sit.meses_sem_contato != null)
+        selo += '<div class="itens-mini" style="color:var(--danger)">' + sit.meses_sem_contato + ' meses sem contato</div>';
+      if (sit.situacao === 'atrasado')
+        selo += '<div class="itens-mini" style="color:var(--warn)">' + sit.dias_atraso_consulta + ' dias de atraso</div>';
+      if (g.recidiva)
+        selo += '<div class="itens-mini" style="color:var(--danger)">Recidiva ' + esc(g.tipo_recidiva_display) + ' em ' + fmtData(g.data_recidiva) + '</div>';
+      // Censurado não é desfecho: o '+' deixa isso explícito na tela.
+      function tempo(meses, evento){
+        if (meses == null) return '—';
+        var txt = meses + ' m';
+        if (evento === 'censurado') return txt + '+ <span style="opacity:.6">(em observação)</span>';
+        return '<strong>' + txt + '</strong> <span style="opacity:.7">(' + esc(evento) + ')</span>';
+      }
+      var sv = g.sobrevida || {};
+      var acoes = g.status_vital === 'obito' ? '<span style="opacity:.5">—</span>'
+        : '<button class="btn btn-primary btn-sm" onclick="abrirConsultaSeguimento('+g.id+',\''+esc(String(g.paciente_nome||'').replace(/'/g,''))+'\')">Consulta</button>'
+          + ' <button class="btn btn-ghost btn-sm" onclick="abrirDesfecho('+g.id+',\''+esc(String(g.paciente_nome||'').replace(/'/g,''))+'\')">Desfecho</button>';
+      var faltas = g.consultas_perdidas ? ('<div class="itens-mini" style="color:var(--warn)">'+g.consultas_perdidas+' falta(s)</div>') : '';
+      return '<tr><td><strong>'+esc(g.paciente_nome)+'</strong>'+(g.cid10_principal?('<div class="itens-mini" style="opacity:.6">'+esc(g.cid10_principal)+'</div>'):'')+faltas+'</td>'
+           + '<td>'+fmtData(g.data_fim_tratamento)+'</td><td>'+selo+'</td>'
+           + '<td>'+fmtData(g.data_ultimo_contato)+'</td><td>'+fmtData(g.proxima_avaliacao)+'</td>'
+           + '<td>'+tempo(sv.sobrevida_livre_doenca_meses, sv.sobrevida_livre_doenca_evento)+'</td>'
+           + '<td>'+tempo(sv.sobrevida_global_meses, sv.sobrevida_global_evento)+'</td>'
+           + '<td>'+acoes+'</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoSeguimento(){
+  var card = document.getElementById('formSegCard');
+  if (!document.getElementById('sgFim').value)
+    document.getElementById('sgFim').value = new Date().toISOString().slice(0,10);
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function salvarSeguimento(){
+  var paciente = document.getElementById('sgPaciente').value.trim();
+  var fim = document.getElementById('sgFim').value;
+  if (!paciente || !fim) return toast('Paciente e fim do tratamento são obrigatórios', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/seguimentos/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, cpf_paciente: document.getElementById('sgCpf').value.replace(/\D/g,''),
+      cid10_principal: document.getElementById('sgCid').value.trim(),
+      data_diagnostico: document.getElementById('sgDiag').value || null,
+      data_fim_tratamento: fim,
+      periodicidade_meses: parseInt(document.getElementById('sgPeriod').value)||3,
+      intencao_tratamento: document.getElementById('sgIntencao').value,
+      medico_responsavel: document.getElementById('sgMedico').value.trim(),
+      data_ultimo_contato: document.getElementById('sgContato').value || null,
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    toast('Seguimento iniciado', true);
+    document.getElementById('formSegCard').style.display = 'none';
+    ['sgPaciente','sgCpf','sgCid','sgDiag','sgMedico','sgContato'].forEach(function(id){ document.getElementById(id).value=''; });
+    carregarSeguimentos();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function abrirConsultaSeguimento(id, nome){
+  seguimentoAtual = id;
+  document.getElementById('csPaciente').textContent = nome;
+  document.getElementById('csPrevista').value = new Date().toISOString().slice(0,10);
+  var card = document.getElementById('formConsultaCard');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+async function salvarConsultaSeguimento(){
+  if (!seguimentoAtual) return;
+  var prevista = document.getElementById('csPrevista').value;
+  if (!prevista) return toast('Informe a data prevista', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/seguimentos/'+seguimentoAtual+'/consultas/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      data_prevista: prevista,
+      compareceu: document.getElementById('csCompareceu').checked,
+      suspeita_recidiva: document.getElementById('csSuspeita').checked,
+      exames: document.getElementById('csExames').value.trim(),
+      achados: document.getElementById('csAchados').value.trim(),
+      profissional: document.getElementById('csProf').value.trim(),
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao registrar', false);
+    toast(d.alerta || 'Consulta registrada', !d.alerta);
+    document.getElementById('formConsultaCard').style.display = 'none';
+    ['csExames','csAchados','csProf'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('csSuspeita').checked = false;
+    document.getElementById('csCompareceu').checked = true;
+    seguimentoAtual = null;
+    carregarSeguimentos();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function abrirDesfecho(id, nome){
+  seguimentoAtual = id;
+  document.getElementById('dfPaciente').textContent = nome;
+  document.getElementById('dfData').value = new Date().toISOString().slice(0,10);
+  ajustarCamposDesfecho();
+  var card = document.getElementById('formDesfechoCard');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function ajustarCamposDesfecho(){
+  var tipo = document.getElementById('dfTipo').value;
+  // Cada desfecho pede exatamente o que a regra exige — e esconde o resto.
+  document.getElementById('grpDataDesfecho').style.display = (tipo === 'perdido') ? 'none' : '';
+  var grpDet = document.getElementById('grpDetalheDesfecho');
+  grpDet.style.display = (tipo === 'perdido') ? 'none' : '';
+  var sel = document.getElementById('dfDetalhe');
+  if (tipo === 'recidiva') {
+    grpDet.querySelector('label').textContent = 'Tipo de recidiva *';
+    sel.innerHTML = '<option value="local">Local</option><option value="regional">Regional</option><option value="distante">Metástase à distância</option>';
+  } else if (tipo === 'obito') {
+    grpDet.querySelector('label').textContent = 'Causa do óbito';
+    sel.innerHTML = '<option value="neoplasia">Relacionada à neoplasia</option><option value="tratamento">Relacionada ao tratamento</option><option value="outra">Outra causa</option><option value="">Não informada</option>';
+  }
+}
+
+async function salvarDesfecho(){
+  if (!seguimentoAtual) return;
+  var tipo = document.getElementById('dfTipo').value;
+  var data = document.getElementById('dfData').value;
+  var det = document.getElementById('dfDetalhe').value;
+  var corpo;
+  if (tipo === 'recidiva') {
+    if (!data) return toast('Informe a data da recidiva', false);
+    corpo = {recidiva: true, data_recidiva: data, tipo_recidiva: det};
+  } else if (tipo === 'obito') {
+    if (!data) return toast('Informe a data do óbito', false);
+    corpo = {status_vital: 'obito', data_obito: data, causa_obito: det};
+  } else {
+    corpo = {status_vital: 'perdido'};
+  }
+  try {
+    var r = await fetch('/api/hospital/oncologia/seguimentos/'+seguimentoAtual+'/', { method:'PUT', credentials:'include', headers: headers(), body: JSON.stringify(corpo) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao registrar desfecho', false);
+    toast('Desfecho registrado', tipo !== 'obito');
+    document.getElementById('formDesfechoCard').style.display = 'none';
+    seguimentoAtual = null;
+    carregarSeguimentos();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
@@ -1432,8 +1698,8 @@ async function salvarApac() {
 }
 
 // ── Jornada oncológica unificada ──────────────────────────────────────────────
-var jornadaIcone = {quimioterapia:'💊', radioterapia:'☢️', rhc:'📋', apac:'🧾', administracao:'💉', resposta:'🎯', quimio_oral:'🏠'};
-var jornadaCor   = {quimioterapia:'badge-info', radioterapia:'badge-warn', rhc:'badge-ok', apac:'badge-gray', resposta:'badge-ok', administracao:'badge-info', quimio_oral:'badge-warn'};
+var jornadaIcone = {quimioterapia:'💊', radioterapia:'☢️', rhc:'📋', apac:'🧾', administracao:'💉', resposta:'🎯', quimio_oral:'🏠', seguimento:'🧬'};
+var jornadaCor   = {quimioterapia:'badge-info', radioterapia:'badge-warn', rhc:'badge-ok', apac:'badge-gray', resposta:'badge-ok', administracao:'badge-info', quimio_oral:'badge-warn', seguimento:'badge-ok'};
 async function buscarJornada() {
   var termo = document.getElementById('jBusca').value.trim();
   if (!termo) return toast('Informe CPF ou nome', false);
@@ -1456,6 +1722,7 @@ async function buscarJornada() {
         '<span class="badge badge-gray">🧾 ' + d.resumo.apac + ' APAC</span>' +
         '<span class="badge badge-info">💉 ' + (d.resumo.administracao||0) + ' administrações</span>' +
         '<span class="badge badge-warn">🏠 ' + (d.resumo.quimio_oral||0) + ' orais</span>' +
+        (d.resumo.seguimento ? ('<span class="badge badge-ok">🧬 em seguimento</span>') : '') +
         '<span class="badge badge-ok">🎯 ' + (d.resumo.resposta||0) + ' avaliações de resposta</span>' +
         (d.desfecho_atual ? ('<span class="badge badge-warn">desfecho atual: ' + esc(d.desfecho_atual) + '</span>') : '') +
       '</div>';
