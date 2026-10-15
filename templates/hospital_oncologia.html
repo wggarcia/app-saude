@@ -129,6 +129,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="tab-btn" data-tab="oral" onclick="setTab('oral')">Quimioterapia Oral</button>
     <button class="tab-btn" data-tab="respostas" onclick="setTab('respostas')">Resposta ao Tratamento</button>
     <button class="tab-btn" data-tab="seguimento" onclick="setTab('seguimento')">Seguimento e Sobrevida</button>
+    <button class="tab-btn" data-tab="interacoes" onclick="setTab('interacoes')">Interações</button>
     <button class="tab-btn" data-tab="certificados" onclick="setTab('certificados')">Assinatura Digital</button>
     <button class="tab-btn" data-tab="jornada" onclick="setTab('jornada')">Jornada do Paciente</button>
   </div>
@@ -329,7 +330,10 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div class="card" style="margin-top:16px">
       <div class="card-header">
         <div class="card-title">🧪 Farmácia oncológica — cadeia fechada do frasco</div>
-        <button class="btn btn-primary btn-sm" onclick="abrirNovoPreparo()">+ Gerar preparos de um ciclo</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="emitirPulseira()">🏷️ Emitir pulseira</button>
+          <button class="btn btn-primary btn-sm" onclick="abrirNovoPreparo()">+ Gerar preparos de um ciclo</button>
+        </div>
       </div>
       <div style="padding:12px 20px 0;font-size:12.5px;color:var(--muted)">
         Nada entra na veia sem ter sido preparado, conferido por um <strong>segundo</strong> profissional
@@ -383,6 +387,11 @@ tr:hover td{background:rgba(0,194,255,.03)}
               <option value="interrupcao">Interrupção por intolerância</option>
               <option value="outra">Outra</option>
             </select></div>
+        </div>
+        <div class="form-row" style="background:rgba(0,194,255,.05);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px">
+          <div class="form-group"><label>🏷️ Código da pulseira do paciente</label><input id="admCodPaciente" placeholder="leia a pulseira" autocomplete="off"></div>
+          <div class="form-group"><label>🏷️ Código do frasco</label><input id="admCodPreparo" placeholder="leia a etiqueta do frasco" autocomplete="off"></div>
+          <div class="form-group" style="flex-basis:100%"><div class="itens-mini" style="opacity:.8">A dupla checagem por <em>nome</em> não pega o paciente trocado quando os dois profissionais leem a mesma tela errada. A leitura dos dois códigos pega. Se o hospital ainda não usa leitor, deixe em branco — a administração continua possível e a adesão à leitura fica medida.</div></div>
         </div>
         <div class="form-group"><label>Conduta adotada (obrigatória se houve intercorrência)</label><input id="admConduta"></div>
         <div class="form-group"><label>Observação</label><input id="admObs"></div>
@@ -599,6 +608,45 @@ tr:hover td{background:rgba(0,194,255,.03)}
     </div>
   </div>
 
+  <div class="tab-panel" id="panel-interacoes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚠️ Interações medicamentosas em oncologia</div>
+      </div>
+      <div class="alert-box ab-info" style="margin:14px 20px">
+        <div class="ab-title">O que esta base é — e o que não é</div>
+        <div style="margin-top:6px">É um <strong>subconjunto curado</strong> das interações que mais importam em oncologia,
+        cada uma com mecanismo, conduta e fonte. <strong>Não é um checador completo</strong> e não substitui o farmacêutico clínico.
+        <em>Ausência de alerta não significa ausência de interação.</em></div>
+        <div class="itens-mini" style="margin-top:6px">Isto é desenho, não limitação: bases completas discordam muito entre si
+        (num estudo com pacientes oncológicos, 152 interações numa base e 614 noutra, nos mesmos pacientes) e disparar centenas de
+        alertas produz fadiga — a equipe passa a ignorar tudo, inclusive o que mata. Base licenciada entra depois como fonte adicional.</div>
+      </div>
+      <div style="padding:0 20px 12px;display:flex;gap:8px;flex-wrap:wrap">
+        <input id="intBusca" placeholder="Buscar fármaco..." style="padding:7px 10px;min-width:220px" onkeyup="if(event.key==='Enter')carregarInteracoes()">
+        <select id="intGravidade" onchange="carregarInteracoes()" style="padding:7px 10px">
+          <option value="">Todas as gravidades</option>
+          <option value="grave">Só graves</option>
+          <option value="moderada">Só moderadas</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="carregarInteracoes()">Filtrar</button>
+      </div>
+      <table>
+        <thead><tr><th>Par</th><th>Gravidade</th><th>Mecanismo</th><th>Conduta</th><th>Fonte</th></tr></thead>
+        <tbody id="intBody"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><div class="card-title">🔎 Checar uma combinação</div></div>
+      <div style="padding:14px 20px">
+        <div class="form-group"><label>Medicamentos (um por linha, ou separados por vírgula)</label>
+          <input id="intLista" placeholder="ex.: Capecitabina, Varfarina 5mg, Omeprazol"></div>
+        <button class="btn btn-primary btn-sm" onclick="checarInteracoes()">Checar</button>
+        <div id="intResultado" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="panel-certificados">
     <div class="card">
       <div class="card-header">
@@ -694,6 +742,24 @@ tr:hover td{background:rgba(0,194,255,.03)}
   </div>
 </div>
 
+<!-- Etiqueta do frasco: o código que a enfermagem lê à beira do leito -->
+<div class="overlay" id="modalEtiqueta">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <div class="t">Etiqueta do preparo</div>
+      <button class="modal-x" onclick="fecharModal('modalEtiqueta')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center">
+        <div id="etqCorpo" style="text-align:left"></div>
+        <div style="margin-top:14px;font-family:ui-monospace,Menlo,monospace;font-size:26px;letter-spacing:3px;font-weight:700" id="etqCodigo">—</div>
+        <div class="itens-mini" style="opacity:.7;margin-top:6px">Imprima esta etiqueta ou mostre o código ao leitor.</div>
+      </div>
+      <div class="itens-mini" style="margin-top:10px;opacity:.8">O leitor de código de barras funciona como teclado: basta clicar no campo e ler. Não precisa de driver nem de integração.</div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de detalhe da APAC -->
 <div class="overlay" id="modalApac">
   <div class="modal">
@@ -726,6 +792,7 @@ function setTab(tab) {
   if (tab === 'oral') carregarOral();
   if (tab === 'seguimento') carregarSeguimentos();
   if (tab === 'certificados') carregarCertificados();
+  if (tab === 'interacoes') carregarInteracoes();
 }
 
 var statusGuiaMap = {vigente:'badge-ok', vencida:'badge-danger', esgotada:'badge-warn', cancelada:'badge-gray', em_analise:'badge-warn', negada:'badge-danger'};
@@ -879,6 +946,91 @@ async function assinarPrescricao(cicloId){
     }
     toast('Prescrição assinada digitalmente', true);
     carregarAssinatura(cicloId);
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+// ── Interações medicamentosas ──────────────────────────────────────────────
+var gravidadeBadge = {grave:'badge-danger', moderada:'badge-warn', leve:'badge-gray'};
+
+async function carregarInteracoes(){
+  var tbody = document.getElementById('intBody');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty">Carregando...</td></tr>';
+  var q = [];
+  var b = document.getElementById('intBusca').value.trim();
+  var g = document.getElementById('intGravidade').value;
+  if (b) q.push('busca=' + encodeURIComponent(b));
+  if (g) q.push('gravidade=' + g);
+  try {
+    var r = await fetch('/api/hospital/oncologia/interacoes' + (q.length?('?'+q.join('&')):''), { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.interacoes.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhuma interação nesta busca.</td></tr>'; return; }
+    tbody.innerHTML = d.interacoes.map(function(i){
+      return '<tr><td><strong>' + esc(i.farmaco_a) + '</strong><div class="itens-mini" style="opacity:.6">+ ' + esc(i.farmaco_b) + '</div></td>'
+           + '<td><span class="badge ' + (gravidadeBadge[i.gravidade]||'badge-gray') + '">' + esc(i.gravidade_display) + '</span></td>'
+           + '<td style="max-width:320px">' + esc(i.mecanismo) + '</td>'
+           + '<td style="max-width:320px">' + esc(i.conduta) + '</td>'
+           + '<td class="itens-mini" style="opacity:.7;max-width:180px">' + esc(i.fonte) + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+async function checarInteracoes(){
+  var bruto = document.getElementById('intLista').value;
+  var lista = bruto.split(/[\n,;]+/).map(function(x){ return x.trim(); }).filter(Boolean);
+  var alvo = document.getElementById('intResultado');
+  if (lista.length < 2) { alvo.innerHTML = '<div class="itens-mini">Informe pelo menos dois medicamentos.</div>'; return; }
+  alvo.innerHTML = '<div class="itens-mini">Checando…</div>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/interacoes/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({medicamentos: lista}) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { alvo.innerHTML = '<div class="alerta-box">' + esc(d.erro||'Erro') + '</div>'; return; }
+    var corpo = d.interacoes.map(function(i){
+      return '<div class="alert-box ' + (i.gravidade === 'grave' ? 'ab-danger' : 'ab-warn') + '">'
+           + '<div class="ab-title">' + esc(i.gravidade_display.toUpperCase()) + ': ' + esc(i.farmaco_a) + ' + ' + esc(i.farmaco_b) + '</div>'
+           + '<div style="margin-top:6px">' + esc(i.mecanismo) + '</div>'
+           + '<div style="margin-top:6px"><strong>Conduta:</strong> ' + esc(i.conduta) + '</div>'
+           + '<div class="itens-mini" style="margin-top:4px;opacity:.7">' + esc(i.fonte) + '</div></div>';
+    }).join('');
+    if (!d.total) corpo = '<div class="alert-box ab-ok"><div class="ab-title">Nenhuma interação encontrada nesta base</div></div>';
+    // O aviso de escopo acompanha SEMPRE: "0 achados" não é "seguro".
+    alvo.innerHTML = corpo + '<div class="itens-mini" style="margin-top:8px;opacity:.75">' + esc(d.escopo||'') + '</div>';
+  } catch(e) { alvo.innerHTML = '<div class="alerta-box">Erro de conexão.</div>'; }
+}
+
+// ── Código de barras: pulseira e etiqueta do frasco ────────────────────────
+async function verEtiqueta(preparoId){
+  try {
+    var r = await fetch('/api/hospital/oncologia/preparos/'+preparoId+'/etiqueta', { credentials:'include', headers: headers() });
+    if (!r.ok) return toast('Não foi possível gerar a etiqueta', false);
+    var e = await r.json();
+    document.getElementById('etqCodigo').textContent = e.codigo;
+    document.getElementById('etqCorpo').innerHTML =
+      '<div style="font-size:15px;font-weight:700">' + esc(e.paciente_nome) + '</div>'
+      + '<div style="margin-top:4px">' + esc(e.droga) + ' — '
+      + esc(e.dose_preparada != null ? (e.dose_preparada + ' ' + (e.unidade||'')) : '—') + '</div>'
+      + '<div class="itens-mini" style="margin-top:4px">' + esc(e.ciclo)
+      + (e.lote ? (' · lote ' + esc(e.lote)) : '')
+      + (e.validade_lote ? (' · val. ' + fmtData(e.validade_lote)) : '') + '</div>'
+      + '<div class="itens-mini" style="opacity:.7">Preparado por ' + esc(e.preparado_por||'—')
+      + ' · conferido por ' + esc(e.conferido_por||'—') + '</div>';
+    document.getElementById('modalEtiqueta').classList.add('show');
+  } catch(err) { toast('Erro de conexão', false); }
+}
+
+async function emitirPulseira(){
+  var nome = prompt('Nome do paciente para emitir a pulseira:');
+  if (!nome) return;
+  var cpf = prompt('CPF (opcional):') || '';
+  try {
+    var r = await fetch('/api/hospital/oncologia/pulseiras/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({paciente_nome: nome, cpf_paciente: cpf.replace(/\D/g,''), emitida_por: 'Central de Infusão'}) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao emitir', false);
+    // Reemitir desativa a anterior: duas pulseiras ativas tornariam a
+    // conferência ambígua.
+    alert('Pulseira emitida para ' + nome + '\n\nCódigo: ' + d.pulseira.codigo
+          + '\n\nImprima ou escreva na pulseira. Qualquer pulseira anterior deste paciente foi desativada.');
+    carregarInfusao();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
@@ -1373,6 +1525,7 @@ async function carregarPreparos(){
       if (!p.administrado && (p.status === 'conferido' || p.status === 'dispensado'))
         acao = '<button class="btn btn-primary btn-sm" onclick="abrirAdministracao('+p.id+',\''+esc(String(p.droga||'').replace(/'/g,''))+'\')">💉 Administrar</button>';
       var lote = p.lote ? esc(p.lote) + (p.validade_lote ? ('<div class="itens-mini" style="opacity:.7">val. '+fmtData(p.validade_lote)+'</div>') : '') : '—';
+      acao += ' <button class="btn btn-ghost btn-sm" onclick="verEtiqueta('+p.id+')">🏷️ Etiqueta</button>';
       return '<tr><td>'+esc(p.paciente_nome)+'<div class="itens-mini" style="opacity:.6">ciclo '+esc(p.numero_ciclo)+'</div></td><td><strong>'+esc(p.droga)+'</strong></td>'
            + '<td>'+dose(p.dose_prescrita)+'</td><td>'+dose(p.dose_preparada)+'</td><td>'+lote+'</td>'
            + '<td>'+esc(p.preparado_por||'—')+'</td><td>'+esc(p.conferido_por||'—')+'</td>'
@@ -1449,15 +1602,19 @@ async function salvarAdministracao(){
       inicio: document.getElementById('admInicio').value,
       fim: document.getElementById('admFim').value || null,
       administrado_por: quem, checado_por: checou,
+      codigo_paciente: document.getElementById('admCodPaciente').value.trim(),
+      codigo_preparo: document.getElementById('admCodPreparo').value.trim(),
       intercorrencia: document.getElementById('admInter').value,
       intercorrencia_conduta: document.getElementById('admConduta').value.trim(),
       observacao: document.getElementById('admObs').value.trim(),
     })});
     var d = await r.json().catch(function(){ return {}; });
     if (!r.ok) return toast(d.erro || 'Erro ao registrar', false);
-    toast('Administração registrada', true);
+    toast(d.administracao && d.administracao.conferido_por_codigo
+            ? 'Administração registrada — identidade conferida por código'
+            : 'Administração registrada', true);
     document.getElementById('formAdmCard').style.display = 'none';
-    ['admPor','admCheck','admConduta','admObs','admFim'].forEach(function(id){ document.getElementById(id).value=''; });
+    ['admPor','admCheck','admConduta','admObs','admFim','admCodPaciente','admCodPreparo'].forEach(function(id){ document.getElementById(id).value=''; });
     document.getElementById('admInter').value = 'nenhuma';
     preparoAdmAtual = null;
     carregarPreparos(); carregarAdministracoes();
@@ -1478,7 +1635,9 @@ async function carregarAdministracoes(){
         ? '<span style="opacity:.5">—</span>'
         : '<span class="badge badge-danger">'+esc(a.intercorrencia_display)+'</span>'
           + (a.intercorrencia_conduta ? '<div class="itens-mini">'+esc(a.intercorrencia_conduta)+'</div>' : '');
-      return '<tr><td>'+esc(a.paciente_nome)+'</td><td><strong>'+esc(a.droga)+'</strong></td><td>'+ini+'</td>'
+      var selo = a.conferido_por_codigo
+        ? ' <span class="badge badge-ok" title="Pulseira e frasco conferidos por leitura de código">🏷️ código</span>' : '';
+      return '<tr><td>'+esc(a.paciente_nome)+selo+'</td><td><strong>'+esc(a.droga)+'</strong></td><td>'+ini+'</td>'
            + '<td>'+esc(a.via_display)+'</td><td>'+(a.dose_administrada!=null?(a.dose_administrada+' '+esc(a.unidade||'')):'—')+'</td>'
            + '<td>'+esc(a.administrado_por)+'</td><td>'+esc(a.checado_por)+'</td><td>'+inter+'</td></tr>';
     }).join('');

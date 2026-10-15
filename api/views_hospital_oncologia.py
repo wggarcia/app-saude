@@ -943,6 +943,17 @@ def api_onco_ciclos(request):
         alertas_aptidao.append(
             "📋 Primeira dose do esquema sem: " + ", ".join(faltando_1a)
             + " (padrão ASCO/ONS para início de tratamento).")
+    # Interação medicamentosa: olha o ciclo inteiro (quimioterápicos e
+    # pré-medicação) e também a quimioterapia oral ativa do paciente — a
+    # interação clássica da capecitabina com varfarina só aparece assim.
+    interacoes = _checar_interacoes_do_ciclo(empresa, ciclo)
+    alertas_interacao = [
+        f"⚠️ Interação {i['gravidade_display'].upper()}: {i['farmaco_a']} + "
+        f"{i['farmaco_b']}. {i['conduta']}"
+        for i in interacoes.get("interacoes", [])
+        if i["gravidade"] in ("grave", "moderada")
+    ]
+
     return JsonResponse({
         "id": ciclo.id,
         "sc_m2": sc_m2,
@@ -955,7 +966,9 @@ def api_onco_ciclos(request):
             "liberada_por": liberado_por,
         },
         "elementos_faltando_1a_dose": faltando_1a,
-        "alertas": alertas_aptidao + alertas_orgao + alertas_cum + alertas_guia,
+        "alertas": (alertas_aptidao + alertas_orgao + alertas_cum
+                    + alertas_guia + alertas_interacao),
+        "interacoes": interacoes,
     }, status=201)
 
 
@@ -2231,6 +2244,7 @@ def _preparo_dict(p):
         "preparado_em": p.preparado_em.isoformat() if p.preparado_em else None,
         "conferido_em": p.conferido_em.isoformat() if p.conferido_em else None,
         "motivo_descarte": p.motivo_descarte,
+        "codigo_barras": p.codigo_barras,
         "administrado": adm is not None,
         "administracao_id": adm.id if adm else None,
     }
@@ -2457,6 +2471,7 @@ def _administracao_dict(a):
         "intercorrencia": a.intercorrencia,
         "intercorrencia_display": a.get_intercorrencia_display(),
         "intercorrencia_conduta": a.intercorrencia_conduta,
+        "conferido_por_codigo": a.conferido_por_codigo,
         "observacao": a.observacao,
     }
 
@@ -2483,10 +2498,15 @@ def api_onco_administracoes(request):
         if inter:
             qs = qs.filter(intercorrencia=inter)
         itens = list(qs.order_by("-inicio")[:300])
+        total = qs.count()
+        com_codigo = qs.filter(conferido_por_codigo=True).count()
         return JsonResponse({
-            "total": qs.count(),
+            "total": total,
             "administracoes": [_administracao_dict(a) for a in itens],
             "com_intercorrencia": qs.exclude(intercorrencia="nenhuma").count(),
+            "conferidas_por_codigo": com_codigo,
+            "adesao_codigo_pct": (round(com_codigo / total * 100, 1)
+                                  if total else None),
         })
 
     data, erro = _parse_json(request)
@@ -2553,6 +2573,23 @@ def api_onco_administracoes(request):
             return None
         return timezone.make_aware(bruto, timezone.get_current_timezone())
 
+    # Conferência por código de barras: a dupla checagem por NOME não pega o
+    # paciente trocado quando os dois profissionais leem a mesma tela errada.
+    codigo_paciente = (data.get("codigo_paciente") or "").strip().upper()
+    codigo_preparo = (data.get("codigo_preparo") or "").strip().upper()
+    conferido_por_codigo = False
+    if codigo_paciente or codigo_preparo:
+        if not codigo_paciente:
+            return JsonResponse(
+                {"erro": "Leia também a pulseira do paciente: conferir só o "
+                         "frasco não identifica quem vai receber.",
+                 "codigo": "falta_codigo_paciente"}, status=400)
+        ok_codigo, problema = _conferir_identidade_por_codigo(
+            empresa, p, codigo_paciente, codigo_preparo)
+        if not ok_codigo:
+            return JsonResponse(problema, status=409)
+        conferido_por_codigo = True
+
     inicio = _dt(data.get("inicio")) or timezone.now()
     fim = _dt(data.get("fim")) if data.get("fim") else None
     if fim and fim < inicio:
@@ -2575,6 +2612,9 @@ def api_onco_administracoes(request):
             inicio=inicio, fim=fim, dose_administrada=dose,
             administrado_por=administrador[:150], checado_por=checador[:150],
             intercorrencia=inter, intercorrencia_conduta=conduta,
+            conferido_por_codigo=conferido_por_codigo,
+            codigo_paciente_lido=codigo_paciente[:40],
+            codigo_preparo_lido=codigo_preparo[:40],
             observacao=(data.get("observacao") or "").strip())
         if p.status == "conferido":
             p.status = "dispensado"
@@ -2815,8 +2855,21 @@ def api_onco_quimio_oral(request):
         data_inicio=inicio, data_fim_prevista=fim,
         medico=(data.get("medico") or "").strip()[:150],
         observacao=(data.get("observacao") or "").strip())
-    return JsonResponse({"id": p.id, "prescricao": _prescricao_oral_dict(p)},
-                        status=201)
+
+    # Checa a droga oral contra o que o paciente já recebe — é aqui que a
+    # capecitabina encontra a varfarina.
+    interacoes = _checar_interacoes_da_oral(empresa, p, data.get("medicamentos_em_uso"))
+    return JsonResponse({
+        "id": p.id,
+        "prescricao": _prescricao_oral_dict(p),
+        "interacoes": interacoes,
+        "alertas": [
+            f"⚠️ Interação {i['gravidade_display'].upper()}: {i['farmaco_a']} + "
+            f"{i['farmaco_b']}. {i['conduta']}"
+            for i in interacoes.get("interacoes", [])
+            if i["gravidade"] in ("grave", "moderada")
+        ],
+    }, status=201)
 
 
 @csrf_exempt
@@ -3852,3 +3905,406 @@ def api_onco_certificado_detalhe(request, certificado_id):
 
     c.save()
     return JsonResponse({"ok": True, "certificado": _certificado_dict(c)})
+
+
+# ── Interação medicamentosa ───────────────────────────────────────────────────
+# Subconjunto curado de oncologia, não checador completo — a resposta sempre
+# carrega o aviso de escopo, para que nenhuma tela trate "0 achados" como
+# "seguro". Ver api/services/interacoes_onco.py.
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_interacoes(request):
+    """GET lista a base do tenant; POST checa uma lista de medicamentos."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import InteracaoMedicamentosa
+    from .services.interacoes_onco import checar, seed_interacoes, canonico
+
+    if request.method == "GET":
+        # Primeira visita semeia a base curada, como já fazemos com protocolos.
+        if not InteracaoMedicamentosa.objects.filter(empresa=empresa).exists():
+            seed_interacoes(empresa)
+        qs = InteracaoMedicamentosa.objects.filter(empresa=empresa, ativo=True)
+        gravidade = (request.GET.get("gravidade") or "").strip()
+        if gravidade:
+            qs = qs.filter(gravidade=gravidade)
+        busca = canonico(request.GET.get("busca", ""))
+        if busca:
+            qs = qs.filter(Q(farmaco_a__icontains=busca) |
+                           Q(farmaco_b__icontains=busca))
+        itens = [{
+            "id": i.id, "farmaco_a": i.farmaco_a, "farmaco_b": i.farmaco_b,
+            "gravidade": i.gravidade, "gravidade_display": i.get_gravidade_display(),
+            "mecanismo": i.mecanismo, "conduta": i.conduta, "fonte": i.fonte,
+            "origem": i.origem, "origem_display": i.get_origem_display(),
+        } for i in qs.order_by("gravidade", "farmaco_a")[:500]]
+        return JsonResponse({
+            "total": qs.count(),
+            "interacoes": itens,
+            "graves": qs.filter(gravidade="grave").count(),
+            "escopo": (
+                "Subconjunto curado de interações relevantes em oncologia — não "
+                "substitui a avaliação do farmacêutico clínico nem uma base "
+                "completa licenciada. Ausência de alerta não significa ausência "
+                "de interação."),
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    medicamentos = data.get("medicamentos")
+    ciclo_id = data.get("ciclo_id")
+    if ciclo_id:
+        _, CicloQuimioterapia, _, _ = _get_onco_models()
+        ciclo = CicloQuimioterapia.objects.filter(
+            id=ciclo_id, empresa=empresa).select_related("protocolo").first()
+        if ciclo is None:
+            return JsonResponse({"erro": "Ciclo não encontrado"}, status=400)
+        medicamentos = list(medicamentos or []) + _medicamentos_do_paciente(
+            empresa, ciclo)
+    if not medicamentos or not isinstance(medicamentos, list):
+        return JsonResponse(
+            {"erro": "Informe 'medicamentos' (lista) ou 'ciclo_id'."}, status=400)
+    if not InteracaoMedicamentosa.objects.filter(empresa=empresa).exists():
+        seed_interacoes(empresa)
+    return JsonResponse(checar(empresa, medicamentos))
+
+
+def _medicamentos_do_paciente(empresa, ciclo):
+    """Tudo que o paciente está tomando: o ciclo mais a quimioterapia oral.
+
+    A interação clássica da capecitabina com varfarina só aparece se olharmos
+    além do que está sendo infundido naquele momento.
+    """
+    from .models import PrescricaoQuimioOral
+    from .services.interacoes_onco import medicamentos_do_ciclo
+
+    nomes = list(medicamentos_do_ciclo(ciclo))
+    orais = PrescricaoQuimioOral.objects.filter(empresa=empresa, status="ativa")
+    if ciclo.cpf_paciente:
+        orais = orais.filter(cpf_paciente=ciclo.cpf_paciente)
+    elif ciclo.identidade_id:
+        orais = orais.filter(identidade_id=ciclo.identidade_id)
+    else:
+        orais = orais.filter(paciente_nome__iexact=ciclo.paciente_nome)
+    nomes += [p.droga for p in orais]
+    return nomes
+
+
+def _checar_interacoes_do_ciclo(empresa, ciclo):
+    """Checagem silenciosa: nunca derruba a criação do ciclo.
+
+    O médico não pode ser bloqueado por uma falha da checagem — se algo der
+    errado aqui, o ciclo é criado e o problema vai para o log, não para a tela.
+    """
+    try:
+        from .models import InteracaoMedicamentosa
+        from .services.interacoes_onco import checar, seed_interacoes
+        if not InteracaoMedicamentosa.objects.filter(empresa=empresa).exists():
+            seed_interacoes(empresa)
+        return checar(empresa, _medicamentos_do_paciente(empresa, ciclo))
+    except Exception:
+        logger.exception("Falha ao checar interação medicamentosa do ciclo %s",
+                         getattr(ciclo, "id", None))
+        return {"total": 0, "interacoes": [], "falha": True}
+
+
+def _checar_interacoes_da_oral(empresa, prescricao, em_uso=None):
+    """Interações da quimioterapia oral com o resto do que o paciente toma.
+
+    `em_uso` permite a equipe informar medicamentos de fora da oncologia
+    (anticoagulante, antidepressivo, antiácido) — que é justamente onde moram
+    as interações mais perigosas da oral.
+    """
+    try:
+        from .models import InteracaoMedicamentosa, PrescricaoQuimioOral
+        from .services.interacoes_onco import (checar, seed_interacoes,
+                                               medicamentos_do_ciclo)
+        if not InteracaoMedicamentosa.objects.filter(empresa=empresa).exists():
+            seed_interacoes(empresa)
+
+        nomes = [prescricao.droga]
+        if isinstance(em_uso, list):
+            nomes += [str(x) for x in em_uso if x]
+
+        # Outras orais ativas do mesmo paciente.
+        outras = PrescricaoQuimioOral.objects.filter(
+            empresa=empresa, status="ativa").exclude(id=prescricao.id)
+        if prescricao.cpf_paciente:
+            outras = outras.filter(cpf_paciente=prescricao.cpf_paciente)
+        else:
+            outras = outras.filter(paciente_nome__iexact=prescricao.paciente_nome)
+        nomes += [o.droga for o in outras]
+
+        # E os ciclos em andamento do mesmo paciente.
+        _, CicloQuimioterapia, _, _ = _get_onco_models()
+        ciclos = CicloQuimioterapia.objects.filter(
+            empresa=empresa, status__in=("agendado", "em_curso")
+        ).select_related("protocolo")
+        if prescricao.cpf_paciente:
+            ciclos = ciclos.filter(cpf_paciente=prescricao.cpf_paciente)
+        else:
+            ciclos = ciclos.filter(paciente_nome__iexact=prescricao.paciente_nome)
+        for c in ciclos:
+            nomes += medicamentos_do_ciclo(c)
+
+        return checar(empresa, nomes)
+    except Exception:
+        logger.exception("Falha ao checar interação da prescrição oral %s",
+                         getattr(prescricao, "id", None))
+        return {"total": 0, "interacoes": [], "falha": True}
+
+
+# ── Código de barras na pulseira: os "cinco certos" ───────────────────────────
+# O leitor se comporta como teclado: digita o código e dá Enter. Não precisa de
+# driver nem de integração. O que isto resolve é o erro de paciente trocado, que
+# a dupla checagem por NOME não pega quando os dois profissionais leem a mesma
+# tela errada.
+
+import secrets
+
+PREFIXO_PULSEIRA = "PAC"
+PREFIXO_PREPARO = "PRE"
+
+
+def _gerar_codigo(prefixo):
+    """Código curto, único e sem ambiguidade visual.
+
+    Fora do alfabeto: 0/O e 1/I/L. Quando alguém tiver de digitar à mão porque
+    o leitor falhou, confundir zero com ó vira paciente errado.
+    """
+    alfabeto = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    corpo = "".join(secrets.choice(alfabeto) for _ in range(8))
+    return f"{prefixo}-{corpo}"
+
+
+def _codigo_preparo(preparo):
+    """Garante o código da etiqueta do frasco, criando na primeira vez."""
+    from .models import PreparoQuimioterapia
+    if preparo.codigo_barras:
+        return preparo.codigo_barras
+    for _ in range(5):
+        codigo = _gerar_codigo(PREFIXO_PREPARO)
+        if not PreparoQuimioterapia.objects.filter(
+                empresa=preparo.empresa, codigo_barras=codigo).exists():
+            preparo.codigo_barras = codigo
+            preparo.save(update_fields=["codigo_barras"])
+            return codigo
+    raise RuntimeError("Não foi possível gerar código único para o preparo")
+
+
+def _pulseira_dict(p):
+    return {
+        "id": p.id,
+        "codigo": p.codigo,
+        "paciente_nome": p.paciente_nome,
+        "cpf_paciente": p.cpf_paciente,
+        "ativa": p.ativa,
+        "emitida_em": p.emitida_em.isoformat() if p.emitida_em else None,
+        "emitida_por": p.emitida_por,
+        "observacao": p.observacao,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_pulseiras(request):
+    """GET/POST /api/hospital/oncologia/pulseiras/ — emissão da pulseira."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import PulseiraPaciente
+
+    if request.method == "GET":
+        qs = PulseiraPaciente.objects.filter(empresa=empresa, ativa=True)
+        cpf = "".join(filter(str.isdigit, request.GET.get("cpf", "")))[:11]
+        if cpf:
+            qs = qs.filter(cpf_paciente=cpf)
+        nome = (request.GET.get("paciente") or "").strip()
+        if nome:
+            qs = qs.filter(paciente_nome__icontains=nome)
+        itens = list(qs.order_by("-emitida_em")[:200])
+        return JsonResponse({"total": qs.count(),
+                             "pulseiras": [_pulseira_dict(p) for p in itens]})
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    paciente = (data.get("paciente_nome") or "").strip()
+    if not paciente:
+        return JsonResponse({"erro": "Paciente é obrigatório"}, status=400)
+
+    cpf_raw = data.get("cpf_paciente", "")
+    ok_cpf, erro_cpf = validar_cpf_cadastro(cpf_raw, empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
+    cpf = "".join(filter(str.isdigit, cpf_raw))[:11]
+
+    with transaction.atomic():
+        # Reemitir desativa a anterior: duas pulseiras ativas para o mesmo
+        # paciente deixam a conferência ambígua.
+        anteriores = PulseiraPaciente.objects.filter(empresa=empresa, ativa=True)
+        if cpf:
+            anteriores = anteriores.filter(cpf_paciente=cpf)
+        else:
+            anteriores = anteriores.filter(paciente_nome__iexact=paciente)
+        anteriores.update(ativa=False)
+
+        codigo = None
+        for _ in range(5):
+            tentativa = _gerar_codigo(PREFIXO_PULSEIRA)
+            if not PulseiraPaciente.objects.filter(
+                    empresa=empresa, codigo=tentativa).exists():
+                codigo = tentativa
+                break
+        if codigo is None:
+            return JsonResponse(
+                {"erro": "Não foi possível gerar um código único."}, status=500)
+
+        p = PulseiraPaciente.objects.create(
+            empresa=empresa, paciente_nome=paciente[:160], cpf_paciente=cpf,
+            identidade=resolver_identidade(empresa, nome=paciente, cpf=cpf_raw),
+            codigo=codigo,
+            emitida_por=(data.get("emitida_por") or "").strip()[:150],
+            observacao=(data.get("observacao") or "").strip()[:200])
+    return JsonResponse({"id": p.id, "pulseira": _pulseira_dict(p)}, status=201)
+
+
+def _conferir_identidade_por_codigo(empresa, preparo, codigo_paciente,
+                                    codigo_preparo):
+    """Confere se a pulseira lida e o frasco lido são do mesmo paciente.
+
+    Devolve (ok, erro_dict). É aqui que o paciente trocado é pego: o frasco
+    pertence a um ciclo, o ciclo a um paciente, e a pulseira a outro.
+    """
+    from .models import PulseiraPaciente
+
+    codigo_paciente = (codigo_paciente or "").strip().upper()
+    codigo_preparo = (codigo_preparo or "").strip().upper()
+
+    esperado = _codigo_preparo(preparo)
+    if codigo_preparo and codigo_preparo != esperado.upper():
+        return False, {
+            "erro": "O código lido no frasco não corresponde a este preparo.",
+            "codigo": "preparo_divergente"}
+
+    pulseira = PulseiraPaciente.objects.filter(
+        empresa=empresa, codigo__iexact=codigo_paciente, ativa=True).first()
+    if pulseira is None:
+        return False, {
+            "erro": "Pulseira não encontrada ou desativada. Emita uma nova "
+                    "pulseira antes de administrar.",
+            "codigo": "pulseira_desconhecida"}
+
+    ciclo = preparo.ciclo
+    # Casa por CPF quando há; cai para o nome quando o paciente não tem CPF.
+    if pulseira.cpf_paciente and ciclo.cpf_paciente:
+        bate = pulseira.cpf_paciente == ciclo.cpf_paciente
+    else:
+        bate = (_norm(pulseira.paciente_nome) == _norm(ciclo.paciente_nome))
+    if not bate:
+        return False, {
+            "erro": f"PACIENTE DIVERGENTE: a pulseira é de "
+                    f"'{pulseira.paciente_nome}' e este preparo é de "
+                    f"'{ciclo.paciente_nome}'. NÃO administrar.",
+            "codigo": "paciente_divergente",
+            "pulseira_paciente": pulseira.paciente_nome,
+            "preparo_paciente": ciclo.paciente_nome}
+    return True, None
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_conferir_codigos(request):
+    """POST /api/hospital/oncologia/conferir-codigos/
+
+    Confere pulseira e frasco ANTES de abrir o formulário de administração,
+    para a enfermagem descobrir a divergência com o frasco ainda na mão.
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    from .models import PreparoQuimioterapia
+    codigo_preparo = (data.get("codigo_preparo") or "").strip().upper()
+    preparo = PreparoQuimioterapia.objects.filter(
+        empresa=empresa, codigo_barras__iexact=codigo_preparo
+    ).select_related("ciclo").first() if codigo_preparo else None
+    if preparo is None and data.get("preparo_id"):
+        preparo = PreparoQuimioterapia.objects.filter(
+            id=data["preparo_id"], empresa=empresa).select_related("ciclo").first()
+    if preparo is None:
+        return JsonResponse(
+            {"erro": "Preparo não encontrado para o código lido.",
+             "codigo": "preparo_desconhecido", "confere": False}, status=404)
+
+    ok, problema = _conferir_identidade_por_codigo(
+        empresa, preparo, data.get("codigo_paciente"), codigo_preparo)
+    if not ok:
+        problema["confere"] = False
+        return JsonResponse(problema, status=409)
+
+    return JsonResponse({
+        "confere": True,
+        "preparo_id": preparo.id,
+        "paciente_nome": preparo.ciclo.paciente_nome,
+        "droga": preparo.droga,
+        "dose_preparada": (float(preparo.dose_preparada)
+                           if preparo.dose_preparada is not None else None),
+        "unidade": preparo.unidade,
+        "status_preparo": preparo.status,
+        "mensagem": "Pulseira e frasco conferem com o mesmo paciente.",
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_etiqueta_preparo(request, preparo_id):
+    """GET /api/hospital/oncologia/preparos/<id>/etiqueta — dados da etiqueta.
+
+    Devolve o código para impressão ou para exibição na tela. O hospital que
+    ainda não tem impressora de etiqueta consegue operar mostrando o código.
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import PreparoQuimioterapia
+    p = PreparoQuimioterapia.objects.filter(
+        id=preparo_id, empresa=empresa).select_related("ciclo").first()
+    if p is None:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    return JsonResponse({
+        "codigo": _codigo_preparo(p),
+        "paciente_nome": p.ciclo.paciente_nome,
+        "droga": p.droga,
+        "dose_preparada": (float(p.dose_preparada)
+                           if p.dose_preparada is not None else None),
+        "unidade": p.unidade,
+        "lote": p.lote,
+        "validade_lote": p.validade_lote.isoformat() if p.validade_lote else None,
+        "diluente": p.diluente,
+        "volume_final_ml": p.volume_final_ml,
+        "ciclo": f"Ciclo {p.ciclo.numero_ciclo}",
+        "preparado_por": p.preparado_por,
+        "conferido_por": p.conferido_por,
+    })

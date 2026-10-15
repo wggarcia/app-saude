@@ -12661,6 +12661,112 @@ class ConsultaSeguimento(models.Model):
         return f"Consulta {self.data_prevista} — {self.seguimento.paciente_nome}"
 
 
+class PulseiraPaciente(models.Model):
+    """Código da pulseira de identificação do paciente.
+
+    Fecha os "cinco certos" da administração. Hoje a conferência à beira do
+    leito é visual: a enfermagem lê o nome na tela e o nome na pulseira. É
+    exatamente aí que acontece o erro de paciente trocado, e é o tipo de erro
+    que a dupla checagem por nome não pega quando os dois profissionais leem a
+    mesma tela errada.
+
+    O leitor de código de barras se comporta como teclado: digita o código e dá
+    Enter. Não precisa de driver nem de integração — só do código impresso (ou
+    mostrado na tela, se o hospital ainda não tiver impressora de etiqueta).
+    """
+    empresa       = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                      related_name="pulseiras_paciente")
+    paciente_nome = models.CharField(max_length=160)
+    cpf_paciente  = models.CharField(max_length=11, blank=True, default="")
+    identidade    = models.ForeignKey("IdentidadePaciente", on_delete=models.SET_NULL,
+                                      null=True, blank=True,
+                                      related_name="pulseiras")
+    codigo        = models.CharField(max_length=40, db_index=True)
+    ativa         = models.BooleanField(default=True, db_index=True)
+    emitida_em    = models.DateTimeField(auto_now_add=True)
+    emitida_por   = models.CharField(max_length=150, blank=True, default="")
+    observacao    = models.CharField(max_length=200, blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Pulseira do Paciente"
+        verbose_name_plural = "Pulseiras dos Pacientes"
+        ordering            = ["-emitida_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativa"]),
+            models.Index(fields=["empresa", "cpf_paciente"]),
+        ]
+        constraints = [
+            # O código é a identidade da pulseira: repetido dentro do mesmo
+            # hospital, a conferência deixa de provar qualquer coisa.
+            models.UniqueConstraint(fields=["empresa", "codigo"],
+                                    name="pulseira_codigo_unico_na_empresa"),
+        ]
+
+    def __str__(self):
+        return f"{self.codigo} — {self.paciente_nome}"
+
+
+class InteracaoMedicamentosa(models.Model):
+    """Par de medicamentos que não devem andar juntos sem conduta.
+
+    Esta base é um SUBCONJUNTO CURADO de oncologia, não um checador completo.
+    A distinção importa: estudos brasileiros com pacientes oncológicos acharam
+    152 interações pelo Micromedex e 614 pelo Drugs.com nos MESMOS pacientes.
+    Uma base que grita centenas de alertas produz fadiga de alerta — a equipe
+    passa a ignorar tudo, inclusive o que importa. Aqui cada par entra com
+    mecanismo, conduta e fonte, e o sistema diz na cara que é subconjunto.
+
+    Quando o hospital licenciar uma base comercial, ela entra como provedor
+    adicional sem substituir estes registros.
+    """
+    GRAVIDADE = [
+        ("grave",    "Grave"),
+        ("moderada", "Moderada"),
+        ("leve",     "Leve"),
+    ]
+    ORIGEM = [
+        ("curada",     "Base curada SoluSCRT"),
+        ("hospital",   "Cadastrada pelo hospital"),
+        ("licenciada", "Base licenciada externa"),
+    ]
+    empresa      = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                     related_name="interacoes_medicamentosas")
+    # Guardamos normalizado (minúsculo, sem acento) para casar com o que vem
+    # da prescrição sem depender de digitação.
+    farmaco_a    = models.CharField(max_length=120, db_index=True)
+    farmaco_b    = models.CharField(max_length=120, db_index=True)
+    gravidade    = models.CharField(max_length=10, choices=GRAVIDADE,
+                                    default="moderada", db_index=True)
+    mecanismo    = models.TextField(
+        help_text="Por que a interação acontece — sem isto o alerta é só um susto")
+    conduta      = models.TextField(
+        help_text="O que fazer: trocar, monitorar, ajustar dose, espaçar")
+    fonte        = models.CharField(
+        max_length=200, blank=True, default="",
+        help_text="De onde veio (bula, alerta regulatório, diretriz)")
+    origem       = models.CharField(max_length=12, choices=ORIGEM, default="curada")
+    ativo        = models.BooleanField(default=True)
+    criado_em    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Interação Medicamentosa"
+        verbose_name_plural = "Interações Medicamentosas"
+        ordering            = ["farmaco_a", "farmaco_b"]
+        indexes             = [
+            models.Index(fields=["empresa", "gravidade"]),
+            models.Index(fields=["empresa", "farmaco_a"]),
+            models.Index(fields=["empresa", "farmaco_b"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["empresa", "farmaco_a", "farmaco_b"],
+                name="interacao_unica_por_par_na_empresa"),
+        ]
+
+    def __str__(self):
+        return f"{self.farmaco_a} + {self.farmaco_b} ({self.get_gravidade_display()})"
+
+
 class CertificadoAssinante(models.Model):
     """Como CADA PROFISSIONAL de CADA cliente assina — nunca um certificado global.
 
@@ -12898,6 +13004,9 @@ class PreparoQuimioterapia(models.Model):
     preparado_em   = models.DateTimeField(null=True, blank=True)
     conferido_em   = models.DateTimeField(null=True, blank=True)
     motivo_descarte = models.TextField(blank=True, default="")
+    # Código impresso na etiqueta do frasco, lido à beira do leito.
+    codigo_barras  = models.CharField(max_length=40, blank=True, default="",
+                                      db_index=True)
     criado_em      = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -12954,6 +13063,12 @@ class AdministracaoQuimioterapia(models.Model):
                                         default="nenhuma", db_index=True)
     intercorrencia_conduta = models.TextField(blank=True, default="")
     observacao    = models.TextField(blank=True, default="")
+    # Registra COMO a identidade foi conferida. Sem isto não dá para medir a
+    # adesão à leitura de código — e o que não se mede volta ao visual.
+    conferido_por_codigo = models.BooleanField(
+        default=False, verbose_name="Identidade conferida por leitura de código")
+    codigo_paciente_lido = models.CharField(max_length=40, blank=True, default="")
+    codigo_preparo_lido  = models.CharField(max_length=40, blank=True, default="")
     criado_em     = models.DateTimeField(auto_now_add=True)
 
     class Meta:

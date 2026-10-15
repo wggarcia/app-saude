@@ -60,7 +60,8 @@ class Command(BaseCommand):
                                 AvaliacaoRespostaOncologica,
                                 PrescricaoQuimioOral, DispensacaoQuimioOral,
                                 SeguimentoOncologico, ConsultaSeguimento,
-                                APACOncologia, ToxicidadeQuimio)
+                                APACOncologia, ToxicidadeQuimio,
+                                PulseiraPaciente)
 
         # Mesma lógica de conexão do seed de OPME: owner só quando é papel
         # realmente distinto (produção com RLS); em SQLite usar 2ª conexão trava.
@@ -97,6 +98,8 @@ class Command(BaseCommand):
             empresa=empresa, paciente_nome__startswith=TAG)
         apacs_antigas = APACOncologia.objects.using(DB).filter(
             empresa=empresa, paciente_nome__startswith=TAG)
+        pulseiras_antigas = PulseiraPaciente.objects.using(DB).filter(
+            empresa=empresa, paciente_nome__startswith=TAG)
         n_antigos = ciclos_antigos.count()
         self.stdout.write(
             f"Lote {TAG} existente: {n_antigos} ciclo(s), {guias_antigas.count()} guia(s), "
@@ -108,6 +111,7 @@ class Command(BaseCommand):
             orais_antigas.delete()     # dispensações caem em cascata
             seguimentos_antigos.delete()   # consultas caem em cascata
             apacs_antigas.delete()
+            pulseiras_antigas.delete()
             ciclos_antigos.delete()
             guias_antigas.delete()
             # O protocolo criado pelo seed só sai no --clear: numa re-semeadura
@@ -355,6 +359,27 @@ class Command(BaseCommand):
                 unidades_dispensadas=28, unidades_devolvidas=14, adesao_pct=50.0,
                 proxima_retirada=_dias(5), dispensado_por="Farm. Letícia Campos",
                 observacao="Paciente relata náusea; devolveu metade da caixa.")
+            oral.observacao = (
+                "Paciente em uso de varfarina por fibrilação atrial — interação "
+                "GRAVE com capecitabina (alerta de caixa-preta): RNI "
+                "imprevisível. Avaliar troca por heparina de baixo peso "
+                "molecular.")
+            oral.save(using=DB, update_fields=["observacao"])
+
+            # ── Pulseiras: o código que a enfermagem lê à beira do leito ──
+            from api.views_hospital_oncologia import _gerar_codigo, PREFIXO_PULSEIRA
+            for nome in (f"{TAG} Marina Alves", f"{TAG} Carlos Prado",
+                         f"{TAG} Rosa Lima"):
+                PulseiraPaciente.objects.using(DB).create(
+                    empresa=empresa, paciente_nome=nome,
+                    codigo=_gerar_codigo(PREFIXO_PULSEIRA),
+                    emitida_por="Recepção da Oncologia")
+
+            # ── Interação medicamentosa: a base curada no tenant ──────────
+            from api.services.interacoes_onco import seed_interacoes
+            seed_interacoes(empresa)
+            # E um caso vivo: paciente em capecitabina que usa varfarina —
+            # alerta de caixa-preta, o cenário que o módulo existe para pegar.
 
             # ── Toxicidade CTCAE: o que de fato acontece com o paciente ───
             ToxicidadeQuimio.objects.using(DB).create(
@@ -433,6 +458,7 @@ class Command(BaseCommand):
             f"OK — lote {TAG} criado: 3 guias, 3 ciclos, 2 reservas de cadeira, "
             f"3 preparos, 2 administrações (1 com extravasamento), 3 avaliações "
             f"RECIST, 1 prescrição oral com adesão de 50% (retirada atrasada) "
-            f"2 seguimentos (1 regular, 1 perdido), 3 toxicidades CTCAE e "
-            f"3 APACs (aprovada/glosada/submetida). "
+            f"2 seguimentos (1 regular, 1 perdido), 3 toxicidades CTCAE, "
+            f"3 APACs (aprovada/glosada/submetida), 3 pulseiras e a base "
+            f"curada de interações. "
             f"Reversível: rode com --apply --clear para remover."))

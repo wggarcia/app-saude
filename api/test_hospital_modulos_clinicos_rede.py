@@ -2122,6 +2122,361 @@ class OncologiaTests(TestCase):
         self.assertEqual(
             CertificadoAssinante.objects.get(id=cid).status, "inativo")
 
+    # ── Interação medicamentosa (subconjunto curado) ───────────────────────
+    def test_capecitabina_com_varfarina_e_alerta_grave(self):
+        """O caso que motivou tudo: alerta de caixa-preta. Prescrever
+        capecitabina para quem usa varfarina sem avisar é omissão séria."""
+        empresa = _empresa("Hospital Rede", "onco-int1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post("/api/hospital/oncologia/interacoes/",
+                        data={"medicamentos": ["Capecitabina", "Varfarina"]},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["graves"], 1)
+        i = d["interacoes"][0]
+        self.assertEqual(i["gravidade"], "grave")
+        self.assertIn("RNI", i["mecanismo"])
+        self.assertIn("heparina", i["conduta"].lower())
+        self.assertIn("caixa-preta", i["fonte"].lower())
+
+    def test_reconhece_nome_comercial_e_sinonimo(self):
+        """Quem prescreve escreve 'Xeloda' e 'Marevan'. Se o sistema só casa o
+        nome genérico, o alerta de caixa-preta simplesmente não dispara."""
+        empresa = _empresa("Hospital Rede", "onco-int2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post("/api/hospital/oncologia/interacoes/",
+                        data={"medicamentos": ["Xeloda 500mg", "Marevan"]},
+                        content_type="application/json")
+        self.assertEqual(r.json()["graves"], 1)
+
+    def test_interacao_por_classe_e_nao_so_por_molecula(self):
+        """Metotrexato + ibuprofeno tem de alertar: o que importa clinicamente
+        é a classe (anti-inflamatório), não a molécula exata."""
+        empresa = _empresa("Hospital Rede", "onco-int3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        for aine in ("Ibuprofeno", "Naproxeno", "Diclofenaco"):
+            r = client.post("/api/hospital/oncologia/interacoes/",
+                            data={"medicamentos": ["Metotrexato", aine]},
+                            content_type="application/json")
+            self.assertEqual(r.json()["graves"], 1, f"falhou para {aine}")
+
+    def test_tamoxifeno_com_fluoxetina_alerta_perda_de_eficacia(self):
+        """A interação que não causa toxicidade — reduz a EFICÁCIA. É a que
+        passa despercebida porque o paciente não piora na hora."""
+        empresa = _empresa("Hospital Rede", "onco-int4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post("/api/hospital/oncologia/interacoes/",
+                        data={"medicamentos": ["Tamoxifeno", "Fluoxetina"]},
+                        content_type="application/json")
+        d = r.json()
+        self.assertEqual(d["graves"], 1)
+        self.assertIn("endoxifeno", d["interacoes"][0]["mecanismo"])
+
+    def test_resposta_sempre_diz_que_e_subconjunto(self):
+        """'Nenhuma interação encontrada' NÃO pode ser lido como 'seguro'."""
+        empresa = _empresa("Hospital Rede", "onco-int5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post("/api/hospital/oncologia/interacoes/",
+                        data={"medicamentos": ["Soro fisiológico", "Dipirona"]},
+                        content_type="application/json")
+        d = r.json()
+        self.assertEqual(d["total"], 0)
+        self.assertIn("não substitui", d["escopo"])
+        self.assertIn("Ausência de alerta não significa", d["escopo"])
+
+    def test_ciclo_alerta_interacao_na_criacao(self):
+        """O alerta tem de aparecer sozinho, não só se alguém for consultar."""
+        empresa = _empresa("Hospital Rede", "onco-int6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(
+            empresa,
+            drogas=[{"droga": "Metotrexato", "dose": 50, "unidade": "mg/m²", "dia": 1}])
+        protocolo.drogas_suporte = [
+            {"droga": "Ibuprofeno", "dose": 400, "unidade": "mg",
+             "via": "VO", "momento": "se dor"}]
+        protocolo.save(update_fields=["drogas_suporte"])
+        r = self._criar_ciclo(client, protocolo, neutrofilos=2500,
+                              plaquetas=220000)
+        self.assertEqual(r.status_code, 201)
+        d = r.json()
+        self.assertGreaterEqual(d["interacoes"]["graves"], 1)
+        self.assertTrue(any("Interação GRAVE" in a for a in d["alertas"]))
+
+    def test_oral_checa_contra_o_ciclo_em_andamento(self):
+        """A capecitabina oral precisa ser checada contra o que o paciente já
+        recebe — inclusive medicamento de fora da oncologia."""
+        empresa = _empresa("Hospital Rede", "onco-int7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post(
+            "/api/hospital/oncologia/quimio-oral/",
+            data={"paciente_nome": "Paciente Anticoagulado",
+                  "droga": "Capecitabina", "unidades_por_dia": 2,
+                  "dias_uso": 14, "dias_pausa": 7,
+                  "data_inicio": date.today().isoformat(),
+                  "medicamentos_em_uso": ["Varfarina 5mg"]},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        d = r.json()
+        self.assertGreaterEqual(d["interacoes"]["graves"], 1)
+        self.assertTrue(any("Interação GRAVE" in a for a in d["alertas"]))
+
+    def test_falha_na_checagem_nao_derruba_a_criacao_do_ciclo(self):
+        """O médico nunca é bloqueado por uma falha da checagem."""
+        from unittest.mock import patch
+        empresa = _empresa("Hospital Rede", "onco-int8@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        with patch("api.services.interacoes_onco.checar",
+                   side_effect=RuntimeError("base fora do ar")):
+            r = self._criar_ciclo(client, protocolo, neutrofilos=2500,
+                                  plaquetas=220000)
+        self.assertEqual(r.status_code, 201)
+        self.assertTrue(r.json()["interacoes"].get("falha"))
+
+    def test_base_curada_e_semeada_e_idempotente(self):
+        from .models import InteracaoMedicamentosa
+        from .services.interacoes_onco import seed_interacoes, BASE_CURADA
+        empresa = _empresa("Hospital Rede", "onco-int9@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        d = client.get("/api/hospital/oncologia/interacoes").json()
+        self.assertEqual(d["total"], len(BASE_CURADA))
+        self.assertGreater(d["graves"], 10)
+        seed_interacoes(empresa)      # de novo não duplica
+        self.assertEqual(
+            InteracaoMedicamentosa.objects.filter(empresa=empresa).count(),
+            len(BASE_CURADA))
+
+    def test_toda_interacao_tem_mecanismo_conduta_e_fonte(self):
+        """Alerta sem conduta é só um susto: a equipe não sabe o que fazer."""
+        from .services.interacoes_onco import BASE_CURADA
+        for a, b, gravidade, mecanismo, conduta, fonte in BASE_CURADA:
+            self.assertTrue(mecanismo.strip(), f"{a}+{b} sem mecanismo")
+            self.assertTrue(conduta.strip(), f"{a}+{b} sem conduta")
+            self.assertTrue(fonte.strip(), f"{a}+{b} sem fonte")
+            self.assertIn(gravidade, ("grave", "moderada", "leve"))
+
+    def test_interacoes_isoladas_por_empresa(self):
+        a = _empresa("Hospital A", "onco-int-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "onco-int-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        ca.get("/api/hospital/oncologia/interacoes")     # semeia só o A
+        from .models import InteracaoMedicamentosa
+        self.assertEqual(
+            InteracaoMedicamentosa.objects.filter(empresa=b).count(), 0)
+        # O B semeia a sua própria base, sem ver a do A.
+        db = cb.get("/api/hospital/oncologia/interacoes").json()
+        self.assertTrue(db["total"] > 0)
+        self.assertEqual(
+            InteracaoMedicamentosa.objects.filter(empresa=a).count(),
+            InteracaoMedicamentosa.objects.filter(empresa=b).count())
+
+    # ── Código de barras na pulseira (os "cinco certos") ───────────────────
+    def _pulseira(self, client, nome, cpf=""):
+        return client.post("/api/hospital/oncologia/pulseiras/",
+                           data={"paciente_nome": nome, "cpf_paciente": cpf,
+                                 "emitida_por": "Recepção"},
+                           content_type="application/json")
+
+    def test_pulseira_trocada_bloqueia_a_administracao(self):
+        """O ERRO QUE ISTO EXISTE PARA PEGAR: paciente trocado. A dupla
+        checagem por nome não pega quando os dois profissionais leem a mesma
+        tela errada — a leitura do código pega."""
+        empresa = _empresa("Hospital Rede", "onco-cb1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(client, protocolo,
+                                     paciente_nome="Maria Souza",
+                                     neutrofilos=2500, plaquetas=220000
+                                     ).json()["id"]
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        etiqueta = client.get(
+            f"/api/hospital/oncologia/preparos/{pid}/etiqueta").json()
+        # Pulseira de OUTRO paciente.
+        outra = self._pulseira(client, "João Pereira").json()["pulseira"]
+
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid,
+                              "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego",
+                              "codigo_paciente": outra["codigo"],
+                              "codigo_preparo": etiqueta["codigo"]},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        d = r.json()
+        self.assertEqual(d["codigo"], "paciente_divergente")
+        self.assertIn("NÃO administrar", d["erro"])
+        self.assertIn("João Pereira", d["erro"])
+        self.assertIn("Maria Souza", d["erro"])
+        from .models import AdministracaoQuimioterapia
+        self.assertEqual(AdministracaoQuimioterapia.objects.count(), 0)
+
+    def test_pulseira_certa_libera_e_registra_a_conferencia(self):
+        empresa = _empresa("Hospital Rede", "onco-cb2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(client, protocolo,
+                                     paciente_nome="Maria Souza",
+                                     neutrofilos=2500, plaquetas=220000
+                                     ).json()["id"]
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        etiqueta = client.get(
+            f"/api/hospital/oncologia/preparos/{pid}/etiqueta").json()
+        pulseira = self._pulseira(client, "Maria Souza").json()["pulseira"]
+
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid,
+                              "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego",
+                              "codigo_paciente": pulseira["codigo"],
+                              "codigo_preparo": etiqueta["codigo"]},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:300])
+        self.assertTrue(r.json()["administracao"]["conferido_por_codigo"])
+        d = client.get("/api/hospital/oncologia/administracoes").json()
+        self.assertEqual(d["conferidas_por_codigo"], 1)
+        self.assertEqual(d["adesao_codigo_pct"], 100.0)
+
+    def test_frasco_de_outro_preparo_e_recusado(self):
+        """Ler o frasco errado do mesmo paciente também é erro de medicação."""
+        empresa = _empresa("Hospital Rede", "onco-cb3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        pulseira = self._pulseira(client, "Paciente Onco").json()["pulseira"]
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid,
+                              "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego",
+                              "codigo_paciente": pulseira["codigo"],
+                              "codigo_preparo": "PRE-XXXXXXXX"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "preparo_divergente")
+
+    def test_ler_so_o_frasco_nao_basta(self):
+        """Conferir só o frasco não identifica QUEM vai receber."""
+        empresa = _empresa("Hospital Rede", "onco-cb4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        etiqueta = client.get(
+            f"/api/hospital/oncologia/preparos/{pid}/etiqueta").json()
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid,
+                              "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego",
+                              "codigo_preparo": etiqueta["codigo"]},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "falta_codigo_paciente")
+
+    def test_pulseira_desativada_nao_confere(self):
+        """Reemitir a pulseira desativa a anterior: duas ativas tornariam a
+        conferência ambígua."""
+        empresa = _empresa("Hospital Rede", "onco-cb5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        antiga = self._pulseira(client, "Maria Souza",
+                                cpf="52998224725").json()["pulseira"]
+        nova = self._pulseira(client, "Maria Souza",
+                              cpf="52998224725").json()["pulseira"]
+        self.assertNotEqual(antiga["codigo"], nova["codigo"])
+        d = client.get("/api/hospital/oncologia/pulseiras").json()
+        self.assertEqual(d["total"], 1)
+
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(client, protocolo,
+                                     paciente_nome="Maria Souza",
+                                     cpf_paciente="52998224725",
+                                     neutrofilos=2500, plaquetas=220000
+                                     ).json()["id"]
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego",
+                              "codigo_paciente": antiga["codigo"]},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "pulseira_desconhecida")
+
+    def test_conferencia_previa_antes_de_abrir_o_formulario(self):
+        """A enfermagem descobre a divergência com o frasco ainda na mão."""
+        empresa = _empresa("Hospital Rede", "onco-cb6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(client, protocolo,
+                                     paciente_nome="Maria Souza",
+                                     neutrofilos=2500, plaquetas=220000
+                                     ).json()["id"]
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        etiqueta = client.get(
+            f"/api/hospital/oncologia/preparos/{pid}/etiqueta").json()
+        certa = self._pulseira(client, "Maria Souza").json()["pulseira"]
+        errada = self._pulseira(client, "João Pereira").json()["pulseira"]
+
+        r = client.post("/api/hospital/oncologia/conferir-codigos/",
+                        data={"codigo_preparo": etiqueta["codigo"],
+                              "codigo_paciente": certa["codigo"]},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["confere"])
+        self.assertEqual(r.json()["paciente_nome"], "Maria Souza")
+
+        r = client.post("/api/hospital/oncologia/conferir-codigos/",
+                        data={"codigo_preparo": etiqueta["codigo"],
+                              "codigo_paciente": errada["codigo"]},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertFalse(r.json()["confere"])
+
+    def test_codigo_evita_caracteres_ambiguos(self):
+        """Quando o leitor falha alguém digita à mão: confundir 0 com O vira
+        paciente errado."""
+        empresa = _empresa("Hospital Rede", "onco-cb7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        for i in range(12):
+            c = self._pulseira(client, f"Paciente {i}").json()["pulseira"]["codigo"]
+            corpo = c.split("-", 1)[1]
+            for proibido in ("0", "O", "1", "I", "L"):
+                self.assertNotIn(proibido, corpo,
+                                 f"código ambíguo gerado: {c}")
+
+    def test_administracao_sem_codigo_continua_possivel(self):
+        """Hospital que ainda não tem leitor não pode ficar impedido de
+        administrar — a leitura soma, não substitui o fluxo."""
+        empresa = _empresa("Hospital Rede", "onco-cb8@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        self.assertFalse(r.json()["administracao"]["conferido_por_codigo"])
+        d = client.get("/api/hospital/oncologia/administracoes").json()
+        self.assertEqual(d["adesao_codigo_pct"], 0.0)
+
+    def test_pulseiras_isoladas_por_empresa(self):
+        a = _empresa("Hospital A", "onco-cb-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "onco-cb-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        pulseira_a = self._pulseira(ca, "Maria Souza").json()["pulseira"]
+        self.assertEqual(cb.get("/api/hospital/oncologia/pulseiras").json()["total"], 0)
+        # A pulseira do hospital A não confere no hospital B.
+        ciclo_b = self._ciclo_pronto(cb, self._protocolo(b))
+        pid_b = self._preparar_ate_conferido(cb, ciclo_b)
+        r = cb.post("/api/hospital/oncologia/administracoes/",
+                    data={"preparo_id": pid_b, "administrado_por": "X",
+                          "checado_por": "Y",
+                          "codigo_paciente": pulseira_a["codigo"]},
+                    content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "pulseira_desconhecida")
+
     def test_assinatura_isolada_por_empresa(self):
         a = _empresa("Hospital A", "onco-icp-a@example.com", "hospital_rede")
         b = _empresa("Hospital B", "onco-icp-b@example.com", "hospital_rede")

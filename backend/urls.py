@@ -1228,6 +1228,10 @@ from api.views_hospital_oncologia import (
     api_onco_ciclo_assinatura,
     api_onco_certificados,
     api_onco_certificado_detalhe,
+    api_onco_interacoes,
+    api_onco_pulseiras,
+    api_onco_conferir_codigos,
+    api_onco_etiqueta_preparo,
 )
 from api.views_hospital_manutencao import (
     hospital_manutencao_page,
@@ -3600,6 +3604,16 @@ urlpatterns = [
     path('api/hospital/oncologia/certificados',                 api_onco_certificados),
     path('api/hospital/oncologia/certificados/',                api_onco_certificados),
     path('api/hospital/oncologia/certificados/<int:certificado_id>/', api_onco_certificado_detalhe),
+    # Interação medicamentosa (subconjunto curado de oncologia)
+    path('api/hospital/oncologia/interacoes',                   api_onco_interacoes),
+    path('api/hospital/oncologia/interacoes/',                  api_onco_interacoes),
+    # Código de barras na pulseira (os "cinco certos")
+    path('api/hospital/oncologia/pulseiras',                    api_onco_pulseiras),
+    path('api/hospital/oncologia/pulseiras/',                   api_onco_pulseiras),
+    path('api/hospital/oncologia/conferir-codigos',             api_onco_conferir_codigos),
+    path('api/hospital/oncologia/conferir-codigos/',            api_onco_conferir_codigos),
+    path('api/hospital/oncologia/preparos/<int:preparo_id>/etiqueta',  api_onco_etiqueta_preparo),
+    path('api/hospital/oncologia/preparos/<int:preparo_id>/etiqueta/', api_onco_etiqueta_preparo),
     path('api/hospital/oncologia/guias/alertas',                api_onco_guias_alertas),
     path('api/hospital/oncologia/guias/alertas/',               api_onco_guias_alertas),
     path('api/hospital/oncologia/guias',                        api_onco_guias),
