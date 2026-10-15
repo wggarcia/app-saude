@@ -3388,3 +3388,205 @@ def api_onco_seguimento_consultas(request, seguimento_id):
                    "seguimento para que entre na sobrevida livre de doença."
                    if c.suspeita_recidiva and not seg.recidiva else None),
     }, status=201)
+
+
+# ── Assinatura digital ICP-Brasil da prescrição ───────────────────────────────
+# A prescrição de quimioterapia é o documento que autoriza colocar um
+# citotóxico numa veia. Sem assinatura ela vale dentro da instituição, mas não
+# tem validade jurídica fora dela. Aqui está tudo que não depende de possuir o
+# certificado — ele é a última peça a encaixar.
+
+def _assinatura_dict(a, conferencia=None):
+    d = {
+        "id": a.id,
+        "tipo_documento": a.tipo_documento,
+        "objeto_id": a.objeto_id,
+        "status": a.status,
+        "status_display": a.get_status_display(),
+        "conteudo_hash": a.conteudo_hash,
+        "algoritmo": a.algoritmo,
+        "signatario_nome": a.signatario_nome,
+        "signatario_registro": a.signatario_registro,
+        "certificado": {
+            "titular": a.certificado_titular,
+            "cpf_cnpj": a.certificado_cpf_cnpj,
+            "emissor": a.certificado_emissor,
+            "numero_serie": a.certificado_serie,
+            "valido_de": (a.certificado_valido_de.isoformat()
+                          if a.certificado_valido_de else None),
+            "valido_ate": (a.certificado_valido_ate.isoformat()
+                           if a.certificado_valido_ate else None),
+        } if a.certificado_titular else None,
+        "provedor": a.provedor,
+        "assinado_em": a.assinado_em.isoformat() if a.assinado_em else None,
+        "carimbo_tempo_em": (a.carimbo_tempo_em.isoformat()
+                             if a.carimbo_tempo_em else None),
+        # Sem carimbo de uma ACT externa, a data é a do nosso relógio. Dizer
+        # isso na própria resposta evita que alguém a trate como prova de data.
+        "data_com_fe_publica": a.carimbo_tempo_em is not None,
+        "motivo_falha": a.motivo_falha,
+    }
+    if conferencia is not None:
+        d["conferencia"] = conferencia
+    return d
+
+
+def _conferir_assinatura(ciclo, assinatura):
+    """Recalcula o resumo e compara com o que foi assinado.
+
+    É o coração da coisa: a assinatura só continua valendo enquanto o documento
+    for byte a byte o mesmo. Se alguém mudou a dose depois, isto aparece.
+    """
+    from .services.assinatura_icp import conteudo_canonico_prescricao, resumo_sha256
+
+    atual = resumo_sha256(conteudo_canonico_prescricao(ciclo))
+    integro = (atual == assinatura.conteudo_hash)
+    if not integro and assinatura.status == "assinada":
+        assinatura.status = "invalidada"
+        assinatura.motivo_falha = (
+            "O conteúdo da prescrição mudou depois da assinatura: o resumo "
+            "recalculado não confere com o que foi assinado.")
+        assinatura.save(update_fields=["status", "motivo_falha"])
+    return {
+        "integro": integro,
+        "hash_atual": atual,
+        "hash_assinado": assinatura.conteudo_hash,
+        "mensagem": ("Documento íntegro: confere com o conteúdo assinado."
+                     if integro else
+                     "ATENÇÃO: a prescrição foi alterada após a assinatura. "
+                     "A assinatura não cobre o conteúdo atual."),
+    }
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_assinatura_status(request):
+    """GET /api/hospital/oncologia/assinatura/status — dá para assinar aqui?"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .services.assinatura_icp import status_assinatura
+    return JsonResponse(status_assinatura())
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_ciclo_assinatura(request, ciclo_id):
+    """GET/POST /api/hospital/oncologia/ciclos/<id>/assinatura/
+
+    GET  devolve a assinatura vigente e reconfere a integridade do documento.
+    POST assina — ou recusa explicitamente, dizendo o que falta.
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import AssinaturaDocumento
+    from .services.assinatura_icp import (
+        AssinaturaIndisponivel, TIPO_PRESCRICAO_QUIMIO, ALGORITMO_RESUMO,
+        conteudo_canonico_prescricao, obter_provedor, resumo_sha256,
+        status_assinatura)
+
+    _, CicloQuimioterapia, _, _ = _get_onco_models()
+    ciclo = CicloQuimioterapia.objects.filter(
+        id=ciclo_id, empresa=empresa).select_related("protocolo").first()
+    if ciclo is None:
+        return JsonResponse({"erro": "Ciclo não encontrado"}, status=404)
+
+    vigente = AssinaturaDocumento.objects.filter(
+        empresa=empresa, tipo_documento=TIPO_PRESCRICAO_QUIMIO,
+        objeto_id=ciclo.id).order_by("-criado_em").first()
+
+    if request.method == "GET":
+        if vigente is None:
+            return JsonResponse({
+                "assinada": False,
+                "assinatura": None,
+                "status_provedor": status_assinatura(),
+                "hash_atual": resumo_sha256(conteudo_canonico_prescricao(ciclo)),
+            })
+        conferencia = _conferir_assinatura(ciclo, vigente)
+        vigente.refresh_from_db()
+        return JsonResponse({
+            "assinada": vigente.status == "assinada",
+            "assinatura": _assinatura_dict(vigente, conferencia),
+            "status_provedor": status_assinatura(),
+        })
+
+    # ── POST: assinar ──────────────────────────────────────────────────────
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    if not (ciclo.doses_calculadas or []):
+        return JsonResponse(
+            {"erro": "Não há prescrição a assinar: o ciclo não tem doses "
+                     "calculadas.", "codigo": "sem_doses"}, status=400)
+
+    if vigente and vigente.status == "assinada":
+        conferencia = _conferir_assinatura(ciclo, vigente)
+        if conferencia["integro"]:
+            return JsonResponse({
+                "erro": "Esta prescrição já está assinada e íntegra.",
+                "codigo": "ja_assinada",
+                "assinatura": _assinatura_dict(vigente, conferencia),
+            }, status=409)
+
+    signatario = (data.get("signatario_nome")
+                  or ciclo.medico_oncologista or "").strip()
+    if not signatario:
+        return JsonResponse(
+            {"erro": "Informe quem está assinando a prescrição.",
+             "codigo": "sem_signatario"}, status=400)
+
+    conteudo = conteudo_canonico_prescricao(ciclo)
+    conteudo_hash = resumo_sha256(conteudo)
+
+    provedor = obter_provedor()
+    try:
+        resultado = provedor.assinar(conteudo.encode("utf-8"))
+    except AssinaturaIndisponivel as exc:
+        # Registra a tentativa como FALHA — nunca como assinada. É o que impede
+        # que uma prescrição não assinada passe por assinada mais tarde.
+        AssinaturaDocumento.objects.create(
+            empresa=empresa, tipo_documento=TIPO_PRESCRICAO_QUIMIO,
+            objeto_id=ciclo.id, conteudo_hash=conteudo_hash,
+            algoritmo=ALGORITMO_RESUMO, status="falha",
+            signatario_nome=signatario[:150],
+            signatario_registro=(data.get("signatario_registro") or "").strip()[:40],
+            provedor=provedor.nome, motivo_falha=exc.mensagem)
+        return JsonResponse({
+            "erro": exc.mensagem,
+            "codigo": exc.codigo,
+            "pendencias": exc.pendencias,
+            "assinada": False,
+            "documento_hash": conteudo_hash,
+        }, status=503)
+
+    cert = resultado.get("certificado") or {}
+    a = AssinaturaDocumento.objects.create(
+        empresa=empresa, tipo_documento=TIPO_PRESCRICAO_QUIMIO,
+        objeto_id=ciclo.id, conteudo_hash=conteudo_hash,
+        algoritmo=ALGORITMO_RESUMO, status="assinada",
+        signatario_nome=signatario[:150],
+        signatario_registro=(data.get("signatario_registro") or "").strip()[:40],
+        certificado_titular=(cert.get("titular") or "")[:200],
+        certificado_cpf_cnpj=(cert.get("cpf_cnpj") or "")[:20],
+        certificado_emissor=(cert.get("emissor") or "")[:200],
+        certificado_serie=(cert.get("numero_serie") or "")[:80],
+        certificado_valido_de=cert.get("valido_de"),
+        certificado_valido_ate=cert.get("valido_ate"),
+        assinatura_b64=resultado.get("assinatura_b64", ""),
+        provedor=resultado.get("provedor", provedor.nome),
+        assinado_em=resultado.get("assinado_em") or timezone.now(),
+        carimbo_tempo_em=resultado.get("carimbo_tempo_em"))
+    return JsonResponse({
+        "assinada": True,
+        "assinatura": _assinatura_dict(a, {"integro": True,
+                                           "hash_atual": conteudo_hash,
+                                           "hash_assinado": conteudo_hash,
+                                           "mensagem": "Documento recém-assinado."}),
+    }, status=201)

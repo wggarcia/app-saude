@@ -53,6 +53,19 @@ SECRET_KEY = os.environ.get(
 )
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+# ── Assinatura digital ICP-Brasil ─────────────────────────────────────────────
+# Vazio = nenhum certificado configurado: o sistema NÃO assina e diz isso de
+# forma explícita, em vez de fingir que assinou (uma assinatura falsa teria
+# valor jurídico, então silêncio aqui seria pior que a ausência da função).
+# Para ativar com certificado A1 (arquivo .pfx/.p12 do médico responsável):
+#   ICP_ASSINATURA_PROVEDOR=a1_local
+#   ICP_CERTIFICADO_A1_PATH=/caminho/seguro/fora/do/repositorio/certificado.pfx
+#   ICP_CERTIFICADO_A1_SENHA=<senha do certificado>
+# O arquivo do certificado nunca entra no repositório nem no backup público.
+ICP_ASSINATURA_PROVEDOR = os.environ.get("ICP_ASSINATURA_PROVEDOR", "")
+ICP_CERTIFICADO_A1_PATH = os.environ.get("ICP_CERTIFICADO_A1_PATH", "")
+ICP_CERTIFICADO_A1_SENHA = os.environ.get("ICP_CERTIFICADO_A1_SENHA", "")
 JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
 
 # Chave Fernet para cifrar embeddings biométricos em repouso (LGPD Art. 11).

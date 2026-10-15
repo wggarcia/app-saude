@@ -728,6 +728,86 @@ async function salvarGuia() {
   } catch(e) { toast('Erro de conexão', false); }
 }
 
+// ── Assinatura digital ICP-Brasil da prescrição ────────────────────────────
+// A tela precisa ser honesta nos três estados: assinada e íntegra, assinada e
+// adulterada, e não assinada (com o motivo). Nunca "parecer" assinada.
+async function carregarAssinatura(cicloId){
+  var alvo = document.getElementById('blocoAssinatura');
+  if (!alvo) return;
+  alvo.innerHTML = '<div class="itens-mini" style="opacity:.6;margin-bottom:12px">Verificando assinatura…</div>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos/'+cicloId+'/assinatura', { credentials:'include', headers: headers() });
+    if (!r.ok) { alvo.innerHTML = ''; return; }
+    var d = await r.json();
+    var prov = d.status_provedor || {};
+    var a = d.assinatura;
+
+    if (d.assinada && a) {
+      var c = a.certificado || {};
+      var dataTxt = a.assinado_em ? (fmtData(a.assinado_em.slice(0,10)) + ' ' + a.assinado_em.slice(11,16)) : '—';
+      alvo.innerHTML =
+        '<div class="alert-box ab-ok"><div class="ab-title">🔏 Prescrição assinada digitalmente</div>' +
+        '<div style="margin-top:6px">' + esc(a.signatario_nome||'') +
+          (a.signatario_registro ? (' · ' + esc(a.signatario_registro)) : '') + ' — ' + dataTxt + '</div>' +
+        (c.titular ? ('<div class="itens-mini" style="margin-top:4px">Certificado: ' + esc(c.titular)
+           + (c.cpf_cnpj ? (' · CPF ' + esc(c.cpf_cnpj)) : '')
+           + ' · emissor ' + esc(c.emissor||'—') + '</div>') : '') +
+        '<div class="itens-mini" style="margin-top:4px;opacity:.75">Resumo ' + esc(a.algoritmo) + ': '
+           + esc((a.conteudo_hash||'').slice(0,32)) + '…</div>' +
+        // Sem Autoridade de Carimbo do Tempo a data é a do nosso relógio: dizer
+        // isso evita que alguém trate a data como prova perante terceiros.
+        (a.data_com_fe_publica ? '' :
+          '<div class="itens-mini" style="margin-top:4px;opacity:.75">Sem carimbo de tempo de autoridade externa: a data é a do servidor.</div>') +
+        '</div>';
+      return;
+    }
+
+    if (a && a.status === 'invalidada') {
+      alvo.innerHTML =
+        '<div class="alert-box ab-danger"><div class="ab-title">⚠ Assinatura inválida — prescrição alterada depois de assinada</div>' +
+        '<div style="margin-top:6px">' + esc((a.conferencia||{}).mensagem || '') + '</div>' +
+        '<div class="itens-mini" style="margin-top:4px">Assinada por ' + esc(a.signatario_nome||'—') +
+          '. É preciso assinar novamente a versão atual.</div></div>' +
+        botaoAssinar(cicloId, prov);
+      return;
+    }
+
+    var motivo = prov.disponivel
+      ? 'Esta prescrição ainda não foi assinada.'
+      : esc(prov.mensagem || 'Assinatura digital não configurada.');
+    var pend = (!prov.disponivel && (prov.pendencias||[]).length)
+      ? '<ul style="margin:6px 0 0 16px">' + prov.pendencias.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('') + '</ul>'
+      : '';
+    alvo.innerHTML =
+      '<div class="alert-box ' + (prov.disponivel ? 'ab-warn' : 'ab-info') + '">' +
+      '<div class="ab-title">' + (prov.disponivel ? '✍ Prescrição não assinada' : 'ℹ Assinatura digital não configurada') + '</div>' +
+      '<div style="margin-top:6px">' + motivo + '</div>' + pend + '</div>' +
+      botaoAssinar(cicloId, prov);
+  } catch(e) { alvo.innerHTML = ''; }
+}
+
+function botaoAssinar(cicloId, prov){
+  if (!prov || !prov.disponivel) return '';
+  return '<div style="margin:-6px 0 14px"><button class="btn btn-primary btn-sm" onclick="assinarPrescricao('+cicloId+')">🔏 Assinar prescrição</button></div>';
+}
+
+async function assinarPrescricao(cicloId){
+  var quem = prompt('Nome do médico que assina:');
+  if (!quem) return;
+  var registro = prompt('Registro profissional (ex.: CRM-MS 12345):') || '';
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos/'+cicloId+'/assinatura/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({signatario_nome: quem, signatario_registro: registro}) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) {
+      // 503 = não há certificado. A mensagem tem de dizer o que falta, não só "erro".
+      var extra = (d.pendencias||[]).length ? (' — ' + d.pendencias.join(' ')) : '';
+      return toast((d.erro || 'Não foi possível assinar') + extra, false);
+    }
+    toast('Prescrição assinada digitalmente', true);
+    carregarAssinatura(cicloId);
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
 // ── Seguimento e sobrevida: o que acontece depois do tratamento ────────────
 var segSituacaoMap = {em_dia:'badge-ok', atrasado:'badge-warn',
                       perdido:'badge-danger', obito:'badge-gray'};
@@ -1470,6 +1550,9 @@ async function abrirCiclo(id) {
       if (rc.ok) categoriasCtcae = (await rc.json()).categorias_ctcae || [];
     }
     renderCiclo(c);
+    // Busca a assinatura depois de desenhar: o detalhe aparece na hora e o
+    // estado da assinatura chega em seguida, sem segurar a tela.
+    carregarAssinatura(c.id);
   } catch(e) { document.getElementById('mcBody').innerHTML = '<div class="empty">Erro de conexão.</div>'; }
 }
 
@@ -1519,6 +1602,7 @@ function renderCiclo(c) {
 
   document.getElementById('mcBody').innerHTML =
     faixaApt +
+    '<div id="blocoAssinatura"></div>' +
     '<div class="info-grid">' +
       '<div><div class="k">Protocolo</div>' + esc(c.protocolo.codigo) + ' — ' + esc(c.protocolo.nome) + '</div>' +
       '<div><div class="k">Status</div><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + esc(c.status_display) + '</span></div>' +

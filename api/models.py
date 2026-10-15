@@ -12661,6 +12661,70 @@ class ConsultaSeguimento(models.Model):
         return f"Consulta {self.data_prevista} — {self.seguimento.paciente_nome}"
 
 
+class AssinaturaDocumento(models.Model):
+    """Assinatura digital ICP-Brasil de um documento clínico.
+
+    Guarda o resumo criptográfico do conteúdo que foi assinado — é isso que
+    permite, depois, provar que o documento não mudou. Se a prescrição for
+    editada após a assinatura, o resumo recalculado deixa de bater e a
+    assinatura é marcada como inválida, em vez de seguir dando uma garantia
+    que já não existe.
+
+    Enquanto não houver certificado configurado, nenhum registro chega ao
+    status 'assinada': um sistema que finge assinar é pior que um sem
+    assinatura, porque a mentira teria valor jurídico.
+    """
+    STATUS = [
+        ("pendente",   "Pendente de assinatura"),
+        ("assinada",   "Assinada"),
+        ("invalidada", "Inválida — documento alterado após a assinatura"),
+        ("falha",      "Falha ao assinar"),
+    ]
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="assinaturas_documento")
+    tipo_documento = models.CharField(max_length=40, db_index=True)
+    objeto_id      = models.PositiveIntegerField(
+        db_index=True, help_text="Id do registro assinado (ex.: ciclo)")
+    # Resumo do conteúdo canônico no momento da assinatura.
+    conteudo_hash  = models.CharField(max_length=64, db_index=True)
+    algoritmo      = models.CharField(max_length=20, default="SHA-256")
+    status         = models.CharField(max_length=12, choices=STATUS,
+                                      default="pendente", db_index=True)
+    # Quem assinou (o profissional), separado do titular do certificado.
+    signatario_nome = models.CharField(max_length=150, blank=True, default="")
+    signatario_registro = models.CharField(
+        max_length=40, blank=True, default="",
+        verbose_name="Registro profissional (ex.: CRM)")
+    # Dados extraídos do certificado efetivamente usado.
+    certificado_titular   = models.CharField(max_length=200, blank=True, default="")
+    certificado_cpf_cnpj  = models.CharField(max_length=20, blank=True, default="")
+    certificado_emissor   = models.CharField(max_length=200, blank=True, default="")
+    certificado_serie     = models.CharField(max_length=80, blank=True, default="")
+    certificado_valido_de  = models.DateTimeField(null=True, blank=True)
+    certificado_valido_ate = models.DateTimeField(null=True, blank=True)
+    assinatura_b64 = models.TextField(
+        blank=True, default="", verbose_name="Assinatura CMS/PKCS#7 em base64")
+    provedor       = models.CharField(max_length=40, blank=True, default="")
+    assinado_em    = models.DateTimeField(null=True, blank=True)
+    # Carimbo de tempo de uma Autoridade de Carimbo do Tempo (ACT) externa.
+    # Sem ele a data é a do nosso relógio, e não a de um terceiro de confiança.
+    carimbo_tempo_em = models.DateTimeField(null=True, blank=True)
+    motivo_falha   = models.TextField(blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Assinatura de Documento"
+        verbose_name_plural = "Assinaturas de Documentos"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "tipo_documento", "objeto_id"]),
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.tipo_documento} #{self.objeto_id} — {self.get_status_display()}"
+
+
 class AgendamentoInfusao(models.Model):
     """Reserva de cadeira/poltrona na central de infusão para um ciclo.
 

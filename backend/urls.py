@@ -1224,6 +1224,8 @@ from api.views_hospital_oncologia import (
     api_onco_seguimentos,
     api_onco_seguimento_detalhe,
     api_onco_seguimento_consultas,
+    api_onco_assinatura_status,
+    api_onco_ciclo_assinatura,
 )
 from api.views_hospital_manutencao import (
     hospital_manutencao_page,
@@ -3588,6 +3590,10 @@ urlpatterns = [
     path('api/hospital/oncologia/seguimentos/<int:seguimento_id>/', api_onco_seguimento_detalhe),
     path('api/hospital/oncologia/seguimentos/<int:seguimento_id>/consultas',  api_onco_seguimento_consultas),
     path('api/hospital/oncologia/seguimentos/<int:seguimento_id>/consultas/', api_onco_seguimento_consultas),
+    # Assinatura digital ICP-Brasil da prescrição
+    path('api/hospital/oncologia/assinatura/status',             api_onco_assinatura_status),
+    path('api/hospital/oncologia/ciclos/<int:ciclo_id>/assinatura',  api_onco_ciclo_assinatura),
+    path('api/hospital/oncologia/ciclos/<int:ciclo_id>/assinatura/', api_onco_ciclo_assinatura),
     path('api/hospital/oncologia/guias/alertas',                api_onco_guias_alertas),
     path('api/hospital/oncologia/guias/alertas/',               api_onco_guias_alertas),
     path('api/hospital/oncologia/guias',                        api_onco_guias),
