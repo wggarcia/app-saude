@@ -1232,6 +1232,14 @@ class OncologiaTests(TestCase):
             AdministracaoQuimioterapia.objects.filter(empresa=empresa).count(), 2)
         self.assertEqual(
             AvaliacaoRespostaOncologica.objects.filter(empresa=empresa).count(), 3)
+        # O motivo da negativa precisa estar na lista de escolhas do modelo:
+        # um valor fora dela faz get_..._display() devolver o código cru e o
+        # usuário lê "doc_insuficiente" no lugar da frase.
+        negada = GuiaOncologica.objects.get(empresa=empresa, status="negada")
+        self.assertIn(negada.motivo_negativa,
+                      dict(GuiaOncologica.MOTIVO_NEGATIVA))
+        self.assertNotEqual(negada.get_motivo_negativa_display(),
+                            negada.motivo_negativa)
         segs = SeguimentoOncologico.objects.filter(empresa=empresa)
         self.assertEqual(segs.count(), 2)
         # Um dos dois tem de cair como perdido de seguimento — é o caso que o
@@ -1402,6 +1410,36 @@ class OncologiaTests(TestCase):
         r = cb.put(f"/api/hospital/oncologia/quimio-oral/{pid}/",
                    data={"status": "cancelada"}, content_type="application/json")
         self.assertEqual(r.status_code, 404)
+
+    def test_jornada_por_nome_para_paciente_sem_identidade_no_mpi(self):
+        """Regressão REAL: o teste anterior passava por engano.
+
+        Criar o paciente pela API resolve a identidade no MPI, e a jornada
+        então usa o ramo da identidade — o fallback por nome nunca roda. Quem
+        cai no fallback é o registro criado direto no banco (importação, seed,
+        carga legada), e aí a divergência de nome de campo entre os modelos
+        derruba a tela com 500. A radioterapia usa `paciente`, o RHC usa
+        `nome_paciente` e o resto usa `paciente_nome`.
+        """
+        from .models import CicloQuimioterapia, SeguimentoOncologico
+        empresa = _empresa("Hospital Rede", "onco-jor-mpi@example.com",
+                           "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        # Direto no ORM, SEM identidade e SEM CPF — como numa carga legada.
+        CicloQuimioterapia.objects.create(
+            empresa=empresa, protocolo=protocolo,
+            paciente_nome="Carga Legada Souza", cid10_principal="C18",
+            numero_ciclo=1, data_inicio=date.today())
+        SeguimentoOncologico.objects.create(
+            empresa=empresa, paciente_nome="Carga Legada Souza",
+            data_fim_tratamento=date.today() - timedelta(days=30))
+
+        r = client.get("/api/hospital/oncologia/jornada?nome=Carga%20Legada%20Souza")
+        self.assertEqual(r.status_code, 200, r.content[:400])
+        d = r.json()
+        self.assertEqual(d["resumo"]["quimioterapia"], 1)
+        self.assertEqual(d["resumo"]["seguimento"], 1)
 
     def test_jornada_por_nome_sem_cpf_nao_quebra(self):
         """Regressão: o fallback por nome usava `nome_paciente`, campo que só o

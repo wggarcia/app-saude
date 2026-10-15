@@ -59,7 +59,8 @@ class Command(BaseCommand):
                                 PreparoQuimioterapia, AdministracaoQuimioterapia,
                                 AvaliacaoRespostaOncologica,
                                 PrescricaoQuimioOral, DispensacaoQuimioOral,
-                                SeguimentoOncologico, ConsultaSeguimento)
+                                SeguimentoOncologico, ConsultaSeguimento,
+                                APACOncologia, ToxicidadeQuimio)
 
         # Mesma lógica de conexão do seed de OPME: owner só quando é papel
         # realmente distinto (produção com RLS); em SQLite usar 2ª conexão trava.
@@ -94,22 +95,31 @@ class Command(BaseCommand):
             empresa=empresa, paciente_nome__startswith=TAG)
         seguimentos_antigos = SeguimentoOncologico.objects.using(DB).filter(
             empresa=empresa, paciente_nome__startswith=TAG)
+        apacs_antigas = APACOncologia.objects.using(DB).filter(
+            empresa=empresa, paciente_nome__startswith=TAG)
         n_antigos = ciclos_antigos.count()
         self.stdout.write(
             f"Lote {TAG} existente: {n_antigos} ciclo(s), {guias_antigas.count()} guia(s), "
             f"{respostas_antigas.count()} avaliação(ões).")
 
-        def _limpar():
+        def _limpar(remover_protocolo=False):
             # Agendamento/preparo/administração caem em cascata pelo ciclo.
             respostas_antigas.delete()
             orais_antigas.delete()     # dispensações caem em cascata
             seguimentos_antigos.delete()   # consultas caem em cascata
+            apacs_antigas.delete()
             ciclos_antigos.delete()
             guias_antigas.delete()
+            # O protocolo criado pelo seed só sai no --clear: numa re-semeadura
+            # ele já foi resolvido acima e os ciclos novos vão apontar para ele.
+            # Sai por último porque a FK do ciclo para o protocolo é PROTECT.
+            if remover_protocolo:
+                ProtocoloOncologico.objects.using(DB).filter(
+                    empresa=empresa, codigo="CARBO-TAXOL").delete()
 
         if opts["clear"]:
             if opts["apply"]:
-                _limpar()
+                _limpar(remover_protocolo=True)
                 self.stdout.write(self.style.SUCCESS("Lote removido. Fim (--clear)."))
             else:
                 self.stdout.write("[preview] removeria o lote acima. Use --apply.")
@@ -125,7 +135,36 @@ class Command(BaseCommand):
         # Usa os protocolos que existirem, sem assumir códigos fixos.
         codigos = sorted(protocolos)
         proto_a = protocolos[codigos[0]]
-        proto_b = protocolos[codigos[1 % len(codigos)]]
+
+        # A paciente de ovário (C56) recebe carboplatina pela fórmula de Calvert.
+        # Isso exige um protocolo que REALMENTE contenha carboplatina: pendurar
+        # uma dose de carboplatina num esquema BEP (bleomicina/etoposídeo/
+        # cisplatina) seria incoerente, e qualquer oncologista notaria na demo.
+        proto_b, _ = ProtocoloOncologico.objects.using(DB).get_or_create(
+            empresa=empresa, codigo="CARBO-TAXOL",
+            defaults={
+                "nome": "Carboplatina + Paclitaxel",
+                "indicacao_cid": "C56",
+                "via": "EV",
+                "ciclos_total": 6,
+                "intervalo_dias": 21,
+                "drogas": [
+                    {"droga": "Carboplatina", "dose": 5, "unidade": "AUC", "dia": 1},
+                    {"droga": "Paclitaxel", "dose": 175, "unidade": "mg/m²", "dia": 1},
+                ],
+                "drogas_suporte": [
+                    {"droga": "Dexametasona", "dose": 20, "unidade": "mg",
+                     "via": "VO", "momento": "12h e 6h antes (pré-paclitaxel)"},
+                    {"droga": "Difenidramina", "dose": 50, "unidade": "mg",
+                     "via": "EV", "momento": "30 min antes"},
+                    {"droga": "Ranitidina", "dose": 50, "unidade": "mg",
+                     "via": "EV", "momento": "30 min antes"},
+                    {"droga": "Ondansetrona", "dose": 8, "unidade": "mg",
+                     "via": "EV", "momento": "30 min antes"},
+                ],
+                "criterios_aptidao": {"clearance_min": 50},
+                "ativo": True,
+            })
 
         if not opts["apply"]:
             self.stdout.write(
@@ -158,7 +197,7 @@ class Command(BaseCommand):
                 operadora="Operadora Demonstração", status="negada",
                 data_emissao=_dias(20), data_validade=date.today() + timedelta(days=160),
                 ciclos_autorizados=6, data_solicitacao=_dias(20),
-                data_resposta=_dias(1), motivo_negativa="falta_documentacao",
+                data_resposta=_dias(1), motivo_negativa="doc_insuficiente",
                 motivo_negativa_detalhe="Laudo anatomopatológico não anexado.")
 
             # ── Ciclos ────────────────────────────────────────────────────────
@@ -172,7 +211,7 @@ class Command(BaseCommand):
                 aptidao_status="apto", aptidao_bloqueios=[],
                 estadiamento="IIB", intencao_tratamento="curativa",
                 confirmacao_patologica=True,
-                medico_oncologista="Dra. HelenaDuarte",
+                medico_oncologista="Dra. Helena Duarte",
                 doses_calculadas=[
                     {"droga": d.get("droga"), "dose_referencia": d.get("dose"),
                      "unidade": d.get("unidade"), "dia": d.get("dia"),
@@ -213,6 +252,10 @@ class Command(BaseCommand):
                      "dia": 1, "dose_calculada": 565.0, "unidade_calculada": "mg",
                      "cap_aplicado": False, "auc_alvo": 5.0, "tfg_utilizada": 88.0,
                      "formula": "Calvert (AUC × [TFG + 25])"},
+                    # 175 mg/m² × 1,8007 m² = 315,1 mg
+                    {"droga": "Paclitaxel", "dose_referencia": 175,
+                     "unidade": "mg/m²", "dia": 1, "dose_calculada": 315.1,
+                     "unidade_calculada": "mg", "cap_aplicado": False},
                 ],
             )
 
@@ -297,7 +340,7 @@ class Command(BaseCommand):
             # Adesão de 50% no intervalo — é o caso que faz a tela mostrar que
             # "o tratamento não respondeu" pode ser outra coisa.
             oral = PrescricaoQuimioOral.objects.using(DB).create(
-                empresa=empresa, paciente_nome=f"{TAG} AntônioBezerra",
+                empresa=empresa, paciente_nome=f"{TAG} Antônio Bezerra",
                 droga="Capecitabina", dose_por_tomada=1500, unidade="mg",
                 unidades_por_dia=2, dias_uso=14, dias_pausa=7,
                 posologia="2 comprimidos de 12 em 12 horas, após as refeições",
@@ -312,6 +355,51 @@ class Command(BaseCommand):
                 unidades_dispensadas=28, unidades_devolvidas=14, adesao_pct=50.0,
                 proxima_retirada=_dias(5), dispensado_por="Farm. Letícia Campos",
                 observacao="Paciente relata náusea; devolveu metade da caixa.")
+
+            # ── Toxicidade CTCAE: o que de fato acontece com o paciente ───
+            ToxicidadeQuimio.objects.using(DB).create(
+                empresa=empresa, ciclo=c_apto, categoria="Náusea", grau=2,
+                data_registro=_dias(1),
+                conduta="Ondansetrona adicional e orientação dietética.")
+            ToxicidadeQuimio.objects.using(DB).create(
+                empresa=empresa, ciclo=c_dose, categoria="Neutropenia", grau=3,
+                data_registro=_dias(5),
+                conduta="Filgrastim por 5 dias; próximo ciclo com redução de 20%.",
+                dose_reduzida=True)
+            ToxicidadeQuimio.objects.using(DB).create(
+                empresa=empresa, ciclo=c_dose, categoria="Neuropatia periférica",
+                grau=2, data_registro=_dias(4),
+                conduta="Acompanhamento; reavaliar se progredir para grau 3.")
+
+            # ── APAC/SUS: uma aprovada e uma glosada ──────────────────────
+            comp = date.today().strftime("%Y%m")
+            APACOncologia.objects.using(DB).create(
+                empresa=empresa, numero_apac="DEMO-APAC-2001",
+                paciente_nome=f"{TAG} Marina Alves", cid10_principal="C50",
+                procedimento_principal="0304020029 - Quimioterapia de mama",
+                ciclo_referencia=c_apto, competencia=comp,
+                carater_atendimento="1", data_solicitacao=_dias(20),
+                data_autorizacao=_dias(15), autorizador_nome="Regulação Municipal",
+                valor_solicitado=1850.00, valor_aprovado=1850.00,
+                status="aprovada")
+            APACOncologia.objects.using(DB).create(
+                empresa=empresa, numero_apac="DEMO-APAC-2002",
+                paciente_nome=f"{TAG} Rosa Lima", cid10_principal="C56",
+                procedimento_principal="0304050017 - Quimioterapia de ovário",
+                ciclo_referencia=c_dose, competencia=comp,
+                carater_atendimento="1", data_solicitacao=_dias(18),
+                data_autorizacao=_dias(10), autorizador_nome="Regulação Municipal",
+                valor_solicitado=2400.00, valor_aprovado=1680.00,
+                status="glosada",
+                motivo_glosa="Divergência entre o procedimento informado e o "
+                             "CID principal; faltou laudo de estadiamento.")
+            APACOncologia.objects.using(DB).create(
+                empresa=empresa, numero_apac="DEMO-APAC-2003",
+                paciente_nome=f"{TAG} Carlos Prado", cid10_principal="C34",
+                procedimento_principal="0304020010 - Quimioterapia de pulmão",
+                competencia=comp, carater_atendimento="1",
+                data_solicitacao=_dias(2), valor_solicitado=3100.00,
+                status="submetida")
 
             # ── Seguimento: o arco completo até o desfecho ────────────────
             # Um paciente em seguimento regular e um que saiu do radar — o
@@ -345,5 +433,6 @@ class Command(BaseCommand):
             f"OK — lote {TAG} criado: 3 guias, 3 ciclos, 2 reservas de cadeira, "
             f"3 preparos, 2 administrações (1 com extravasamento), 3 avaliações "
             f"RECIST, 1 prescrição oral com adesão de 50% (retirada atrasada) "
-            f"e 2 seguimentos (1 regular, 1 perdido de seguimento). "
+            f"2 seguimentos (1 regular, 1 perdido), 3 toxicidades CTCAE e "
+            f"3 APACs (aprovada/glosada/submetida). "
             f"Reversível: rode com --apply --clear para remover."))

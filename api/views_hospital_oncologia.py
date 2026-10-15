@@ -1501,12 +1501,20 @@ def api_onco_jornada(request):
         if cpf and tem_cpf:
             return model.objects.filter(empresa=empresa, cpf_paciente=cpf)
         # Último recurso, busca só por nome. Os modelos desta jornada divergem no
-        # nome do campo (RHC usa `nome_paciente`; ciclo, APAC, resposta e oral usam
-        # `paciente_nome`), então fixar um só derruba a busca por nome com 500.
+        # nome do campo: ciclo/APAC/resposta/oral/seguimento usam `paciente_nome`,
+        # o RHC usa `nome_paciente` e a radioterapia usa `paciente`. Fixar um só
+        # derruba a jornada com 500 — e o caso real é o paciente SEM identidade
+        # no MPI, que é justamente quem cai aqui.
         campos = {f.name for f in model._meta.get_fields() if hasattr(f, "attname")}
-        campo_nome = "nome_paciente" if "nome_paciente" in campos else "paciente_nome"
-        return model.objects.filter(empresa=empresa,
-                                    **{f"{campo_nome}__iexact": nome_q})
+        for candidato in ("paciente_nome", "nome_paciente", "paciente"):
+            if candidato in campos:
+                return model.objects.filter(
+                    empresa=empresa, **{f"{candidato}__iexact": nome_q})
+        # Modelo sem campo de nome: não dá para filtrar, devolve vazio em vez
+        # de estourar a tela inteira por causa de uma fonte.
+        logger.warning("Jornada: %s não tem campo de nome de paciente.",
+                       model.__name__)
+        return model.objects.none()
 
     eventos = []
 
