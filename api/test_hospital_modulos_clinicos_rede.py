@@ -1778,13 +1778,22 @@ class OncologiaTests(TestCase):
         client = _client_for(empresa)
         protocolo = self._protocolo(empresa)
         ciclo_id = self._ciclo_pronto(client, protocolo)
+        from django.utils import timezone as _tz
         from .models import CicloQuimioterapia
         c = CicloQuimioterapia.objects.get(id=ciclo_id)
-        a = resumo_sha256(conteudo_canonico_prescricao(c))
+        # Para um MESMO instante de emissão o conteúdo é byte a byte igual —
+        # é essa a propriedade que a verificação reproduz depois.
+        instante = _tz.now()
+        a = resumo_sha256(conteudo_canonico_prescricao(c, emitido_em=instante))
         c.refresh_from_db()
-        b = resumo_sha256(conteudo_canonico_prescricao(c))
+        b = resumo_sha256(conteudo_canonico_prescricao(c, emitido_em=instante))
         self.assertEqual(a, b)
         self.assertEqual(len(a), 64)
+        # E instantes diferentes dão resumos diferentes: a hora de emissão
+        # integra o documento (art. 2º, "d"), não é enfeite.
+        outro = resumo_sha256(conteudo_canonico_prescricao(
+            c, emitido_em=instante + timedelta(minutes=1)))
+        self.assertNotEqual(a, outro)
 
     def test_assina_de_verdade_quando_ha_certificado(self):
         """Prova que o caminho inteiro funciona com o certificado DO MÉDICO."""
@@ -2476,6 +2485,135 @@ class OncologiaTests(TestCase):
                     content_type="application/json")
         self.assertEqual(r.status_code, 409)
         self.assertEqual(r.json()["codigo"], "pulseira_desconhecida")
+
+    # ── Conformidade CFM 2.299/2021 (deveres do ESTABELECIMENTO) ───────────
+    def test_hora_de_emissao_nao_quebra_a_verificacao(self):
+        """REGRESSÃO CRÍTICA: o art. 2º exige data E HORA no documento. Se a
+        verificação recalculasse o conteúdo com a hora atual, NENHUMA
+        assinatura conferiria — toda prescrição assinada viraria 'adulterada'
+        no segundo seguinte."""
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Rede", "onco-cf1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:300])
+        # Confere várias vezes: tem de continuar íntegro sempre.
+        for _ in range(3):
+            d = client.get(
+                f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/").json()
+            self.assertTrue(d["assinada"], d)
+            self.assertTrue(d["assinatura"]["conferencia"]["integro"])
+        from .models import AssinaturaDocumento
+        a = AssinaturaDocumento.objects.get(objeto_id=ciclo_id, status="assinada")
+        self.assertIsNotNone(a.documento_emitido_em)
+
+    def test_documento_carrega_crm_rqe_e_estabelecimento(self):
+        """Art. 2º: nome, CRM e endereço do médico, RQE, e identificação do
+        paciente. Assinar sem isso deixa o documento incompleto."""
+        from .models import ResponsabilidadeTecnica, CertificadoAssinante
+        from .services.assinatura_icp import conteudo_canonico_prescricao
+        empresa = _empresa("Hospital Rede", "onco-cf2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        ResponsabilidadeTecnica.objects.create(
+            empresa=empresa, crm_pessoa_juridica="CRM-MS PJ 555",
+            uf_conselho="MS", diretor_tecnico_nome="Dr. Diretor",
+            diretor_tecnico_crm="CRM-MS 111", endereco="Rua do Hospital, 100",
+            cnes="1234567")
+        self._cert(client, profissional_rqe="RQE 4321",
+                   profissional_endereco="Av. Central, 50 - sala 3")
+        cfg = CertificadoAssinante.objects.get(empresa=empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(client, protocolo, cpf_paciente="52998224725",
+                                     neutrofilos=2500, plaquetas=220000).json()["id"]
+        from .models import CicloQuimioterapia
+        ciclo = CicloQuimioterapia.objects.get(id=ciclo_id)
+        conteudo = conteudo_canonico_prescricao(ciclo, cfg=cfg)
+        for esperado in ("CRM-MS 12345", "RQE 4321", "Av. Central, 50",
+                         "CRM-MS PJ 555", "Dr. Diretor", "Rua do Hospital, 100",
+                         "emitido_em"):
+            self.assertIn(esperado, conteudo, f"faltou {esperado} no documento")
+
+    def test_avisa_o_que_falta_do_art2_sem_impedir_a_assinatura(self):
+        """O médico não é bloqueado — mas precisa saber que o documento sai
+        incompleto."""
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Rede", "onco-cf3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        # Sem CRM, sem endereço, e o paciente sem CPF.
+        self._cert(client, profissional_registro="", provedor="a1_local",
+                   a1_caminho=caminho, a1_senha=senha)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        faltando = r.json()["elementos_faltando_art2"]
+        self.assertIn("CRM do médico", faltando)
+        self.assertIn("número do documento legal do paciente", faltando)
+        self.assertIn("incompleto", r.json()["alerta"])
+
+    def test_painel_diz_o_que_falta_e_de_quem_e_o_dever(self):
+        """O dever do art. 5º é do ESTABELECIMENTO, não de quem fornece o
+        software — e o painel precisa deixar isso explícito."""
+        empresa = _empresa("Hospital Rede", "onco-cf4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        d = client.get("/api/hospital/oncologia/conformidade").json()
+        self.assertFalse(d["conforme"])
+        self.assertTrue(any("CRM" in p for p in d["pendencias"]))
+        self.assertTrue(any("Diretor Técnico" in p for p in d["pendencias"]))
+        self.assertIn("ESTABELECIMENTO DE SAÚDE", d["de_quem_e_o_dever"])
+        self.assertIn("não presta nem intermedeia", d["de_quem_e_o_dever"])
+        self.assertTrue(d["base_normativa"])
+
+    def test_preencher_responsabilidade_tecnica_zera_as_pendencias(self):
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Rede", "onco-cf5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho,
+                   a1_senha=senha, profissional_endereco="Av. Central, 50")
+        r = client.put("/api/hospital/oncologia/conformidade/",
+                       data={"crm_pessoa_juridica": "CRM-MS PJ 555",
+                             "uf_conselho": "MS",
+                             "diretor_tecnico_nome": "Dr. Diretor",
+                             "diretor_tecnico_crm": "CRM-MS 111",
+                             "endereco": "Rua do Hospital, 100",
+                             "cnes": "1234567",
+                             "ciente_informado_em": date.today().isoformat()},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertTrue(d["conforme"], d["pendencias"])
+        self.assertEqual(d["assinantes_prontos"], 1)
+
+    def test_validacao_do_prescritor_admite_que_nao_esta_configurada(self):
+        """O web service do CFM é tarifado. Sem credencial, dizer isso é melhor
+        que devolver um 'médico regular' que ninguém verificou."""
+        empresa = _empresa("Hospital Rede", "onco-cf6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        v = client.get("/api/hospital/oncologia/conformidade").json()["validacao_prescritor"]
+        self.assertFalse(v["disponivel"])
+        self.assertIn("conferida manualmente", v["mensagem"])
+        self.assertTrue(any("tarifado" in p for p in v["pendencias"]))
+
+    def test_conformidade_isolada_por_empresa(self):
+        a = _empresa("Hospital A", "onco-cf-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "onco-cf-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        ca.put("/api/hospital/oncologia/conformidade/",
+               data={"crm_pessoa_juridica": "CRM-MS PJ 555",
+                     "diretor_tecnico_nome": "Dr. A"},
+               content_type="application/json")
+        d = cb.get("/api/hospital/oncologia/conformidade").json()
+        self.assertEqual(d["estabelecimento"]["crm_pessoa_juridica"], "")
+        self.assertEqual(d["estabelecimento"]["diretor_tecnico_nome"], "")
 
     def test_assinatura_isolada_por_empresa(self):
         a = _empresa("Hospital A", "onco-icp-a@example.com", "hospital_rede")

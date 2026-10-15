@@ -663,17 +663,43 @@ tr:hover td{background:rgba(0,194,255,.03)}
         autoriza cada assinatura pelo celular. Se o hospital já tem serviço próprio de assinatura,
         use a opção “API de assinatura do hospital”.</div>
       </div>
+      <div id="confBox" style="margin:0 20px 14px"></div>
       <table>
-        <thead><tr><th>Profissional</th><th>Registro</th><th>Provedor</th><th>Situação</th><th>Validade</th><th>Ação</th></tr></thead>
+        <thead><tr><th>Profissional</th><th>CRM / RQE</th><th>Provedor</th><th>Situação</th><th>Validade</th><th>Ação</th></tr></thead>
         <tbody id="certBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
       </table>
+    </div>
+    <div class="form-card" id="formRtCard" style="display:none">
+      <div class="form-card-title">Responsabilidade técnica do estabelecimento</div>
+      <div class="itens-mini" style="opacity:.85;margin-bottom:12px">Estes dados são do <strong>hospital</strong>, que já é obrigado a ter
+      inscrição no CRM e Diretor Técnico médico. Quem fornece o software não presta nem intermedeia assistência à saúde — pela Lei 6.839/80
+      o registro em conselho segue a atividade básica da empresa. O sistema guarda e estampa nos documentos emitidos.</div>
+      <div class="form-row3">
+        <div class="form-group"><label>Inscrição do estabelecimento no CRM *</label><input id="rtCrm" placeholder="ex.: CRM-MS PJ 5555"></div>
+        <div class="form-group"><label>UF do conselho</label><input id="rtUf" maxlength="2" placeholder="MS"></div>
+        <div class="form-group"><label>CNES</label><input id="rtCnes" maxlength="7"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Diretor Técnico médico *</label><input id="rtDtNome"></div>
+        <div class="form-group"><label>CRM do Diretor Técnico *</label><input id="rtDtCrm"></div>
+        <div class="form-group"><label>Médicos informados em</label><input type="date" id="rtCiente"></div>
+      </div>
+      <div class="form-group"><label>Endereço do estabelecimento *</label><input id="rtEndereco"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formRtCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarResponsabilidadeTecnica()">Salvar</button>
+      </div>
     </div>
     <div class="form-card" id="formCertCard" style="display:none">
       <div class="form-card-title">Cadastrar assinante</div>
       <div class="form-row3">
         <div class="form-group"><label>Nome do médico *</label><input id="ctNome"></div>
         <div class="form-group"><label>CPF do médico</label><input id="ctCpf" maxlength="14"></div>
-        <div class="form-group"><label>Registro no conselho</label><input id="ctRegistro" placeholder="ex.: CRM-MS 12345"></div>
+        <div class="form-group"><label>CRM *</label><input id="ctRegistro" placeholder="ex.: CRM-MS 12345"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>RQE <span style="opacity:.6">(se tiver especialidade)</span></label><input id="ctRqe" placeholder="ex.: RQE 4321"></div>
+        <div class="form-group"><label>Endereço profissional</label><input id="ctEndereco" placeholder="exigido no documento pelo art. 2º da Resolução CFM 2.299/2021"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Provedor *</label>
@@ -791,7 +817,7 @@ function setTab(tab) {
   if (tab === 'infusao') carregarInfusao();
   if (tab === 'oral') carregarOral();
   if (tab === 'seguimento') carregarSeguimentos();
-  if (tab === 'certificados') carregarCertificados();
+  if (tab === 'certificados') { carregarCertificados(); carregarConformidade(); }
   if (tab === 'interacoes') carregarInteracoes();
 }
 
@@ -1037,6 +1063,64 @@ async function emitirPulseira(){
 // ── Certificados de assinantes (por médico, nunca por instalação) ──────────
 var certStatusMap = {ativo:'badge-ok', pendente:'badge-warn', inativo:'badge-gray'};
 
+async function carregarConformidade(){
+  var alvo = document.getElementById('confBox');
+  if (!alvo) return;
+  try {
+    var r = await fetch('/api/hospital/oncologia/conformidade', { credentials:'include', headers: headers() });
+    if (!r.ok) { alvo.innerHTML = ''; return; }
+    var d = await r.json();
+    var e = d.estabelecimento || {};
+    var lista = (d.pendencias||[]).map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('');
+    var vp = d.validacao_prescritor || {};
+    alvo.innerHTML =
+      '<div class="alert-box ' + (d.conforme ? 'ab-ok' : 'ab-warn') + '">' +
+      '<div class="ab-title">' + (d.conforme
+        ? '✓ Estabelecimento em conformidade para emitir documento médico eletrônico'
+        : '⚠ Pendências do estabelecimento (Resolução CFM 2.299/2021)') + '</div>' +
+      (lista ? ('<ul style="margin:6px 0 0 16px">'+lista+'</ul>') : '') +
+      (e.crm_pessoa_juridica ? ('<div class="itens-mini" style="margin-top:6px">Inscrição: '+esc(e.crm_pessoa_juridica)
+        + (e.diretor_tecnico_nome ? (' · Diretor Técnico: '+esc(e.diretor_tecnico_nome)+' '+esc(e.diretor_tecnico_crm||'')) : '')
+        + '</div>') : '') +
+      (vp.disponivel ? '' : ('<div class="itens-mini" style="margin-top:6px;opacity:.8">'+esc(vp.mensagem||'')+'</div>')) +
+      '<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="abrirResponsabilidadeTecnica()">Preencher responsabilidade técnica</button></div>' +
+      '</div>';
+    window._rtCache = e;
+  } catch(err) { alvo.innerHTML = ''; }
+}
+
+function abrirResponsabilidadeTecnica(){
+  var e = window._rtCache || {};
+  document.getElementById('rtCrm').value = e.crm_pessoa_juridica || '';
+  document.getElementById('rtUf').value = e.uf_conselho || '';
+  document.getElementById('rtCnes').value = e.cnes || '';
+  document.getElementById('rtDtNome').value = e.diretor_tecnico_nome || '';
+  document.getElementById('rtDtCrm').value = e.diretor_tecnico_crm || '';
+  document.getElementById('rtEndereco').value = e.endereco || '';
+  document.getElementById('rtCiente').value = e.ciente_informado_em || '';
+  var card = document.getElementById('formRtCard');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function salvarResponsabilidadeTecnica(){
+  try {
+    var r = await fetch('/api/hospital/oncologia/conformidade/', { method:'PUT', credentials:'include', headers: headers(), body: JSON.stringify({
+      crm_pessoa_juridica: document.getElementById('rtCrm').value.trim(),
+      uf_conselho: document.getElementById('rtUf').value.trim().toUpperCase(),
+      cnes: document.getElementById('rtCnes').value.trim(),
+      diretor_tecnico_nome: document.getElementById('rtDtNome').value.trim(),
+      diretor_tecnico_crm: document.getElementById('rtDtCrm').value.trim(),
+      endereco: document.getElementById('rtEndereco').value.trim(),
+      ciente_informado_em: document.getElementById('rtCiente').value || null,
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    toast(d.conforme ? 'Estabelecimento em conformidade' : ('Salvo — ainda falta: ' + (d.pendencias||[]).join(' ')), !!d.conforme);
+    document.getElementById('formRtCard').style.display = 'none';
+    carregarConformidade();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
 async function carregarCertificados(){
   var tbody = document.getElementById('certBody');
   tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
@@ -1065,7 +1149,10 @@ async function carregarCertificados(){
         : '<button class="btn btn-ghost btn-sm" onclick="desativarCertificado('+c.id+')">Desativar</button>';
       return '<tr><td><strong>'+esc(c.profissional_nome)+'</strong>'
            + (c.profissional_cpf ? ('<div class="itens-mini" style="opacity:.6">CPF '+esc(c.profissional_cpf)+'</div>') : '')
-           + '</td><td>'+esc(c.profissional_registro||'—')+'</td>'
+           + '</td><td>'+esc(c.profissional_registro||'—')
+           + (c.profissional_rqe ? ('<div class="itens-mini" style="opacity:.7">'+esc(c.profissional_rqe)+'</div>') : '')
+           + (c.profissional_endereco ? '' : '<div class="itens-mini" style="color:var(--warn)">sem endereço (art. 2º)</div>')
+           + '</td>'
            + '<td>'+esc(c.provedor_display)+(c.api_url?('<div class="itens-mini" style="opacity:.6">'+esc(c.api_url)+'</div>'):'')+'</td>'
            + '<td><span class="badge '+(certStatusMap[c.status]||'badge-gray')+'">'+esc(c.status_display)+'</span>'+pend+'</td>'
            + '<td>'+val+'</td><td>'+acao+'</td></tr>';
@@ -1093,6 +1180,8 @@ async function salvarCertificado(){
     profissional_nome: nome,
     profissional_cpf: document.getElementById('ctCpf').value.replace(/\D/g,''),
     profissional_registro: document.getElementById('ctRegistro').value.trim(),
+    profissional_rqe: document.getElementById('ctRqe').value.trim(),
+    profissional_endereco: document.getElementById('ctEndereco').value.trim(),
     provedor: document.getElementById('ctProvedor').value,
     valido_ate: document.getElementById('ctValidade').value || null,
     identificador_provedor: document.getElementById('ctIdent').value.trim(),
@@ -1113,7 +1202,7 @@ async function salvarCertificado(){
             : 'Assinante cadastrado como PENDENTE — ainda falta: ' + (c.pendencias||[]).join(' '),
           !!c.pronto_para_assinar);
     document.getElementById('formCertCard').style.display = 'none';
-    ['ctNome','ctCpf','ctRegistro','ctIdent','ctClienteId','ctClienteSecreto',
+    ['ctNome','ctCpf','ctRegistro','ctRqe','ctEndereco','ctIdent','ctClienteId','ctClienteSecreto',
      'ctApiUrl','ctApiToken','ctA1Caminho','ctA1Senha','ctValidade'].forEach(function(id){ document.getElementById(id).value=''; });
     carregarCertificados();
   } catch(e) { toast('Erro de conexão', false); }

@@ -1,10 +1,19 @@
 # Assinatura digital ICP-Brasil — como funciona e quem compra o quê
 
-> **Correção importante.** Uma versão anterior deste documento mandava a SoluSCRT
-> comprar um certificado e configurá-lo numa variável de ambiente global. Estava
-> errado em dois níveis: errado o escopo (um certificado para a instalação
-> inteira, num produto multi-tenant) e errado o dono (a empresa em vez do
-> profissional). O desenho atual é o descrito abaixo.
+> **Duas correções importantes.**
+>
+> 1. Uma versão anterior mandava a SoloCRT comprar um certificado e configurá-lo
+>    numa variável de ambiente global. Errado em dois níveis: o escopo (um
+>    certificado para a instalação inteira, num produto multi-tenant) e o dono
+>    (a empresa em vez do profissional).
+> 2. Outra versão afirmava que a SoloCRT precisaria se inscrever num CRM e
+>    nomear um Diretor Técnico médico. **Também errado.** Esse dever é do
+>    ESTABELECIMENTO DE SAÚDE que usa o sistema. Pela Lei 6.839/80 o registro em
+>    conselho segue a **atividade básica** da empresa, e desenvolver software não
+>    é atividade médica — o CFM inscreve prestadores e intermediadores de
+>    assistência à saúde. Quem fornece a ferramenta não é nenhum dos dois.
+>
+> O desenho atual é o descrito abaixo.
 
 ## Quem assina, afinal
 
@@ -133,6 +142,52 @@ a tela diz "sem carimbo de tempo de autoridade externa".
 
 Sem ACT a assinatura continua válida — o que não se prova perante terceiros é
 *quando* ela foi feita.
+
+## Quem cumpre o quê (Resolução CFM 2.299/2021)
+
+| Dever | De quem é | Onde fica no sistema |
+|---|---|---|
+| Art. 2º — documento com nome, CRM, endereço e RQE do médico; paciente com documento legal; **data e hora** | Médico, com os dados que o sistema estampa | `CertificadoAssinante` + `ResponsabilidadeTecnica`; entram no conteúdo assinado |
+| Art. 4º — assinatura ICP-Brasil **NGS2**, validável pelo ITI ou pelo CFM | Médico (certificado é dele) | Aba Assinatura Digital, por profissional |
+| Art. 5º — inscrição no CRM da sede + **Diretor Técnico médico** | **Estabelecimento de saúde** (o hospital cliente) | Painel de conformidade: `ResponsabilidadeTecnica` |
+| Art. 8º — garantir que o prescritor é médico regular, pelo Cadastro Nacional de Médicos | Estabelecimento, com apoio do sistema | `CFM_WS_USUARIO`/`CFM_WS_SENHA` — web service **tarifado** (Res. CFM 2.129/2015) |
+
+**O que a SoloCRT não precisa fazer:** inscrever-se em CRM, nomear diretor
+técnico médico ou comprar certificado. Nada disso recai sobre quem fornece o
+software. O que recai é **estruturar o produto para o cliente conseguir
+cumprir** — que é o que o painel de conformidade faz: diz ao hospital, item a
+item, o que falta.
+
+## O que o módulo de oncologia exige, na prática
+
+A prescrição de quimioterapia de **paciente internado** não é Notificação de
+Receita: a Portaria 344/98 dispensa a Notificação para internados, e a
+dispensação se faz com receita privativa do estabelecimento. Some-se que
+doxorrubicina, carboplatina e paclitaxel não estão nas listas da 344/98.
+
+**Mas há exceções dentro da própria oncologia**, e elas estão no módulo de
+quimioterapia oral: **talidomida** (lista C3) e **tretinoína/ATRA** (lista C2)
+são controladas e vão para casa com o paciente. Opioides para dor oncológica
+também. Para esses, vale a RDC 1.000/2025 por inteiro — inclusive a integração
+com o SNCR.
+
+## RDC 1.000/2025 e o SNCR — prazos
+
+| Data | O que muda |
+|---|---|
+| 15/02/2026 | RDC 1.000/2025 entra em vigor |
+| 30/09/2026 | Começa a emissão eletrônica integrada ao SNCR |
+| até 29/10/2026 | Transição: convivem papel e eletrônico com e sem integração |
+| **30/10/2026** | Receita branca emitida **eletronicamente** tem de estar integrada ao SNCR |
+
+A emissão eletrônica **continua opcional**. Mas sistema não integrado ao SNCR
+fica impedido de emitir esses receituários eletronicamente. Assinatura exigida:
+Notificação de Receita e Receita de Controle Especial = **qualificada
+ICP-Brasil**; receita sujeita à retenção aceita avançada (inclusive gov.br).
+
+A ANVISA já publicou a documentação da API do SNCR e um ambiente de treinamento.
+A integração é trabalho do sistema de prescrição — ou seja, nosso, se um cliente
+precisar emitir controlado eletronicamente.
 
 ## Pendência regulatória a confirmar
 

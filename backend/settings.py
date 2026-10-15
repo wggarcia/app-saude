@@ -68,6 +68,13 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 # produção SaaS. Ver docs/assinatura_icp_brasil.md.
 ICP_CERTIFICADO_A1_PATH = os.environ.get("ICP_CERTIFICADO_A1_PATH", "")
 ICP_CERTIFICADO_A1_SENHA = os.environ.get("ICP_CERTIFICADO_A1_SENHA", "")
+
+# Consulta ao Cadastro Nacional de Médicos do CFM (Resolução CFM 2.299/2021,
+# art. 8º: a plataforma deve garantir que o prescritor é médico regular).
+# O web service é contratado e tarifado (Resolução CFM 2.129/2015). Vazio =
+# sem validação automática, e o sistema diz isso em vez de presumir regular.
+CFM_WS_USUARIO = os.environ.get("CFM_WS_USUARIO", "")
+CFM_WS_SENHA = os.environ.get("CFM_WS_SENHA", "")
 JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
 
 # Chave Fernet para cifrar embeddings biométricos em repouso (LGPD Art. 11).

@@ -1229,6 +1229,7 @@ from api.views_hospital_oncologia import (
     api_onco_certificados,
     api_onco_certificado_detalhe,
     api_onco_interacoes,
+    api_onco_conformidade,
     api_onco_pulseiras,
     api_onco_conferir_codigos,
     api_onco_etiqueta_preparo,
@@ -3607,6 +3608,9 @@ urlpatterns = [
     # Interação medicamentosa (subconjunto curado de oncologia)
     path('api/hospital/oncologia/interacoes',                   api_onco_interacoes),
     path('api/hospital/oncologia/interacoes/',                  api_onco_interacoes),
+    # Conformidade do ESTABELECIMENTO (Resolução CFM 2.299/2021)
+    path('api/hospital/oncologia/conformidade',                 api_onco_conformidade),
+    path('api/hospital/oncologia/conformidade/',                api_onco_conformidade),
     # Código de barras na pulseira (os "cinco certos")
     path('api/hospital/oncologia/pulseiras',                    api_onco_pulseiras),
     path('api/hospital/oncologia/pulseiras/',                   api_onco_pulseiras),

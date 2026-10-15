@@ -3501,7 +3501,9 @@ def _conferir_assinatura(ciclo, assinatura):
     """
     from .services.assinatura_icp import conteudo_canonico_prescricao, resumo_sha256
 
-    atual = resumo_sha256(conteudo_canonico_prescricao(ciclo))
+    atual = resumo_sha256(conteudo_canonico_prescricao(
+        ciclo, cfg=assinatura.certificado_config,
+        emitido_em=assinatura.documento_emitido_em))
     integro = (atual == assinatura.conteudo_hash)
     if not integro and assinatura.status == "assinada":
         assinatura.status = "invalidada"
@@ -3557,8 +3559,8 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
     from .models import AssinaturaDocumento
     from .services.assinatura_icp import (
         AssinaturaIndisponivel, TIPO_PRESCRICAO_QUIMIO, ALGORITMO_RESUMO,
-        conteudo_canonico_prescricao, localizar_certificado, provedor_para,
-        resumo_sha256, status_assinatura)
+        conteudo_canonico_prescricao, elementos_faltando_art2,
+        localizar_certificado, provedor_para, resumo_sha256, status_assinatura)
 
     _, CicloQuimioterapia, _, _ = _get_onco_models()
     ciclo = CicloQuimioterapia.objects.filter(
@@ -3579,6 +3581,9 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
                 "assinatura": None,
                 "status_provedor": st,
                 "hash_atual": resumo_sha256(conteudo_canonico_prescricao(ciclo)),
+                "elementos_faltando_art2": elementos_faltando_art2(
+                    ciclo, localizar_certificado(
+                        empresa, nome=ciclo.medico_oncologista)),
             })
         conferencia = _conferir_assinatura(ciclo, vigente)
         vigente.refresh_from_db()
@@ -3614,14 +3619,20 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
             {"erro": "Informe quem está assinando a prescrição.",
              "codigo": "sem_signatario"}, status=400)
 
-    conteudo = conteudo_canonico_prescricao(ciclo)
-    conteudo_hash = resumo_sha256(conteudo)
-
     # Acha o certificado DO PROFISSIONAL que está assinando, dentro do tenant.
     cfg = localizar_certificado(
         empresa, nome=signatario,
         cpf=data.get("signatario_cpf"),
         registro=data.get("signatario_registro"))
+
+    # O instante da emissão entra no conteúdo assinado e é guardado junto: a
+    # verificação precisa reconstruir o MESMO conteúdo, byte a byte.
+    emitido_em = timezone.now()
+    conteudo = conteudo_canonico_prescricao(ciclo, cfg=cfg, emitido_em=emitido_em)
+    conteudo_hash = resumo_sha256(conteudo)
+
+    # Campos obrigatórios do art. 2º: avisa, mas não impede a emissão.
+    faltando_art2 = elementos_faltando_art2(ciclo, cfg)
     provedor = provedor_para(cfg)
     try:
         resultado = provedor.assinar(
@@ -3636,7 +3647,7 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
             algoritmo=ALGORITMO_RESUMO, status="falha",
             signatario_nome=signatario[:150],
             signatario_registro=(data.get("signatario_registro") or "").strip()[:40],
-            certificado_config=cfg,
+            certificado_config=cfg, documento_emitido_em=emitido_em,
             provedor=provedor.nome, motivo_falha=exc.mensagem)
         return JsonResponse({
             "erro": exc.mensagem,
@@ -3644,6 +3655,7 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
             "pendencias": exc.pendencias,
             "assinada": False,
             "documento_hash": conteudo_hash,
+            "elementos_faltando_art2": faltando_art2,
         }, status=503)
 
     cert = resultado.get("certificado") or {}
@@ -3660,7 +3672,7 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
         certificado_valido_de=cert.get("valido_de"),
         certificado_valido_ate=cert.get("valido_ate"),
         assinatura_b64=resultado.get("assinatura_b64", ""),
-        certificado_config=cfg,
+        certificado_config=cfg, documento_emitido_em=emitido_em,
         provedor=resultado.get("provedor", provedor.nome),
         assinado_em=resultado.get("assinado_em") or timezone.now(),
         carimbo_tempo_em=resultado.get("carimbo_tempo_em"))
@@ -3670,6 +3682,10 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
                                            "hash_atual": conteudo_hash,
                                            "hash_assinado": conteudo_hash,
                                            "mensagem": "Documento recém-assinado."}),
+        "elementos_faltando_art2": faltando_art2,
+        "alerta": ("Documento assinado, mas incompleto para a Resolução CFM "
+                   "2.299/2021 — falta: " + ", ".join(faltando_art2)
+                   if faltando_art2 else None),
     }, status=201)
 
 
@@ -3685,6 +3701,8 @@ def _certificado_dict(c):
         "profissional_nome": c.profissional_nome,
         "profissional_cpf": c.profissional_cpf,
         "profissional_registro": c.profissional_registro,
+        "profissional_rqe": c.profissional_rqe,
+        "profissional_endereco": c.profissional_endereco,
         "provedor": c.provedor,
         "provedor_display": c.get_provedor_display(),
         "status": c.status,
@@ -3763,6 +3781,8 @@ def api_onco_certificados(request):
     c = CertificadoAssinante(
         empresa=empresa, profissional_nome=nome[:150], profissional_cpf=cpf,
         profissional_registro=(data.get("profissional_registro") or "").strip()[:40],
+        profissional_rqe=(data.get("profissional_rqe") or "").strip()[:40],
+        profissional_endereco=(data.get("profissional_endereco") or "").strip()[:250],
         provedor=provedor,
         identificador_provedor=(data.get("identificador_provedor")
                                 or cpf or "")[:120],
@@ -3849,6 +3869,8 @@ def api_onco_certificado_detalhe(request, certificado_id):
 
     for campo, limite in (("profissional_nome", 150),
                           ("profissional_registro", 40),
+                          ("profissional_rqe", 40),
+                          ("profissional_endereco", 250),
                           ("identificador_provedor", 120),
                           ("cliente_id", 200),
                           ("a1_caminho", 500),
@@ -4308,3 +4330,154 @@ def api_onco_etiqueta_preparo(request, preparo_id):
         "preparado_por": p.preparado_por,
         "conferido_por": p.conferido_por,
     })
+
+
+# ── Conformidade do ESTABELECIMENTO (Resolução CFM 2.299/2021) ────────────────
+# Os deveres do art. 5º e 8º recaem sobre quem oferece o serviço de prescrição
+# ao médico — o estabelecimento de saúde, que já é obrigado a ter inscrição no
+# CRM e Diretor Técnico. A fornecedora do software não presta nem intermedeia
+# assistência: pela Lei 6.839/80 o registro em conselho segue a ATIVIDADE
+# BÁSICA da empresa, e desenvolver software não é atividade médica.
+#
+# O papel do sistema é guardar esses dados por cliente, estampá-los nos
+# documentos e dizer ao hospital exatamente o que falta.
+
+def _rt_dict(rt, empresa):
+    pend = rt.pendencias() if rt else [
+        "Cadastrar a responsabilidade técnica do estabelecimento "
+        "(inscrição no CRM e Diretor Técnico médico)."]
+    return {
+        "crm_pessoa_juridica": rt.crm_pessoa_juridica if rt else "",
+        "uf_conselho": rt.uf_conselho if rt else "",
+        "diretor_tecnico_nome": rt.diretor_tecnico_nome if rt else "",
+        "diretor_tecnico_crm": rt.diretor_tecnico_crm if rt else "",
+        "endereco": rt.endereco if rt else "",
+        "cnes": rt.cnes if rt else "",
+        "ciente_informado_em": (rt.ciente_informado_em.isoformat()
+                                if rt and rt.ciente_informado_em else None),
+        "observacao": rt.observacao if rt else "",
+        "conforme": not pend,
+        "pendencias": pend,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_conformidade(request):
+    """GET/PUT /api/hospital/oncologia/conformidade/
+
+    Painel que diz ao hospital o que falta para ele cumprir a Resolução CFM
+    2.299/2021 ao emitir documento médico eletrônico.
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import CertificadoAssinante, ResponsabilidadeTecnica
+
+    rt = ResponsabilidadeTecnica.objects.filter(empresa=empresa).first()
+
+    if request.method == "PUT":
+        data, erro = _parse_json(request)
+        if erro:
+            return erro
+        if rt is None:
+            rt = ResponsabilidadeTecnica(empresa=empresa)
+        for campo, limite in (("crm_pessoa_juridica", 40), ("uf_conselho", 2),
+                              ("diretor_tecnico_nome", 150),
+                              ("diretor_tecnico_crm", 40),
+                              ("endereco", 250), ("cnes", 7),
+                              ("observacao", 0)):
+            if campo in data:
+                valor = (data.get(campo) or "").strip()
+                setattr(rt, campo, valor[:limite] if limite else valor)
+        if "ciente_informado_em" in data:
+            valor, err = _data_ou_erro(data.get("ciente_informado_em"),
+                                       "ciente_informado_em")
+            if err:
+                return err
+            rt.ciente_informado_em = valor
+        rt.save()
+
+    assinantes = list(CertificadoAssinante.objects.filter(empresa=empresa))
+    prontos = [c for c in assinantes if provedor_para_novo(c).disponivel()]
+    sem_crm = [c.profissional_nome for c in assinantes
+               if not c.profissional_registro]
+    sem_endereco = [c.profissional_nome for c in assinantes
+                    if not c.profissional_endereco]
+
+    rt_info = _rt_dict(rt, empresa)
+    bloqueios = list(rt_info["pendencias"])
+    if not assinantes:
+        bloqueios.append(
+            "Nenhum médico com certificado configurado: documentos médicos "
+            "eletrônicos exigem assinatura ICP-Brasil NGS2 (art. 4º).")
+    elif not prontos:
+        bloqueios.append(
+            "Nenhum certificado está pronto para assinar — veja as pendências "
+            "em Assinatura Digital.")
+    if sem_crm:
+        bloqueios.append(
+            "Sem CRM cadastrado: " + ", ".join(sem_crm[:5])
+            + " (art. 2º exige nome, CRM e endereço do médico).")
+    if sem_endereco and not rt_info["endereco"]:
+        bloqueios.append(
+            "Sem endereço do médico nem do estabelecimento: "
+            + ", ".join(sem_endereco[:5]) + ".")
+
+    return JsonResponse({
+        "estabelecimento": rt_info,
+        "assinantes_cadastrados": len(assinantes),
+        "assinantes_prontos": len(prontos),
+        "conforme": not bloqueios,
+        "pendencias": bloqueios,
+        "validacao_prescritor": _status_validacao_cfm(),
+        # Deixa explícito de quem é cada dever — foi a confusão que motivou
+        # este painel.
+        "de_quem_e_o_dever": (
+            "Os deveres dos arts. 5º e 8º são do ESTABELECIMENTO DE SAÚDE que "
+            "oferece o serviço de prescrição ao médico, que já é obrigado a ter "
+            "inscrição no CRM e Diretor Técnico. A empresa que fornece o "
+            "software não presta nem intermedeia assistência à saúde: pela Lei "
+            "6.839/80 o registro em conselho segue a atividade básica da "
+            "empresa. O sistema guarda os dados e os estampa nos documentos."),
+        "base_normativa": [
+            "Resolução CFM 2.299/2021, art. 2º — conteúdo obrigatório do "
+            "documento médico eletrônico.",
+            "Resolução CFM 2.299/2021, art. 4º — assinatura ICP-Brasil NGS2, "
+            "validável pelo ITI ou pelo validador do CFM.",
+            "Resolução CFM 2.299/2021, art. 5º — inscrição no CRM e Diretor "
+            "Técnico médico do estabelecimento.",
+            "Resolução CFM 2.299/2021, art. 8º — garantir que o prescritor é "
+            "médico regular, pelo Cadastro Nacional de Médicos do CFM.",
+        ],
+    })
+
+
+def _status_validacao_cfm():
+    """Validação do prescritor no Cadastro Nacional de Médicos (art. 8º).
+
+    O web service do CFM é contratado e tarifado (Resolução CFM 2.129/2015).
+    Sem credencial não há como consultar — e dizer isso é melhor que devolver
+    um "médico regular" que ninguém verificou.
+    """
+    from django.conf import settings
+    usuario = getattr(settings, "CFM_WS_USUARIO", "")
+    senha = getattr(settings, "CFM_WS_SENHA", "")
+    disponivel = bool(usuario and senha)
+    return {
+        "disponivel": disponivel,
+        "mensagem": (
+            "Validação automática do prescritor ativa."
+            if disponivel else
+            "Validação automática do prescritor no Cadastro Nacional de "
+            "Médicos do CFM não configurada: a regularidade do médico precisa "
+            "ser conferida manualmente pelo estabelecimento."),
+        "pendencias": [] if disponivel else [
+            "Contratar o serviço de consulta ao Cadastro Nacional de Médicos "
+            "do CFM (Resolução CFM 2.129/2015, serviço tarifado).",
+            "Configurar CFM_WS_USUARIO e CFM_WS_SENHA.",
+        ],
+    }

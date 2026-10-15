@@ -12767,6 +12767,75 @@ class InteracaoMedicamentosa(models.Model):
         return f"{self.farmaco_a} + {self.farmaco_b} ({self.get_gravidade_display()})"
 
 
+class ResponsabilidadeTecnica(models.Model):
+    """Dados de responsabilidade técnica do ESTABELECIMENTO cliente.
+
+    A Resolução CFM 2.299/2021 impõe deveres a quem oferece o serviço de
+    prescrição eletrônica ao médico: inscrição no CRM da jurisdição da sede e
+    indicação de um Diretor Técnico médico (art. 5º), além de garantir que o
+    prescritor é médico regular (art. 8º).
+
+    Quem cumpre isso é o ESTABELECIMENTO DE SAÚDE que usa o sistema — e todo
+    hospital já é obrigado a ter inscrição e diretor técnico. A fornecedora do
+    software não presta nem intermedeia assistência à saúde: pela Lei 6.839/80
+    o registro em conselho segue a ATIVIDADE BÁSICA da empresa, e desenvolver
+    software não é atividade médica.
+
+    O papel do sistema é guardar esses dados por cliente e estampá-los nos
+    documentos emitidos — é isso que permite ao hospital estar em conformidade.
+    """
+    empresa        = models.OneToOneField("Empresa", on_delete=models.CASCADE,
+                                          related_name="responsabilidade_tecnica")
+    # Inscrição da pessoa jurídica no CRM da jurisdição da sede (art. 5º).
+    crm_pessoa_juridica = models.CharField(
+        max_length=40, blank=True, default="",
+        verbose_name="Inscrição do estabelecimento no CRM")
+    uf_conselho    = models.CharField(max_length=2, blank=True, default="")
+    # Diretor Técnico médico, que responde pelos aspectos éticos (art. 5º) e
+    # compartilha a responsabilidade pela guarda das informações (art. 3º, §1º).
+    diretor_tecnico_nome = models.CharField(max_length=150, blank=True, default="")
+    diretor_tecnico_crm  = models.CharField(max_length=40, blank=True, default="")
+    # Endereço do estabelecimento, que entra no documento emitido.
+    endereco       = models.CharField(max_length=250, blank=True, default="")
+    cnes           = models.CharField(max_length=7, blank=True, default="",
+                                      verbose_name="CNES do estabelecimento")
+    # O art. 5º, parágrafo único, manda informar documentalmente ao médico
+    # usuário que a plataforma atende às normas do CFM.
+    ciente_informado_em = models.DateField(
+        null=True, blank=True,
+        verbose_name="Data em que os médicos usuários foram informados")
+    observacao     = models.TextField(blank=True, default="")
+    atualizado_em  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Responsabilidade Técnica"
+        verbose_name_plural = "Responsabilidades Técnicas"
+
+    def __str__(self):
+        return f"RT {self.empresa_id} — {self.diretor_tecnico_nome or 'sem diretor técnico'}"
+
+    def pendencias(self):
+        """O que falta para o ESTABELECIMENTO estar em conformidade."""
+        faltando = []
+        if not self.crm_pessoa_juridica:
+            faltando.append(
+                "Inscrição do estabelecimento no CRM da jurisdição da sede "
+                "(Resolução CFM 2.299/2021, art. 5º).")
+        if not self.diretor_tecnico_nome or not self.diretor_tecnico_crm:
+            faltando.append(
+                "Indicar o Diretor Técnico médico, inscrito no mesmo CRM, que "
+                "responde pelos aspectos éticos (art. 5º).")
+        if not self.endereco:
+            faltando.append(
+                "Endereço do estabelecimento, que compõe o documento emitido.")
+        if not self.ciente_informado_em:
+            faltando.append(
+                "Registrar a data em que os médicos usuários foram informados "
+                "documentalmente de que a plataforma atende às normas do CFM "
+                "(art. 5º, parágrafo único).")
+        return faltando
+
+
 class CertificadoAssinante(models.Model):
     """Como CADA PROFISSIONAL de CADA cliente assina — nunca um certificado global.
 
@@ -12801,6 +12870,16 @@ class CertificadoAssinante(models.Model):
     profissional_registro = models.CharField(
         max_length=40, blank=True, default="",
         verbose_name="Registro no conselho (ex.: CRM-MS 12345)")
+    # Exigidos no documento médico eletrônico pelo art. 2º da Resolução CFM
+    # 2.299/2021: identificação do médico com nome, CRM e endereço, e o RQE
+    # quando houver vinculação com especialidade. Sem isso o documento sai
+    # incompleto mesmo estando assinado.
+    profissional_rqe = models.CharField(
+        max_length=40, blank=True, default="",
+        verbose_name="RQE — Registro de Qualificação de Especialista")
+    profissional_endereco = models.CharField(
+        max_length=250, blank=True, default="",
+        verbose_name="Endereço profissional")
     provedor       = models.CharField(max_length=20, choices=PROVEDOR)
     status         = models.CharField(max_length=10, choices=STATUS,
                                       default="pendente", db_index=True)
@@ -12899,6 +12978,10 @@ class AssinaturaDocumento(models.Model):
         related_name="assinaturas",
         help_text="Qual configuração de assinante foi usada")
     assinado_em    = models.DateTimeField(null=True, blank=True)
+    # Instante de emissão que ENTROU no conteúdo assinado (art. 2º, "d").
+    # Precisa ficar guardado: a verificação reconstrói o conteúdo canônico e,
+    # se usasse a hora atual, nenhuma assinatura conferiria jamais.
+    documento_emitido_em = models.DateTimeField(null=True, blank=True)
     # Carimbo de tempo de uma Autoridade de Carimbo do Tempo (ACT) externa.
     # Sem ele a data é a do nosso relógio, e não a de um terceiro de confiança.
     carimbo_tempo_em = models.DateTimeField(null=True, blank=True)

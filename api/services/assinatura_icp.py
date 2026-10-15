@@ -58,7 +58,61 @@ def _canonizar(payload):
                       separators=(",", ":"), default=str)
 
 
-def conteudo_canonico_prescricao(ciclo):
+def _dados_emitente(empresa, cfg=None):
+    """Identificação do médico e do estabelecimento, como o art. 2º exige.
+
+    A Resolução CFM 2.299/2021 lista o conteúdo obrigatório do documento médico
+    eletrônico: nome, CRM e endereço do médico, RQE quando houver, nome e
+    documento do paciente, data e hora, e a assinatura. Assinar um documento
+    sem esses campos deixa o documento incompleto mesmo com assinatura válida.
+    """
+    medico = {"nome": "", "crm": "", "rqe": "", "endereco": ""}
+    if cfg is not None:
+        medico = {
+            "nome": cfg.profissional_nome or "",
+            "crm": cfg.profissional_registro or "",
+            "rqe": getattr(cfg, "profissional_rqe", "") or "",
+            "endereco": getattr(cfg, "profissional_endereco", "") or "",
+        }
+    estabelecimento = {"nome": "", "crm": "", "endereco": "", "cnes": "",
+                       "diretor_tecnico": "", "diretor_tecnico_crm": ""}
+    rt = getattr(empresa, "responsabilidade_tecnica", None)
+    if rt is not None:
+        estabelecimento = {
+            "nome": empresa.nome,
+            "crm": rt.crm_pessoa_juridica or "",
+            "endereco": rt.endereco or "",
+            "cnes": rt.cnes or "",
+            "diretor_tecnico": rt.diretor_tecnico_nome or "",
+            "diretor_tecnico_crm": rt.diretor_tecnico_crm or "",
+        }
+    else:
+        estabelecimento["nome"] = empresa.nome
+    return medico, estabelecimento
+
+
+def elementos_faltando_art2(ciclo, cfg=None):
+    """Campos obrigatórios do art. 2º que ainda não estão preenchidos.
+
+    Reportar isso é mais útil que recusar a assinatura: o documento pode ser
+    emitido, mas quem assina precisa saber que ele sai incompleto.
+    """
+    medico, estab = _dados_emitente(ciclo.empresa, cfg)
+    faltando = []
+    if not medico["nome"]:
+        faltando.append("nome do médico")
+    if not medico["crm"]:
+        faltando.append("CRM do médico")
+    if not medico["endereco"] and not estab["endereco"]:
+        faltando.append("endereço do médico ou do estabelecimento")
+    if not ciclo.paciente_nome:
+        faltando.append("nome do paciente")
+    if not ciclo.cpf_paciente:
+        faltando.append("número do documento legal do paciente")
+    return faltando
+
+
+def conteudo_canonico_prescricao(ciclo, cfg=None, emitido_em=None):
     """Documento assinável de uma prescrição de quimioterapia.
 
     Inclui tudo que é clinicamente determinante — paciente, protocolo, doses
@@ -84,11 +138,18 @@ def conteudo_canonico_prescricao(ciclo):
         }
         for m in (ciclo.protocolo.drogas_suporte or [])
     ]
+    medico, estabelecimento = _dados_emitente(ciclo.empresa, cfg)
+    # Data E HORA da emissão (art. 2º, "d"): a data do ciclo é dado clínico,
+    # não o momento em que o documento foi emitido e assinado.
+    emitido_em = emitido_em or timezone.now()
     payload = {
         "documento": TIPO_PRESCRICAO_QUIMIO,
-        "versao": 1,
+        "versao": 2,
         "empresa_id": ciclo.empresa_id,
         "ciclo_id": ciclo.id,
+        "emitido_em": timezone.localtime(emitido_em).isoformat(),
+        "medico": medico,
+        "estabelecimento": estabelecimento,
         "paciente": {"nome": ciclo.paciente_nome, "cpf": ciclo.cpf_paciente or ""},
         "diagnostico_cid10": ciclo.cid10_principal or "",
         "protocolo": {"codigo": ciclo.protocolo.codigo,
