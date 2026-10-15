@@ -224,6 +224,147 @@ class OncologiaTests(TestCase):
         r = client.get("/api/hospital/oncologia/ciclos/")
         self.assertEqual(r.status_code, 200)
 
+    # ══ Relógio regulatório da autorização (ANS RN 623/2024 — 5 dias úteis) ═══
+    def _guia(self, client, **extra):
+        payload = {
+            "numero_guia": "G-1", "paciente_nome": "Paciente Onco",
+            "data_emissao": date.today().isoformat(),
+            "data_validade": (date.today() + timedelta(days=90)).isoformat(),
+            "ciclos_autorizados": 6,
+        }
+        payload.update(extra)
+        return client.post("/api/hospital/oncologia/guias/",
+                           data=payload, content_type="application/json")
+
+    def test_dias_uteis_ignora_fim_de_semana(self):
+        from api.views_hospital_oncologia import _dias_uteis_entre
+        # sexta 2026-01-02 → segunda 2026-01-05 = 1 dia útil
+        self.assertEqual(_dias_uteis_entre(date(2026, 1, 2), date(2026, 1, 5)), 1)
+        # segunda → sexta da mesma semana = 4 dias úteis
+        self.assertEqual(_dias_uteis_entre(date(2026, 1, 5), date(2026, 1, 9)), 4)
+        self.assertEqual(_dias_uteis_entre(date(2026, 1, 5), date(2026, 1, 5)), 0)
+
+    def test_prazo_estourado_aparece_no_alerta(self):
+        empresa = _empresa("Hospital Rede", "onco-pz1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._guia(client, status="em_analise",
+                       data_solicitacao=(date.today() - timedelta(days=20)).isoformat())
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertTrue(r.json()["guia"]["prazo_resposta"]["estourado"])
+        a = client.get("/api/hospital/oncologia/guias/alertas/").json()
+        self.assertEqual(a["total_prazo_resposta_estourado"], 1)
+
+    def test_prazo_dentro_nao_alerta(self):
+        empresa = _empresa("Hospital Rede", "onco-pz2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._guia(client, numero_guia="G-2", status="em_analise",
+                   data_solicitacao=date.today().isoformat())
+        a = client.get("/api/hospital/oncologia/guias/alertas/").json()
+        self.assertEqual(a["total_prazo_resposta_estourado"], 0)
+
+    def test_guia_respondida_para_o_relogio(self):
+        """Depois de respondida, o relógio mede o que levou e não alerta mais."""
+        empresa = _empresa("Hospital Rede", "onco-pz3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._guia(client, numero_guia="G-3",
+                       data_solicitacao=(date.today() - timedelta(days=30)).isoformat(),
+                       data_resposta=(date.today() - timedelta(days=28)).isoformat())
+        p = r.json()["guia"]["prazo_resposta"]
+        self.assertTrue(p["respondida"])
+        a = client.get("/api/hospital/oncologia/guias/alertas/").json()
+        self.assertEqual(a["total_prazo_resposta_estourado"], 0)
+
+    def test_negativa_exige_motivo_valido(self):
+        empresa = _empresa("Hospital Rede", "onco-pz4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._guia(client, numero_guia="G-4", status="negada",
+                       motivo_negativa="inventado")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("validos", r.json())
+
+    def test_negativa_com_motivo_estruturado(self):
+        empresa = _empresa("Hospital Rede", "onco-pz5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._guia(client, numero_guia="G-5", status="negada",
+                       motivo_negativa="dut",
+                       motivo_negativa_detalhe="Não cumpre a DUT do rol vigente.")
+        self.assertEqual(r.status_code, 201, r.content)
+        g = r.json()["guia"]
+        self.assertEqual(g["motivo_negativa"], "dut")
+        self.assertIn("Diretriz de Utilização", g["motivo_negativa_display"])
+
+    def test_guia_em_analise_nao_vira_vigente_sozinha(self):
+        """Regressão: autorização pendente não pode ser tratada como concedida."""
+        empresa = _empresa("Hospital Rede", "onco-pz6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._guia(client, numero_guia="G-6", status="em_analise",
+                       data_solicitacao=date.today().isoformat())
+        self.assertEqual(r.json()["guia"]["status"], "em_analise")
+
+    def test_kpi_conta_autorizacoes_estouradas(self):
+        empresa = _empresa("Hospital Rede", "onco-pz7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._guia(client, numero_guia="G-7", status="em_analise",
+                   data_solicitacao=(date.today() - timedelta(days=20)).isoformat())
+        k = client.get("/api/hospital/oncologia/kpis/").json()
+        self.assertEqual(k["autorizacoes_prazo_estourado"], 1)
+        self.assertEqual(k["autorizacoes_aguardando_resposta"], 1)
+
+    # ══ Pré-medicação e suporte ═══════════════════════════════════════════════
+    def test_protocolos_semeados_tem_pre_medicacao(self):
+        """Nenhum esquema real existe só com antineoplásico."""
+        empresa = _empresa("Hospital Rede", "onco-sup1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.get("/api/hospital/oncologia/protocolos/")
+        self.assertEqual(r.status_code, 200)
+        por_codigo = {p["codigo"]: p for p in r.json()["protocolos"]}
+        for cod in ("FOLFOX-6", "FOLFIRI", "AC-T", "BEP", "CHOP"):
+            self.assertTrue(por_codigo[cod]["drogas_suporte"],
+                            f"{cod} sem pré-medicação")
+        # BEP carrega cisplatina: exige função renal melhor que o padrão
+        self.assertEqual(por_codigo["BEP"]["criterios_aptidao"]["clearance_min"], 60)
+        self.assertFalse(por_codigo["BEP"]["criterios_sao_padrao"])
+        # FOLFOX usa o padrão seguro
+        self.assertTrue(por_codigo["FOLFOX-6"]["criterios_sao_padrao"])
+
+    def test_bep_hidratacao_na_pre_medicacao(self):
+        """Cisplatina sem hiper-hidratação é nefrotoxicidade programada."""
+        empresa = _empresa("Hospital Rede", "onco-sup2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.get("/api/hospital/oncologia/protocolos/")
+        bep = [p for p in r.json()["protocolos"] if p["codigo"] == "BEP"][0]
+        nomes = " ".join(d["droga"] for d in bep["drogas_suporte"]).lower()
+        self.assertIn("fisiológico", nomes)
+
+    def test_ciclo_devolve_pre_medicacao_do_protocolo(self):
+        empresa = _empresa("Hospital Rede", "onco-sup3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        from api.models import ProtocoloOncologico
+        p = ProtocoloOncologico.objects.create(
+            empresa=empresa, codigo="X1", nome="X1", ciclos_total=4, intervalo_dias=21,
+            drogas=[{"droga": "Oxaliplatina", "dose": 85, "unidade": "mg/m²", "dia": 1}],
+            drogas_suporte=[{"droga": "Ondansetrona", "dose": 8, "unidade": "mg",
+                             "via": "EV", "momento": "30 min antes"}])
+        r = self._criar_ciclo(client, p, neutrofilos=3000, plaquetas=250000)
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json()["pre_medicacao"][0]["droga"], "Ondansetrona")
+
+    def test_protocolo_proprio_aceita_suporte_e_criterios(self):
+        empresa = _empresa("Hospital Rede", "onco-sup4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post("/api/hospital/oncologia/protocolos/", data={
+            "codigo": "MEU-1", "nome": "Protocolo da Casa",
+            "drogas": [{"droga": "Cisplatina", "dose": 75, "unidade": "mg/m²", "dia": 1}],
+            "drogas_suporte": [{"droga": "Ondansetrona", "dose": 8, "unidade": "mg",
+                                "via": "EV", "momento": "30 min antes"}],
+            "criterios_aptidao": {"neutrofilos_min": 2000},
+        }, content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content)
+        from api.models import ProtocoloOncologico
+        p = ProtocoloOncologico.objects.get(id=r.json()["id"])
+        self.assertEqual(p.criterios_aptidao["neutrofilos_min"], 2000)
+        self.assertTrue(p.drogas_suporte)
+
     # ══ Segurança clínica do ciclo ════════════════════════════════════════════
     def _criar_ciclo(self, client, protocolo, **extra):
         payload = {

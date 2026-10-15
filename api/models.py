@@ -12402,10 +12402,23 @@ class GuiaOncologica(models.Model):
         ("geral",         "Tratamento oncológico"),
     ]
     STATUS = [
+        ("em_analise", "Em análise (aguardando resposta)"),
         ("vigente",   "Vigente"),
+        ("negada",    "Negada"),
         ("vencida",   "Vencida"),
         ("esgotada",  "Esgotada (ciclos consumidos)"),
         ("cancelada", "Cancelada"),
+    ]
+    # Motivos estruturados de negativa. Sem lista fechada, o motivo vira texto
+    # solto e ninguém consegue analisar por que as autorizações são negadas.
+    MOTIVO_NEGATIVA = [
+        ("fora_rol",        "Procedimento/medicamento fora do Rol da ANS"),
+        ("dut",             "Não atende à Diretriz de Utilização (DUT)"),
+        ("off_label",       "Uso off-label"),
+        ("doc_insuficiente","Documentação clínica insuficiente"),
+        ("carencia",        "Carência contratual"),
+        ("rede",            "Prestador fora da rede"),
+        ("outro",           "Outro"),
     ]
     empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
                                           related_name="guias_oncologicas")
@@ -12419,6 +12432,21 @@ class GuiaOncologica(models.Model):
     operadora        = models.CharField(max_length=120, blank=True, default="")
     data_emissao     = models.DateField()
     data_validade    = models.DateField(verbose_name="Válida até")
+    # ── Relógio regulatório da autorização ─────────────────────────────────
+    # A ANS exige resposta em terapias oncológicas em até 5 dias úteis
+    # (RN 623/2024). Sem cronometrar isso, a operadora só descobre que estourou
+    # quando chega a reclamação na ouvidoria ou a ação judicial.
+    data_solicitacao = models.DateField(null=True, blank=True,
+                                        verbose_name="Data da solicitação")
+    data_resposta    = models.DateField(null=True, blank=True,
+                                        verbose_name="Data da resposta ao solicitante")
+    prazo_resposta_dias_uteis = models.PositiveSmallIntegerField(
+        default=5, verbose_name="Prazo de resposta (dias úteis)")
+    motivo_negativa  = models.CharField(max_length=20, blank=True, default="",
+                                        choices=MOTIVO_NEGATIVA,
+                                        verbose_name="Motivo estruturado da negativa")
+    motivo_negativa_detalhe = models.TextField(blank=True, default="",
+                                               verbose_name="Detalhe da negativa")
     ciclos_autorizados = models.PositiveSmallIntegerField(default=0,
                                                           help_text="0 = sem limite de ciclos")
     ciclos_utilizados  = models.PositiveSmallIntegerField(default=0)

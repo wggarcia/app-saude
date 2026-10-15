@@ -107,6 +107,45 @@ def hospital_oncologia_page(request):
     return render(request, "hospital_oncologia.html")
 
 # Protocolos PCDT/INCA mais prevalentes para seed
+# Pré-medicação e suporte por protocolo. Um esquema sem antiemético e sem
+# hidratação não é um esquema — é metade da prescrição. `momento` diz quando
+# administrar em relação à quimioterapia.
+_SUPORTE_SEED = {
+    "FOLFOX-6": [
+        {"droga": "Ondansetrona", "dose": 8, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Dexametasona", "dose": 10, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+    ],
+    "FOLFIRI": [
+        {"droga": "Ondansetrona", "dose": 8, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Dexametasona", "dose": 10, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Atropina", "dose": 0.25, "unidade": "mg", "via": "SC",
+         "momento": "se síndrome colinérgica aguda da irinotecana"},
+    ],
+    "AC-T": [
+        {"droga": "Ondansetrona", "dose": 8, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Dexametasona", "dose": 10, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Aprepitanto", "dose": 125, "unidade": "mg", "via": "VO",
+         "momento": "1 h antes (ciclos com doxorrubicina — alto poder emetogênico)"},
+        {"droga": "Difenidramina", "dose": 50, "unidade": "mg", "via": "EV",
+         "momento": "30 min antes do paclitaxel (prevenção de hipersensibilidade)"},
+    ],
+    "BEP": [
+        {"droga": "Ondansetrona", "dose": 8, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Dexametasona", "dose": 10, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Soro fisiológico 0,9%", "dose": 1000, "unidade": "mL", "via": "EV",
+         "momento": "hiper-hidratação antes e depois da cisplatina (nefroproteção)"},
+    ],
+    "CHOP": [
+        {"droga": "Ondansetrona", "dose": 8, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+        {"droga": "Dexametasona", "dose": 10, "unidade": "mg", "via": "EV", "momento": "30 min antes"},
+    ],
+}
+
+# Critérios de aptidão específicos. BEP carrega cisplatina: função renal manda.
+_CRITERIOS_SEED = {
+    "BEP": {"clearance_min": 60},
+}
+
 _PROTOCOLOS_SEED = [
     ("FOLFOX-6",   "C18", "EV", 12, 14, [
         {"droga": "Oxaliplatina", "dose": 85, "unidade": "mg/m²", "dia": 1},
@@ -144,10 +183,56 @@ def _get_onco_models():
     return ProtocoloOncologico, CicloQuimioterapia, APACOncologia, ToxicidadeQuimio
 
 
+# ── Relógio regulatório da autorização ─────────────────────────────────────────
+# A ANS exige resposta em terapias oncológicas em até 5 dias úteis (RN 623/2024).
+# Feriados NÃO são considerados: contá-los como dias úteis faz o alerta disparar
+# ANTES do prazo real, que é o erro seguro para quem precisa responder a tempo.
+def _dias_uteis_entre(inicio, fim):
+    """Dias úteis decorridos entre duas datas (exclui o dia da solicitação)."""
+    if not inicio or not fim or fim < inicio:
+        return 0
+    dias = 0
+    atual = inicio
+    while atual < fim:
+        atual += timedelta(days=1)
+        if atual.weekday() < 5:          # 0=segunda … 4=sexta
+            dias += 1
+    return dias
+
+
+def _prazo_resposta_guia(guia, hoje=None):
+    """Situação da guia frente ao prazo regulatório de resposta.
+
+    Devolve dict com dias úteis decorridos, restantes e se estourou. Só se aplica
+    enquanto a guia está em análise — depois de respondida, mede o que levou.
+    """
+    hoje = hoje or date.today()
+    prazo = guia.prazo_resposta_dias_uteis or 5
+    if not guia.data_solicitacao:
+        return {"aplicavel": False, "prazo_dias_uteis": prazo}
+    referencia = guia.data_resposta or hoje
+    decorridos = _dias_uteis_entre(guia.data_solicitacao, referencia)
+    restantes = prazo - decorridos
+    respondida = guia.data_resposta is not None
+    return {
+        "aplicavel": True,
+        "prazo_dias_uteis": prazo,
+        "data_solicitacao": guia.data_solicitacao.isoformat(),
+        "data_resposta": guia.data_resposta.isoformat() if respondida else None,
+        "respondida": respondida,
+        "dias_uteis_decorridos": decorridos,
+        "dias_uteis_restantes": max(restantes, 0),
+        "estourado": decorridos > prazo,
+        "vence_hoje": (not respondida) and restantes == 0,
+    }
+
+
 def _sync_status_guia(guia):
     """Atualiza o status da guia conforme validade e ciclos consumidos."""
     hoje = date.today()
-    if guia.status in ("cancelada",):
+    # Em análise ou negada são decisões de autorização, não de vigência: o
+    # relógio de validade só corre depois que a guia é concedida.
+    if guia.status in ("cancelada", "em_analise", "negada"):
         return guia.status
     if guia.ciclos_autorizados and guia.ciclos_utilizados >= guia.ciclos_autorizados:
         novo = "esgotada"
@@ -461,7 +546,7 @@ def _seed_protocolos(empresa, ProtocoloOncologico):
     """Popula os protocolos PCDT/INCA de referência. Idempotente (get_or_create)."""
     with transaction.atomic():
         for nome, cid, via, ciclos, intervalo, drogas in _PROTOCOLOS_SEED:
-            ProtocoloOncologico.objects.get_or_create(
+            p, _criado = ProtocoloOncologico.objects.get_or_create(
                 empresa=empresa, codigo=nome,
                 defaults={
                     "nome": nome,
@@ -470,9 +555,20 @@ def _seed_protocolos(empresa, ProtocoloOncologico):
                     "ciclos_total": ciclos,
                     "intervalo_dias": intervalo,
                     "drogas": drogas,
+                    "drogas_suporte": _SUPORTE_SEED.get(nome, []),
+                    "criterios_aptidao": _CRITERIOS_SEED.get(nome, {}),
                     "ativo": True,
                 },
             )
+            # Protocolos semeados antes do suporte existir ficam completos aqui,
+            # sem sobrescrever o que o hospital tenha ajustado à mão.
+            campos = []
+            if not p.drogas_suporte and _SUPORTE_SEED.get(nome):
+                p.drogas_suporte = _SUPORTE_SEED[nome]; campos.append("drogas_suporte")
+            if not p.criterios_aptidao and _CRITERIOS_SEED.get(nome):
+                p.criterios_aptidao = _CRITERIOS_SEED[nome]; campos.append("criterios_aptidao")
+            if campos:
+                p.save(update_fields=campos)
 
 
 @csrf_exempt
@@ -499,6 +595,12 @@ def api_onco_protocolos(request):
         drogas = data.get("drogas", [])
         if not isinstance(drogas, list):
             return JsonResponse({"erro": "drogas deve ser uma lista"}, status=400)
+        suporte = data.get("drogas_suporte", [])
+        if not isinstance(suporte, list):
+            return JsonResponse({"erro": "drogas_suporte deve ser uma lista"}, status=400)
+        criterios = data.get("criterios_aptidao", {})
+        if not isinstance(criterios, dict):
+            return JsonResponse({"erro": "criterios_aptidao deve ser um objeto"}, status=400)
         if ProtocoloOncologico.objects.filter(empresa=empresa, codigo=codigo).exists():
             return JsonResponse({"erro": f"Já existe protocolo com o código '{codigo}'"}, status=400)
         p = ProtocoloOncologico.objects.create(
@@ -508,6 +610,10 @@ def api_onco_protocolos(request):
             ciclos_total=data.get("ciclos_total") or None,
             intervalo_dias=data.get("intervalo_dias") or None,
             drogas=drogas,
+            drogas_suporte=suporte,
+            criterios_aptidao=criterios,
+            exige_confirmacao_patologica=bool(
+                data.get("exige_confirmacao_patologica", True)),
             obs=data.get("obs", ""),
             ativo=True,
         )
@@ -538,6 +644,10 @@ def api_onco_protocolos(request):
                 "ciclos_total": p.ciclos_total,
                 "intervalo_dias": p.intervalo_dias,
                 "drogas": p.drogas,
+                "drogas_suporte": p.drogas_suporte,
+                "criterios_aptidao": p.criterios_aptidao or APTIDAO_PADRAO,
+                "criterios_sao_padrao": not bool(p.criterios_aptidao),
+                "exige_confirmacao_patologica": p.exige_confirmacao_patologica,
             }
             for p in qs.order_by("nome")
         ],
@@ -771,6 +881,7 @@ def api_onco_ciclos(request):
         "id": ciclo.id,
         "sc_m2": sc_m2,
         "doses_calculadas": doses,
+        "pre_medicacao": protocolo.drogas_suporte or [],
         "caps_aplicados": caps,
         "aptidao": {
             "status": aptidao_status,
@@ -1216,12 +1327,20 @@ def api_onco_kpis(request):
     limite_guia = hoje + timedelta(days=30)
     guias_vencidas = 0
     guias_vencendo = 0
+    prazo_estourado = prazo_limite = aguardando = 0
     for g in guias_ativas:
         _sync_status_guia(g)
         if g.status == "vencida":
             guias_vencidas += 1
         elif g.status == "vigente" and g.data_validade <= limite_guia:
             guias_vencendo += 1
+        p = _prazo_resposta_guia(g, hoje)
+        if p["aplicavel"] and not p["respondida"]:
+            aguardando += 1
+            if p["estourado"]:
+                prazo_estourado += 1
+            elif p["dias_uteis_restantes"] <= 1:
+                prazo_limite += 1
 
     return JsonResponse({
         "ciclos_ativos": ciclos_ativos,
@@ -1232,6 +1351,9 @@ def api_onco_kpis(request):
         "valor_aprovado_mes": val_aprovado,
         "guias_vencendo_30d": guias_vencendo,
         "guias_vencidas": guias_vencidas,
+        "autorizacoes_prazo_estourado": prazo_estourado,
+        "autorizacoes_no_limite_prazo": prazo_limite,
+        "autorizacoes_aguardando_resposta": aguardando,
     })
 
 
@@ -1385,6 +1507,10 @@ def _guia_dict(g):
         "ciclos_utilizados": g.ciclos_utilizados,
         "status": g.status,
         "status_display": g.get_status_display(),
+        "motivo_negativa": g.motivo_negativa,
+        "motivo_negativa_display": g.get_motivo_negativa_display() if g.motivo_negativa else "",
+        "motivo_negativa_detalhe": g.motivo_negativa_detalhe,
+        "prazo_resposta": _prazo_resposta_guia(g),
     }
 
 
@@ -1446,6 +1572,40 @@ def api_onco_guias(request):
         data_emissao=d_em, data_validade=d_val,
         ciclos_autorizados=int(data.get("ciclos_autorizados", 0) or 0),
         obs=data.get("obs", ""))
+    # Relógio regulatório: quando a solicitação entrou e, se já houve, a resposta.
+    campos_prazo = []
+    for campo in ("data_solicitacao", "data_resposta"):
+        valor = data.get(campo)
+        if valor:
+            try:
+                setattr(guia, campo,
+                        datetime.strptime(str(valor)[:10], "%Y-%m-%d").date())
+                campos_prazo.append(campo)
+            except (ValueError, TypeError):
+                return JsonResponse(
+                    {"erro": f"{campo} inválida (use AAAA-MM-DD)"}, status=400)
+    prazo_custom = data.get("prazo_resposta_dias_uteis")
+    if prazo_custom not in (None, ""):
+        try:
+            guia.prazo_resposta_dias_uteis = max(1, min(int(prazo_custom), 60))
+            campos_prazo.append("prazo_resposta_dias_uteis")
+        except (TypeError, ValueError):
+            return JsonResponse({"erro": "prazo_resposta_dias_uteis inválido"}, status=400)
+    status_in = (data.get("status") or "").strip()
+    if status_in in dict(GuiaOncologica.STATUS):
+        guia.status = status_in
+        campos_prazo.append("status")
+    motivo = (data.get("motivo_negativa") or "").strip()
+    if motivo:
+        if motivo not in dict(GuiaOncologica.MOTIVO_NEGATIVA):
+            return JsonResponse(
+                {"erro": "motivo_negativa inválido",
+                 "validos": [m[0] for m in GuiaOncologica.MOTIVO_NEGATIVA]}, status=400)
+        guia.motivo_negativa = motivo
+        guia.motivo_negativa_detalhe = (data.get("motivo_negativa_detalhe") or "").strip()
+        campos_prazo += ["motivo_negativa", "motivo_negativa_detalhe"]
+    if campos_prazo:
+        guia.save(update_fields=list(dict.fromkeys(campos_prazo)))
     _sync_status_guia(guia)
     return JsonResponse({"id": guia.id, "guia": _guia_dict(guia)}, status=201)
 
@@ -1470,16 +1630,31 @@ def api_onco_guias_alertas(request):
     ativas = GuiaOncologica.objects.filter(
         empresa=empresa).exclude(status="cancelada")
     vencidas, vencendo = [], []
+    prazo_estourado, prazo_vencendo = [], []
     for g in ativas:
         _sync_status_guia(g)
         if g.status == "vencida":
             vencidas.append(_guia_dict(g))
         elif g.status == "vigente" and g.data_validade <= limite:
             vencendo.append(_guia_dict(g))
+        # Relógio de resposta: só vale enquanto ninguém respondeu.
+        p = _prazo_resposta_guia(g)
+        if p["aplicavel"] and not p["respondida"]:
+            if p["estourado"]:
+                prazo_estourado.append(_guia_dict(g))
+            elif p["dias_uteis_restantes"] <= 1:
+                prazo_vencendo.append(_guia_dict(g))
     return JsonResponse({
         "janela_dias": dias,
         "total_vencidas": len(vencidas),
         "total_vencendo": len(vencendo),
         "vencidas": vencidas,
         "vencendo": sorted(vencendo, key=lambda x: x["dias_para_vencer"]),
+        # Prazo regulatório de RESPOSTA (ANS RN 623/2024 — 5 dias úteis)
+        "total_prazo_resposta_estourado": len(prazo_estourado),
+        "total_prazo_resposta_no_limite": len(prazo_vencendo),
+        "prazo_resposta_estourado": sorted(
+            prazo_estourado,
+            key=lambda x: -x["prazo_resposta"]["dias_uteis_decorridos"]),
+        "prazo_resposta_no_limite": prazo_vencendo,
     })
