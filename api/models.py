@@ -12393,6 +12393,73 @@ class ToxicidadeQuimio(models.Model):
         return f"Tox Grau {self.grau} — {self.categoria} — {self.ciclo.paciente_nome}"
 
 
+class AvaliacaoRespostaOncologica(models.Model):
+    """Avaliação de resposta ao tratamento pelo critério RECIST 1.1.
+
+    É o que fecha a frase "da guia ao desfecho": sem isto, o sistema sabe o que
+    foi gasto e o que foi feito, mas nunca se funcionou.
+    """
+    METODO = [
+        ("tc",      "Tomografia computadorizada"),
+        ("rm",      "Ressonância magnética"),
+        ("petct",   "PET-CT"),
+        ("clinica", "Avaliação clínica"),
+        ("outro",   "Outro"),
+    ]
+    RESPOSTA = [
+        ("rc", "Resposta completa"),
+        ("rp", "Resposta parcial"),
+        ("de", "Doença estável"),
+        ("dp", "Doença progressiva"),
+        ("ne", "Não avaliável"),
+    ]
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="avaliacoes_resposta_onco")
+    paciente_nome  = models.CharField(max_length=160)
+    cpf_paciente   = models.CharField(max_length=11, blank=True, default="")
+    identidade     = models.ForeignKey("IdentidadePaciente", on_delete=models.SET_NULL,
+                                       null=True, blank=True,
+                                       related_name="avaliacoes_resposta_onco")
+    ciclo          = models.ForeignKey("CicloQuimioterapia", on_delete=models.SET_NULL,
+                                       null=True, blank=True, related_name="avaliacoes_resposta",
+                                       help_text="Ciclo após o qual a avaliação foi feita")
+    data_avaliacao = models.DateField()
+    metodo         = models.CharField(max_length=10, choices=METODO, default="tc")
+    basal          = models.BooleanField(
+        default=False, verbose_name="É a avaliação basal (antes do tratamento)?")
+    # Soma dos maiores diâmetros das lesões-alvo, em milímetros.
+    soma_lesoes_mm = models.DecimalField(max_digits=7, decimal_places=1, null=True, blank=True,
+                                         verbose_name="Soma dos diâmetros das lesões-alvo (mm)")
+    lesoes_novas   = models.BooleanField(default=False,
+                                         verbose_name="Surgiram lesões novas?")
+    desaparecimento_total = models.BooleanField(
+        default=False, verbose_name="Desaparecimento de todas as lesões-alvo?")
+    resposta       = models.CharField(max_length=2, choices=RESPOSTA, default="ne",
+                                      db_index=True)
+    resposta_automatica = models.BooleanField(
+        default=True, verbose_name="Classificação calculada pelo sistema (não editada à mão)")
+    variacao_vs_basal_pct = models.DecimalField(max_digits=6, decimal_places=1,
+                                                null=True, blank=True)
+    variacao_vs_nadir_pct = models.DecimalField(max_digits=6, decimal_places=1,
+                                                null=True, blank=True)
+    justificativa  = models.TextField(blank=True, default="")
+    avaliador      = models.CharField(max_length=150, blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Avaliação de Resposta Oncológica"
+        verbose_name_plural = "Avaliações de Resposta Oncológica"
+        ordering            = ["-data_avaliacao"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_avaliacao"]),
+            models.Index(fields=["empresa", "resposta"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_resposta_display()} — {self.paciente_nome} ({self.data_avaliacao})"
+
+
 class GuiaOncologica(models.Model):
     """Guia/autorização que cobre o tratamento oncológico. Tem validade e um teto
     de ciclos autorizados — base para o alerta de vencimento de guia."""

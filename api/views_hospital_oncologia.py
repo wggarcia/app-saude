@@ -183,6 +183,71 @@ def _get_onco_models():
     return ProtocoloOncologico, CicloQuimioterapia, APACOncologia, ToxicidadeQuimio
 
 
+# ── Resposta ao tratamento (RECIST 1.1) ────────────────────────────────────────
+# Limiares do critério RECIST 1.1. A progressão é medida contra o NADIR (a menor
+# soma já registrada), não contra a basal — é o detalhe que separa uma régua de
+# verdade de uma conta de padaria: um tumor que encolheu muito e voltou a crescer
+# ainda pode estar abaixo da basal e já ser progressão.
+RECIST_REDUCAO_RP = 30.0     # % de redução vs basal para resposta parcial
+RECIST_AUMENTO_DP = 20.0     # % de aumento vs nadir para progressão
+RECIST_AUMENTO_ABSOLUTO_DP_MM = 5.0   # exige também 5 mm de aumento absoluto
+
+
+def _classificar_recist(soma_atual, soma_basal, soma_nadir,
+                        lesoes_novas=False, desaparecimento_total=False):
+    """Classifica a resposta pelo RECIST 1.1.
+
+    Devolve (resposta, variacao_vs_basal_pct, variacao_vs_nadir_pct).
+    A ordem importa: lesão nova é progressão independentemente da medida.
+    """
+    def _f(v):
+        try:
+            return float(v) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    atual, basal, nadir = _f(soma_atual), _f(soma_basal), _f(soma_nadir)
+
+    var_basal = var_nadir = None
+    if atual is not None and basal:
+        var_basal = round((atual - basal) / basal * 100.0, 1)
+    if atual is not None and nadir:
+        var_nadir = round((atual - nadir) / nadir * 100.0, 1)
+
+    # Lesão nova é progressão, não importa o que a soma diga.
+    if lesoes_novas:
+        return "dp", var_basal, var_nadir
+    if desaparecimento_total:
+        return "rc", var_basal, var_nadir
+    if atual is None or basal is None:
+        return "ne", var_basal, var_nadir
+    if atual == 0:
+        return "rc", var_basal, var_nadir
+
+    # Progressão: ≥20% acima do nadir E ≥5 mm de aumento absoluto.
+    if nadir:
+        if (var_nadir is not None and var_nadir >= RECIST_AUMENTO_DP
+                and (atual - nadir) >= RECIST_AUMENTO_ABSOLUTO_DP_MM):
+            return "dp", var_basal, var_nadir
+    # Resposta parcial: ≥30% de redução vs basal.
+    if var_basal is not None and var_basal <= -RECIST_REDUCAO_RP:
+        return "rp", var_basal, var_nadir
+    return "de", var_basal, var_nadir
+
+
+def _historico_resposta(empresa, cpf, nome, Modelo):
+    """Basal e nadir do paciente, base de qualquer classificação posterior."""
+    qs = Modelo.objects.filter(empresa=empresa)
+    qs = qs.filter(cpf_paciente=cpf) if cpf else qs.filter(paciente_nome__iexact=nome)
+    basal_obj = qs.filter(basal=True).order_by("data_avaliacao").first()
+    basal = float(basal_obj.soma_lesoes_mm) if (
+        basal_obj and basal_obj.soma_lesoes_mm is not None) else None
+    somas = [float(a.soma_lesoes_mm) for a in qs
+             if a.soma_lesoes_mm is not None]
+    nadir = min(somas) if somas else None
+    return basal, nadir
+
+
 # ── Relógio regulatório da autorização ─────────────────────────────────────────
 # A ANS exige resposta em terapias oncológicas em até 5 dias úteis (RN 623/2024).
 # Feriados NÃO são considerados: contá-los como dias úteis faz o alerta disparar
@@ -1468,6 +1533,28 @@ def api_onco_jornada(request):
             },
         })
 
+    # Desfecho: é o que fecha a frase "da guia ao desfecho clínico".
+    from .models import AvaliacaoRespostaOncologica
+    for a in _filtro(AvaliacaoRespostaOncologica):
+        eventos.append({
+            "tipo": "resposta",
+            "data": a.data_avaliacao.isoformat(),
+            "titulo": ("Avaliação basal (antes do tratamento)" if a.basal
+                       else f"Resposta: {a.get_resposta_display()}"),
+            "status": a.get_resposta_display(),
+            "detalhe": {
+                "id": a.id,
+                "metodo": a.get_metodo_display(),
+                "basal": a.basal,
+                "soma_lesoes_mm": (float(a.soma_lesoes_mm)
+                                   if a.soma_lesoes_mm is not None else None),
+                "variacao_vs_basal_pct": (float(a.variacao_vs_basal_pct)
+                                          if a.variacao_vs_basal_pct is not None else None),
+                "lesoes_novas": a.lesoes_novas,
+                "automatica": a.resposta_automatica,
+            },
+        })
+
     # Ordena a linha do tempo (eventos sem data vão para o fim)
     eventos.sort(key=lambda e: (e["data"] is None, e["data"] or ""))
 
@@ -1483,10 +1570,157 @@ def api_onco_jornada(request):
             "radioterapia": sum(1 for e in eventos if e["tipo"] == "radioterapia"),
             "rhc": sum(1 for e in eventos if e["tipo"] == "rhc"),
             "apac": sum(1 for e in eventos if e["tipo"] == "apac"),
+            "resposta": sum(1 for e in eventos if e["tipo"] == "resposta"),
         },
+        # Desfecho mais recente do paciente (ignora a basal, que é ponto de partida).
+        "desfecho_atual": next(
+            (e["status"] for e in reversed(eventos)
+             if e["tipo"] == "resposta" and not e["detalhe"].get("basal")), None),
         "total_eventos": len(eventos),
         "timeline": eventos,
     })
+
+
+# ── Resposta ao tratamento ─────────────────────────────────────────────────────
+
+def _resposta_dict(a):
+    return {
+        "id": a.id,
+        "paciente_nome": a.paciente_nome,
+        "cpf_paciente": a.cpf_paciente,
+        "ciclo_id": a.ciclo_id,
+        "data_avaliacao": a.data_avaliacao.isoformat(),
+        "metodo": a.metodo,
+        "metodo_display": a.get_metodo_display(),
+        "basal": a.basal,
+        "soma_lesoes_mm": float(a.soma_lesoes_mm) if a.soma_lesoes_mm is not None else None,
+        "lesoes_novas": a.lesoes_novas,
+        "desaparecimento_total": a.desaparecimento_total,
+        "resposta": a.resposta,
+        "resposta_display": a.get_resposta_display(),
+        "resposta_automatica": a.resposta_automatica,
+        "variacao_vs_basal_pct": (float(a.variacao_vs_basal_pct)
+                                  if a.variacao_vs_basal_pct is not None else None),
+        "variacao_vs_nadir_pct": (float(a.variacao_vs_nadir_pct)
+                                  if a.variacao_vs_nadir_pct is not None else None),
+        "avaliador": a.avaliador,
+        "justificativa": a.justificativa,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_respostas(request):
+    """GET/POST /api/hospital/oncologia/respostas/ — avaliação RECIST 1.1."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import AvaliacaoRespostaOncologica, CicloQuimioterapia
+
+    if request.method == "GET":
+        qs = AvaliacaoRespostaOncologica.objects.filter(empresa=empresa)
+        cpf = "".join(filter(str.isdigit, request.GET.get("cpf", "")))[:11]
+        if cpf:
+            qs = qs.filter(cpf_paciente=cpf)
+        resposta_f = request.GET.get("resposta")
+        if resposta_f:
+            qs = qs.filter(resposta=resposta_f)
+        itens = list(qs.order_by("-data_avaliacao")[:300])
+        return JsonResponse({"total": qs.count(),
+                             "avaliacoes": [_resposta_dict(a) for a in itens]})
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    paciente = (data.get("paciente_nome") or "").strip()
+    if not paciente:
+        return JsonResponse({"erro": "Nome do paciente é obrigatório"}, status=400)
+    try:
+        d_aval = datetime.strptime(
+            str(data.get("data_avaliacao") or date.today().isoformat())[:10],
+            "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "data_avaliacao inválida (use AAAA-MM-DD)"}, status=400)
+
+    cpf_raw = data.get("cpf_paciente", "")
+    ok_cpf, erro_cpf = validar_cpf_cadastro(cpf_raw, empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
+    cpf = "".join(filter(str.isdigit, cpf_raw))[:11]
+
+    metodo = (data.get("metodo") or "tc").strip()
+    if metodo not in dict(AvaliacaoRespostaOncologica.METODO):
+        return JsonResponse(
+            {"erro": "metodo inválido",
+             "validos": [m[0] for m in AvaliacaoRespostaOncologica.METODO]}, status=400)
+
+    soma = data.get("soma_lesoes_mm")
+    if soma not in (None, ""):
+        soma = _num_positivo(soma)
+        if soma is None:
+            return JsonResponse(
+                {"erro": "soma_lesoes_mm deve ser um número ≥ 0"}, status=400)
+    else:
+        soma = None
+
+    ciclo = None
+    if data.get("ciclo_id"):
+        ciclo = CicloQuimioterapia.objects.filter(
+            id=data["ciclo_id"], empresa=empresa).first()
+        if ciclo is None:
+            return JsonResponse({"erro": "Ciclo não encontrado nesta empresa"}, status=400)
+
+    eh_basal = bool(data.get("basal"))
+    lesoes_novas = bool(data.get("lesoes_novas"))
+    sumiu_tudo = bool(data.get("desaparecimento_total"))
+
+    if eh_basal:
+        # A basal é o ponto de partida: não se classifica contra si mesma.
+        resposta, var_basal, var_nadir = "ne", None, None
+    else:
+        basal, nadir = _historico_resposta(
+            empresa, cpf, paciente, AvaliacaoRespostaOncologica)
+        if basal is None:
+            return JsonResponse(
+                {"erro": "Não há avaliação basal para este paciente. Registre a basal "
+                         "antes de classificar a resposta.",
+                 "codigo": "sem_basal"}, status=400)
+        resposta, var_basal, var_nadir = _classificar_recist(
+            soma, basal, nadir, lesoes_novas, sumiu_tudo)
+
+    # Sobrescrita médica: o avaliador pode discordar da régua, mas tem de dizer
+    # por quê — e fica registrado que a classificação não foi a automática.
+    resposta_manual = (data.get("resposta") or "").strip()
+    automatica = True
+    if resposta_manual and resposta_manual != resposta:
+        if resposta_manual not in dict(AvaliacaoRespostaOncologica.RESPOSTA):
+            return JsonResponse(
+                {"erro": "resposta inválida",
+                 "validos": [r[0] for r in AvaliacaoRespostaOncologica.RESPOSTA]}, status=400)
+        if not (data.get("justificativa") or "").strip():
+            return JsonResponse(
+                {"erro": "Para classificar diferente do RECIST calculado, informe a "
+                         "justificativa clínica.",
+                 "codigo": "override_sem_justificativa",
+                 "resposta_calculada": resposta}, status=400)
+        resposta = resposta_manual
+        automatica = False
+
+    identidade = resolver_identidade(empresa, nome=paciente, cpf=cpf_raw)
+    a = AvaliacaoRespostaOncologica.objects.create(
+        empresa=empresa, paciente_nome=paciente, cpf_paciente=cpf,
+        identidade=identidade, ciclo=ciclo, data_avaliacao=d_aval, metodo=metodo,
+        basal=eh_basal, soma_lesoes_mm=soma, lesoes_novas=lesoes_novas,
+        desaparecimento_total=sumiu_tudo, resposta=resposta,
+        resposta_automatica=automatica,
+        variacao_vs_basal_pct=var_basal, variacao_vs_nadir_pct=var_nadir,
+        justificativa=(data.get("justificativa") or "").strip(),
+        avaliador=(data.get("avaliador") or "").strip()[:150])
+    return JsonResponse({"id": a.id, "avaliacao": _resposta_dict(a)}, status=201)
 
 
 # ── Guias oncológicas (autorização + alerta de vencimento) ──────────────────────

@@ -224,6 +224,124 @@ class OncologiaTests(TestCase):
         r = client.get("/api/hospital/oncologia/ciclos/")
         self.assertEqual(r.status_code, 200)
 
+    # ══ Resposta ao tratamento — RECIST 1.1 ═══════════════════════════════════
+    def _aval(self, client, **extra):
+        payload = {"paciente_nome": "Paciente Onco",
+                   "data_avaliacao": date.today().isoformat(), "metodo": "tc"}
+        payload.update(extra)
+        return client.post("/api/hospital/oncologia/respostas/",
+                           data=payload, content_type="application/json")
+
+    def test_recist_regua_pura(self):
+        """A régua, isolada, antes de qualquer HTTP."""
+        from api.views_hospital_oncologia import _classificar_recist
+        # redução de 40% vs basal → resposta parcial
+        r, vb, vn = _classificar_recist(60, 100, 100)
+        self.assertEqual(r, "rp"); self.assertEqual(vb, -40.0)
+        # estável: caiu só 10%
+        self.assertEqual(_classificar_recist(90, 100, 100)[0], "de")
+        # progressão medida contra o NADIR, não contra a basal:
+        # basal 100, nadir 40, atual 60 → ainda 40% abaixo da basal, mas +50%
+        # sobre o nadir e +20 mm → progressão
+        r2, vb2, vn2 = _classificar_recist(60, 100, 40)
+        self.assertEqual(r2, "dp"); self.assertEqual(vb2, -40.0); self.assertEqual(vn2, 50.0)
+        # aumento percentual grande mas absoluto < 5 mm não é progressão
+        self.assertEqual(_classificar_recist(12, 100, 10)[0], "rp")
+        # lesão nova é progressão mesmo com tumor menor
+        self.assertEqual(_classificar_recist(10, 100, 100, lesoes_novas=True)[0], "dp")
+        # desaparecimento total é resposta completa
+        self.assertEqual(
+            _classificar_recist(0, 100, 100, desaparecimento_total=True)[0], "rc")
+        # sem basal não dá para julgar
+        self.assertEqual(_classificar_recist(50, None, None)[0], "ne")
+
+    def test_resposta_exige_basal_antes(self):
+        empresa = _empresa("Hospital Rede", "onco-rc1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._aval(client, soma_lesoes_mm=80)
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "sem_basal")
+
+    def test_basal_depois_resposta_parcial(self):
+        empresa = _empresa("Hospital Rede", "onco-rc2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        b = self._aval(client, basal=True, soma_lesoes_mm=100)
+        self.assertEqual(b.status_code, 201, b.content)
+        self.assertEqual(b.json()["avaliacao"]["resposta"], "ne")
+        r = self._aval(client, soma_lesoes_mm=60)
+        self.assertEqual(r.status_code, 201, r.content)
+        d = r.json()["avaliacao"]
+        self.assertEqual(d["resposta"], "rp")
+        self.assertEqual(d["variacao_vs_basal_pct"], -40.0)
+        self.assertTrue(d["resposta_automatica"])
+
+    def test_progressao_contra_nadir(self):
+        """Tumor encolheu muito e voltou a crescer: é progressão mesmo abaixo da basal."""
+        empresa = _empresa("Hospital Rede", "onco-rc3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        self._aval(client, soma_lesoes_mm=40)   # nadir
+        r = self._aval(client, soma_lesoes_mm=60)
+        d = r.json()["avaliacao"]
+        self.assertEqual(d["resposta"], "dp")
+        self.assertEqual(d["variacao_vs_nadir_pct"], 50.0)
+
+    def test_lesao_nova_e_progressao(self):
+        empresa = _empresa("Hospital Rede", "onco-rc4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        r = self._aval(client, soma_lesoes_mm=10, lesoes_novas=True)
+        self.assertEqual(r.json()["avaliacao"]["resposta"], "dp")
+
+    def test_override_sem_justificativa_recusado(self):
+        empresa = _empresa("Hospital Rede", "onco-rc5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        r = self._aval(client, soma_lesoes_mm=60, resposta="de")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "override_sem_justificativa")
+        self.assertEqual(r.json()["resposta_calculada"], "rp")
+
+    def test_override_com_justificativa_fica_marcado(self):
+        empresa = _empresa("Hospital Rede", "onco-rc6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        r = self._aval(client, soma_lesoes_mm=60, resposta="de",
+                       justificativa="Lesão medida inclui componente cístico.")
+        self.assertEqual(r.status_code, 201, r.content)
+        d = r.json()["avaliacao"]
+        self.assertEqual(d["resposta"], "de")
+        self.assertFalse(d["resposta_automatica"])
+
+    def test_metodo_invalido_recusado(self):
+        empresa = _empresa("Hospital Rede", "onco-rc7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._aval(client, basal=True, soma_lesoes_mm=100, metodo="bola-de-cristal")
+        self.assertEqual(r.status_code, 400)
+
+    def test_avaliacao_nao_vaza_entre_empresas(self):
+        e1 = _empresa("Hospital Rede", "onco-rc8@example.com", "hospital_rede")
+        e2 = _empresa("Hospital Rede", "onco-rc9@example.com", "hospital_rede")
+        c1, c2 = _client_for(e1), _client_for(e2)
+        self._aval(c1, basal=True, soma_lesoes_mm=100)
+        self.assertEqual(c2.get("/api/hospital/oncologia/respostas/").json()["total"], 0)
+        # e a basal de e1 não serve de base para e2
+        r = self._aval(c2, soma_lesoes_mm=60)
+        self.assertEqual(r.status_code, 400)
+
+    def test_jornada_inclui_o_desfecho(self):
+        """'Da guia ao desfecho': a avaliação de resposta entra na linha do tempo."""
+        empresa = _empresa("Hospital Rede", "onco-rc10@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        self._aval(client, soma_lesoes_mm=60)
+        r = client.get("/api/hospital/oncologia/jornada/?nome=Paciente Onco")
+        self.assertEqual(r.status_code, 200, r.content)
+        d = r.json()
+        self.assertIn("resposta", [e["tipo"] for e in d["timeline"]])
+        self.assertEqual(d["resumo"]["resposta"], 2)
+        self.assertEqual(d["desfecho_atual"], "Resposta parcial")
+
     # ══ Relógio regulatório da autorização (ANS RN 623/2024 — 5 dias úteis) ═══
     def _guia(self, client, **extra):
         payload = {

@@ -1212,6 +1212,7 @@ from api.views_hospital_oncologia import (
     api_onco_guias,
     api_onco_guias_alertas,
     hospital_oncologia_page,
+    api_onco_respostas,
 )
 from api.views_hospital_manutencao import (
     hospital_manutencao_page,
@@ -3553,6 +3554,8 @@ urlpatterns = [
     path('api/hospital/oncologia/kpis/',                        api_onco_kpis),
     path('api/hospital/oncologia/jornada',                      api_onco_jornada),
     path('api/hospital/oncologia/jornada/',                     api_onco_jornada),
+    path('api/hospital/oncologia/respostas',                    api_onco_respostas),
+    path('api/hospital/oncologia/respostas/',                   api_onco_respostas),
     path('api/hospital/oncologia/guias/alertas',                api_onco_guias_alertas),
     path('api/hospital/oncologia/guias/alertas/',               api_onco_guias_alertas),
     path('api/hospital/oncologia/guias',                        api_onco_guias),
