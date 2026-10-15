@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
@@ -1410,9 +1411,32 @@ def api_onco_kpis(request):
             elif p["dias_uteis_restantes"] <= 1:
                 prazo_limite += 1
 
+    # Cadeia fechada: o que está parado na farmácia e o que deu errado na veia.
+    from .models import (AgendamentoInfusao, PreparoQuimioterapia,
+                         AdministracaoQuimioterapia)
+    inicio_mes = hoje.replace(day=1)
+    fila_farmacia = PreparoQuimioterapia.objects.filter(
+        empresa=empresa, status__in=("pendente", "em_preparo", "pronto")).count()
+    preparos_aguardando_conferencia = PreparoQuimioterapia.objects.filter(
+        empresa=empresa, status="pronto").count()
+    intercorrencias_mes = AdministracaoQuimioterapia.objects.filter(
+        empresa=empresa, inicio__date__gte=inicio_mes).exclude(
+        intercorrencia="nenhuma").count()
+    extravasamentos_mes = AdministracaoQuimioterapia.objects.filter(
+        empresa=empresa, inicio__date__gte=inicio_mes,
+        intercorrencia="extravasamento").count()
+    infusoes_hoje = AgendamentoInfusao.objects.filter(
+        empresa=empresa, data=hoje).exclude(
+        status__in=("cancelado", "faltou")).count()
+
     return JsonResponse({
         "ciclos_ativos": ciclos_ativos,
         "ciclos_por_status": por_status,
+        "fila_farmacia": fila_farmacia,
+        "preparos_aguardando_conferencia": preparos_aguardando_conferencia,
+        "intercorrencias_mes": intercorrencias_mes,
+        "extravasamentos_mes": extravasamentos_mes,
+        "infusoes_agendadas_hoje": infusoes_hoje,
         "ciclos_atrasados": ciclos_atrasados,
         "toxicidades_grau3_mais_mes": tox_graves_mes,
         "apac_glosas_mes": apac_glosa,
@@ -1476,7 +1500,13 @@ def api_onco_jornada(request):
             return model.objects.filter(empresa=empresa).filter(q)
         if cpf and tem_cpf:
             return model.objects.filter(empresa=empresa, cpf_paciente=cpf)
-        return model.objects.filter(empresa=empresa, nome_paciente__iexact=nome_q)
+        # Último recurso, busca só por nome. Os modelos desta jornada divergem no
+        # nome do campo (RHC usa `nome_paciente`; ciclo, APAC, resposta e oral usam
+        # `paciente_nome`), então fixar um só derruba a busca por nome com 500.
+        campos = {f.name for f in model._meta.get_fields() if hasattr(f, "attname")}
+        campo_nome = "nome_paciente" if "nome_paciente" in campos else "paciente_nome"
+        return model.objects.filter(empresa=empresa,
+                                    **{f"{campo_nome}__iexact": nome_q})
 
     eventos = []
 
@@ -1493,6 +1523,54 @@ def api_onco_jornada(request):
                 "id": c.id, "cid10": c.cid10_principal,
                 "sc_m2": float(c.sc_m2) if c.sc_m2 else None,
                 "data_prevista": c.data_prevista.isoformat() if c.data_prevista else None,
+            },
+        })
+
+    # Administração à beira do leito — o que de fato entrou na veia. Liga-se ao
+    # paciente pelo ciclo, não por CPF próprio, por isso fica fora de _filtro().
+    from .models import AdministracaoQuimioterapia
+    ciclos_ids = list(_filtro(CicloQuimioterapia).values_list("id", flat=True))
+    if ciclos_ids:
+        for adm in AdministracaoQuimioterapia.objects.filter(
+                empresa=empresa, ciclo_id__in=ciclos_ids).select_related("preparo"):
+            local = timezone.localtime(adm.inicio)
+            eventos.append({
+                "tipo": "administracao",
+                "data": local.date().isoformat(),
+                "titulo": f"{adm.preparo.droga} administrado"
+                          + (f" ({adm.get_via_display()})" if adm.via else ""),
+                "status": (adm.get_intercorrencia_display()
+                           if adm.intercorrencia != "nenhuma" else "Sem intercorrência"),
+                "detalhe": {
+                    "id": adm.id, "ciclo_id": adm.ciclo_id,
+                    "hora": local.strftime("%H:%M"),
+                    "dose": float(adm.dose_administrada) if adm.dose_administrada is not None else None,
+                    "unidade": adm.preparo.unidade,
+                    "administrado_por": adm.administrado_por,
+                    "checado_por": adm.checado_por,
+                    "intercorrencia": adm.intercorrencia,
+                    "conduta": adm.intercorrencia_conduta,
+                    "lote": adm.preparo.lote,
+                },
+            })
+
+    # Quimioterapia oral — o tratamento que acontece fora do hospital e que,
+    # sem isto, não deixa rastro nenhum na linha do tempo do paciente.
+    from .models import PrescricaoQuimioOral
+    for po in _filtro(PrescricaoQuimioOral).prefetch_related("dispensacoes"):
+        info = _prescricao_oral_dict(po)
+        eventos.append({
+            "tipo": "quimio_oral",
+            "data": po.data_inicio.isoformat(),
+            "titulo": f"{po.droga} por via oral — {info['esquema']}",
+            "status": po.get_status_display(),
+            "detalhe": {
+                "id": po.id,
+                "posologia": po.posologia,
+                "adesao_media_pct": info["adesao_media_pct"],
+                "adesao_baixa": info["adesao_baixa"],
+                "retiradas": info["total_dispensacoes"],
+                "retirada_atrasada": bool(info["retirada"].get("atrasado")),
             },
         })
 
@@ -1573,6 +1651,8 @@ def api_onco_jornada(request):
             "radioterapia": sum(1 for e in eventos if e["tipo"] == "radioterapia"),
             "rhc": sum(1 for e in eventos if e["tipo"] == "rhc"),
             "apac": sum(1 for e in eventos if e["tipo"] == "apac"),
+            "administracao": sum(1 for e in eventos if e["tipo"] == "administracao"),
+            "quimio_oral": sum(1 for e in eventos if e["tipo"] == "quimio_oral"),
             "resposta": sum(1 for e in eventos if e["tipo"] == "resposta"),
         },
         # Desfecho mais recente do paciente (ignora a basal, que é ponto de partida).
@@ -1895,3 +1975,963 @@ def api_onco_guias_alertas(request):
             key=lambda x: -x["prazo_resposta"]["dias_uteis_decorridos"]),
         "prazo_resposta_no_limite": prazo_vencendo,
     })
+
+
+# ── Cadeia fechada: agenda → preparo → administração ───────────────────────────
+# Três elos que hoje vivem em papel e planilha. O ponto não é registrar cada um:
+# é que um não acontece sem o anterior. Sem a cadeia, o sistema sabe que o ciclo
+# foi "concluído" e não sabe o que entrou na veia do paciente, nem quem conferiu.
+
+def _get_cadeia_models():
+    from .models import (AgendamentoInfusao, PreparoQuimioterapia,
+                         AdministracaoQuimioterapia)
+    return AgendamentoInfusao, PreparoQuimioterapia, AdministracaoQuimioterapia
+
+
+def _hhmm(valor):
+    """Converte 'HH:MM' em time. Retorna None se inválido."""
+    try:
+        return datetime.strptime(str(valor)[:5], "%H:%M").time()
+    except (ValueError, TypeError):
+        return None
+
+
+def _janela_minutos(hora, duracao_min):
+    """Janela [início, fim) em minutos desde a meia-noite."""
+    inicio = hora.hour * 60 + hora.minute
+    return inicio, inicio + max(int(duracao_min or 0), 1)
+
+
+def _ciclo_liberado_para_infusao(ciclo):
+    """Um ciclo inapto só segue para preparo se alguém assumiu a liberação.
+
+    Devolve (ok, motivo). É a trava que impede a farmácia de manipular droga
+    para um paciente que o hemograma do dia reprovou.
+    """
+    if ciclo.aptidao_status == "inapto" and not ciclo.aptidao_liberada_por:
+        return False, (
+            "Ciclo marcado como INAPTO e sem liberação médica registrada. "
+            + " ".join(ciclo.aptidao_bloqueios or [])
+        )
+    if ciclo.status in ("cancelado", "suspenso"):
+        return False, f"Ciclo está '{ciclo.get_status_display()}'."
+    return True, ""
+
+
+def _agendamento_dict(a):
+    fim_min = _janela_minutos(a.hora_inicio, a.duracao_min)[1]
+    return {
+        "id": a.id,
+        "ciclo_id": a.ciclo_id,
+        "paciente_nome": a.ciclo.paciente_nome,
+        "protocolo": a.ciclo.protocolo.codigo,
+        "numero_ciclo": a.ciclo.numero_ciclo,
+        "data": a.data.isoformat(),
+        "hora_inicio": a.hora_inicio.strftime("%H:%M"),
+        "hora_fim_prevista": f"{(fim_min // 60) % 24:02d}:{fim_min % 60:02d}",
+        "duracao_min": a.duracao_min,
+        "cadeira": a.cadeira,
+        "status": a.status,
+        "status_display": a.get_status_display(),
+        "agendado_por": a.agendado_por,
+        "observacao": a.observacao,
+        "aptidao_status": a.ciclo.aptidao_status,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_agenda_infusao(request):
+    """GET/POST /api/hospital/oncologia/agenda-infusao/ — cadeiras da central."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    AgendamentoInfusao, _, _ = _get_cadeia_models()
+    _, CicloQuimioterapia, _, _ = _get_onco_models()
+
+    if request.method == "GET":
+        qs = AgendamentoInfusao.objects.filter(empresa=empresa).select_related(
+            "ciclo", "ciclo__protocolo")
+        try:
+            dia = datetime.strptime(
+                str(request.GET.get("data") or date.today().isoformat())[:10],
+                "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return JsonResponse({"erro": "data inválida (use AAAA-MM-DD)"}, status=400)
+        qs = qs.filter(data=dia)
+        cadeira = (request.GET.get("cadeira") or "").strip()
+        if cadeira:
+            qs = qs.filter(cadeira=cadeira)
+        itens = list(qs.order_by("cadeira", "hora_inicio"))
+        ocupacao = {}
+        for a in itens:
+            if a.status in ("cancelado", "faltou"):
+                continue
+            ocupacao[a.cadeira] = ocupacao.get(a.cadeira, 0) + a.duracao_min
+        return JsonResponse({
+            "data": dia.isoformat(),
+            "total": len(itens),
+            "agendamentos": [_agendamento_dict(a) for a in itens],
+            # Minutos ocupados por cadeira no dia — é o que mostra se a central
+            # está no limite antes de alguém ligar para o paciente.
+            "ocupacao_min_por_cadeira": ocupacao,
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    ciclo = CicloQuimioterapia.objects.filter(
+        id=data.get("ciclo_id"), empresa=empresa).first()
+    if ciclo is None:
+        return JsonResponse({"erro": "Ciclo não encontrado nesta empresa"}, status=400)
+
+    try:
+        dia = datetime.strptime(str(data.get("data") or "")[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "data é obrigatória (AAAA-MM-DD)"}, status=400)
+
+    hora = _hhmm(data.get("hora_inicio"))
+    if hora is None:
+        return JsonResponse({"erro": "hora_inicio é obrigatória (HH:MM)"}, status=400)
+
+    cadeira = (data.get("cadeira") or "").strip()[:40]
+    if not cadeira:
+        return JsonResponse({"erro": "cadeira é obrigatória"}, status=400)
+
+    try:
+        duracao = int(data.get("duracao_min") or 180)
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "duracao_min inválida"}, status=400)
+    if not (15 <= duracao <= 1440):
+        return JsonResponse(
+            {"erro": "duracao_min deve estar entre 15 e 1440 minutos"}, status=400)
+
+    ini_novo, fim_novo = _janela_minutos(hora, duracao)
+    # Choque de cadeira: duas infusões no mesmo assento ao mesmo tempo é um erro
+    # operacional que só aparece no dia se o sistema não checar agora.
+    for a in AgendamentoInfusao.objects.filter(
+            empresa=empresa, data=dia, cadeira=cadeira).exclude(
+            status__in=("cancelado", "faltou")):
+        ini, fim = _janela_minutos(a.hora_inicio, a.duracao_min)
+        if ini_novo < fim and ini < fim_novo:
+            return JsonResponse({
+                "erro": f"Cadeira '{cadeira}' já ocupada das "
+                        f"{a.hora_inicio.strftime('%H:%M')} por {a.duracao_min} min.",
+                "codigo": "cadeira_ocupada",
+                "conflito": _agendamento_dict(a),
+            }, status=409)
+
+    ag = AgendamentoInfusao.objects.create(
+        empresa=empresa, ciclo=ciclo, data=dia, hora_inicio=hora,
+        duracao_min=duracao, cadeira=cadeira,
+        agendado_por=(data.get("agendado_por") or "").strip()[:150],
+        observacao=(data.get("observacao") or "").strip())
+
+    # Agendar não é liberar: avisa, mas não bloqueia — quem decide é o médico.
+    ok_apt, motivo_apt = _ciclo_liberado_para_infusao(ciclo)
+    return JsonResponse({
+        "id": ag.id,
+        "agendamento": _agendamento_dict(ag),
+        "alerta_aptidao": None if ok_apt else motivo_apt,
+    }, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "DELETE"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_agenda_infusao_detalhe(request, agendamento_id):
+    """PUT/DELETE /api/hospital/oncologia/agenda-infusao/<id>/"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    AgendamentoInfusao, _, _ = _get_cadeia_models()
+    ag = AgendamentoInfusao.objects.filter(
+        id=agendamento_id, empresa=empresa).select_related(
+        "ciclo", "ciclo__protocolo").first()
+    if ag is None:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    if request.method == "DELETE":
+        ag.status = "cancelado"
+        ag.save(update_fields=["status"])
+        return JsonResponse({"ok": True, "agendamento": _agendamento_dict(ag)})
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    novo = (data.get("status") or "").strip()
+    if novo:
+        validos = dict(AgendamentoInfusao.STATUS)
+        if novo not in validos:
+            return JsonResponse(
+                {"erro": "status inválido", "validos": sorted(validos)}, status=400)
+        ag.status = novo
+    if "observacao" in data:
+        ag.observacao = (data.get("observacao") or "").strip()
+    ag.save(update_fields=["status", "observacao"])
+    return JsonResponse({"ok": True, "agendamento": _agendamento_dict(ag)})
+
+
+def _preparo_dict(p):
+    adm = getattr(p, "administracao", None)
+    return {
+        "id": p.id,
+        "ciclo_id": p.ciclo_id,
+        "paciente_nome": p.ciclo.paciente_nome,
+        "numero_ciclo": p.ciclo.numero_ciclo,
+        "droga": p.droga,
+        "dose_prescrita": float(p.dose_prescrita) if p.dose_prescrita is not None else None,
+        "dose_preparada": float(p.dose_preparada) if p.dose_preparada is not None else None,
+        "unidade": p.unidade,
+        "lote": p.lote,
+        "validade_lote": p.validade_lote.isoformat() if p.validade_lote else None,
+        "diluente": p.diluente,
+        "volume_final_ml": p.volume_final_ml,
+        "status": p.status,
+        "status_display": p.get_status_display(),
+        "preparado_por": p.preparado_por,
+        "conferido_por": p.conferido_por,
+        "preparado_em": p.preparado_em.isoformat() if p.preparado_em else None,
+        "conferido_em": p.conferido_em.isoformat() if p.conferido_em else None,
+        "motivo_descarte": p.motivo_descarte,
+        "administrado": adm is not None,
+        "administracao_id": adm.id if adm else None,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_preparos(request):
+    """GET/POST /api/hospital/oncologia/preparos/ — farmácia oncológica.
+
+    O POST sem `droga` gera a lista de preparos a partir das doses já calculadas
+    do ciclo: a farmácia não redigita a prescrição, recebe o que o médico assinou.
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _, PreparoQuimioterapia, _ = _get_cadeia_models()
+    _, CicloQuimioterapia, _, _ = _get_onco_models()
+
+    if request.method == "GET":
+        qs = PreparoQuimioterapia.objects.filter(empresa=empresa).select_related(
+            "ciclo", "administracao")
+        status_f = (request.GET.get("status") or "").strip()
+        if status_f:
+            qs = qs.filter(status=status_f)
+        ciclo_f = request.GET.get("ciclo_id")
+        if ciclo_f:
+            qs = qs.filter(ciclo_id=ciclo_f)
+        itens = list(qs.order_by("-criado_em")[:300])
+        return JsonResponse({
+            "total": qs.count(),
+            "preparos": [_preparo_dict(p) for p in itens],
+            "fila_pendente": qs.filter(
+                status__in=("pendente", "em_preparo", "pronto")).count(),
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    ciclo = CicloQuimioterapia.objects.filter(
+        id=data.get("ciclo_id"), empresa=empresa).select_related("protocolo").first()
+    if ciclo is None:
+        return JsonResponse({"erro": "Ciclo não encontrado nesta empresa"}, status=400)
+
+    ok_apt, motivo_apt = _ciclo_liberado_para_infusao(ciclo)
+    if not ok_apt:
+        return JsonResponse(
+            {"erro": "Preparo bloqueado. " + motivo_apt,
+             "codigo": "ciclo_nao_liberado"}, status=409)
+
+    droga_unica = (data.get("droga") or "").strip()
+    if droga_unica:
+        linhas = [{"droga": droga_unica[:120],
+                   "dose": data.get("dose_prescrita"),
+                   "unidade": (data.get("unidade") or "mg")[:20]}]
+    else:
+        # Deriva da prescrição calculada do ciclo. Sem doses calculadas não há
+        # o que preparar — é sinal de que o ciclo nunca foi dosado.
+        doses = ciclo.doses_calculadas or []
+        linhas = [{"droga": str(d.get("droga") or "")[:120],
+                   "dose": d.get("dose_calculada"),
+                   "unidade": str(d.get("unidade_calculada") or d.get("unidade") or "mg")[:20]}
+                  for d in doses if d.get("droga")]
+        if not linhas:
+            return JsonResponse(
+                {"erro": "Ciclo sem doses calculadas: informe peso/altura no ciclo "
+                         "ou envie 'droga' e 'dose_prescrita' manualmente.",
+                 "codigo": "sem_doses"}, status=400)
+
+    criados = []
+    with transaction.atomic():
+        for linha in linhas:
+            dose = linha.get("dose")
+            try:
+                dose = float(dose) if dose not in (None, "") else None
+            except (TypeError, ValueError):
+                dose = None
+            criados.append(PreparoQuimioterapia.objects.create(
+                empresa=empresa, ciclo=ciclo, droga=linha["droga"],
+                dose_prescrita=dose, unidade=linha["unidade"]))
+    return JsonResponse({
+        "total": len(criados),
+        "preparos": [_preparo_dict(p) for p in criados],
+    }, status=201)
+
+
+# Caminhos válidos na farmácia. Descarte pode vir de qualquer ponto antes da
+# dispensação; voltar atrás não pode, porque o frasco já foi manipulado.
+TRANSICOES_PREPARO = {
+    "pendente":   {"em_preparo", "descartado"},
+    "em_preparo": {"pronto", "descartado"},
+    "pronto":     {"conferido", "descartado"},
+    "conferido":  {"dispensado", "descartado"},
+    "dispensado": set(),
+    "descartado": set(),
+}
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_preparo_detalhe(request, preparo_id):
+    """PUT /api/hospital/oncologia/preparos/<id>/ — avança um elo da cadeia."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _, PreparoQuimioterapia, _ = _get_cadeia_models()
+    p = PreparoQuimioterapia.objects.filter(
+        id=preparo_id, empresa=empresa).select_related("ciclo").first()
+    if p is None:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    campos = []
+    for campo, limite in (("lote", 60), ("diluente", 80),
+                          ("preparado_por", 150), ("motivo_descarte", 0)):
+        if campo in data:
+            valor = (data.get(campo) or "").strip()
+            setattr(p, campo, valor[:limite] if limite else valor)
+            campos.append(campo)
+
+    if "validade_lote" in data:
+        bruto = data.get("validade_lote")
+        if bruto in (None, ""):
+            p.validade_lote = None
+        else:
+            try:
+                p.validade_lote = datetime.strptime(str(bruto)[:10], "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                return JsonResponse(
+                    {"erro": "validade_lote inválida (use AAAA-MM-DD)"}, status=400)
+        campos.append("validade_lote")
+
+    for campo in ("dose_preparada", "volume_final_ml"):
+        if campo in data and data.get(campo) not in (None, ""):
+            valor = _num_positivo(data.get(campo))
+            if valor is None:
+                return JsonResponse(
+                    {"erro": f"{campo} deve ser um número maior que zero"}, status=400)
+            setattr(p, campo, valor if campo == "dose_preparada" else int(valor))
+            campos.append(campo)
+
+    novo = (data.get("status") or "").strip()
+    if novo and novo != p.status:
+        permitidos = TRANSICOES_PREPARO.get(p.status, set())
+        if novo not in permitidos:
+            return JsonResponse({
+                "erro": f"Transição inválida: '{p.get_status_display()}' → '{novo}'.",
+                "status_atual": p.status,
+                "transicoes_validas": sorted(permitidos),
+            }, status=409)
+
+        if novo == "descartado" and not (p.motivo_descarte or "").strip():
+            return JsonResponse(
+                {"erro": "Descarte de quimioterápico exige motivo registrado.",
+                 "codigo": "descarte_sem_motivo"}, status=400)
+
+        if novo == "pronto":
+            if not (p.preparado_por or "").strip():
+                return JsonResponse(
+                    {"erro": "Informe quem preparou antes de marcar como pronto.",
+                     "codigo": "sem_preparador"}, status=400)
+            if p.dose_preparada is None:
+                return JsonResponse(
+                    {"erro": "Informe a dose efetivamente preparada.",
+                     "codigo": "sem_dose_preparada"}, status=400)
+            p.preparado_em = timezone.now()
+            campos.append("preparado_em")
+
+        if novo == "conferido":
+            conferente = (data.get("conferido_por") or p.conferido_por or "").strip()
+            if not conferente:
+                return JsonResponse(
+                    {"erro": "Conferência exige o nome do segundo profissional.",
+                     "codigo": "sem_conferente"}, status=400)
+            # Dupla checagem de verdade: conferir o próprio preparo não é conferência.
+            if _norm(conferente) == _norm(p.preparado_por):
+                return JsonResponse(
+                    {"erro": "A conferência precisa ser feita por um profissional "
+                             "diferente de quem preparou.",
+                     "codigo": "dupla_checagem_mesma_pessoa"}, status=400)
+            if p.validade_lote and p.validade_lote < date.today():
+                return JsonResponse(
+                    {"erro": f"Lote vencido em {p.validade_lote.strftime('%d/%m/%Y')}: "
+                             "não pode ser liberado.",
+                     "codigo": "lote_vencido"}, status=409)
+            p.conferido_por = conferente[:150]
+            p.conferido_em = timezone.now()
+            campos += ["conferido_por", "conferido_em"]
+
+        p.status = novo
+        campos.append("status")
+
+    if campos:
+        p.save(update_fields=list(dict.fromkeys(campos)))
+    return JsonResponse({"ok": True, "preparo": _preparo_dict(p)})
+
+
+def _administracao_dict(a):
+    return {
+        "id": a.id,
+        "preparo_id": a.preparo_id,
+        "ciclo_id": a.ciclo_id,
+        "paciente_nome": a.ciclo.paciente_nome,
+        "droga": a.preparo.droga,
+        "via": a.via,
+        "via_display": a.get_via_display(),
+        "inicio": a.inicio.isoformat(),
+        "fim": a.fim.isoformat() if a.fim else None,
+        "dose_administrada": (float(a.dose_administrada)
+                              if a.dose_administrada is not None else None),
+        "unidade": a.preparo.unidade,
+        "administrado_por": a.administrado_por,
+        "checado_por": a.checado_por,
+        "intercorrencia": a.intercorrencia,
+        "intercorrencia_display": a.get_intercorrencia_display(),
+        "intercorrencia_conduta": a.intercorrencia_conduta,
+        "observacao": a.observacao,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_administracoes(request):
+    """GET/POST /api/hospital/oncologia/administracoes/ — beira do leito."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _, PreparoQuimioterapia, AdministracaoQuimioterapia = _get_cadeia_models()
+
+    if request.method == "GET":
+        qs = AdministracaoQuimioterapia.objects.filter(
+            empresa=empresa).select_related("preparo", "ciclo")
+        ciclo_f = request.GET.get("ciclo_id")
+        if ciclo_f:
+            qs = qs.filter(ciclo_id=ciclo_f)
+        inter = (request.GET.get("intercorrencia") or "").strip()
+        if inter:
+            qs = qs.filter(intercorrencia=inter)
+        itens = list(qs.order_by("-inicio")[:300])
+        return JsonResponse({
+            "total": qs.count(),
+            "administracoes": [_administracao_dict(a) for a in itens],
+            "com_intercorrencia": qs.exclude(intercorrencia="nenhuma").count(),
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    p = PreparoQuimioterapia.objects.filter(
+        id=data.get("preparo_id"), empresa=empresa).select_related("ciclo").first()
+    if p is None:
+        return JsonResponse({"erro": "Preparo não encontrado nesta empresa"}, status=400)
+
+    # O elo que fecha a cadeia: só entra na veia o que a farmácia conferiu.
+    if p.status not in ("conferido", "dispensado"):
+        return JsonResponse({
+            "erro": f"Preparo está '{p.get_status_display()}'. Só é possível "
+                    "administrar após a conferência da farmácia.",
+            "codigo": "preparo_nao_conferido",
+            "status_preparo": p.status,
+        }, status=409)
+    if AdministracaoQuimioterapia.objects.filter(preparo=p).exists():
+        return JsonResponse(
+            {"erro": "Este preparo já foi administrado.",
+             "codigo": "preparo_ja_administrado"}, status=409)
+
+    administrador = (data.get("administrado_por") or "").strip()
+    checador = (data.get("checado_por") or "").strip()
+    if not administrador or not checador:
+        return JsonResponse(
+            {"erro": "Administração exige dois profissionais: quem administra "
+                     "e quem checa à beira do leito.",
+             "codigo": "dupla_checagem_incompleta"}, status=400)
+    if _norm(administrador) == _norm(checador):
+        return JsonResponse(
+            {"erro": "A checagem à beira do leito precisa ser de um profissional "
+                     "diferente de quem administra.",
+             "codigo": "dupla_checagem_mesma_pessoa"}, status=400)
+
+    via = (data.get("via") or "periferico").strip()
+    if via not in dict(AdministracaoQuimioterapia.VIA):
+        return JsonResponse(
+            {"erro": "via inválida",
+             "validos": [v[0] for v in AdministracaoQuimioterapia.VIA]}, status=400)
+
+    inter = (data.get("intercorrencia") or "nenhuma").strip()
+    if inter not in dict(AdministracaoQuimioterapia.INTERCORRENCIA):
+        return JsonResponse(
+            {"erro": "intercorrencia inválida",
+             "validos": [i[0] for i in AdministracaoQuimioterapia.INTERCORRENCIA]},
+            status=400)
+    conduta = (data.get("intercorrencia_conduta") or "").strip()
+    # Extravasamento sem conduta registrada é o caso clássico que some do
+    # prontuário e reaparece como processo.
+    if inter != "nenhuma" and not conduta:
+        return JsonResponse(
+            {"erro": "Intercorrência exige a conduta adotada.",
+             "codigo": "intercorrencia_sem_conduta"}, status=400)
+
+    def _dt(valor):
+        """Converte 'AAAA-MM-DDTHH:MM' em datetime com fuso — gravar ingênuo com
+        USE_TZ ativo desloca o horário da infusão em produção."""
+        try:
+            bruto = datetime.strptime(str(valor)[:16], "%Y-%m-%dT%H:%M")
+        except (ValueError, TypeError):
+            return None
+        return timezone.make_aware(bruto, timezone.get_current_timezone())
+
+    inicio = _dt(data.get("inicio")) or timezone.now()
+    fim = _dt(data.get("fim")) if data.get("fim") else None
+    if fim and fim < inicio:
+        return JsonResponse(
+            {"erro": "O fim da infusão não pode ser anterior ao início."}, status=400)
+
+    dose = data.get("dose_administrada")
+    if dose in (None, ""):
+        dose = p.dose_preparada
+    else:
+        dose = _num_positivo(dose)
+        if dose is None:
+            return JsonResponse(
+                {"erro": "dose_administrada deve ser um número maior que zero"},
+                status=400)
+
+    with transaction.atomic():
+        a = AdministracaoQuimioterapia.objects.create(
+            empresa=empresa, preparo=p, ciclo=p.ciclo, via=via,
+            inicio=inicio, fim=fim, dose_administrada=dose,
+            administrado_por=administrador[:150], checado_por=checador[:150],
+            intercorrencia=inter, intercorrencia_conduta=conduta,
+            observacao=(data.get("observacao") or "").strip())
+        if p.status == "conferido":
+            p.status = "dispensado"
+            p.save(update_fields=["status"])
+
+    return JsonResponse({"id": a.id, "administracao": _administracao_dict(a)},
+                        status=201)
+
+
+# ── Quimioterapia oral: o paciente que não senta na cadeira ────────────────────
+# A infusão é vigiada porque acontece dentro do hospital. A oral acontece na
+# cozinha do paciente — e é por isso que a não-adesão só aparece depois, disfarçada
+# de "o tratamento não respondeu". A contagem de comprimidos é o único dado
+# objetivo disponível na prática: entregue − devolvido, contra o esperado no
+# intervalo entre duas retiradas.
+
+ADESAO_LIMITE_BAIXA = 80.0    # % — abaixo disto, a literatura já associa perda de eficácia
+ATRASO_RETIRADA_ALERTA = 3    # dias de atraso que acendem o alerta
+
+
+def _get_oral_models():
+    from .models import PrescricaoQuimioOral, DispensacaoQuimioOral
+    return PrescricaoQuimioOral, DispensacaoQuimioOral
+
+
+def _dias_de_uso_no_intervalo(prescricao, inicio, fim):
+    """Quantos dias de USO caem entre duas datas, respeitando o esquema cíclico.
+
+    Capecitabina 14+7 não é "tomar todo dia": contar dias corridos superestima o
+    esperado e faz todo paciente parecer não-aderente.
+    """
+    uso = max(int(prescricao.dias_uso or 0), 0)
+    pausa = max(int(prescricao.dias_pausa or 0), 0)
+    periodo = uso + pausa
+    if uso == 0:
+        return 0
+    if periodo == 0 or pausa == 0:
+        return max((fim - inicio).days, 0)
+    dias = 0
+    atual = inicio
+    while atual < fim:
+        # Posição do dia dentro do ciclo, contada a partir do início da prescrição.
+        pos = (atual - prescricao.data_inicio).days % periodo
+        if 0 <= pos < uso:
+            dias += 1
+        atual += timedelta(days=1)
+    return dias
+
+
+def _calcular_adesao(prescricao, dispensacao_anterior, data_atual, devolvidas):
+    """Adesão do intervalo pela contagem de comprimidos.
+
+    Devolve (adesao_pct, esperado, tomado) ou (None, ...) quando não há retirada
+    anterior — a primeira dispensação não mede nada, só entrega.
+    """
+    if dispensacao_anterior is None:
+        return None, None, None
+    esperado = (_dias_de_uso_no_intervalo(
+        prescricao, dispensacao_anterior.data, data_atual)
+        * max(int(prescricao.unidades_por_dia or 0), 0))
+    if esperado <= 0:
+        return None, esperado, None
+    tomado = max(int(dispensacao_anterior.unidades_dispensadas) - int(devolvidas), 0)
+    # Teto em 100%: tomar mais que o prescrito não é "mais aderente"; vira
+    # observação clínica, não um número acima de 100 no painel.
+    pct = min(round(tomado / esperado * 100, 1), 100.0)
+    return pct, esperado, tomado
+
+
+def _situacao_retirada(prescricao, ultima):
+    """Se o paciente está atrasado para voltar buscar a próxima caixa."""
+    if prescricao.status != "ativa" or ultima is None or not ultima.proxima_retirada:
+        return {"aplicavel": False}
+    atraso = (date.today() - ultima.proxima_retirada).days
+    return {
+        "aplicavel": True,
+        "proxima_retirada": ultima.proxima_retirada.isoformat(),
+        "dias_atraso": max(atraso, 0),
+        "atrasado": atraso >= ATRASO_RETIRADA_ALERTA,
+    }
+
+
+def _prescricao_oral_dict(p):
+    disp = list(p.dispensacoes.all().order_by("-data"))
+    ultima = disp[0] if disp else None
+    medidas = [float(d.adesao_pct) for d in disp if d.adesao_pct is not None]
+    media = round(sum(medidas) / len(medidas), 1) if medidas else None
+    return {
+        "id": p.id,
+        "paciente_nome": p.paciente_nome,
+        "cpf_paciente": p.cpf_paciente,
+        "ciclo_id": p.ciclo_id,
+        "droga": p.droga,
+        "dose_por_tomada": (float(p.dose_por_tomada)
+                            if p.dose_por_tomada is not None else None),
+        "unidade": p.unidade,
+        "unidades_por_dia": p.unidades_por_dia,
+        "posologia": p.posologia,
+        "dias_uso": p.dias_uso,
+        "dias_pausa": p.dias_pausa,
+        "esquema": f"{p.dias_uso} dias de uso + {p.dias_pausa} de pausa"
+                   if p.dias_pausa else "uso contínuo",
+        "data_inicio": p.data_inicio.isoformat(),
+        "data_fim_prevista": (p.data_fim_prevista.isoformat()
+                              if p.data_fim_prevista else None),
+        "status": p.status,
+        "status_display": p.get_status_display(),
+        "medico": p.medico,
+        "observacao": p.observacao,
+        "total_dispensacoes": len(disp),
+        "adesao_media_pct": media,
+        "adesao_baixa": (media is not None and media < ADESAO_LIMITE_BAIXA),
+        "ultima_adesao_pct": (float(ultima.adesao_pct)
+                              if ultima and ultima.adesao_pct is not None else None),
+        "retirada": _situacao_retirada(p, ultima),
+    }
+
+
+def _dispensacao_dict(d):
+    return {
+        "id": d.id,
+        "prescricao_id": d.prescricao_id,
+        "data": d.data.isoformat(),
+        "unidades_dispensadas": d.unidades_dispensadas,
+        "unidades_devolvidas": d.unidades_devolvidas,
+        "adesao_pct": float(d.adesao_pct) if d.adesao_pct is not None else None,
+        "proxima_retirada": (d.proxima_retirada.isoformat()
+                             if d.proxima_retirada else None),
+        "dispensado_por": d.dispensado_por,
+        "observacao": d.observacao,
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_quimio_oral(request):
+    """GET/POST /api/hospital/oncologia/quimio-oral/ — prescrições orais."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    PrescricaoQuimioOral, _ = _get_oral_models()
+    _, CicloQuimioterapia, _, _ = _get_onco_models()
+
+    if request.method == "GET":
+        qs = PrescricaoQuimioOral.objects.filter(empresa=empresa).prefetch_related(
+            "dispensacoes")
+        status_f = (request.GET.get("status") or "").strip()
+        if status_f:
+            qs = qs.filter(status=status_f)
+        cpf = "".join(filter(str.isdigit, request.GET.get("cpf", "")))[:11]
+        if cpf:
+            qs = qs.filter(cpf_paciente=cpf)
+        itens = [_prescricao_oral_dict(p) for p in qs.order_by("-data_inicio")[:300]]
+        return JsonResponse({
+            "total": qs.count(),
+            "prescricoes": itens,
+            # Os dois números que importam: quem não voltou buscar e quem está
+            # tomando menos do que deveria.
+            "atrasados_retirada": sum(
+                1 for i in itens if i["retirada"].get("atrasado")),
+            "adesao_baixa": sum(1 for i in itens if i["adesao_baixa"]),
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    paciente = (data.get("paciente_nome") or "").strip()
+    droga = (data.get("droga") or "").strip()
+    if not paciente or not droga:
+        return JsonResponse(
+            {"erro": "Paciente e droga são obrigatórios"}, status=400)
+
+    try:
+        inicio = datetime.strptime(
+            str(data.get("data_inicio") or date.today().isoformat())[:10],
+            "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "data_inicio inválida (use AAAA-MM-DD)"}, status=400)
+
+    cpf_raw = data.get("cpf_paciente", "")
+    ok_cpf, erro_cpf = validar_cpf_cadastro(cpf_raw, empresa)
+    if not ok_cpf:
+        return JsonResponse({"erro": erro_cpf}, status=400)
+    cpf = "".join(filter(str.isdigit, cpf_raw))[:11]
+
+    try:
+        por_dia = int(data.get("unidades_por_dia") or 2)
+        dias_uso = int(data.get("dias_uso") or 14)
+        dias_pausa = int(data.get("dias_pausa") or 7)
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"erro": "unidades_por_dia, dias_uso e dias_pausa devem ser inteiros"},
+            status=400)
+    if por_dia < 1 or dias_uso < 1 or dias_pausa < 0:
+        return JsonResponse(
+            {"erro": "Esquema inválido: unidades_por_dia e dias_uso ≥ 1, "
+                     "dias_pausa ≥ 0."}, status=400)
+
+    ciclo = None
+    if data.get("ciclo_id"):
+        ciclo = CicloQuimioterapia.objects.filter(
+            id=data["ciclo_id"], empresa=empresa).first()
+        if ciclo is None:
+            return JsonResponse({"erro": "Ciclo não encontrado nesta empresa"}, status=400)
+
+    fim = None
+    if data.get("data_fim_prevista"):
+        try:
+            fim = datetime.strptime(
+                str(data["data_fim_prevista"])[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return JsonResponse(
+                {"erro": "data_fim_prevista inválida (use AAAA-MM-DD)"}, status=400)
+        if fim < inicio:
+            return JsonResponse(
+                {"erro": "data_fim_prevista não pode ser anterior ao início"}, status=400)
+
+    dose = data.get("dose_por_tomada")
+    if dose not in (None, ""):
+        dose = _num_positivo(dose)
+        if dose is None:
+            return JsonResponse(
+                {"erro": "dose_por_tomada deve ser um número maior que zero"}, status=400)
+    else:
+        dose = None
+
+    p = PrescricaoQuimioOral.objects.create(
+        empresa=empresa, paciente_nome=paciente, cpf_paciente=cpf,
+        identidade=resolver_identidade(empresa, nome=paciente, cpf=cpf_raw),
+        ciclo=ciclo, droga=droga[:120], dose_por_tomada=dose,
+        unidade=(data.get("unidade") or "mg")[:20], unidades_por_dia=por_dia,
+        posologia=(data.get("posologia") or "").strip()[:200],
+        dias_uso=dias_uso, dias_pausa=dias_pausa,
+        data_inicio=inicio, data_fim_prevista=fim,
+        medico=(data.get("medico") or "").strip()[:150],
+        observacao=(data.get("observacao") or "").strip())
+    return JsonResponse({"id": p.id, "prescricao": _prescricao_oral_dict(p)},
+                        status=201)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_quimio_oral_detalhe(request, prescricao_id):
+    """PUT /api/hospital/oncologia/quimio-oral/<id>/ — suspender, retomar, encerrar."""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    PrescricaoQuimioOral, _ = _get_oral_models()
+    p = PrescricaoQuimioOral.objects.filter(
+        id=prescricao_id, empresa=empresa).prefetch_related("dispensacoes").first()
+    if p is None:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    campos = []
+    novo = (data.get("status") or "").strip()
+    if novo and novo != p.status:
+        if novo not in dict(PrescricaoQuimioOral.STATUS):
+            return JsonResponse(
+                {"erro": "status inválido",
+                 "validos": [x[0] for x in PrescricaoQuimioOral.STATUS]}, status=400)
+        if p.status in ("concluida", "cancelada"):
+            return JsonResponse(
+                {"erro": f"Prescrição já está '{p.get_status_display()}'.",
+                 "status_atual": p.status}, status=409)
+        p.status = novo
+        campos.append("status")
+    for campo, limite in (("posologia", 200), ("medico", 150), ("observacao", 0)):
+        if campo in data:
+            valor = (data.get(campo) or "").strip()
+            setattr(p, campo, valor[:limite] if limite else valor)
+            campos.append(campo)
+    if campos:
+        p.save(update_fields=campos)
+    return JsonResponse({"ok": True, "prescricao": _prescricao_oral_dict(p)})
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_quimio_oral_dispensacoes(request, prescricao_id):
+    """GET/POST /api/hospital/oncologia/quimio-oral/<id>/dispensacoes/"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    PrescricaoQuimioOral, DispensacaoQuimioOral = _get_oral_models()
+    p = PrescricaoQuimioOral.objects.filter(
+        id=prescricao_id, empresa=empresa).first()
+    if p is None:
+        return JsonResponse({"erro": "Prescrição não encontrada"}, status=404)
+
+    if request.method == "GET":
+        itens = list(p.dispensacoes.all().order_by("-data"))
+        return JsonResponse({
+            "prescricao_id": p.id,
+            "total": len(itens),
+            "dispensacoes": [_dispensacao_dict(d) for d in itens],
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    if p.status != "ativa":
+        return JsonResponse(
+            {"erro": f"Prescrição está '{p.get_status_display()}': não há o que "
+                     "dispensar.", "codigo": "prescricao_inativa"}, status=409)
+
+    try:
+        d_dia = datetime.strptime(
+            str(data.get("data") or date.today().isoformat())[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "data inválida (use AAAA-MM-DD)"}, status=400)
+
+    try:
+        entregues = int(data.get("unidades_dispensadas"))
+        devolvidas = int(data.get("unidades_devolvidas") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"erro": "unidades_dispensadas é obrigatória (inteiro) e "
+                     "unidades_devolvidas deve ser inteira"}, status=400)
+    if entregues < 1 or devolvidas < 0:
+        return JsonResponse(
+            {"erro": "unidades_dispensadas ≥ 1 e unidades_devolvidas ≥ 0"}, status=400)
+
+    anterior = p.dispensacoes.order_by("-data").first()
+    if anterior and d_dia < anterior.data:
+        return JsonResponse(
+            {"erro": f"Já existe retirada em {anterior.data.strftime('%d/%m/%Y')}; "
+                     "a nova não pode ser anterior.",
+             "codigo": "retirada_retroativa"}, status=400)
+    # Devolver mais do que foi entregue é erro de contagem, não adesão perfeita.
+    if anterior and devolvidas > anterior.unidades_dispensadas:
+        return JsonResponse(
+            {"erro": f"Devolvidas ({devolvidas}) excedem as "
+                     f"{anterior.unidades_dispensadas} entregues na retirada anterior.",
+             "codigo": "devolucao_maior_que_entrega"}, status=400)
+    if anterior is None and devolvidas:
+        return JsonResponse(
+            {"erro": "Não há retirada anterior: não existem unidades a devolver.",
+             "codigo": "devolucao_sem_retirada_anterior"}, status=400)
+
+    adesao, esperado, tomado = _calcular_adesao(p, anterior, d_dia, devolvidas)
+
+    proxima = None
+    if data.get("proxima_retirada"):
+        try:
+            proxima = datetime.strptime(
+                str(data["proxima_retirada"])[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return JsonResponse(
+                {"erro": "proxima_retirada inválida (use AAAA-MM-DD)"}, status=400)
+    else:
+        # Sem data informada, agenda para o fim do ciclo de uso em curso.
+        periodo = (p.dias_uso or 0) + (p.dias_pausa or 0)
+        proxima = d_dia + timedelta(days=periodo or 28)
+
+    d = DispensacaoQuimioOral.objects.create(
+        empresa=empresa, prescricao=p, data=d_dia,
+        unidades_dispensadas=entregues, unidades_devolvidas=devolvidas,
+        adesao_pct=adesao, proxima_retirada=proxima,
+        dispensado_por=(data.get("dispensado_por") or "").strip()[:150],
+        observacao=(data.get("observacao") or "").strip())
+
+    return JsonResponse({
+        "id": d.id,
+        "dispensacao": _dispensacao_dict(d),
+        "adesao_intervalo": {
+            "adesao_pct": adesao,
+            "unidades_esperadas": esperado,
+            "unidades_tomadas": tomado,
+            "baixa": (adesao is not None and adesao < ADESAO_LIMITE_BAIXA),
+        },
+        "alerta": ("Adesão abaixo de "
+                   f"{ADESAO_LIMITE_BAIXA:.0f}% no intervalo — conversar com o "
+                   "paciente antes de atribuir falha ao tratamento."
+                   if adesao is not None and adesao < ADESAO_LIMITE_BAIXA else None),
+    }, status=201)

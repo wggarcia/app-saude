@@ -12460,6 +12460,258 @@ class AvaliacaoRespostaOncologica(models.Model):
         return f"{self.get_resposta_display()} — {self.paciente_nome} ({self.data_avaliacao})"
 
 
+class PrescricaoQuimioOral(models.Model):
+    """Quimioterapia por via oral (capecitabina, TKIs, hormonioterapia).
+
+    O ponto cego do setor: o paciente de infusão aparece na cadeira e é visto;
+    o de quimio oral some por 21 dias com a droga em casa. Sem acompanhar a
+    retirada e a contagem de comprimidos, ninguém sabe se ele tomou — e a
+    não-adesão aparece só como "o tratamento não funcionou".
+    """
+    STATUS = [
+        ("ativa",     "Ativa"),
+        ("suspensa",  "Suspensa"),
+        ("concluida", "Concluída"),
+        ("cancelada", "Cancelada"),
+    ]
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="prescricoes_quimio_oral")
+    paciente_nome  = models.CharField(max_length=160)
+    cpf_paciente   = models.CharField(max_length=11, blank=True, default="")
+    identidade     = models.ForeignKey("IdentidadePaciente", on_delete=models.SET_NULL,
+                                       null=True, blank=True,
+                                       related_name="prescricoes_quimio_oral")
+    ciclo          = models.ForeignKey("CicloQuimioterapia", on_delete=models.SET_NULL,
+                                       null=True, blank=True,
+                                       related_name="prescricoes_orais")
+    droga          = models.CharField(max_length=120)
+    dose_por_tomada = models.DecimalField(max_digits=10, decimal_places=2,
+                                          null=True, blank=True)
+    unidade        = models.CharField(max_length=20, blank=True, default="mg")
+    # Quantas unidades (comprimidos/cápsulas) o paciente toma por dia: é a base
+    # da contagem de comprimidos que mede adesão.
+    unidades_por_dia = models.PositiveIntegerField(default=2)
+    posologia      = models.CharField(max_length=200, blank=True, default="",
+                                      help_text="Ex.: 2 comprimidos 12/12h após refeição")
+    # Esquema cíclico típico da oral: capecitabina é 14 dias de uso + 7 de pausa.
+    dias_uso       = models.PositiveIntegerField(default=14)
+    dias_pausa     = models.PositiveIntegerField(default=7)
+    data_inicio    = models.DateField()
+    data_fim_prevista = models.DateField(null=True, blank=True)
+    status         = models.CharField(max_length=10, choices=STATUS,
+                                      default="ativa", db_index=True)
+    medico         = models.CharField(max_length=150, blank=True, default="")
+    observacao     = models.TextField(blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Prescrição de Quimioterapia Oral"
+        verbose_name_plural = "Prescrições de Quimioterapia Oral"
+        ordering            = ["-data_inicio"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"{self.droga} — {self.paciente_nome}"
+
+
+class DispensacaoQuimioOral(models.Model):
+    """Retirada do medicamento oral, com contagem de comprimidos devolvidos.
+
+    A contagem é o único dado objetivo de adesão que existe na prática clínica:
+    o que foi entregue menos o que voltou, contra o que deveria ter sido tomado
+    no intervalo.
+    """
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="dispensacoes_quimio_oral")
+    prescricao     = models.ForeignKey("PrescricaoQuimioOral", on_delete=models.CASCADE,
+                                       related_name="dispensacoes")
+    data           = models.DateField(db_index=True)
+    unidades_dispensadas = models.PositiveIntegerField(
+        verbose_name="Unidades entregues (comprimidos/cápsulas)")
+    unidades_devolvidas  = models.PositiveIntegerField(
+        default=0, verbose_name="Unidades devolvidas da retirada anterior")
+    # Adesão do intervalo, calculada na dispensação e congelada: recalcular
+    # depois mudaria o histórico quando a prescrição for editada.
+    adesao_pct     = models.DecimalField(max_digits=5, decimal_places=1,
+                                         null=True, blank=True)
+    proxima_retirada = models.DateField(null=True, blank=True)
+    dispensado_por = models.CharField(max_length=150, blank=True, default="")
+    observacao     = models.TextField(blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Dispensação de Quimioterapia Oral"
+        verbose_name_plural = "Dispensações de Quimioterapia Oral"
+        ordering            = ["-data"]
+        indexes             = [
+            models.Index(fields=["empresa", "data"]),
+            models.Index(fields=["prescricao", "data"]),
+        ]
+
+    def __str__(self):
+        return f"{self.prescricao.droga} — {self.data}"
+
+
+class AgendamentoInfusao(models.Model):
+    """Reserva de cadeira/poltrona na central de infusão para um ciclo.
+
+    É o gargalo físico real da quimioterapia: o protocolo pode estar perfeito e
+    a guia vigente, mas se não há cadeira livre no dia, o ciclo atrasa. Sem esta
+    camada o sistema sabe quando o ciclo *deveria* acontecer e não sabe se cabe.
+    """
+    STATUS = [
+        ("reservado",  "Reservado"),
+        ("confirmado", "Confirmado (paciente chegou)"),
+        ("em_curso",   "Em curso"),
+        ("concluido",  "Concluído"),
+        ("faltou",     "Paciente faltou"),
+        ("cancelado",  "Cancelado"),
+    ]
+    empresa      = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                     related_name="agendamentos_infusao")
+    ciclo        = models.ForeignKey("CicloQuimioterapia", on_delete=models.CASCADE,
+                                     related_name="agendamentos")
+    data         = models.DateField(db_index=True)
+    hora_inicio  = models.TimeField()
+    # Duração estimada a partir do protocolo; é o que permite detectar choque
+    # de horário na mesma cadeira.
+    duracao_min  = models.PositiveIntegerField(
+        default=180, verbose_name="Duração estimada (minutos)")
+    cadeira      = models.CharField(max_length=40,
+                                    verbose_name="Cadeira/poltrona de infusão")
+    status       = models.CharField(max_length=12, choices=STATUS,
+                                    default="reservado", db_index=True)
+    observacao   = models.TextField(blank=True, default="")
+    agendado_por = models.CharField(max_length=150, blank=True, default="")
+    criado_em    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Agendamento de Infusão"
+        verbose_name_plural = "Agendamentos de Infusão"
+        ordering            = ["data", "hora_inicio"]
+        indexes             = [
+            models.Index(fields=["empresa", "data"]),
+            models.Index(fields=["empresa", "cadeira", "data"]),
+        ]
+
+    def __str__(self):
+        return f"{self.cadeira} {self.data} {self.hora_inicio} — ciclo {self.ciclo_id}"
+
+
+class PreparoQuimioterapia(models.Model):
+    """Preparo de uma droga do ciclo na farmácia oncológica (manipulação).
+
+    Primeiro elo da cadeia fechada: nada é administrado sem ter sido preparado,
+    conferido por um segundo profissional e rastreado por lote. É a diferença
+    entre registrar que o paciente recebeu quimioterapia e conseguir provar o
+    que entrou na veia dele.
+    """
+    STATUS = [
+        ("pendente",   "Pendente"),
+        ("em_preparo", "Em preparo"),
+        ("pronto",     "Pronto (aguardando conferência)"),
+        ("conferido",  "Conferido (liberado para administração)"),
+        ("dispensado", "Dispensado para a infusão"),
+        ("descartado", "Descartado"),
+    ]
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="preparos_quimio")
+    ciclo          = models.ForeignKey("CicloQuimioterapia", on_delete=models.CASCADE,
+                                       related_name="preparos")
+    droga          = models.CharField(max_length=120)
+    # Dose que saiu do cálculo do ciclo (mg, mg/m², AUC já resolvida).
+    dose_prescrita = models.DecimalField(max_digits=10, decimal_places=2,
+                                         null=True, blank=True)
+    unidade        = models.CharField(max_length=20, blank=True, default="mg")
+    # Dose efetivamente manipulada: pode diferir por arredondamento de frasco.
+    dose_preparada = models.DecimalField(max_digits=10, decimal_places=2,
+                                         null=True, blank=True)
+    lote           = models.CharField(max_length=60, blank=True, default="")
+    validade_lote  = models.DateField(null=True, blank=True)
+    diluente       = models.CharField(max_length=80, blank=True, default="")
+    volume_final_ml = models.PositiveIntegerField(null=True, blank=True)
+    status         = models.CharField(max_length=12, choices=STATUS,
+                                      default="pendente", db_index=True)
+    preparado_por  = models.CharField(max_length=150, blank=True, default="")
+    # Dupla checagem da farmácia: quem confere NÃO pode ser quem preparou.
+    conferido_por  = models.CharField(max_length=150, blank=True, default="")
+    preparado_em   = models.DateTimeField(null=True, blank=True)
+    conferido_em   = models.DateTimeField(null=True, blank=True)
+    motivo_descarte = models.TextField(blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Preparo de Quimioterapia"
+        verbose_name_plural = "Preparos de Quimioterapia"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["ciclo", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.droga} — ciclo {self.ciclo_id} ({self.get_status_display()})"
+
+
+class AdministracaoQuimioterapia(models.Model):
+    """Administração à beira do leito, ligada ao preparo que a originou.
+
+    Fecha a cadeia: só administra o que a farmácia conferiu, com dupla checagem
+    de beira de leito (dois profissionais distintos) e registro de intercorrência
+    — extravasamento e reação infusional são eventos que hoje se perdem em papel.
+    """
+    INTERCORRENCIA = [
+        ("nenhuma",        "Sem intercorrência"),
+        ("extravasamento", "Extravasamento"),
+        ("reacao_infusional", "Reação infusional / hipersensibilidade"),
+        ("perda_acesso",   "Perda do acesso venoso"),
+        ("interrupcao",    "Interrupção por intolerância"),
+        ("outra",          "Outra"),
+    ]
+    VIA = [
+        ("periferico",  "Acesso venoso periférico"),
+        ("cateter",     "Cateter central / PICC"),
+        ("porto",       "Port-a-cath"),
+        ("oral",        "Via oral"),
+        ("subcutanea",  "Subcutânea"),
+        ("intratecal",  "Intratecal"),
+    ]
+    empresa       = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                      related_name="administracoes_quimio")
+    preparo       = models.OneToOneField("PreparoQuimioterapia", on_delete=models.CASCADE,
+                                         related_name="administracao")
+    ciclo         = models.ForeignKey("CicloQuimioterapia", on_delete=models.CASCADE,
+                                      related_name="administracoes")
+    via           = models.CharField(max_length=12, choices=VIA, default="periferico")
+    inicio        = models.DateTimeField()
+    fim           = models.DateTimeField(null=True, blank=True)
+    dose_administrada = models.DecimalField(max_digits=10, decimal_places=2,
+                                            null=True, blank=True)
+    # Dupla checagem à beira do leito: dois profissionais, nomes distintos.
+    administrado_por = models.CharField(max_length=150)
+    checado_por      = models.CharField(max_length=150)
+    intercorrencia   = models.CharField(max_length=20, choices=INTERCORRENCIA,
+                                        default="nenhuma", db_index=True)
+    intercorrencia_conduta = models.TextField(blank=True, default="")
+    observacao    = models.TextField(blank=True, default="")
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Administração de Quimioterapia"
+        verbose_name_plural = "Administrações de Quimioterapia"
+        ordering            = ["-inicio"]
+        indexes             = [
+            models.Index(fields=["empresa", "inicio"]),
+            models.Index(fields=["empresa", "intercorrencia"]),
+        ]
+
+    def __str__(self):
+        return f"{self.preparo.droga} — {self.inicio:%d/%m/%Y %H:%M}"
+
+
 class GuiaOncologica(models.Model):
     """Guia/autorização que cobre o tratamento oncológico. Tem validade e um teto
     de ciclos autorizados — base para o alerta de vencimento de guia."""

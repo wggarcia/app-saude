@@ -115,6 +115,9 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <div class="kpi ok"><div class="kpi-val" id="kpiValorAprovado">—</div><div class="kpi-lbl">Valor Aprovado APAC (mês)</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiPrazoEstourado">—</div><div class="kpi-lbl">Autorizações fora do prazo</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiPrazoAguardando">—</div><div class="kpi-lbl">Aguardando resposta da operadora</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiInfusoesHoje">—</div><div class="kpi-lbl">Infusões agendadas hoje</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiFilaFarmacia">—</div><div class="kpi-lbl">Na fila da farmácia</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiIntercorrencias">—</div><div class="kpi-lbl">Intercorrências na infusão (mês)</div></div>
   </div>
 
   <div class="tabs">
@@ -122,6 +125,8 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="tab-btn" data-tab="ciclos" onclick="setTab('ciclos')">Ciclos de Quimioterapia</button>
     <button class="tab-btn" data-tab="apacs" onclick="setTab('apacs')">APAC / SUS</button>
     <button class="tab-btn" data-tab="guias" onclick="setTab('guias')">Guias / Autorizações</button>
+    <button class="tab-btn" data-tab="infusao" onclick="setTab('infusao')">Central de Infusão</button>
+    <button class="tab-btn" data-tab="oral" onclick="setTab('oral')">Quimioterapia Oral</button>
     <button class="tab-btn" data-tab="respostas" onclick="setTab('respostas')">Resposta ao Tratamento</button>
     <button class="tab-btn" data-tab="jornada" onclick="setTab('jornada')">Jornada do Paciente</button>
   </div>
@@ -286,6 +291,170 @@ tr:hover td{background:rgba(0,194,255,.03)}
     </div>
   </div>
 
+  <div class="tab-panel" id="panel-infusao">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🪑 Agenda das cadeiras de infusão</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="agData" onchange="carregarAgenda()" style="padding:7px 10px">
+          <button class="btn btn-primary btn-sm" onclick="abrirNovoAgendamento()">+ Reservar cadeira</button>
+        </div>
+      </div>
+      <div id="agOcupacao" style="padding:10px 20px 0"></div>
+      <table>
+        <thead><tr><th>Cadeira</th><th>Horário</th><th>Paciente</th><th>Protocolo / ciclo</th><th>Duração</th><th>Status</th><th></th></tr></thead>
+        <tbody id="agendaBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formAgCard" style="display:none">
+      <div class="form-card-title">Reservar cadeira</div>
+      <div class="form-row3">
+        <div class="form-group"><label>Ciclo *</label><select id="agCiclo"></select></div>
+        <div class="form-group"><label>Data *</label><input type="date" id="agDataNovo"></div>
+        <div class="form-group"><label>Hora de início *</label><input type="time" id="agHora" value="08:00"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Cadeira / poltrona *</label><input id="agCadeira" placeholder="ex.: P1"></div>
+        <div class="form-group"><label>Duração estimada (minutos)</label><input type="number" id="agDuracao" value="180" min="15" max="1440"></div>
+        <div class="form-group"><label>Agendado por</label><input id="agPor"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formAgCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarAgendamento()">Reservar</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <div class="card-title">🧪 Farmácia oncológica — cadeia fechada do frasco</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoPreparo()">+ Gerar preparos de um ciclo</button>
+      </div>
+      <div style="padding:12px 20px 0;font-size:12.5px;color:var(--muted)">
+        Nada entra na veia sem ter sido preparado, conferido por um <strong>segundo</strong> profissional
+        e rastreado por lote. Conferir o próprio preparo não é conferência — o sistema recusa.
+      </div>
+      <div class="form-card" id="formPreparoCard" style="display:none;margin:12px 20px">
+        <div class="form-row">
+          <div class="form-group"><label>Ciclo</label><select id="prepCiclo"></select></div>
+          <div class="form-group"><label>&nbsp;</label>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" onclick="gerarPreparos()">Gerar preparos da prescrição</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('formPreparoCard').style.display='none'">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Droga</th><th>Dose prescrita</th><th>Dose preparada</th><th>Lote</th><th>Preparado por</th><th>Conferido por</th><th>Status</th><th>Ação</th></tr></thead>
+        <tbody id="preparosBody"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <div class="card-title">💉 Administrações à beira do leito</div>
+      </div>
+      <div class="form-card" id="formAdmCard" style="display:none;margin:12px 20px">
+        <div class="form-card-title">Administrar — <span id="admDroga"></span></div>
+        <div class="form-row3">
+          <div class="form-group"><label>Quem administra *</label><input id="admPor" placeholder="enfermeiro(a)"></div>
+          <div class="form-group"><label>Quem checa à beira do leito *</label><input id="admCheck" placeholder="segundo profissional, obrigatoriamente outro"></div>
+          <div class="form-group"><label>Via / acesso</label>
+            <select id="admVia">
+              <option value="periferico">Acesso venoso periférico</option>
+              <option value="cateter">Cateter central / PICC</option>
+              <option value="porto">Port-a-cath</option>
+              <option value="oral">Via oral</option>
+              <option value="subcutanea">Subcutânea</option>
+              <option value="intratecal">Intratecal</option>
+            </select></div>
+        </div>
+        <div class="form-row3">
+          <div class="form-group"><label>Início</label><input type="datetime-local" id="admInicio"></div>
+          <div class="form-group"><label>Fim (opcional)</label><input type="datetime-local" id="admFim"></div>
+          <div class="form-group"><label>Intercorrência</label>
+            <select id="admInter">
+              <option value="nenhuma">Sem intercorrência</option>
+              <option value="extravasamento">Extravasamento</option>
+              <option value="reacao_infusional">Reação infusional / hipersensibilidade</option>
+              <option value="perda_acesso">Perda do acesso venoso</option>
+              <option value="interrupcao">Interrupção por intolerância</option>
+              <option value="outra">Outra</option>
+            </select></div>
+        </div>
+        <div class="form-group"><label>Conduta adotada (obrigatória se houve intercorrência)</label><input id="admConduta"></div>
+        <div class="form-group"><label>Observação</label><input id="admObs"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="document.getElementById('formAdmCard').style.display='none'">Cancelar</button>
+          <button class="btn btn-primary" onclick="salvarAdministracao()">Registrar administração</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Droga</th><th>Início</th><th>Via</th><th>Dose</th><th>Administrado por</th><th>Checado por</th><th>Intercorrência</th></tr></thead>
+        <tbody id="admBody"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-oral">
+    <div id="oralAlertaBox"></div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">💊 Quimioterapia oral — adesão por contagem de comprimidos</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaPrescricaoOral()">+ Nova prescrição oral</button>
+      </div>
+      <div style="padding:12px 20px 0;font-size:12.5px;color:var(--muted)">
+        O paciente de infusão senta na cadeira e é visto. O de quimio oral some por 21 dias com a droga em casa.
+        A cada retirada o sistema conta o que voltou e calcula a adesão do intervalo, respeitando o esquema
+        (14 dias de uso + 7 de pausa não é tomar todo dia). Abaixo de 80%, a baixa resposta pode não ser do tratamento.
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Droga</th><th>Esquema</th><th>Posologia</th><th>Adesão média</th><th>Próxima retirada</th><th>Status</th><th>Ação</th></tr></thead>
+        <tbody id="oralBody"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formOralCard" style="display:none">
+      <div class="form-card-title">Nova prescrição oral</div>
+      <div class="form-row3">
+        <div class="form-group"><label>Paciente *</label><input id="oPaciente"></div>
+        <div class="form-group"><label>CPF</label><input id="oCpf" maxlength="14"></div>
+        <div class="form-group"><label>Droga *</label><input id="oDroga" placeholder="ex.: Capecitabina"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Dose por tomada</label><input type="number" step="0.01" id="oDose" placeholder="ex.: 1500"></div>
+        <div class="form-group"><label>Unidades por dia (comprimidos)</label><input type="number" id="oPorDia" value="2" min="1"></div>
+        <div class="form-group"><label>Início *</label><input type="date" id="oInicio"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Dias de uso</label><input type="number" id="oUso" value="14" min="1"></div>
+        <div class="form-group"><label>Dias de pausa (0 = contínuo)</label><input type="number" id="oPausa" value="7" min="0"></div>
+        <div class="form-group"><label>Médico</label><input id="oMedico"></div>
+      </div>
+      <div class="form-group"><label>Posologia</label><input id="oPosologia" placeholder="ex.: 2 comprimidos 12/12h após refeição"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formOralCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarPrescricaoOral()">Salvar prescrição</button>
+      </div>
+    </div>
+    <div class="form-card" id="formDispCard" style="display:none">
+      <div class="form-card-title">Registrar retirada — <span id="dispDroga"></span></div>
+      <div class="form-row3">
+        <div class="form-group"><label>Data da retirada</label><input type="date" id="dData"></div>
+        <div class="form-group"><label>Unidades entregues *</label><input type="number" id="dEntregues" min="1" placeholder="ex.: 28"></div>
+        <div class="form-group"><label>Unidades devolvidas da retirada anterior</label><input type="number" id="dDevolvidas" value="0" min="0"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Próxima retirada</label><input type="date" id="dProxima"></div>
+        <div class="form-group"><label>Dispensado por</label><input id="dPor"></div>
+        <div class="form-group"><label>Observação</label><input id="dObs"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formDispCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarDispensacao()">Registrar retirada</button>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="panel-respostas">
     <div class="card">
       <div class="card-header">
@@ -389,6 +558,8 @@ function setTab(tab) {
   if (tab === 'apacs') carregarApacs();
   if (tab === 'guias') carregarGuias();
   if (tab === 'respostas') carregarRespostas();
+  if (tab === 'infusao') carregarInfusao();
+  if (tab === 'oral') carregarOral();
 }
 
 var statusGuiaMap = {vigente:'badge-ok', vencida:'badge-danger', esgotada:'badge-warn', cancelada:'badge-gray', em_analise:'badge-warn', negada:'badge-danger'};
@@ -459,6 +630,343 @@ async function salvarGuia() {
     document.getElementById('gCiclos').value='0';
     carregarGuias(); carregarKpis();
   } catch(e) { toast('Erro de conexão', false); }
+}
+
+// ── Quimioterapia oral: adesão medida, não presumida ───────────────────────
+var oralStatusMap = {ativa:'badge-ok', suspensa:'badge-warn', concluida:'badge-gray', cancelada:'badge-gray'};
+var prescricaoOralAtual = null;
+
+async function carregarOral(){
+  var tbody = document.getElementById('oralBody');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/quimio-oral', { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    var box = document.getElementById('oralAlertaBox');
+    box.innerHTML = (d.atrasados_retirada || d.adesao_baixa)
+      ? '<div class="alerta-box" style="margin-bottom:14px">⚠️ ' + d.atrasados_retirada
+        + ' paciente(s) atrasado(s) para retirar o medicamento e ' + d.adesao_baixa
+        + ' com adesão abaixo de 80% — estes são os casos em que a "falha do tratamento" pode ser outra coisa.</div>'
+      : '';
+    if (!d.prescricoes.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma prescrição oral ativa.</td></tr>'; return; }
+    tbody.innerHTML = d.prescricoes.map(function(p){
+      var adesao = p.adesao_media_pct == null
+        ? '<span style="opacity:.5">sem medida ainda</span>'
+        : '<span style="color:' + (p.adesao_baixa ? 'var(--danger)' : 'var(--ok)') + ';font-weight:700">'
+          + p.adesao_media_pct.toFixed(1) + '%</span>'
+          + (p.ultima_adesao_pct != null ? ('<div class="itens-mini" style="opacity:.7">última: '+p.ultima_adesao_pct.toFixed(1)+'%</div>') : '');
+      var ret = p.retirada && p.retirada.aplicavel
+        ? (p.retirada.atrasado
+            ? '<span style="color:var(--danger)"><strong>atrasado '+p.retirada.dias_atraso+'d</strong><div class="itens-mini">previsto '+fmtData(p.retirada.proxima_retirada)+'</div></span>'
+            : fmtData(p.retirada.proxima_retirada))
+        : '<span style="opacity:.5">—</span>';
+      var dose = p.dose_por_tomada != null ? (p.dose_por_tomada + ' ' + esc(p.unidade||'')) : '';
+      var acao = p.status === 'ativa'
+        ? '<button class="btn btn-primary btn-sm" onclick="abrirDispensacao('+p.id+',\''+esc(String(p.droga||'').replace(/'/g,''))+'\')">Registrar retirada</button>'
+        : '<span style="opacity:.5">—</span>';
+      return '<tr><td><strong>'+esc(p.paciente_nome)+'</strong></td>'
+           + '<td>'+esc(p.droga)+(dose?('<div class="itens-mini" style="opacity:.7">'+dose+'</div>'):'')+'</td>'
+           + '<td>'+esc(p.esquema)+'<div class="itens-mini" style="opacity:.7">'+p.unidades_por_dia+'/dia</div></td>'
+           + '<td>'+esc(p.posologia||'—')+'</td><td>'+adesao+'</td><td>'+ret+'</td>'
+           + '<td><span class="badge '+(oralStatusMap[p.status]||'badge-gray')+'">'+esc(p.status_display)+'</span></td>'
+           + '<td>'+acao+'</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovaPrescricaoOral(){
+  var card = document.getElementById('formOralCard');
+  if (!document.getElementById('oInicio').value)
+    document.getElementById('oInicio').value = new Date().toISOString().slice(0,10);
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function salvarPrescricaoOral(){
+  var paciente = document.getElementById('oPaciente').value.trim();
+  var droga = document.getElementById('oDroga').value.trim();
+  if (!paciente || !droga) return toast('Paciente e droga são obrigatórios', false);
+  var dose = document.getElementById('oDose').value;
+  try {
+    var r = await fetch('/api/hospital/oncologia/quimio-oral/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, cpf_paciente: document.getElementById('oCpf').value.replace(/\D/g,''),
+      droga: droga, dose_por_tomada: dose === '' ? null : parseFloat(dose),
+      unidades_por_dia: parseInt(document.getElementById('oPorDia').value)||2,
+      dias_uso: parseInt(document.getElementById('oUso').value)||14,
+      dias_pausa: parseInt(document.getElementById('oPausa').value)||0,
+      data_inicio: document.getElementById('oInicio').value,
+      posologia: document.getElementById('oPosologia').value.trim(),
+      medico: document.getElementById('oMedico').value.trim(),
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    toast('Prescrição oral registrada', true);
+    document.getElementById('formOralCard').style.display = 'none';
+    ['oPaciente','oCpf','oDroga','oDose','oPosologia','oMedico'].forEach(function(id){ document.getElementById(id).value=''; });
+    carregarOral();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function abrirDispensacao(id, droga){
+  prescricaoOralAtual = id;
+  document.getElementById('dispDroga').textContent = droga;
+  document.getElementById('dData').value = new Date().toISOString().slice(0,10);
+  var card = document.getElementById('formDispCard');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+async function salvarDispensacao(){
+  if (!prescricaoOralAtual) return;
+  var entregues = parseInt(document.getElementById('dEntregues').value);
+  if (!entregues || entregues < 1) return toast('Informe quantas unidades foram entregues', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/quimio-oral/'+prescricaoOralAtual+'/dispensacoes/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      data: document.getElementById('dData').value,
+      unidades_dispensadas: entregues,
+      unidades_devolvidas: parseInt(document.getElementById('dDevolvidas').value)||0,
+      proxima_retirada: document.getElementById('dProxima').value || null,
+      dispensado_por: document.getElementById('dPor').value.trim(),
+      observacao: document.getElementById('dObs').value.trim(),
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao registrar', false);
+    var a = d.adesao_intervalo || {};
+    toast(a.adesao_pct == null
+            ? 'Retirada registrada (primeira entrega: ainda não há adesão a medir)'
+            : ('Retirada registrada — adesão do intervalo: ' + a.adesao_pct + '% ('
+               + a.unidades_tomadas + ' de ' + a.unidades_esperadas + ' esperadas)'),
+          !a.baixa);
+    document.getElementById('formDispCard').style.display = 'none';
+    ['dEntregues','dProxima','dPor','dObs'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('dDevolvidas').value = '0';
+    prescricaoOralAtual = null;
+    carregarOral();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+// ── Central de infusão: agenda → farmácia → beira do leito ─────────────────
+var agStatusMap = {reservado:'badge-info', confirmado:'badge-warn', em_curso:'badge-warn',
+                   concluido:'badge-ok', faltou:'badge-danger', cancelado:'badge-gray'};
+var prepStatusMap = {pendente:'badge-gray', em_preparo:'badge-warn', pronto:'badge-warn',
+                     conferido:'badge-ok', dispensado:'badge-ok', descartado:'badge-danger'};
+
+function carregarInfusao(){
+  if (!document.getElementById('agData').value)
+    document.getElementById('agData').value = new Date().toISOString().slice(0,10);
+  carregarAgenda(); carregarPreparos(); carregarAdministracoes();
+}
+
+async function carregarAgenda(){
+  var tbody = document.getElementById('agendaBody');
+  var dia = document.getElementById('agData').value || new Date().toISOString().slice(0,10);
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/agenda-infusao?data='+dia, { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    var oc = d.ocupacao_min_por_cadeira || {};
+    var cadeiras = Object.keys(oc).sort();
+    document.getElementById('agOcupacao').innerHTML = cadeiras.length
+      ? cadeiras.map(function(c){
+          var h = Math.floor(oc[c]/60), m = oc[c]%60;
+          return '<span class="badge badge-info" style="margin-right:6px">'+esc(c)+': '+h+'h'+(m?(' '+m+'min'):'')+' ocupados</span>';
+        }).join('')
+      : '';
+    if (!d.agendamentos.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma cadeira reservada neste dia.</td></tr>'; return; }
+    tbody.innerHTML = d.agendamentos.map(function(a){
+      var alerta = a.aptidao_status === 'inapto'
+        ? ' <span class="badge badge-danger">ciclo inapto</span>' : '';
+      return '<tr><td><strong>'+esc(a.cadeira)+'</strong></td><td>'+esc(a.hora_inicio)+'–'+esc(a.hora_fim_prevista)
+           + '</td><td>'+esc(a.paciente_nome)+alerta+'</td><td>'+esc(a.protocolo)+' · ciclo '+esc(a.numero_ciclo)
+           + '</td><td>'+a.duracao_min+' min</td><td><span class="badge '+(agStatusMap[a.status]||'badge-gray')+'">'+esc(a.status_display)+'</span></td>'
+           + '<td><select onchange="mudarStatusAgendamento('+a.id+', this.value)" style="padding:4px 6px;font-size:11px">'
+           + ['reservado','confirmado','em_curso','concluido','faltou','cancelado'].map(function(st){
+               return '<option value="'+st+'"'+(st===a.status?' selected':'')+'>'+st.replace('_',' ')+'</option>'; }).join('')
+           + '</select></td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+async function mudarStatusAgendamento(id, status){
+  try {
+    var r = await fetch('/api/hospital/oncologia/agenda-infusao/'+id+'/', { method:'PUT', credentials:'include', headers: headers(), body: JSON.stringify({status: status}) });
+    if (!r.ok) { toast('Não foi possível mudar o status', false); return; }
+    toast('Agendamento atualizado', true); carregarAgenda();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function preencherSelectCiclos(selectId){
+  var sel = document.getElementById(selectId);
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos', { credentials:'include', headers: headers() });
+    var d = await r.json();
+    var abertos = (d.ciclos||[]).filter(function(c){ return c.status !== 'cancelado'; });
+    sel.innerHTML = abertos.length
+      ? abertos.map(function(c){
+          return '<option value="'+c.id+'">'+esc(c.paciente_nome)+' — '+esc(c.protocolo||'')
+               + ' ciclo '+esc(c.numero_ciclo)+'</option>'; }).join('')
+      : '<option value="">Nenhum ciclo em aberto</option>';
+  } catch(e) { sel.innerHTML = '<option value="">Erro ao carregar ciclos</option>'; }
+}
+
+function abrirNovoAgendamento(){
+  var card = document.getElementById('formAgCard');
+  document.getElementById('agDataNovo').value = document.getElementById('agData').value || new Date().toISOString().slice(0,10);
+  preencherSelectCiclos('agCiclo');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function salvarAgendamento(){
+  var ciclo = document.getElementById('agCiclo').value;
+  var cadeira = document.getElementById('agCadeira').value.trim();
+  if (!ciclo || !cadeira) return toast('Ciclo e cadeira são obrigatórios', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/agenda-infusao/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      ciclo_id: parseInt(ciclo), data: document.getElementById('agDataNovo').value,
+      hora_inicio: document.getElementById('agHora').value, cadeira: cadeira,
+      duracao_min: parseInt(document.getElementById('agDuracao').value)||180,
+      agendado_por: document.getElementById('agPor').value.trim(),
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao reservar', false);
+    toast(d.alerta_aptidao ? ('Reservado — ATENÇÃO: ' + d.alerta_aptidao) : 'Cadeira reservada', !d.alerta_aptidao);
+    document.getElementById('formAgCard').style.display = 'none';
+    document.getElementById('agCadeira').value = '';
+    document.getElementById('agData').value = document.getElementById('agDataNovo').value;
+    carregarAgenda();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarPreparos(){
+  var tbody = document.getElementById('preparosBody');
+  tbody.innerHTML = '<tr><td colspan="9" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/preparos', { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="9" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.preparos.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty">Nenhum preparo na fila.</td></tr>'; return; }
+    tbody.innerHTML = d.preparos.map(function(p){
+      var dose = function(v){ return v!=null ? (v+' '+esc(p.unidade||'')) : '—'; };
+      var proximo = {pendente:'em_preparo', em_preparo:'pronto', pronto:'conferido', conferido:'dispensado'}[p.status];
+      var rotulo = {em_preparo:'Iniciar preparo', pronto:'Marcar pronto', conferido:'Conferir', dispensado:'Dispensar'}[proximo];
+      var acao = proximo
+        ? '<button class="btn btn-primary btn-sm" onclick="avancarPreparo('+p.id+",'"+proximo+"'"+')">'+rotulo+'</button>'
+        : '<span style="opacity:.5">—</span>';
+      // Conferido pela farmácia e ainda não administrado: é o que a enfermagem pode pendurar.
+      if (!p.administrado && (p.status === 'conferido' || p.status === 'dispensado'))
+        acao = '<button class="btn btn-primary btn-sm" onclick="abrirAdministracao('+p.id+',\''+esc(String(p.droga||'').replace(/'/g,''))+'\')">💉 Administrar</button>';
+      var lote = p.lote ? esc(p.lote) + (p.validade_lote ? ('<div class="itens-mini" style="opacity:.7">val. '+fmtData(p.validade_lote)+'</div>') : '') : '—';
+      return '<tr><td>'+esc(p.paciente_nome)+'<div class="itens-mini" style="opacity:.6">ciclo '+esc(p.numero_ciclo)+'</div></td><td><strong>'+esc(p.droga)+'</strong></td>'
+           + '<td>'+dose(p.dose_prescrita)+'</td><td>'+dose(p.dose_preparada)+'</td><td>'+lote+'</td>'
+           + '<td>'+esc(p.preparado_por||'—')+'</td><td>'+esc(p.conferido_por||'—')+'</td>'
+           + '<td><span class="badge '+(prepStatusMap[p.status]||'badge-gray')+'">'+esc(p.status_display)+'</span>'
+           + (p.administrado ? ' <span class="badge badge-ok">administrado</span>' : '') + '</td><td>'+acao+'</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="9" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+async function avancarPreparo(id, destino){
+  var corpo = {status: destino};
+  // Cada passo pede exatamente o que a regra exige — sem isso a API devolve erro
+  // e o farmacêutico fica adivinhando o que faltou.
+  if (destino === 'em_preparo') {
+    var quem = prompt('Quem está preparando?'); if (!quem) return;
+    corpo.preparado_por = quem;
+  } else if (destino === 'pronto') {
+    var dose = prompt('Dose efetivamente preparada (número):'); if (!dose) return;
+    corpo.dose_preparada = parseFloat(dose);
+    var lote = prompt('Lote (opcional):'); if (lote) corpo.lote = lote;
+    var val = prompt('Validade do lote AAAA-MM-DD (opcional):'); if (val) corpo.validade_lote = val;
+  } else if (destino === 'conferido') {
+    var conf = prompt('Segunda conferência — nome do profissional (diferente de quem preparou):');
+    if (!conf) return;
+    corpo.conferido_por = conf;
+  }
+  try {
+    var r = await fetch('/api/hospital/oncologia/preparos/'+id+'/', { method:'PUT', credentials:'include', headers: headers(), body: JSON.stringify(corpo) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao avançar o preparo', false);
+    toast('Preparo atualizado', true);
+    carregarPreparos();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function abrirNovoPreparo(){
+  var card = document.getElementById('formPreparoCard');
+  preencherSelectCiclos('prepCiclo');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function gerarPreparos(){
+  var cicloId = parseInt(document.getElementById('prepCiclo').value);
+  if (!cicloId) return toast('Selecione um ciclo', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/preparos/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({ciclo_id: cicloId}) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao gerar preparos', false);
+    toast(d.total + ' preparo(s) gerado(s) a partir da prescrição', true);
+    document.getElementById('formPreparoCard').style.display = 'none';
+    carregarPreparos();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+var preparoAdmAtual = null;
+function abrirAdministracao(preparoId, droga){
+  preparoAdmAtual = preparoId;
+  document.getElementById('admDroga').textContent = droga;
+  var agora = new Date(); agora.setMinutes(agora.getMinutes() - agora.getTimezoneOffset());
+  document.getElementById('admInicio').value = agora.toISOString().slice(0,16);
+  var card = document.getElementById('formAdmCard');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+async function salvarAdministracao(){
+  if (!preparoAdmAtual) return;
+  var quem = document.getElementById('admPor').value.trim();
+  var checou = document.getElementById('admCheck').value.trim();
+  if (!quem || !checou) return toast('A dupla checagem exige os dois profissionais', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/administracoes/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      preparo_id: preparoAdmAtual,
+      via: document.getElementById('admVia').value,
+      inicio: document.getElementById('admInicio').value,
+      fim: document.getElementById('admFim').value || null,
+      administrado_por: quem, checado_por: checou,
+      intercorrencia: document.getElementById('admInter').value,
+      intercorrencia_conduta: document.getElementById('admConduta').value.trim(),
+      observacao: document.getElementById('admObs').value.trim(),
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao registrar', false);
+    toast('Administração registrada', true);
+    document.getElementById('formAdmCard').style.display = 'none';
+    ['admPor','admCheck','admConduta','admObs','admFim'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('admInter').value = 'nenhuma';
+    preparoAdmAtual = null;
+    carregarPreparos(); carregarAdministracoes();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarAdministracoes(){
+  var tbody = document.getElementById('admBody');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/administracoes', { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.administracoes.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma administração registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.administracoes.map(function(a){
+      var ini = a.inicio ? (fmtData(a.inicio.slice(0,10)) + ' ' + a.inicio.slice(11,16)) : '—';
+      var inter = a.intercorrencia === 'nenhuma'
+        ? '<span style="opacity:.5">—</span>'
+        : '<span class="badge badge-danger">'+esc(a.intercorrencia_display)+'</span>'
+          + (a.intercorrencia_conduta ? '<div class="itens-mini">'+esc(a.intercorrencia_conduta)+'</div>' : '');
+      return '<tr><td>'+esc(a.paciente_nome)+'</td><td><strong>'+esc(a.droga)+'</strong></td><td>'+ini+'</td>'
+           + '<td>'+esc(a.via_display)+'</td><td>'+(a.dose_administrada!=null?(a.dose_administrada+' '+esc(a.unidade||'')):'—')+'</td>'
+           + '<td>'+esc(a.administrado_por)+'</td><td>'+esc(a.checado_por)+'</td><td>'+inter+'</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro de conexão.</td></tr>'; }
 }
 
 // ── Resposta ao tratamento (RECIST 1.1) ────────────────────────────────────
@@ -532,6 +1040,9 @@ async function carregarKpis() {
     document.getElementById('kpiValorAprovado').textContent = 'R$ ' + (d.valor_aprovado_mes||0).toLocaleString('pt-BR', {minimumFractionDigits:2});
     document.getElementById('kpiPrazoEstourado').textContent = d.autorizacoes_prazo_estourado != null ? d.autorizacoes_prazo_estourado : '—';
     document.getElementById('kpiPrazoAguardando').textContent = d.autorizacoes_aguardando_resposta != null ? d.autorizacoes_aguardando_resposta : '—';
+    document.getElementById('kpiInfusoesHoje').textContent = d.infusoes_agendadas_hoje != null ? d.infusoes_agendadas_hoje : '—';
+    document.getElementById('kpiFilaFarmacia').textContent = d.fila_farmacia != null ? d.fila_farmacia : '—';
+    document.getElementById('kpiIntercorrencias').textContent = d.intercorrencias_mes != null ? d.intercorrencias_mes : '—';
   } catch(e) { document.getElementById('kpiCiclosAtivos').textContent = '!'; }
 }
 
@@ -921,8 +1432,8 @@ async function salvarApac() {
 }
 
 // ── Jornada oncológica unificada ──────────────────────────────────────────────
-var jornadaIcone = {quimioterapia:'💊', radioterapia:'☢️', rhc:'📋', apac:'🧾'};
-var jornadaCor   = {quimioterapia:'badge-info', radioterapia:'badge-warn', rhc:'badge-ok', apac:'badge-gray'};
+var jornadaIcone = {quimioterapia:'💊', radioterapia:'☢️', rhc:'📋', apac:'🧾', administracao:'💉', resposta:'🎯', quimio_oral:'🏠'};
+var jornadaCor   = {quimioterapia:'badge-info', radioterapia:'badge-warn', rhc:'badge-ok', apac:'badge-gray', resposta:'badge-ok', administracao:'badge-info', quimio_oral:'badge-warn'};
 async function buscarJornada() {
   var termo = document.getElementById('jBusca').value.trim();
   if (!termo) return toast('Informe CPF ou nome', false);
@@ -943,6 +1454,10 @@ async function buscarJornada() {
         '<span class="badge badge-warn">☢️ ' + d.resumo.radioterapia + ' radio</span>' +
         '<span class="badge badge-ok">📋 ' + d.resumo.rhc + ' RHC</span>' +
         '<span class="badge badge-gray">🧾 ' + d.resumo.apac + ' APAC</span>' +
+        '<span class="badge badge-info">💉 ' + (d.resumo.administracao||0) + ' administrações</span>' +
+        '<span class="badge badge-warn">🏠 ' + (d.resumo.quimio_oral||0) + ' orais</span>' +
+        '<span class="badge badge-ok">🎯 ' + (d.resumo.resposta||0) + ' avaliações de resposta</span>' +
+        (d.desfecho_atual ? ('<span class="badge badge-warn">desfecho atual: ' + esc(d.desfecho_atual) + '</span>') : '') +
       '</div>';
     tl.innerHTML = '<table><thead><tr><th>Data</th><th>Tipo</th><th>Evento</th><th>Status</th></tr></thead><tbody>' +
       d.timeline.map(function(e){

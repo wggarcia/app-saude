@@ -726,6 +726,598 @@ class OncologiaTests(TestCase):
         )
         self.assertEqual(r.status_code, 409)
 
+    # ── Cadeia fechada: agenda → preparo → administração ───────────────────
+    def _ciclo_pronto(self, client, protocolo, **extra):
+        """Ciclo apto, com doses calculadas — ponto de partida da cadeia."""
+        base = {"neutrofilos": 2500, "plaquetas": 220000}
+        base.update(extra)
+        return self._criar_ciclo(client, protocolo, **base).json()["id"]
+
+    def _preparar_ate_conferido(self, client, ciclo_id):
+        """Leva um preparo até 'conferido' — o estado que libera a veia."""
+        pid = client.post("/api/hospital/oncologia/preparos/",
+                          data={"ciclo_id": ciclo_id},
+                          content_type="application/json").json()["preparos"][0]["id"]
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "em_preparo", "preparado_por": "Farm. Ana"},
+                   content_type="application/json")
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "pronto", "dose_preparada": 150,
+                         "lote": "L123", "diluente": "SF 0,9%"},
+                   content_type="application/json")
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "conferido", "conferido_por": "Farm. Bruno"},
+                   content_type="application/json")
+        return pid
+
+    def test_agenda_infusao_bloqueia_cadeira_ocupada(self):
+        """Duas infusões na mesma cadeira no mesmo horário é erro operacional:
+        tem de aparecer na hora de agendar, não no dia."""
+        empresa = _empresa("Hospital Rede", "onco-ag1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        c1 = self._ciclo_pronto(client, protocolo)
+        c2 = self._ciclo_pronto(client, protocolo)
+        hoje = date.today().isoformat()
+        r1 = client.post("/api/hospital/oncologia/agenda-infusao/",
+                         data={"ciclo_id": c1, "data": hoje, "hora_inicio": "08:00",
+                               "duracao_min": 180, "cadeira": "P1"},
+                         content_type="application/json")
+        self.assertEqual(r1.status_code, 201)
+        self.assertEqual(r1.json()["agendamento"]["hora_fim_prevista"], "11:00")
+        # 10:00 cai dentro de 08:00–11:00
+        r2 = client.post("/api/hospital/oncologia/agenda-infusao/",
+                         data={"ciclo_id": c2, "data": hoje, "hora_inicio": "10:00",
+                               "duracao_min": 120, "cadeira": "P1"},
+                         content_type="application/json")
+        self.assertEqual(r2.status_code, 409)
+        self.assertEqual(r2.json()["codigo"], "cadeira_ocupada")
+        # Mesma hora em OUTRA cadeira é legítimo.
+        r3 = client.post("/api/hospital/oncologia/agenda-infusao/",
+                         data={"ciclo_id": c2, "data": hoje, "hora_inicio": "10:00",
+                               "duracao_min": 120, "cadeira": "P2"},
+                         content_type="application/json")
+        self.assertEqual(r3.status_code, 201)
+
+    def test_agenda_cancelada_libera_a_cadeira(self):
+        """Cancelar devolve o horário para a central — senão a agenda entope
+        com reservas mortas."""
+        empresa = _empresa("Hospital Rede", "onco-ag2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        c1 = self._ciclo_pronto(client, protocolo)
+        c2 = self._ciclo_pronto(client, protocolo)
+        hoje = date.today().isoformat()
+        ag = client.post("/api/hospital/oncologia/agenda-infusao/",
+                         data={"ciclo_id": c1, "data": hoje, "hora_inicio": "08:00",
+                               "cadeira": "P1"},
+                         content_type="application/json").json()["id"]
+        client.delete(f"/api/hospital/oncologia/agenda-infusao/{ag}/")
+        r = client.post("/api/hospital/oncologia/agenda-infusao/",
+                        data={"ciclo_id": c2, "data": hoje, "hora_inicio": "08:00",
+                              "cadeira": "P1"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+
+    def test_preparo_nasce_das_doses_calculadas_do_ciclo(self):
+        """A farmácia recebe a prescrição que o médico assinou, não redigita."""
+        empresa = _empresa("Hospital Rede", "onco-prep1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        r = client.post("/api/hospital/oncologia/preparos/",
+                        data={"ciclo_id": ciclo_id}, content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        preparos = r.json()["preparos"]
+        self.assertEqual([p["droga"] for p in preparos], ["Oxaliplatina"])
+        # 85 mg/m² × SC(70kg,170cm) — veio calculado, não digitado
+        self.assertIsNotNone(preparos[0]["dose_prescrita"])
+        self.assertEqual(preparos[0]["status"], "pendente")
+
+    def test_preparo_bloqueado_para_ciclo_inapto_sem_liberacao(self):
+        """A farmácia não manipula droga para paciente que o hemograma reprovou
+        e que ninguém liberou."""
+        empresa = _empresa("Hospital Rede", "onco-prep2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(client, protocolo,
+                                     neutrofilos=300, plaquetas=200000).json()["id"]
+        r = client.post("/api/hospital/oncologia/preparos/",
+                        data={"ciclo_id": ciclo_id}, content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "ciclo_nao_liberado")
+
+    def test_preparo_inapto_liberado_por_medico_passa(self):
+        """Liberação médica registrada destrava — o médico nunca é bloqueado,
+        só precisa assumir a decisão."""
+        empresa = _empresa("Hospital Rede", "onco-prep3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(
+            client, protocolo, neutrofilos=300, plaquetas=200000,
+            aptidao_liberada_por="Dra. Marina",
+            aptidao_justificativa="Paciente em cuidado paliativo, risco assumido",
+        ).json()["id"]
+        r = client.post("/api/hospital/oncologia/preparos/",
+                        data={"ciclo_id": ciclo_id}, content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+
+    def test_conferencia_exige_segundo_profissional(self):
+        """Dupla checagem de verdade: conferir o próprio preparo não é conferência."""
+        empresa = _empresa("Hospital Rede", "onco-prep4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = client.post("/api/hospital/oncologia/preparos/",
+                          data={"ciclo_id": ciclo_id},
+                          content_type="application/json").json()["preparos"][0]["id"]
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "em_preparo", "preparado_por": "Farm. Ana"},
+                   content_type="application/json")
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "pronto", "dose_preparada": 150},
+                   content_type="application/json")
+        r = client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                       data={"status": "conferido", "conferido_por": "farm. ANA"},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "dupla_checagem_mesma_pessoa")
+
+    def test_preparo_nao_fica_pronto_sem_dose_preparada(self):
+        """Dose efetivamente manipulada é o que será administrado: não pode
+        ficar em branco."""
+        empresa = _empresa("Hospital Rede", "onco-prep5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = client.post("/api/hospital/oncologia/preparos/",
+                          data={"ciclo_id": ciclo_id},
+                          content_type="application/json").json()["preparos"][0]["id"]
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "em_preparo", "preparado_por": "Farm. Ana"},
+                   content_type="application/json")
+        r = client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                       data={"status": "pronto"}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "sem_dose_preparada")
+
+    def test_lote_vencido_nao_e_liberado(self):
+        empresa = _empresa("Hospital Rede", "onco-prep6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = client.post("/api/hospital/oncologia/preparos/",
+                          data={"ciclo_id": ciclo_id},
+                          content_type="application/json").json()["preparos"][0]["id"]
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "em_preparo", "preparado_por": "Farm. Ana"},
+                   content_type="application/json")
+        client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                   data={"status": "pronto", "dose_preparada": 150, "lote": "L9",
+                         "validade_lote": (date.today() - timedelta(days=1)).isoformat()},
+                   content_type="application/json")
+        r = client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                       data={"status": "conferido", "conferido_por": "Farm. Bruno"},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "lote_vencido")
+
+    def test_descarte_exige_motivo(self):
+        empresa = _empresa("Hospital Rede", "onco-prep7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = client.post("/api/hospital/oncologia/preparos/",
+                          data={"ciclo_id": ciclo_id},
+                          content_type="application/json").json()["preparos"][0]["id"]
+        r = client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                       data={"status": "descartado"}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "descarte_sem_motivo")
+        r = client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                       data={"status": "descartado",
+                             "motivo_descarte": "Frasco violado no transporte"},
+                       content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+
+    def test_preparo_nao_volta_atras(self):
+        """Frasco manipulado não desmanipula: a FSM da farmácia é de mão única."""
+        empresa = _empresa("Hospital Rede", "onco-prep8@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        r = client.put(f"/api/hospital/oncologia/preparos/{pid}/",
+                       data={"status": "em_preparo"}, content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+
+    def test_administracao_exige_preparo_conferido(self):
+        """O elo que fecha a cadeia: só entra na veia o que a farmácia conferiu."""
+        empresa = _empresa("Hospital Rede", "onco-adm1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = client.post("/api/hospital/oncologia/preparos/",
+                          data={"ciclo_id": ciclo_id},
+                          content_type="application/json").json()["preparos"][0]["id"]
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "preparo_nao_conferido")
+
+    def test_administracao_completa_e_dispensa_o_preparo(self):
+        empresa = _empresa("Hospital Rede", "onco-adm2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego", "via": "porto"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        adm = r.json()["administracao"]
+        self.assertEqual(adm["droga"], "Oxaliplatina")
+        # Dose administrada herda a dose preparada quando não é informada.
+        self.assertEqual(adm["dose_administrada"], 150.0)
+        # O preparo é consumido pela administração.
+        d = client.get(f"/api/hospital/oncologia/preparos?ciclo_id={ciclo_id}").json()
+        self.assertEqual(d["preparos"][0]["status"], "dispensado")
+        self.assertTrue(d["preparos"][0]["administrado"])
+        # E não pode ser administrado duas vezes.
+        r2 = client.post("/api/hospital/oncologia/administracoes/",
+                         data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                               "checado_por": "Enf. Diego"},
+                         content_type="application/json")
+        self.assertEqual(r2.status_code, 409)
+        self.assertEqual(r2.json()["codigo"], "preparo_ja_administrado")
+
+    def test_administracao_exige_dois_profissionais_distintos(self):
+        empresa = _empresa("Hospital Rede", "onco-adm3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                              "checado_por": "enf. carla"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "dupla_checagem_mesma_pessoa")
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "dupla_checagem_incompleta")
+
+    def test_extravasamento_exige_conduta(self):
+        """Intercorrência sem conduta é o caso que some do prontuário e
+        reaparece como processo."""
+        empresa = _empresa("Hospital Rede", "onco-adm4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego",
+                              "intercorrencia": "extravasamento"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "intercorrencia_sem_conduta")
+        r = client.post("/api/hospital/oncologia/administracoes/",
+                        data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                              "checado_por": "Enf. Diego",
+                              "intercorrencia": "extravasamento",
+                              "intercorrencia_conduta": "Infusão interrompida, "
+                                                        "compressa fria, dexrazoxano"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        d = client.get("/api/hospital/oncologia/administracoes").json()
+        self.assertEqual(d["com_intercorrencia"], 1)
+
+    def test_horario_de_infusao_e_gravado_com_fuso(self):
+        """Regressão: datetime ingênuo com USE_TZ ativo desloca o horário real
+        da infusão. O que a enfermagem digita é o que tem de voltar."""
+        empresa = _empresa("Hospital Rede", "onco-tz@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        r = client.post(
+            "/api/hospital/oncologia/administracoes/",
+            data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                  "checado_por": "Enf. Diego",
+                  "inicio": f"{date.today().isoformat()}T14:30"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        from .models import AdministracaoQuimioterapia
+        a = AdministracaoQuimioterapia.objects.get(id=r.json()["id"])
+        self.assertIsNotNone(a.inicio.tzinfo)
+        local = timezone.localtime(a.inicio)
+        self.assertEqual((local.hour, local.minute), (14, 30))
+
+    def test_kpis_enxergam_a_cadeia(self):
+        """Fila da farmácia e intercorrência do mês são o painel do dia da
+        central — se não sobem para o KPI, ninguém olha."""
+        empresa = _empresa("Hospital Rede", "onco-kpi-cad@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        client.post("/api/hospital/oncologia/preparos/",
+                    data={"ciclo_id": ciclo_id}, content_type="application/json")
+        k = client.get("/api/hospital/oncologia/kpis").json()
+        self.assertEqual(k["fila_farmacia"], 1)
+        self.assertEqual(k["intercorrencias_mes"], 0)
+
+        ciclo2 = self._ciclo_pronto(client, protocolo)
+        pid = self._preparar_ate_conferido(client, ciclo2)
+        client.post("/api/hospital/oncologia/administracoes/",
+                    data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                          "checado_por": "Enf. Diego",
+                          "intercorrencia": "extravasamento",
+                          "intercorrencia_conduta": "Infusão interrompida"},
+                    content_type="application/json")
+        client.post("/api/hospital/oncologia/agenda-infusao/",
+                    data={"ciclo_id": ciclo_id, "data": date.today().isoformat(),
+                          "hora_inicio": "08:00", "cadeira": "P1"},
+                    content_type="application/json")
+        k = client.get("/api/hospital/oncologia/kpis").json()
+        self.assertEqual(k["intercorrencias_mes"], 1)
+        self.assertEqual(k["extravasamentos_mes"], 1)
+        self.assertEqual(k["infusoes_agendadas_hoje"], 1)
+
+    def test_jornada_mostra_o_que_entrou_na_veia(self):
+        """A linha do tempo do paciente tem de registrar a administração, com
+        quem administrou e quem checou — é a prova do que foi feito."""
+        empresa = _empresa("Hospital Rede", "onco-jor-cad@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._criar_ciclo(
+            client, protocolo, paciente_nome="Jorge Cadeia",
+            cpf_paciente="52998224725", neutrofilos=2500, plaquetas=220000,
+        ).json()["id"]
+        pid = self._preparar_ate_conferido(client, ciclo_id)
+        client.post("/api/hospital/oncologia/administracoes/",
+                    data={"preparo_id": pid, "administrado_por": "Enf. Carla",
+                          "checado_por": "Enf. Diego"},
+                    content_type="application/json")
+        d = client.get("/api/hospital/oncologia/jornada?cpf=52998224725").json()
+        self.assertEqual(d["resumo"]["administracao"], 1)
+        ev = [e for e in d["timeline"] if e["tipo"] == "administracao"]
+        self.assertEqual(len(ev), 1)
+        self.assertIn("Oxaliplatina", ev[0]["titulo"])
+        self.assertEqual(ev[0]["detalhe"]["checado_por"], "Enf. Diego")
+
+    def test_seed_demo_popula_e_reverte_a_cadeia(self):
+        """O seed de demonstração roda sozinho e desfaz o que criou. Sem isto,
+        só se descobre que ele quebra apontando para a conta demo de produção."""
+        from io import StringIO
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from .models import (CicloQuimioterapia, GuiaOncologica,
+                             AdministracaoQuimioterapia,
+                             AvaliacaoRespostaOncologica, PrescricaoQuimioOral)
+
+        empresa = _empresa("Hospital Demo", "demo.hospital@exemplo-demo.com",
+                           "hospital_rede")
+        self._protocolo(empresa)
+        ProtocoloOncologico.objects.create(
+            empresa=empresa, codigo="CARBO-TESTE", nome="Carbo/Taxol",
+            ciclos_total=6, intervalo_dias=21,
+            drogas=[{"droga": "Carboplatina", "dose": 5, "unidade": "AUC", "dia": 1}])
+
+        out = StringIO()
+        call_command("seed_oncologia_demo", "--apply",
+                     "--empresa-id", str(empresa.id), stdout=out)
+        self.assertEqual(
+            CicloQuimioterapia.objects.filter(
+                empresa=empresa, paciente_nome__startswith="[DEMO-ONCO]").count(), 3)
+        self.assertEqual(GuiaOncologica.objects.filter(empresa=empresa).count(), 3)
+        self.assertEqual(
+            AdministracaoQuimioterapia.objects.filter(empresa=empresa).count(), 2)
+        self.assertEqual(
+            AvaliacaoRespostaOncologica.objects.filter(empresa=empresa).count(), 3)
+        oral = PrescricaoQuimioOral.objects.get(empresa=empresa)
+        self.assertEqual(oral.dispensacoes.count(), 2)
+        self.assertEqual(float(oral.dispensacoes.order_by("-data").first().adesao_pct), 50.0)
+
+        # Rodar de novo não duplica (é idempotente).
+        call_command("seed_oncologia_demo", "--apply",
+                     "--empresa-id", str(empresa.id), stdout=out)
+        self.assertEqual(
+            CicloQuimioterapia.objects.filter(empresa=empresa).count(), 3)
+
+        call_command("seed_oncologia_demo", "--apply", "--clear",
+                     "--empresa-id", str(empresa.id), stdout=out)
+        self.assertEqual(CicloQuimioterapia.objects.filter(empresa=empresa).count(), 0)
+        self.assertEqual(
+            AdministracaoQuimioterapia.objects.filter(empresa=empresa).count(), 0)
+        self.assertEqual(PrescricaoQuimioOral.objects.filter(empresa=empresa).count(), 0)
+
+        # Trava de segurança: conta sem "demo" no e-mail é recusada.
+        real = _empresa("Hospital Real", "contas@hospital-real.com", "hospital_rede")
+        self._protocolo(real)
+        with self.assertRaises(CommandError):
+            call_command("seed_oncologia_demo", "--apply",
+                         "--empresa-id", str(real.id), stdout=out)
+
+    # ── Quimioterapia oral: adesão por contagem de comprimidos ─────────────
+    def _prescricao_oral(self, client, **extra):
+        payload = {
+            "paciente_nome": "Paciente Oral", "droga": "Capecitabina",
+            "dose_por_tomada": 1500, "unidades_por_dia": 2,
+            "dias_uso": 14, "dias_pausa": 7,
+            "data_inicio": (date.today() - timedelta(days=21)).isoformat(),
+            "posologia": "2 comprimidos 12/12h após refeição",
+        }
+        payload.update(extra)
+        return client.post("/api/hospital/oncologia/quimio-oral/",
+                           data=payload, content_type="application/json")
+
+    def test_primeira_dispensacao_nao_mede_adesao(self):
+        """Não há intervalo anterior para contar: entregar não é medir."""
+        empresa = _empresa("Hospital Rede", "onco-or1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pid = self._prescricao_oral(client).json()["id"]
+        r = client.post(f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/",
+                        data={"data": (date.today() - timedelta(days=21)).isoformat(),
+                              "unidades_dispensadas": 28},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        self.assertIsNone(r.json()["adesao_intervalo"]["adesao_pct"])
+
+    def test_adesao_respeita_esquema_de_pausa(self):
+        """Capecitabina 14+7 não é tomar todo dia: contar dias corridos faria
+        todo paciente parecer não-aderente (21 dias × 2 = 42 esperados em vez de 28)."""
+        empresa = _empresa("Hospital Rede", "onco-or2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pid = self._prescricao_oral(client).json()["id"]
+        url = f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/"
+        client.post(url, data={"data": (date.today() - timedelta(days=21)).isoformat(),
+                               "unidades_dispensadas": 28},
+                    content_type="application/json")
+        r = client.post(url, data={"data": date.today().isoformat(),
+                                   "unidades_dispensadas": 28,
+                                   "unidades_devolvidas": 0},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        ad = r.json()["adesao_intervalo"]
+        self.assertEqual(ad["unidades_esperadas"], 28)   # 14 dias de uso × 2
+        self.assertEqual(ad["adesao_pct"], 100.0)
+        self.assertFalse(ad["baixa"])
+
+    def test_adesao_baixa_dispara_alerta(self):
+        """Metade dos comprimidos voltou: é não-adesão, não falha do tratamento."""
+        empresa = _empresa("Hospital Rede", "onco-or3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pid = self._prescricao_oral(client).json()["id"]
+        url = f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/"
+        client.post(url, data={"data": (date.today() - timedelta(days=21)).isoformat(),
+                               "unidades_dispensadas": 28},
+                    content_type="application/json")
+        r = client.post(url, data={"data": date.today().isoformat(),
+                                   "unidades_dispensadas": 28,
+                                   "unidades_devolvidas": 14},
+                        content_type="application/json")
+        self.assertEqual(r.json()["adesao_intervalo"]["adesao_pct"], 50.0)
+        self.assertTrue(r.json()["adesao_intervalo"]["baixa"])
+        self.assertIn("Adesão abaixo", r.json()["alerta"])
+        d = client.get("/api/hospital/oncologia/quimio-oral").json()
+        self.assertEqual(d["adesao_baixa"], 1)
+        self.assertEqual(d["prescricoes"][0]["adesao_media_pct"], 50.0)
+
+    def test_uso_continuo_conta_dias_corridos(self):
+        """Hormonioterapia é uso contínuo: sem pausa, o esperado é dia a dia."""
+        empresa = _empresa("Hospital Rede", "onco-or4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pid = self._prescricao_oral(
+            client, droga="Tamoxifeno", dias_uso=30, dias_pausa=0,
+            unidades_por_dia=1,
+            data_inicio=(date.today() - timedelta(days=30)).isoformat(),
+        ).json()["id"]
+        url = f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/"
+        client.post(url, data={"data": (date.today() - timedelta(days=30)).isoformat(),
+                               "unidades_dispensadas": 30},
+                    content_type="application/json")
+        r = client.post(url, data={"data": date.today().isoformat(),
+                                   "unidades_dispensadas": 30,
+                                   "unidades_devolvidas": 0},
+                        content_type="application/json")
+        self.assertEqual(r.json()["adesao_intervalo"]["unidades_esperadas"], 30)
+
+    def test_devolucao_maior_que_entrega_e_recusada(self):
+        """Devolver mais do que levou é erro de contagem, não adesão perfeita."""
+        empresa = _empresa("Hospital Rede", "onco-or5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pid = self._prescricao_oral(client).json()["id"]
+        url = f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/"
+        client.post(url, data={"data": (date.today() - timedelta(days=21)).isoformat(),
+                               "unidades_dispensadas": 28},
+                    content_type="application/json")
+        r = client.post(url, data={"data": date.today().isoformat(),
+                                   "unidades_dispensadas": 28,
+                                   "unidades_devolvidas": 40},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "devolucao_maior_que_entrega")
+
+    def test_retirada_atrasada_aparece_na_lista(self):
+        """O paciente que não voltou buscar a caixa é o que some do radar."""
+        empresa = _empresa("Hospital Rede", "onco-or6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pid = self._prescricao_oral(client).json()["id"]
+        client.post(f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/",
+                    data={"data": (date.today() - timedelta(days=30)).isoformat(),
+                          "unidades_dispensadas": 28,
+                          "proxima_retirada": (date.today() - timedelta(days=9)).isoformat()},
+                    content_type="application/json")
+        d = client.get("/api/hospital/oncologia/quimio-oral").json()
+        self.assertEqual(d["atrasados_retirada"], 1)
+        self.assertEqual(d["prescricoes"][0]["retirada"]["dias_atraso"], 9)
+
+    def test_prescricao_suspensa_nao_dispensa(self):
+        empresa = _empresa("Hospital Rede", "onco-or7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        pid = self._prescricao_oral(client).json()["id"]
+        r = client.put(f"/api/hospital/oncologia/quimio-oral/{pid}/",
+                       data={"status": "suspensa"}, content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        r = client.post(f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/",
+                        data={"unidades_dispensadas": 28},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "prescricao_inativa")
+
+    def test_quimio_oral_isolada_por_empresa(self):
+        a = _empresa("Hospital A", "onco-or-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "onco-or-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        pid = self._prescricao_oral(ca).json()["id"]
+        self.assertEqual(cb.get("/api/hospital/oncologia/quimio-oral").json()["total"], 0)
+        r = cb.post(f"/api/hospital/oncologia/quimio-oral/{pid}/dispensacoes/",
+                    data={"unidades_dispensadas": 28}, content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+        r = cb.put(f"/api/hospital/oncologia/quimio-oral/{pid}/",
+                   data={"status": "cancelada"}, content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+
+    def test_jornada_por_nome_sem_cpf_nao_quebra(self):
+        """Regressão: o fallback por nome usava `nome_paciente`, campo que só o
+        RHC tem — buscar um paciente sem CPF derrubava a jornada com 500."""
+        empresa = _empresa("Hospital Rede", "onco-jor-nome@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        # Sem CPF: o paciente não entra no MPI, então o filtro cai no nome.
+        self._criar_ciclo(client, protocolo, paciente_nome="Sem Documento Silva",
+                          neutrofilos=2500, plaquetas=220000)
+        self._prescricao_oral(client, paciente_nome="Sem Documento Silva")
+        r = client.get("/api/hospital/oncologia/jornada?nome=Sem%20Documento%20Silva")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["resumo"]["quimioterapia"], 1)
+        self.assertEqual(d["resumo"]["quimio_oral"], 1)
+        ev = [e for e in d["timeline"] if e["tipo"] == "quimio_oral"]
+        self.assertIn("Capecitabina", ev[0]["titulo"])
+
+    def test_cadeia_isolada_por_empresa(self):
+        """Hospital A não enxerga nem administra preparo do hospital B."""
+        a = _empresa("Hospital A", "onco-iso-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "onco-iso-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        ciclo_a = self._ciclo_pronto(ca, self._protocolo(a))
+        pid_a = self._preparar_ate_conferido(ca, ciclo_a)
+        r = cb.put(f"/api/hospital/oncologia/preparos/{pid_a}/",
+                   data={"status": "dispensado"}, content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+        r = cb.post("/api/hospital/oncologia/administracoes/",
+                    data={"preparo_id": pid_a, "administrado_por": "X",
+                          "checado_por": "Y"}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(cb.get("/api/hospital/oncologia/preparos").json()["total"], 0)
+
     def test_detalhe_ciclo_traz_pre_medicacao_do_protocolo(self):
         """A tela do ciclo precisa da pré-medicação junto: antiemético é prescrição,
         não observação. Sem isto o detalhe mostra o quimioterápico e esconde o resto."""
