@@ -1,28 +1,29 @@
-"""Assinatura digital ICP-Brasil para documentos clínicos.
+"""Assinatura digital ICP-Brasil de documentos clínicos, em SaaS multi-tenant.
 
 A ICP-Brasil (Infraestrutura de Chaves Públicas Brasileira, instituída pela
 Medida Provisória 2.200-2/2001) dá validade jurídica ao documento eletrônico
-assinado com certificado emitido por uma Autoridade Certificadora credenciada.
+assinado com certificado emitido por Autoridade Certificadora credenciada.
 
-Este módulo faz TUDO o que não depende de possuir o certificado:
+QUEM ASSINA. Prescrição é ato médico: assina o **médico, pessoa física**, com
+certificado vinculado ao seu CPF e ao seu CRM. Não assina a empresa que fornece
+o software, nem o hospital (e-CNPJ não assina ato médico). Por isso a
+configuração é **por empresa e por profissional**, nunca global — um hospital
+com 40 oncologistas tem 40 configurações.
 
-  • monta o conteúdo canônico do documento (o que efetivamente é assinado);
-  • calcula o resumo criptográfico SHA-256 desse conteúdo;
-  • define a interface do provedor de assinatura;
-  • implementa o provedor A1 (certificado em arquivo .pfx/.p12), que passa a
-    funcionar no instante em que o certificado for configurado;
-  • verifica depois se o documento foi alterado após a assinatura.
+ONDE FICA A CHAVE. O caminho principal é o certificado **em nuvem** (VIDaaS,
+vinculado ao registro no CRM, ou BirdID): a chave privada fica no cofre do
+provedor credenciado e o médico autoriza cada assinatura. O sistema nunca vê a
+chave. Guardar arquivo A1 e senha de dezenas de médicos num servidor de SaaS
+seria assumir a identidade jurídica deles.
 
-REGRA INEGOCIÁVEL: sem certificado configurado, nada é marcado como assinado.
-Um sistema que finge assinar é pior que um sistema sem assinatura — seria uma
-mentira com valor jurídico. Quando não há provedor, a operação falha de forma
-explícita e diz exatamente o que falta.
+CAMINHO DE MIGRAÇÃO DOS CLIENTES. Hospital que já tem um serviço próprio de
+assinatura aponta a URL dele (`api_hospital`): mandamos o resumo, ele devolve a
+assinatura e os dados do certificado. É o que permite migrar um cliente sem
+obrigá-lo a trocar de provedor.
 
-O que ainda depende do titular do certificado (ver `requisitos_pendentes`):
-  • o próprio certificado A1 (.pfx) ou A3 (token/smartcard) e sua senha;
-  • opcionalmente, uma Autoridade de Carimbo do Tempo (ACT) para carimbo de
-    tempo — sem ela a assinatura vale, mas a data é a do nosso relógio, e não
-    a de um terceiro de confiança.
+REGRA INEGOCIÁVEL: sem certificado utilizável, nada é marcado como assinado.
+A operação falha explicitamente e diz o que falta. Um sistema que finge assinar
+é pior que um sem assinatura, porque a mentira teria valor jurídico.
 """
 import base64
 import hashlib
@@ -37,31 +38,32 @@ logger = logging.getLogger(__name__)
 
 ALGORITMO_RESUMO = "SHA-256"
 
-# Tipos de documento que podem ser assinados. Manter como lista fechada evita
-# que um `tipo_documento` digitado errado crie uma categoria órfã de assinaturas.
 TIPO_PRESCRICAO_QUIMIO = "prescricao_quimio"
 TIPOS_DOCUMENTO = {
     TIPO_PRESCRICAO_QUIMIO: "Prescrição de quimioterapia",
 }
 
+# Tempo máximo esperando a API de assinatura do hospital. Assinar é síncrono na
+# beira do leito: melhor falhar rápido e explicar do que pendurar a tela.
+TIMEOUT_API_HOSPITAL = 20
+
 
 # ── Conteúdo canônico ─────────────────────────────────────────────────────────
-# O que é assinado precisa ser reprodutível byte a byte: se a serialização mudar
-# conforme a ordem de um dicionário, a mesma prescrição gera resumos diferentes e
-# toda assinatura "quebra" sozinha na verificação seguinte.
+# O que é assinado precisa ser reprodutível byte a byte: se a serialização
+# variar com a ordem de um dicionário, a mesma prescrição gera resumos
+# diferentes e toda assinatura "quebra" sozinha na verificação seguinte.
 
 def _canonizar(payload):
-    """Serializa de forma determinística: chaves ordenadas, separadores fixos."""
     return json.dumps(payload, sort_keys=True, ensure_ascii=False,
                       separators=(",", ":"), default=str)
 
 
 def conteudo_canonico_prescricao(ciclo):
-    """Monta o documento assinável de uma prescrição de quimioterapia.
+    """Documento assinável de uma prescrição de quimioterapia.
 
     Inclui tudo que é clinicamente determinante — paciente, protocolo, doses
-    calculadas e pré-medicação. Se qualquer um desses mudar depois, a assinatura
-    deixa de conferir, que é exatamente o comportamento desejado.
+    calculadas e pré-medicação. Se qualquer um mudar depois, a assinatura deixa
+    de conferir, que é exatamente o comportamento desejado.
     """
     doses = [
         {
@@ -87,15 +89,10 @@ def conteudo_canonico_prescricao(ciclo):
         "versao": 1,
         "empresa_id": ciclo.empresa_id,
         "ciclo_id": ciclo.id,
-        "paciente": {
-            "nome": ciclo.paciente_nome,
-            "cpf": ciclo.cpf_paciente or "",
-        },
+        "paciente": {"nome": ciclo.paciente_nome, "cpf": ciclo.cpf_paciente or ""},
         "diagnostico_cid10": ciclo.cid10_principal or "",
-        "protocolo": {
-            "codigo": ciclo.protocolo.codigo,
-            "nome": ciclo.protocolo.nome,
-        },
+        "protocolo": {"codigo": ciclo.protocolo.codigo,
+                      "nome": ciclo.protocolo.nome},
         "numero_ciclo": ciclo.numero_ciclo,
         "data_inicio": ciclo.data_inicio.isoformat() if ciclo.data_inicio else None,
         "superficie_corporal_m2": (float(ciclo.sc_m2) if ciclo.sc_m2 else None),
@@ -108,16 +105,15 @@ def conteudo_canonico_prescricao(ciclo):
 
 
 def resumo_sha256(conteudo):
-    """Resumo criptográfico hexadecimal do conteúdo canônico."""
     if isinstance(conteudo, str):
         conteudo = conteudo.encode("utf-8")
     return hashlib.sha256(conteudo).hexdigest()
 
 
-# ── Provedores de assinatura ──────────────────────────────────────────────────
+# ── Provedores ────────────────────────────────────────────────────────────────
 
 class AssinaturaIndisponivel(Exception):
-    """Levantada quando não há provedor utilizável. Carrega o que falta."""
+    """Não há provedor utilizável. Carrega o que exatamente falta."""
 
     def __init__(self, mensagem, codigo="assinatura_nao_configurada",
                  pendencias=None):
@@ -128,76 +124,242 @@ class AssinaturaIndisponivel(Exception):
 
 
 class ProvedorAssinatura:
-    """Contrato que qualquer provedor de assinatura precisa cumprir."""
+    """Contrato que qualquer provedor precisa cumprir."""
 
     nome = "abstrato"
+    rotulo = "Abstrato"
 
     def disponivel(self):
         raise NotImplementedError
 
     def requisitos_pendentes(self):
-        """Lista legível do que falta para este provedor funcionar."""
         return []
 
-    def assinar(self, conteudo_bytes):
-        """Devolve dict com a assinatura e os dados do certificado usado."""
+    def assinar(self, conteudo_bytes, contexto=None):
         raise NotImplementedError
 
 
 class ProvedorNaoConfigurado(ProvedorAssinatura):
-    """Estado padrão: ninguém configurou certificado algum.
+    """Estado padrão: o profissional não tem certificado configurado.
 
-    Existe para que a ausência de assinatura seja um caminho explícito e
-    testável, em vez de um `None` solto espalhando AttributeError pela base.
+    Existe para que a ausência seja um caminho explícito e testável, em vez de
+    um `None` solto espalhando AttributeError pela base.
     """
 
     nome = "nao_configurado"
+    rotulo = "Não configurado"
+
+    def __init__(self, motivo=None):
+        self.motivo = motivo
 
     def disponivel(self):
         return False
 
     def requisitos_pendentes(self):
+        if self.motivo:
+            return [self.motivo]
         return [
-            "Definir ICP_ASSINATURA_PROVEDOR (ex.: 'a1_local').",
-            "Fornecer o certificado ICP-Brasil do médico responsável "
-            "(A1 em arquivo .pfx/.p12, ou A3 em token/smartcard).",
-            "Configurar a senha do certificado em ICP_CERTIFICADO_A1_SENHA.",
+            "Cadastrar o certificado do médico que assina, em Certificados de "
+            "Assinantes do hospital.",
+            "O certificado é do MÉDICO (pessoa física, e-CPF vinculado ao CRM) "
+            "— não da empresa fornecedora do software nem do hospital.",
+            "Caminho recomendado: certificado em nuvem (VIDaaS, ligado ao "
+            "registro no CRM, ou BirdID), em que a chave fica com o provedor "
+            "e o médico autoriza cada assinatura pelo celular.",
         ]
 
-    def assinar(self, conteudo_bytes):
+    def assinar(self, conteudo_bytes, contexto=None):
         raise AssinaturaIndisponivel(
-            "Assinatura digital ICP-Brasil não configurada neste ambiente. "
-            "Nenhum documento foi assinado.",
+            "Assinatura digital ICP-Brasil não configurada para este "
+            "profissional. Nenhum documento foi assinado.",
             pendencias=self.requisitos_pendentes())
 
 
-class ProvedorA1Local(ProvedorAssinatura):
-    """Certificado A1 (ICP-Brasil) em arquivo PKCS#12 (.pfx/.p12).
+class ProvedorNuvemICP(ProvedorAssinatura):
+    """Certificado em nuvem (VIDaaS / BirdID).
 
-    Produz uma assinatura CMS/PKCS#7 destacada sobre o conteúdo — o formato
-    base das assinaturas CAdES usadas na ICP-Brasil. Enquanto o arquivo não
-    existir, `disponivel()` é False e nada é assinado.
+    O médico autoriza cada assinatura no celular e a chave nunca sai do cofre
+    do provedor. Falta a credencial de aplicação, que é emitida pelo provedor
+    para quem integra — por isso o provedor reporta a pendência em vez de
+    simular uma assinatura.
+    """
+
+    nome = "nuvem"
+    rotulo = "Certificado em nuvem"
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.nome = cfg.provedor          # 'vidaas' ou 'birdid'
+        self.rotulo = cfg.get_provedor_display()
+
+    def requisitos_pendentes(self):
+        faltando = []
+        if not (self.cfg.identificador_provedor or self.cfg.profissional_cpf):
+            faltando.append(
+                "Informar o identificador do médico no provedor (normalmente o CPF).")
+        if not self.cfg.cliente_id:
+            faltando.append(
+                f"Credencial de aplicação junto ao {self.cfg.get_provedor_display()}: "
+                "cliente_id emitido pelo provedor para integração.")
+        if not self.cfg.cliente_secreto:
+            faltando.append("Segredo da aplicação (cliente_secreto) do provedor.")
+        faltando.append(
+            "Habilitar a integração no portal do provedor e autorizar o "
+            "consentimento do médico (ele aprova a assinatura no celular).")
+        return faltando
+
+    def disponivel(self):
+        # Enquanto não houver credencial de aplicação não há como assinar —
+        # e dizer isso é mais útil que falhar na hora em que o médico clica.
+        return bool(self.cfg.cliente_id and self.cfg.cliente_secreto
+                    and (self.cfg.identificador_provedor
+                         or self.cfg.profissional_cpf))
+
+    def assinar(self, conteudo_bytes, contexto=None):
+        raise AssinaturaIndisponivel(
+            f"A integração com o {self.rotulo} ainda não está habilitada neste "
+            "ambiente. Nenhum documento foi assinado.",
+            codigo="provedor_nuvem_nao_habilitado",
+            pendencias=self.requisitos_pendentes())
+
+
+class ProvedorApiHospital(ProvedorAssinatura):
+    """Serviço de assinatura do próprio hospital — o caminho de migração.
+
+    O cliente que já tem assinatura funcionando aponta a URL dele. Mandamos o
+    resumo e o identificador do profissional; ele devolve a assinatura e os
+    dados do certificado usado. Nunca trafega chave privada nem senha de
+    certificado por aqui.
+
+    Contrato esperado (POST, JSON):
+      envio   {"hash","algoritmo","tipo_documento","profissional":{"cpf","registro","nome"}}
+      retorno {"assinatura_b64", "certificado":{"titular","cpf_cnpj","emissor",
+               "numero_serie","valido_de","valido_ate"}, "carimbo_tempo_em"?}
+    """
+
+    nome = "api_hospital"
+    rotulo = "API de assinatura do hospital"
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+    def requisitos_pendentes(self):
+        faltando = []
+        if not self.cfg.api_url:
+            faltando.append("Informar a URL do serviço de assinatura do hospital.")
+        elif not self.cfg.api_url.lower().startswith("https://"):
+            # Resumo de documento clínico e token não saem em texto claro.
+            faltando.append("A URL precisa ser HTTPS.")
+        if not self.cfg.api_token:
+            faltando.append("Informar o token de autenticação do serviço.")
+        return faltando
+
+    def disponivel(self):
+        return not self.requisitos_pendentes()
+
+    def assinar(self, conteudo_bytes, contexto=None):
+        pendencias = self.requisitos_pendentes()
+        if pendencias:
+            raise AssinaturaIndisponivel(
+                "Serviço de assinatura do hospital não configurado. Nenhum "
+                "documento foi assinado.", pendencias=pendencias)
+
+        import requests
+
+        envio = {
+            "hash": resumo_sha256(conteudo_bytes),
+            "algoritmo": ALGORITMO_RESUMO,
+            "tipo_documento": (contexto or {}).get("tipo_documento",
+                                                   TIPO_PRESCRICAO_QUIMIO),
+            "profissional": {
+                "nome": self.cfg.profissional_nome,
+                "cpf": self.cfg.profissional_cpf,
+                "registro": self.cfg.profissional_registro,
+            },
+        }
+        try:
+            resp = requests.post(
+                self.cfg.api_url, json=envio,
+                headers={"Authorization": f"Bearer {self.cfg.api_token}",
+                         "Content-Type": "application/json"},
+                timeout=TIMEOUT_API_HOSPITAL)
+        except Exception as exc:
+            logger.warning("Assinatura: falha ao chamar API do hospital: %s", exc)
+            raise AssinaturaIndisponivel(
+                "Não foi possível falar com o serviço de assinatura do "
+                f"hospital: {exc}", codigo="api_hospital_indisponivel")
+
+        if resp.status_code >= 400:
+            raise AssinaturaIndisponivel(
+                f"O serviço de assinatura do hospital recusou a solicitação "
+                f"(HTTP {resp.status_code}).",
+                codigo="api_hospital_recusou")
+        try:
+            dados = resp.json()
+        except ValueError:
+            raise AssinaturaIndisponivel(
+                "O serviço de assinatura do hospital não devolveu JSON válido.",
+                codigo="api_hospital_resposta_invalida")
+
+        assinatura = (dados or {}).get("assinatura_b64")
+        if not assinatura:
+            raise AssinaturaIndisponivel(
+                "O serviço do hospital respondeu sem o campo 'assinatura_b64'. "
+                "Nada foi marcado como assinado.",
+                codigo="api_hospital_sem_assinatura")
+
+        cert = (dados.get("certificado") or {})
+        return {
+            "assinatura_b64": assinatura,
+            "provedor": self.nome,
+            "assinado_em": timezone.now(),
+            "certificado": {
+                "titular": cert.get("titular") or self.cfg.profissional_nome,
+                "cpf_cnpj": cert.get("cpf_cnpj") or self.cfg.profissional_cpf,
+                "emissor": cert.get("emissor") or "",
+                "numero_serie": cert.get("numero_serie") or "",
+                "valido_de": _parse_dt(cert.get("valido_de")),
+                "valido_ate": _parse_dt(cert.get("valido_ate")),
+            },
+            "carimbo_tempo_em": _parse_dt(dados.get("carimbo_tempo_em")),
+        }
+
+
+class ProvedorA1Local(ProvedorAssinatura):
+    """Certificado A1 (.pfx/.p12) em arquivo — exceção para instalação dedicada.
+
+    Produz assinatura CMS/PKCS#7 destacada, que é o formato base das assinaturas
+    CAdES da ICP-Brasil. Não é o caminho recomendado em SaaS: guardar o arquivo
+    e a senha do médico no servidor equivale a guardar a identidade jurídica
+    dele. A senha fica cifrada em repouso.
     """
 
     nome = "a1_local"
+    rotulo = "Arquivo A1 no servidor"
 
-    def __init__(self, caminho=None, senha=None):
-        self.caminho = caminho or getattr(settings, "ICP_CERTIFICADO_A1_PATH", "")
-        senha = senha if senha is not None else getattr(
-            settings, "ICP_CERTIFICADO_A1_SENHA", "")
+    def __init__(self, cfg=None, caminho=None, senha=None):
+        self.cfg = cfg
+        if cfg is not None:
+            self.caminho = cfg.a1_caminho
+            senha = cfg.a1_senha
+        else:
+            # Instalação dedicada (on-premise) pode configurar por ambiente.
+            self.caminho = caminho or getattr(settings, "ICP_CERTIFICADO_A1_PATH", "")
+            senha = senha if senha is not None else getattr(
+                settings, "ICP_CERTIFICADO_A1_SENHA", "")
         self.senha = senha.encode("utf-8") if isinstance(senha, str) else senha
 
     def requisitos_pendentes(self):
         faltando = []
         if not self.caminho:
-            faltando.append("ICP_CERTIFICADO_A1_PATH não definido.")
+            faltando.append("Caminho do arquivo .pfx/.p12 não informado.")
         else:
             import os
             if not os.path.exists(self.caminho):
                 faltando.append(
                     f"Arquivo do certificado não encontrado em {self.caminho}.")
         if not self.senha:
-            faltando.append("ICP_CERTIFICADO_A1_SENHA não definida.")
+            faltando.append("Senha do certificado não informada.")
         return faltando
 
     def disponivel(self):
@@ -214,7 +376,7 @@ class ProvedorA1Local(ProvedorAssinatura):
                 "certificado válidos.", codigo="certificado_invalido")
         return chave, cert, (cadeia or [])
 
-    def assinar(self, conteudo_bytes):
+    def assinar(self, conteudo_bytes, contexto=None):
         pendencias = self.requisitos_pendentes()
         if pendencias:
             raise AssinaturaIndisponivel(
@@ -228,8 +390,8 @@ class ProvedorA1Local(ProvedorAssinatura):
         chave, cert, _cadeia = self._carregar()
 
         agora = timezone.now()
-        # Certificado fora da validade não assina: a ICP-Brasil não reconhece
-        # assinatura feita com certificado vencido ou ainda não vigente.
+        # A ICP-Brasil não reconhece assinatura feita com certificado fora da
+        # validade.
         nao_antes, nao_depois = _validade_certificado(cert)
         if nao_antes and agora < nao_antes:
             raise AssinaturaIndisponivel(
@@ -251,10 +413,23 @@ class ProvedorA1Local(ProvedorAssinatura):
             "provedor": self.nome,
             "assinado_em": agora,
             "certificado": dados_certificado(cert),
-            # Carimbo de tempo exige uma Autoridade de Carimbo do Tempo externa:
+            # Carimbo de tempo exige Autoridade de Carimbo do Tempo externa:
             # sem ela a data é a do nosso relógio, não a de um terceiro.
             "carimbo_tempo_em": None,
         }
+
+
+def _parse_dt(valor):
+    """Converte ISO-8601 em datetime com fuso; None quando não dá."""
+    if not valor:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(valor).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
 
 
 def _nome_x509(cert, oid):
@@ -266,7 +441,6 @@ def _nome_x509(cert, oid):
 
 
 def _validade_certificado(cert):
-    """Validade do certificado como datetimes com fuso."""
     def _aware(valor):
         if valor is None:
             return None
@@ -287,13 +461,12 @@ def dados_certificado(cert):
     from cryptography.x509.oid import NameOID
     nao_antes, nao_depois = _validade_certificado(cert)
     titular = _nome_x509(cert, NameOID.COMMON_NAME)
-    # Em certificados ICP-Brasil de pessoa física o CPF vem anexado ao nome
+    # Em certificado ICP-Brasil de pessoa física o CPF vem anexado ao nome
     # comum ("FULANO DE TAL:12345678901").
     cpf = ""
     if ":" in titular:
         titular, _, sufixo = titular.partition(":")
         cpf = "".join(filter(str.isdigit, sufixo))[:11]
-    emissor = ""
     try:
         atributos = cert.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)
         emissor = atributos[0].value if atributos else ""
@@ -309,38 +482,83 @@ def dados_certificado(cert):
     }
 
 
-_PROVEDORES = {
-    ProvedorA1Local.nome: ProvedorA1Local,
-}
-
-
-def obter_provedor():
-    """Devolve o provedor configurado, ou o 'não configurado' quando não há."""
-    escolhido = (getattr(settings, "ICP_ASSINATURA_PROVEDOR", "") or "").strip()
-    if not escolhido:
+def provedor_para(cfg):
+    """Constrói o provedor a partir da configuração do profissional."""
+    if cfg is None:
         return ProvedorNaoConfigurado()
-    classe = _PROVEDORES.get(escolhido)
-    if classe is None:
-        logger.warning(
-            "ICP_ASSINATURA_PROVEDOR=%r desconhecido; assinatura indisponível.",
-            escolhido)
-        return ProvedorNaoConfigurado()
-    return classe()
+    if cfg.status != "ativo":
+        return ProvedorNaoConfigurado(
+            motivo=f"A configuração de {cfg.profissional_nome} está "
+                   f"'{cfg.get_status_display()}'.")
+    if cfg.provedor in ("vidaas", "birdid"):
+        return ProvedorNuvemICP(cfg)
+    if cfg.provedor == "api_hospital":
+        return ProvedorApiHospital(cfg)
+    if cfg.provedor == "a1_local":
+        return ProvedorA1Local(cfg=cfg)
+    return ProvedorNaoConfigurado(
+        motivo=f"Provedor '{cfg.provedor}' desconhecido.")
 
 
-def status_assinatura():
+def localizar_certificado(empresa, nome=None, cpf=None, registro=None):
+    """Acha a configuração do profissional que está assinando, dentro do tenant.
+
+    Procura por CPF (identificador forte), depois por registro no conselho e só
+    então por nome — nome é o critério mais frágil e fica por último.
+    """
+    from api.models import CertificadoAssinante
+
+    base = CertificadoAssinante.objects.filter(empresa=empresa, status="ativo")
+    cpf_limpo = "".join(filter(str.isdigit, cpf or ""))[:11]
+    if cpf_limpo:
+        achado = base.filter(profissional_cpf=cpf_limpo).first()
+        if achado:
+            return achado
+    if registro:
+        achado = base.filter(profissional_registro__iexact=registro.strip()).first()
+        if achado:
+            return achado
+    if nome:
+        achado = base.filter(profissional_nome__iexact=nome.strip()).first()
+        if achado:
+            return achado
+    return None
+
+
+def status_assinatura(empresa=None, nome=None, cpf=None, registro=None):
     """Diagnóstico para a tela: dá para assinar aqui, e se não, o que falta."""
-    provedor = obter_provedor()
-    pendencias = provedor.requisitos_pendentes()
+    cfg = None
+    if empresa is not None and (nome or cpf or registro):
+        cfg = localizar_certificado(empresa, nome=nome, cpf=cpf, registro=registro)
+
+    total_ativos = 0
+    if empresa is not None:
+        from api.models import CertificadoAssinante
+        total_ativos = CertificadoAssinante.objects.filter(
+            empresa=empresa, status="ativo").count()
+
+    provedor = provedor_para(cfg)
+    disponivel = provedor.disponivel()
     return {
-        "disponivel": provedor.disponivel(),
+        "disponivel": disponivel,
         "provedor": provedor.nome,
+        "provedor_rotulo": provedor.rotulo,
         "algoritmo_resumo": ALGORITMO_RESUMO,
-        "pendencias": pendencias,
+        "certificado_id": cfg.id if cfg else None,
+        "profissional": cfg.profissional_nome if cfg else None,
+        "assinantes_ativos": total_ativos,
+        "pendencias": provedor.requisitos_pendentes(),
         "mensagem": (
-            "Assinatura digital ICP-Brasil ativa."
-            if provedor.disponivel() else
-            "Assinatura digital ICP-Brasil ainda não configurada: as prescrições "
-            "podem ser emitidas, mas sairão como NÃO ASSINADAS."
+            f"Assinatura ICP-Brasil ativa via {provedor.rotulo}."
+            if disponivel else
+            "Assinatura digital ICP-Brasil ainda não configurada para este "
+            "profissional: as prescrições podem ser emitidas, mas sairão como "
+            "NÃO ASSINADAS."
+        ),
+        # Deixa explícito de quem é o certificado — foi a confusão que motivou
+        # este desenho: não é da empresa fornecedora, nem do hospital.
+        "titularidade": (
+            "O certificado é do médico (pessoa física, e-CPF vinculado ao CRM). "
+            "Não é da empresa fornecedora do software nem do hospital."
         ),
     }

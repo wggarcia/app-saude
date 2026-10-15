@@ -3426,6 +3426,7 @@ def _assinatura_dict(a, conferencia=None):
                            if a.certificado_valido_ate else None),
         } if a.certificado_titular else None,
         "provedor": a.provedor,
+        "certificado_config_id": a.certificado_config_id,
         "assinado_em": a.assinado_em.isoformat() if a.assinado_em else None,
         "carimbo_tempo_em": (a.carimbo_tempo_em.isoformat()
                              if a.carimbo_tempo_em else None),
@@ -3470,12 +3471,20 @@ def _conferir_assinatura(ciclo, assinatura):
 @api_requer_feature("hospital.oncologia")
 @api_requer_permissao_modulo("hospital.clinico")
 def api_onco_assinatura_status(request):
-    """GET /api/hospital/oncologia/assinatura/status — dá para assinar aqui?"""
+    """GET /api/hospital/oncologia/assinatura/status?medico=&cpf=&registro=
+
+    Responde pelo PROFISSIONAL, não pela instalação: cada médico tem o próprio
+    certificado, então "dá para assinar" só faz sentido perguntando de quem.
+    """
     empresa = _hosp(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     from .services.assinatura_icp import status_assinatura
-    return JsonResponse(status_assinatura())
+    return JsonResponse(status_assinatura(
+        empresa,
+        nome=request.GET.get("medico") or request.GET.get("nome"),
+        cpf=request.GET.get("cpf"),
+        registro=request.GET.get("registro")))
 
 
 @csrf_exempt
@@ -3495,8 +3504,8 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
     from .models import AssinaturaDocumento
     from .services.assinatura_icp import (
         AssinaturaIndisponivel, TIPO_PRESCRICAO_QUIMIO, ALGORITMO_RESUMO,
-        conteudo_canonico_prescricao, obter_provedor, resumo_sha256,
-        status_assinatura)
+        conteudo_canonico_prescricao, localizar_certificado, provedor_para,
+        resumo_sha256, status_assinatura)
 
     _, CicloQuimioterapia, _, _ = _get_onco_models()
     ciclo = CicloQuimioterapia.objects.filter(
@@ -3509,11 +3518,13 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
         objeto_id=ciclo.id).order_by("-criado_em").first()
 
     if request.method == "GET":
+        # O "quem assina" padrão é o oncologista do ciclo.
+        st = status_assinatura(empresa, nome=ciclo.medico_oncologista)
         if vigente is None:
             return JsonResponse({
                 "assinada": False,
                 "assinatura": None,
-                "status_provedor": status_assinatura(),
+                "status_provedor": st,
                 "hash_atual": resumo_sha256(conteudo_canonico_prescricao(ciclo)),
             })
         conferencia = _conferir_assinatura(ciclo, vigente)
@@ -3521,7 +3532,7 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
         return JsonResponse({
             "assinada": vigente.status == "assinada",
             "assinatura": _assinatura_dict(vigente, conferencia),
-            "status_provedor": status_assinatura(),
+            "status_provedor": st,
         })
 
     # ── POST: assinar ──────────────────────────────────────────────────────
@@ -3553,9 +3564,16 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
     conteudo = conteudo_canonico_prescricao(ciclo)
     conteudo_hash = resumo_sha256(conteudo)
 
-    provedor = obter_provedor()
+    # Acha o certificado DO PROFISSIONAL que está assinando, dentro do tenant.
+    cfg = localizar_certificado(
+        empresa, nome=signatario,
+        cpf=data.get("signatario_cpf"),
+        registro=data.get("signatario_registro"))
+    provedor = provedor_para(cfg)
     try:
-        resultado = provedor.assinar(conteudo.encode("utf-8"))
+        resultado = provedor.assinar(
+            conteudo.encode("utf-8"),
+            contexto={"tipo_documento": TIPO_PRESCRICAO_QUIMIO})
     except AssinaturaIndisponivel as exc:
         # Registra a tentativa como FALHA — nunca como assinada. É o que impede
         # que uma prescrição não assinada passe por assinada mais tarde.
@@ -3565,6 +3583,7 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
             algoritmo=ALGORITMO_RESUMO, status="falha",
             signatario_nome=signatario[:150],
             signatario_registro=(data.get("signatario_registro") or "").strip()[:40],
+            certificado_config=cfg,
             provedor=provedor.nome, motivo_falha=exc.mensagem)
         return JsonResponse({
             "erro": exc.mensagem,
@@ -3588,6 +3607,7 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
         certificado_valido_de=cert.get("valido_de"),
         certificado_valido_ate=cert.get("valido_ate"),
         assinatura_b64=resultado.get("assinatura_b64", ""),
+        certificado_config=cfg,
         provedor=resultado.get("provedor", provedor.nome),
         assinado_em=resultado.get("assinado_em") or timezone.now(),
         carimbo_tempo_em=resultado.get("carimbo_tempo_em"))
@@ -3598,3 +3618,237 @@ def api_onco_ciclo_assinatura(request, ciclo_id):
                                            "hash_assinado": conteudo_hash,
                                            "mensagem": "Documento recém-assinado."}),
     }, status=201)
+
+
+# ── Certificados de assinantes (por empresa e por profissional) ────────────────
+# Aqui o hospital cliente cadastra QUEM assina e COMO. É o ponto em que um
+# cliente que já tem serviço de assinatura próprio migra: basta apontar a URL
+# dele, sem trocar de provedor e sem nos entregar chave privada.
+
+def _certificado_dict(c):
+    provedor = provedor_para_novo(c)
+    return {
+        "id": c.id,
+        "profissional_nome": c.profissional_nome,
+        "profissional_cpf": c.profissional_cpf,
+        "profissional_registro": c.profissional_registro,
+        "provedor": c.provedor,
+        "provedor_display": c.get_provedor_display(),
+        "status": c.status,
+        "status_display": c.get_status_display(),
+        "identificador_provedor": c.identificador_provedor,
+        "api_url": c.api_url,
+        # Segredos NUNCA voltam na resposta: só dizemos se estão preenchidos.
+        "tem_cliente_secreto": bool(c.cliente_secreto),
+        "tem_api_token": bool(c.api_token),
+        "tem_senha_a1": bool(c.a1_senha),
+        "a1_caminho": c.a1_caminho,
+        "valido_ate": c.valido_ate.isoformat() if c.valido_ate else None,
+        "vence_em_dias": ((c.valido_ate - date.today()).days
+                          if c.valido_ate else None),
+        "observacao": c.observacao,
+        "pronto_para_assinar": provedor.disponivel(),
+        "pendencias": provedor.requisitos_pendentes(),
+    }
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_certificados(request):
+    """GET/POST /api/hospital/oncologia/certificados/"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import CertificadoAssinante
+
+    if request.method == "GET":
+        qs = CertificadoAssinante.objects.filter(empresa=empresa)
+        itens = [_certificado_dict(c) for c in qs.order_by("profissional_nome")]
+        return JsonResponse({
+            "total": len(itens),
+            "certificados": itens,
+            "prontos": sum(1 for i in itens if i["pronto_para_assinar"]),
+            "vencendo_90d": sum(
+                1 for i in itens
+                if i["vence_em_dias"] is not None and 0 <= i["vence_em_dias"] <= 90),
+            "provedores": [{"valor": v, "rotulo": r}
+                           for v, r in CertificadoAssinante.PROVEDOR],
+            "titularidade": (
+                "O certificado é do médico (pessoa física, e-CPF vinculado ao "
+                "CRM). Não é da empresa fornecedora do software nem do hospital."),
+        })
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    nome = (data.get("profissional_nome") or "").strip()
+    provedor = (data.get("provedor") or "").strip()
+    if not nome:
+        return JsonResponse({"erro": "Nome do profissional é obrigatório"},
+                            status=400)
+    if provedor not in dict(CertificadoAssinante.PROVEDOR):
+        return JsonResponse(
+            {"erro": "provedor inválido",
+             "validos": [p[0] for p in CertificadoAssinante.PROVEDOR]}, status=400)
+
+    cpf_raw = data.get("profissional_cpf", "")
+    cpf = "".join(filter(str.isdigit, str(cpf_raw)))[:11]
+    if cpf and CertificadoAssinante.objects.filter(
+            empresa=empresa, profissional_cpf=cpf).exists():
+        return JsonResponse(
+            {"erro": "Este profissional já tem certificado configurado nesta "
+                     "empresa.", "codigo": "profissional_duplicado"}, status=409)
+
+    valido_ate, err = _data_ou_erro(data.get("valido_ate"), "valido_ate")
+    if err:
+        return err
+
+    c = CertificadoAssinante(
+        empresa=empresa, profissional_nome=nome[:150], profissional_cpf=cpf,
+        profissional_registro=(data.get("profissional_registro") or "").strip()[:40],
+        provedor=provedor,
+        identificador_provedor=(data.get("identificador_provedor")
+                                or cpf or "")[:120],
+        cliente_id=(data.get("cliente_id") or "").strip()[:200],
+        cliente_secreto=(data.get("cliente_secreto") or "").strip(),
+        api_url=(data.get("api_url") or "").strip(),
+        api_token=(data.get("api_token") or "").strip(),
+        a1_caminho=(data.get("a1_caminho") or "").strip()[:500],
+        a1_senha=(data.get("a1_senha") or "").strip(),
+        valido_ate=valido_ate,
+        observacao=(data.get("observacao") or "").strip())
+
+    erro_resp = _validar_certificado(c)
+    if erro_resp:
+        return erro_resp
+
+    # Só vira 'ativo' se realmente der para assinar — senão o hospital acha
+    # que configurou e descobre o contrário na frente do paciente.
+    c.status = "ativo" if provedor_para_novo(c).disponivel() else "pendente"
+    c.save()
+    return JsonResponse({"id": c.id, "certificado": _certificado_dict(c)},
+                        status=201)
+
+
+def provedor_para_novo(cfg):
+    """Avalia o provedor de uma configuração ainda não salva (status vazio)."""
+    from .services.assinatura_icp import (ProvedorNuvemICP, ProvedorApiHospital,
+                                          ProvedorA1Local, ProvedorNaoConfigurado)
+    if cfg.provedor in ("vidaas", "birdid"):
+        return ProvedorNuvemICP(cfg)
+    if cfg.provedor == "api_hospital":
+        return ProvedorApiHospital(cfg)
+    if cfg.provedor == "a1_local":
+        return ProvedorA1Local(cfg=cfg)
+    return ProvedorNaoConfigurado()
+
+
+def _validar_certificado(c):
+    """Validações que dependem do provedor escolhido."""
+    if c.provedor == "api_hospital":
+        if not c.api_url:
+            return JsonResponse(
+                {"erro": "A URL do serviço de assinatura do hospital é "
+                         "obrigatória para este provedor.",
+                 "codigo": "api_url_obrigatoria"}, status=400)
+        if not c.api_url.lower().startswith("https://"):
+            # Resumo de documento clínico e token não trafegam em texto claro.
+            return JsonResponse(
+                {"erro": "A URL do serviço de assinatura precisa ser HTTPS.",
+                 "codigo": "api_url_insegura"}, status=400)
+    if c.provedor == "a1_local" and not c.a1_caminho:
+        return JsonResponse(
+            {"erro": "Informe o caminho do arquivo .pfx/.p12.",
+             "codigo": "a1_caminho_obrigatorio"}, status=400)
+    return None
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "DELETE"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_certificado_detalhe(request, certificado_id):
+    """PUT/DELETE /api/hospital/oncologia/certificados/<id>/"""
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import CertificadoAssinante
+    c = CertificadoAssinante.objects.filter(
+        id=certificado_id, empresa=empresa).first()
+    if c is None:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    if request.method == "DELETE":
+        # Desativa em vez de apagar: as assinaturas já feitas apontam para esta
+        # configuração e precisam continuar auditáveis.
+        c.status = "inativo"
+        c.save(update_fields=["status"])
+        return JsonResponse({"ok": True, "certificado": _certificado_dict(c)})
+
+    data, erro = _parse_json(request)
+    if erro:
+        return erro
+
+    for campo, limite in (("profissional_nome", 150),
+                          ("profissional_registro", 40),
+                          ("identificador_provedor", 120),
+                          ("cliente_id", 200),
+                          ("a1_caminho", 500),
+                          ("observacao", 0)):
+        if campo in data:
+            valor = (data.get(campo) or "").strip()
+            setattr(c, campo, valor[:limite] if limite else valor)
+
+    if "api_url" in data:
+        c.api_url = (data.get("api_url") or "").strip()
+    # Segredos só são tocados quando vêm preenchidos: mandar vazio num PUT
+    # parcial apagaria a credencial sem ninguém pedir.
+    for campo in ("cliente_secreto", "api_token", "a1_senha"):
+        if data.get(campo):
+            setattr(c, campo, str(data[campo]).strip())
+
+    if "valido_ate" in data:
+        valido_ate, err = _data_ou_erro(data.get("valido_ate"), "valido_ate")
+        if err:
+            return err
+        c.valido_ate = valido_ate
+
+    if "provedor" in data:
+        novo = (data.get("provedor") or "").strip()
+        if novo not in dict(CertificadoAssinante.PROVEDOR):
+            return JsonResponse(
+                {"erro": "provedor inválido",
+                 "validos": [p[0] for p in CertificadoAssinante.PROVEDOR]},
+                status=400)
+        c.provedor = novo
+
+    erro_resp = _validar_certificado(c)
+    if erro_resp:
+        return erro_resp
+
+    pedido_status = (data.get("status") or "").strip()
+    if pedido_status and pedido_status not in dict(CertificadoAssinante.STATUS):
+        return JsonResponse(
+            {"erro": "status inválido",
+             "validos": [x[0] for x in CertificadoAssinante.STATUS]}, status=400)
+
+    pronto = provedor_para_novo(c).disponivel()
+    if pedido_status == "ativo" and not pronto:
+        return JsonResponse(
+            {"erro": "Não é possível ativar: a configuração ainda não permite "
+                     "assinar.",
+             "codigo": "configuracao_incompleta",
+             "pendencias": provedor_para_novo(c).requisitos_pendentes()},
+            status=400)
+    if pedido_status:
+        c.status = pedido_status
+    elif c.status != "inativo":
+        c.status = "ativo" if pronto else "pendente"
+
+    c.save()
+    return JsonResponse({"ok": True, "certificado": _certificado_dict(c)})

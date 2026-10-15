@@ -1226,6 +1226,8 @@ from api.views_hospital_oncologia import (
     api_onco_seguimento_consultas,
     api_onco_assinatura_status,
     api_onco_ciclo_assinatura,
+    api_onco_certificados,
+    api_onco_certificado_detalhe,
 )
 from api.views_hospital_manutencao import (
     hospital_manutencao_page,
@@ -3594,6 +3596,10 @@ urlpatterns = [
     path('api/hospital/oncologia/assinatura/status',             api_onco_assinatura_status),
     path('api/hospital/oncologia/ciclos/<int:ciclo_id>/assinatura',  api_onco_ciclo_assinatura),
     path('api/hospital/oncologia/ciclos/<int:ciclo_id>/assinatura/', api_onco_ciclo_assinatura),
+    # Certificados por profissional (e migração de API dos hospitais clientes)
+    path('api/hospital/oncologia/certificados',                 api_onco_certificados),
+    path('api/hospital/oncologia/certificados/',                api_onco_certificados),
+    path('api/hospital/oncologia/certificados/<int:certificado_id>/', api_onco_certificado_detalhe),
     path('api/hospital/oncologia/guias/alertas',                api_onco_guias_alertas),
     path('api/hospital/oncologia/guias/alertas/',               api_onco_guias_alertas),
     path('api/hospital/oncologia/guias',                        api_onco_guias),

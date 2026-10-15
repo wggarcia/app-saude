@@ -1733,14 +1733,17 @@ class OncologiaTests(TestCase):
         return arq.name, senha.decode()
 
     def test_status_diz_que_assinatura_nao_esta_configurada(self):
-        """O sistema precisa admitir que não assina — em vez de ficar calado."""
+        """O sistema precisa admitir que não assina — em vez de ficar calado —
+        e deixar claro de quem é o certificado."""
         empresa = _empresa("Hospital Rede", "onco-icp1@example.com", "hospital_rede")
         client = _client_for(empresa)
         d = client.get("/api/hospital/oncologia/assinatura/status").json()
         self.assertFalse(d["disponivel"])
         self.assertEqual(d["provedor"], "nao_configurado")
+        self.assertEqual(d["assinantes_ativos"], 0)
         self.assertTrue(d["pendencias"])
         self.assertIn("NÃO ASSINADAS", d["mensagem"])
+        self.assertIn("médico", d["titularidade"])
 
     def test_sem_certificado_nada_e_marcado_como_assinado(self):
         """A regra inegociável: fingir que assinou seria uma mentira com valor
@@ -1784,53 +1787,50 @@ class OncologiaTests(TestCase):
         self.assertEqual(len(a), 64)
 
     def test_assina_de_verdade_quando_ha_certificado(self):
-        """Prova que o caminho inteiro funciona: só falta o certificado real."""
-        from django.test import override_settings
+        """Prova que o caminho inteiro funciona com o certificado DO MÉDICO."""
         caminho, senha = self._certificado_teste()
         empresa = _empresa("Hospital Rede", "onco-icp4@example.com", "hospital_rede")
         client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
         protocolo = self._protocolo(empresa)
         ciclo_id = self._ciclo_pronto(client, protocolo)
-        with override_settings(ICP_ASSINATURA_PROVEDOR="a1_local",
-                               ICP_CERTIFICADO_A1_PATH=caminho,
-                               ICP_CERTIFICADO_A1_SENHA=senha):
-            st = client.get("/api/hospital/oncologia/assinatura/status").json()
-            self.assertTrue(st["disponivel"])
-            r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
-                            data={"signatario_nome": "Dra. Helena Duarte",
-                                  "signatario_registro": "CRM-MS 12345"},
-                            content_type="application/json")
-        self.assertEqual(r.status_code, 201)
+        st = client.get("/api/hospital/oncologia/assinatura/status"
+                        "?cpf=52998224725").json()
+        self.assertTrue(st["disponivel"])
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725",
+                              "signatario_registro": "CRM-MS 12345"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:400])
         d = r.json()
         self.assertTrue(d["assinada"])
         a = d["assinatura"]
         self.assertEqual(a["status"], "assinada")
-        self.assertTrue(a["assinatura_b64"] if "assinatura_b64" in a else True)
-        # O CPF vem anexado ao nome comum em certificado ICP-Brasil de pessoa física.
+        # Em certificado ICP-Brasil de pessoa física o CPF vem anexado ao CN.
         self.assertEqual(a["certificado"]["titular"], "HELENA DUARTE")
         self.assertEqual(a["certificado"]["cpf_cnpj"], "52998224725")
         self.assertEqual(a["certificado"]["emissor"], "AC TESTE SOLOCRT")
         # Sem Autoridade de Carimbo do Tempo, a data não tem fé pública.
         self.assertFalse(a["data_com_fe_publica"])
         from .models import AssinaturaDocumento
-        self.assertTrue(
-            AssinaturaDocumento.objects.get(id=a["id"]).assinatura_b64)
+        self.assertTrue(AssinaturaDocumento.objects.get(id=a["id"]).assinatura_b64)
 
     def test_alterar_a_dose_depois_invalida_a_assinatura(self):
         """O coração da coisa: a assinatura só vale enquanto o documento for
         byte a byte o mesmo. Mudou a dose, a garantia acaba."""
-        from django.test import override_settings
         caminho, senha = self._certificado_teste()
         empresa = _empresa("Hospital Rede", "onco-icp5@example.com", "hospital_rede")
         client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
         protocolo = self._protocolo(empresa)
         ciclo_id = self._ciclo_pronto(client, protocolo)
-        with override_settings(ICP_ASSINATURA_PROVEDOR="a1_local",
-                               ICP_CERTIFICADO_A1_PATH=caminho,
-                               ICP_CERTIFICADO_A1_SENHA=senha):
-            client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
-                        data={"signatario_nome": "Dra. Helena"},
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725"},
                         content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:300])
+
         # Alguém mexe na prescrição depois de assinada.
         from .models import CicloQuimioterapia
         c = CicloQuimioterapia.objects.get(id=ciclo_id)
@@ -1849,39 +1849,34 @@ class OncologiaTests(TestCase):
                       d["assinatura"]["conferencia"]["mensagem"])
 
     def test_nao_assina_duas_vezes_o_mesmo_documento_integro(self):
-        from django.test import override_settings
         caminho, senha = self._certificado_teste()
         empresa = _empresa("Hospital Rede", "onco-icp6@example.com", "hospital_rede")
         client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
         protocolo = self._protocolo(empresa)
         ciclo_id = self._ciclo_pronto(client, protocolo)
-        with override_settings(ICP_ASSINATURA_PROVEDOR="a1_local",
-                               ICP_CERTIFICADO_A1_PATH=caminho,
-                               ICP_CERTIFICADO_A1_SENHA=senha):
-            client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
-                        data={"signatario_nome": "Dra. Helena"},
-                        content_type="application/json")
-            r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
-                            data={"signatario_nome": "Dra. Helena"},
-                            content_type="application/json")
+        corpo = {"signatario_nome": "Dra. Helena Duarte",
+                 "signatario_cpf": "52998224725"}
+        client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                    data=corpo, content_type="application/json")
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data=corpo, content_type="application/json")
         self.assertEqual(r.status_code, 409)
         self.assertEqual(r.json()["codigo"], "ja_assinada")
 
     def test_certificado_vencido_nao_assina(self):
         """A ICP-Brasil não reconhece assinatura feita com certificado vencido."""
-        from django.test import override_settings
         caminho, senha = self._certificado_teste(dias_validade=-1,
                                                  valido_de_dias=-400)
         empresa = _empresa("Hospital Rede", "onco-icp7@example.com", "hospital_rede")
         client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
         protocolo = self._protocolo(empresa)
         ciclo_id = self._ciclo_pronto(client, protocolo)
-        with override_settings(ICP_ASSINATURA_PROVEDOR="a1_local",
-                               ICP_CERTIFICADO_A1_PATH=caminho,
-                               ICP_CERTIFICADO_A1_SENHA=senha):
-            r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
-                            data={"signatario_nome": "Dra. Helena"},
-                            content_type="application/json")
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725"},
+                        content_type="application/json")
         self.assertEqual(r.status_code, 503)
         self.assertEqual(r.json()["codigo"], "certificado_vencido")
         from .models import AssinaturaDocumento
@@ -1889,20 +1884,23 @@ class OncologiaTests(TestCase):
             AssinaturaDocumento.objects.filter(status="assinada").count(), 0)
 
     def test_certificado_inexistente_reporta_o_que_falta(self):
-        from django.test import override_settings
+        """Arquivo que não existe: a configuração nasce pendente e diz o motivo."""
         empresa = _empresa("Hospital Rede", "onco-icp8@example.com", "hospital_rede")
         client = _client_for(empresa)
+        r = self._cert(client, provedor="a1_local",
+                       a1_caminho="/caminho/que/nao/existe.pfx", a1_senha="x")
+        self.assertEqual(r.status_code, 201)
+        c = r.json()["certificado"]
+        self.assertEqual(c["status"], "pendente")
+        self.assertFalse(c["pronto_para_assinar"])
+        self.assertTrue(any("não encontrado" in p for p in c["pendencias"]))
+
         protocolo = self._protocolo(empresa)
         ciclo_id = self._ciclo_pronto(client, protocolo)
-        with override_settings(ICP_ASSINATURA_PROVEDOR="a1_local",
-                               ICP_CERTIFICADO_A1_PATH="/caminho/que/nao/existe.pfx",
-                               ICP_CERTIFICADO_A1_SENHA="x"):
-            st = client.get("/api/hospital/oncologia/assinatura/status").json()
-            self.assertFalse(st["disponivel"])
-            self.assertTrue(any("não encontrado" in p for p in st["pendencias"]))
-            r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
-                            data={"signatario_nome": "Dra. Helena"},
-                            content_type="application/json")
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725"},
+                        content_type="application/json")
         self.assertEqual(r.status_code, 503)
 
     def test_ciclo_sem_doses_nao_tem_o_que_assinar(self):
@@ -1923,29 +1921,206 @@ class OncologiaTests(TestCase):
 
     def test_assinatura_registra_quem_assinou_e_o_certificado_usado(self):
         """Signatário (o profissional) e titular do certificado são coisas
-        distintas e as duas precisam ficar registradas: é o que permite auditar
-        se alguém assinou com o certificado de outra pessoa."""
-        from django.test import override_settings
+        distintas e as duas ficam registradas: é o que permite auditar se
+        alguém assinou com o certificado de outra pessoa."""
         caminho, senha = self._certificado_teste()
-        empresa = _empresa("Hospital Rede", "onco-icp10@example.com", "hospital_rede")
+        empresa = _empresa("Hospital Rede", "onco-icp10@example.com",
+                           "hospital_rede")
         client = _client_for(empresa)
+        # Configuração em nome do Dr. Paulo, mas o ARQUIVO é da Dra. Helena.
+        self._cert(client, profissional_nome="Dr. Paulo Vieira",
+                   profissional_cpf="11144477735",
+                   profissional_registro="CRM-MS 98765",
+                   provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
         protocolo = self._protocolo(empresa)
         ciclo_id = self._ciclo_pronto(client, protocolo)
-        with override_settings(ICP_ASSINATURA_PROVEDOR="a1_local",
-                               ICP_CERTIFICADO_A1_PATH=caminho,
-                               ICP_CERTIFICADO_A1_SENHA=senha):
-            client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
-                        data={"signatario_nome": "Dr. Paulo Vieira",
-                              "signatario_registro": "CRM-MS 98765"},
-                        content_type="application/json")
-            d = client.get(
-                f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/").json()
+        client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                    data={"signatario_nome": "Dr. Paulo Vieira",
+                          "signatario_cpf": "11144477735",
+                          "signatario_registro": "CRM-MS 98765"},
+                    content_type="application/json")
+        d = client.get(
+            f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/").json()
         a = d["assinatura"]
         self.assertEqual(a["signatario_nome"], "Dr. Paulo Vieira")
         self.assertEqual(a["signatario_registro"], "CRM-MS 98765")
-        # Certificado é de outra pessoa — fica evidente na auditoria.
+        # O certificado é de OUTRA pessoa — fica evidente na auditoria.
         self.assertEqual(a["certificado"]["titular"], "HELENA DUARTE")
         self.assertTrue(a["conferencia"]["integro"])
+
+    def _cert(self, client, **extra):
+        payload = {"profissional_nome": "Dra. Helena Duarte",
+                   "profissional_cpf": "52998224725",
+                   "profissional_registro": "CRM-MS 12345",
+                   "provedor": "vidaas"}
+        payload.update(extra)
+        return client.post("/api/hospital/oncologia/certificados/",
+                           data=payload, content_type="application/json")
+
+    def test_certificado_e_por_profissional_nao_por_instalacao(self):
+        """O certificado é do MÉDICO, não da empresa que vende o software nem
+        do hospital. Dois médicos no mesmo hospital = duas configurações."""
+        empresa = _empresa("Hospital Rede", "onco-cert1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r1 = self._cert(client)
+        self.assertEqual(r1.status_code, 201)
+        r2 = self._cert(client, profissional_nome="Dr. Paulo Vieira",
+                        profissional_cpf="11144477735",
+                        profissional_registro="CRM-MS 98765")
+        self.assertEqual(r2.status_code, 201)
+        d = client.get("/api/hospital/oncologia/certificados").json()
+        self.assertEqual(d["total"], 2)
+        self.assertIn("médico", d["titularidade"])
+        self.assertIn("Não é da empresa", d["titularidade"])
+
+    def test_mesmo_profissional_nao_duplica_na_empresa(self):
+        """Duas configurações para o mesmo CPF deixariam a auditoria sem saber
+        qual delas assinou."""
+        empresa = _empresa("Hospital Rede", "onco-cert2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client)
+        r = self._cert(client)
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(r.json()["codigo"], "profissional_duplicado")
+
+    def test_segredos_nunca_voltam_na_resposta(self):
+        """Token e senha saem do sistema só para o provedor — nunca para a tela."""
+        empresa = _empresa("Hospital Rede", "onco-cert3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._cert(client, provedor="api_hospital",
+                       api_url="https://assinatura.hospital.exemplo/v1/assinar",
+                       api_token="token-secreto-do-hospital")
+        self.assertEqual(r.status_code, 201)
+        corpo = r.content.decode()
+        self.assertNotIn("token-secreto-do-hospital", corpo)
+        self.assertTrue(r.json()["certificado"]["tem_api_token"])
+        listagem = client.get("/api/hospital/oncologia/certificados").content.decode()
+        self.assertNotIn("token-secreto-do-hospital", listagem)
+
+    def test_segredo_fica_cifrado_em_repouso(self):
+        """O token é dado sensível: no banco não pode estar em texto claro."""
+        from django.db import connection
+        from .models import CertificadoAssinante
+        empresa = _empresa("Hospital Rede", "onco-cert4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client, provedor="api_hospital",
+                   api_url="https://assinatura.hospital.exemplo/v1/assinar",
+                   api_token="token-secreto-do-hospital")
+        c = CertificadoAssinante.objects.get(empresa=empresa)
+        # Pela ORM volta decifrado...
+        self.assertEqual(c.api_token, "token-secreto-do-hospital")
+        # ...mas o valor cru no banco não contém o segredo.
+        with connection.cursor() as cur:
+            cur.execute("SELECT api_token FROM api_certificadoassinante WHERE id=%s",
+                        [c.id])
+            cru = cur.fetchone()[0]
+        self.assertNotIn("token-secreto-do-hospital", cru or "")
+
+    def test_api_do_hospital_exige_https(self):
+        """Resumo de documento clínico e token não trafegam em texto claro."""
+        empresa = _empresa("Hospital Rede", "onco-cert5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._cert(client, provedor="api_hospital",
+                       api_url="http://assinatura.hospital.exemplo/v1/assinar",
+                       api_token="x")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "api_url_insegura")
+
+    def test_configuracao_incompleta_nao_fica_ativa(self):
+        """Nuvem sem credencial de aplicação não assina — e o sistema não pode
+        deixar o hospital achar que está pronto."""
+        empresa = _empresa("Hospital Rede", "onco-cert6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = self._cert(client)          # vidaas sem cliente_id/segredo
+        self.assertEqual(r.status_code, 201)
+        c = r.json()["certificado"]
+        self.assertEqual(c["status"], "pendente")
+        self.assertFalse(c["pronto_para_assinar"])
+        self.assertTrue(c["pendencias"])
+        r = client.put(f"/api/hospital/oncologia/certificados/{c['id']}/",
+                       data={"status": "ativo"}, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "configuracao_incompleta")
+
+    def test_status_de_assinatura_responde_pelo_profissional(self):
+        """'Dá para assinar?' só faz sentido perguntando de QUEM."""
+        empresa = _empresa("Hospital Rede", "onco-cert7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        caminho, senha = self._certificado_teste()
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        # Médico configurado
+        d = client.get("/api/hospital/oncologia/assinatura/status"
+                       "?cpf=52998224725").json()
+        self.assertTrue(d["disponivel"])
+        self.assertEqual(d["profissional"], "Dra. Helena Duarte")
+        # Outro médico do MESMO hospital segue sem certificado
+        d = client.get("/api/hospital/oncologia/assinatura/status"
+                       "?medico=Dr.%20Desconhecido").json()
+        self.assertFalse(d["disponivel"])
+        self.assertEqual(d["assinantes_ativos"], 1)
+
+    def test_assina_com_o_certificado_do_profissional_do_ciclo(self):
+        empresa = _empresa("Hospital Rede", "onco-cert8@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        caminho, senha = self._certificado_teste()
+        rc = self._cert(client, provedor="a1_local",
+                        a1_caminho=caminho, a1_senha=senha)
+        cert_id = rc.json()["id"]
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo,
+                                      medico_oncologista="Dra. Helena Duarte")
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:400])
+        a = r.json()["assinatura"]
+        self.assertTrue(r.json()["assinada"])
+        # Fica registrado QUAL configuração assinou.
+        self.assertEqual(a["certificado_config_id"], cert_id)
+
+    def test_medico_sem_certificado_nao_assina_mesmo_com_outro_configurado(self):
+        """Ter um médico configurado não habilita o hospital inteiro."""
+        empresa = _empresa("Hospital Rede", "onco-cert9@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        caminho, senha = self._certificado_teste()
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dr. Sem Certificado"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 503)
+        from .models import AssinaturaDocumento
+        self.assertEqual(
+            AssinaturaDocumento.objects.filter(status="assinada").count(), 0)
+
+    def test_certificados_isolados_por_empresa(self):
+        """Hospital A não enxerga nem altera o certificado do hospital B."""
+        a = _empresa("Hospital A", "onco-cert-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "onco-cert-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        cid = self._cert(ca).json()["id"]
+        self.assertEqual(
+            cb.get("/api/hospital/oncologia/certificados").json()["total"], 0)
+        r = cb.put(f"/api/hospital/oncologia/certificados/{cid}/",
+                   data={"profissional_nome": "Invasor"},
+                   content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+        r = cb.delete(f"/api/hospital/oncologia/certificados/{cid}/")
+        self.assertEqual(r.status_code, 404)
+
+    def test_desativar_preserva_a_auditoria(self):
+        """Apagar a configuração deixaria assinaturas antigas órfãs: desativa."""
+        from .models import CertificadoAssinante
+        empresa = _empresa("Hospital Rede", "onco-cert10@example.com",
+                           "hospital_rede")
+        client = _client_for(empresa)
+        cid = self._cert(client).json()["id"]
+        r = client.delete(f"/api/hospital/oncologia/certificados/{cid}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            CertificadoAssinante.objects.get(id=cid).status, "inativo")
 
     def test_assinatura_isolada_por_empresa(self):
         a = _empresa("Hospital A", "onco-icp-a@example.com", "hospital_rede")

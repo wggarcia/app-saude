@@ -12661,6 +12661,89 @@ class ConsultaSeguimento(models.Model):
         return f"Consulta {self.data_prevista} — {self.seguimento.paciente_nome}"
 
 
+class CertificadoAssinante(models.Model):
+    """Como CADA PROFISSIONAL de CADA cliente assina — nunca um certificado global.
+
+    Prescrição é ato médico: quem assina é o médico, pessoa física, com
+    certificado vinculado ao seu CPF e CRM. Não é a empresa que fornece o
+    software, nem o hospital. Um hospital com 40 oncologistas tem 40 config.
+
+    A chave privada NÃO fica aqui por padrão. O caminho principal é o
+    certificado em nuvem (VIDaaS, ligado ao registro no CRM, ou BirdID): a
+    chave fica no cofre do provedor credenciado e o médico autoriza cada
+    assinatura. Guardar arquivo A1 + senha de dezenas de médicos num servidor
+    de SaaS seria assumir a identidade jurídica deles — passivo que não vale
+    a pena correr. Quando houver segredo guardado, ele é cifrado em repouso.
+    """
+    PROVEDOR = [
+        ("vidaas",       "Certificado em nuvem VIDaaS (vinculado ao CRM)"),
+        ("birdid",       "Certificado em nuvem BirdID"),
+        ("api_hospital", "API de assinatura do próprio hospital"),
+        ("a1_local",     "Arquivo A1 (.pfx/.p12) no servidor — instalação dedicada"),
+    ]
+    STATUS = [
+        ("ativo",     "Ativo"),
+        ("inativo",   "Inativo"),
+        ("pendente",  "Pendente de configuração"),
+    ]
+    empresa        = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                       related_name="certificados_assinantes")
+    # O profissional dono do certificado.
+    profissional_nome = models.CharField(max_length=150)
+    profissional_cpf  = models.CharField(max_length=11, blank=True, default="",
+                                         db_index=True)
+    profissional_registro = models.CharField(
+        max_length=40, blank=True, default="",
+        verbose_name="Registro no conselho (ex.: CRM-MS 12345)")
+    provedor       = models.CharField(max_length=20, choices=PROVEDOR)
+    status         = models.CharField(max_length=10, choices=STATUS,
+                                      default="pendente", db_index=True)
+
+    # ── Nuvem (VIDaaS/BirdID): identificamos o titular, nunca a chave ──────
+    # O identificador costuma ser o CPF do médico no provedor.
+    identificador_provedor = models.CharField(max_length=120, blank=True, default="")
+    # Credenciais da APLICAÇÃO junto ao provedor (não do médico).
+    cliente_id     = models.CharField(max_length=200, blank=True, default="")
+    cliente_secreto = EncryptedTextField(blank=True, default="")
+
+    # ── API do próprio hospital (caminho de migração dos clientes) ─────────
+    # Hospital que já tem serviço de assinatura aponta a URL aqui e o nosso
+    # sistema manda o resumo para assinar, sem nunca ver chave privada.
+    api_url        = models.URLField(blank=True, default="",
+                                     verbose_name="Endpoint de assinatura do hospital")
+    api_token      = EncryptedTextField(blank=True, default="")
+
+    # ── A1 em arquivo: exceção para instalação dedicada ───────────────────
+    a1_caminho     = models.CharField(max_length=500, blank=True, default="")
+    a1_senha       = EncryptedTextField(blank=True, default="")
+
+    valido_ate     = models.DateField(null=True, blank=True,
+                                      help_text="Validade do certificado, para avisar antes de vencer")
+    observacao     = models.TextField(blank=True, default="")
+    criado_em      = models.DateTimeField(auto_now_add=True)
+    atualizado_em  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Certificado de Assinante"
+        verbose_name_plural = "Certificados de Assinantes"
+        ordering            = ["profissional_nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "profissional_cpf"]),
+        ]
+        constraints = [
+            # Um profissional tem uma configuração por empresa: duas levariam
+            # a "qual das duas assinou?" sem resposta na auditoria.
+            models.UniqueConstraint(
+                fields=["empresa", "profissional_cpf"],
+                condition=~models.Q(profissional_cpf=""),
+                name="certificado_unico_por_profissional_na_empresa"),
+        ]
+
+    def __str__(self):
+        return f"{self.profissional_nome} — {self.get_provedor_display()}"
+
+
 class AssinaturaDocumento(models.Model):
     """Assinatura digital ICP-Brasil de um documento clínico.
 
@@ -12705,6 +12788,10 @@ class AssinaturaDocumento(models.Model):
     assinatura_b64 = models.TextField(
         blank=True, default="", verbose_name="Assinatura CMS/PKCS#7 em base64")
     provedor       = models.CharField(max_length=40, blank=True, default="")
+    certificado_config = models.ForeignKey(
+        "CertificadoAssinante", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="assinaturas",
+        help_text="Qual configuração de assinante foi usada")
     assinado_em    = models.DateTimeField(null=True, blank=True)
     # Carimbo de tempo de uma Autoridade de Carimbo do Tempo (ACT) externa.
     # Sem ele a data é a do nosso relógio, e não a de um terceiro de confiança.

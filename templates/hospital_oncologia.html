@@ -129,6 +129,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="tab-btn" data-tab="oral" onclick="setTab('oral')">Quimioterapia Oral</button>
     <button class="tab-btn" data-tab="respostas" onclick="setTab('respostas')">Resposta ao Tratamento</button>
     <button class="tab-btn" data-tab="seguimento" onclick="setTab('seguimento')">Seguimento e Sobrevida</button>
+    <button class="tab-btn" data-tab="certificados" onclick="setTab('certificados')">Assinatura Digital</button>
     <button class="tab-btn" data-tab="jornada" onclick="setTab('jornada')">Jornada do Paciente</button>
   </div>
 
@@ -598,6 +599,74 @@ tr:hover td{background:rgba(0,194,255,.03)}
     </div>
   </div>
 
+  <div class="tab-panel" id="panel-certificados">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🔏 Assinatura digital — certificados por profissional</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoCertificado()">+ Cadastrar assinante</button>
+      </div>
+      <div class="alert-box ab-info" style="margin:14px 20px">
+        <div class="ab-title">De quem é o certificado</div>
+        <div style="margin-top:6px">Prescrição é ato médico: quem assina é o <strong>médico, pessoa física</strong>,
+        com certificado vinculado ao CPF e ao CRM dele. Não é do hospital (e-CNPJ não assina ato médico)
+        e não é de quem fornece o software. Cada médico que prescreve precisa do seu.</div>
+        <div class="itens-mini" style="margin-top:6px">Caminho recomendado: certificado <strong>em nuvem</strong>
+        (VIDaaS, ligado ao registro no CRM, ou BirdID) — a chave fica no cofre do provedor e o médico
+        autoriza cada assinatura pelo celular. Se o hospital já tem serviço próprio de assinatura,
+        use a opção “API de assinatura do hospital”.</div>
+      </div>
+      <table>
+        <thead><tr><th>Profissional</th><th>Registro</th><th>Provedor</th><th>Situação</th><th>Validade</th><th>Ação</th></tr></thead>
+        <tbody id="certBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formCertCard" style="display:none">
+      <div class="form-card-title">Cadastrar assinante</div>
+      <div class="form-row3">
+        <div class="form-group"><label>Nome do médico *</label><input id="ctNome"></div>
+        <div class="form-group"><label>CPF do médico</label><input id="ctCpf" maxlength="14"></div>
+        <div class="form-group"><label>Registro no conselho</label><input id="ctRegistro" placeholder="ex.: CRM-MS 12345"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Provedor *</label>
+          <select id="ctProvedor" onchange="ajustarCamposCertificado()">
+            <option value="vidaas">Certificado em nuvem VIDaaS (vinculado ao CRM)</option>
+            <option value="birdid">Certificado em nuvem BirdID</option>
+            <option value="api_hospital">API de assinatura do próprio hospital</option>
+            <option value="a1_local">Arquivo A1 (.pfx/.p12) no servidor — instalação dedicada</option>
+          </select></div>
+        <div class="form-group"><label>Validade do certificado</label><input type="date" id="ctValidade"></div>
+      </div>
+      <div id="grpNuvem">
+        <div class="form-row3">
+          <div class="form-group"><label>Identificador no provedor</label><input id="ctIdent" placeholder="normalmente o CPF do médico"></div>
+          <div class="form-group"><label>cliente_id da aplicação</label><input id="ctClienteId"></div>
+          <div class="form-group"><label>cliente_secreto</label><input type="password" id="ctClienteSecreto"></div>
+        </div>
+      </div>
+      <div id="grpApiHospital" style="display:none">
+        <div class="form-row">
+          <div class="form-group"><label>URL do serviço de assinatura (HTTPS) *</label><input id="ctApiUrl" placeholder="https://assinatura.seuhospital.com.br/v1/assinar"></div>
+          <div class="form-group"><label>Token de autenticação *</label><input type="password" id="ctApiToken"></div>
+        </div>
+        <div class="itens-mini" style="opacity:.75;margin:-6px 0 12px">O hospital recebe o resumo do documento e devolve a assinatura.
+        Nenhuma chave privada passa por aqui. O contrato está em docs/assinatura_icp_brasil.md.</div>
+      </div>
+      <div id="grpA1" style="display:none">
+        <div class="form-row">
+          <div class="form-group"><label>Caminho do arquivo .pfx/.p12 *</label><input id="ctA1Caminho" placeholder="/etc/soluscrt/certificado.pfx"></div>
+          <div class="form-group"><label>Senha do certificado *</label><input type="password" id="ctA1Senha"></div>
+        </div>
+        <div class="itens-mini" style="color:var(--warn);margin:-6px 0 12px">Guardar arquivo e senha do médico no servidor equivale a
+        guardar a identidade jurídica dele. Use apenas em instalação dedicada.</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formCertCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarCertificado()">Salvar assinante</button>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="panel-jornada">
     <div class="card">
       <div class="card-header">
@@ -656,6 +725,7 @@ function setTab(tab) {
   if (tab === 'infusao') carregarInfusao();
   if (tab === 'oral') carregarOral();
   if (tab === 'seguimento') carregarSeguimentos();
+  if (tab === 'certificados') carregarCertificados();
 }
 
 var statusGuiaMap = {vigente:'badge-ok', vencida:'badge-danger', esgotada:'badge-warn', cancelada:'badge-gray', em_analise:'badge-warn', negada:'badge-danger'};
@@ -772,17 +842,21 @@ async function carregarAssinatura(cicloId){
       return;
     }
 
+    var quem = prov.profissional ? (' (' + esc(prov.profissional) + ')') : '';
     var motivo = prov.disponivel
-      ? 'Esta prescrição ainda não foi assinada.'
+      ? ('Esta prescrição ainda não foi assinada' + quem + '.')
       : esc(prov.mensagem || 'Assinatura digital não configurada.');
     var pend = (!prov.disponivel && (prov.pendencias||[]).length)
       ? '<ul style="margin:6px 0 0 16px">' + prov.pendencias.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('') + '</ul>'
       : '';
     alvo.innerHTML =
       '<div class="alert-box ' + (prov.disponivel ? 'ab-warn' : 'ab-info') + '">' +
-      '<div class="ab-title">' + (prov.disponivel ? '✍ Prescrição não assinada' : 'ℹ Assinatura digital não configurada') + '</div>' +
-      '<div style="margin-top:6px">' + motivo + '</div>' + pend + '</div>' +
-      botaoAssinar(cicloId, prov);
+      '<div class="ab-title">' + (prov.disponivel ? '✍ Prescrição não assinada' : 'ℹ Assinatura digital não configurada para este médico') + '</div>' +
+      '<div style="margin-top:6px">' + motivo + '</div>' + pend +
+      (prov.disponivel ? '' :
+        '<div class="itens-mini" style="margin-top:6px;opacity:.8">' + esc(prov.titularidade||'') +
+        ' Configure em <strong>Assinatura Digital</strong>.</div>') +
+      '</div>' + botaoAssinar(cicloId, prov);
   } catch(e) { alvo.innerHTML = ''; }
 }
 
@@ -805,6 +879,102 @@ async function assinarPrescricao(cicloId){
     }
     toast('Prescrição assinada digitalmente', true);
     carregarAssinatura(cicloId);
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+// ── Certificados de assinantes (por médico, nunca por instalação) ──────────
+var certStatusMap = {ativo:'badge-ok', pendente:'badge-warn', inativo:'badge-gray'};
+
+async function carregarCertificados(){
+  var tbody = document.getElementById('certBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/certificados', { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.certificados.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum médico com assinatura configurada. '
+        + 'As prescrições podem ser emitidas, mas sairão como NÃO ASSINADAS.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.certificados.map(function(c){
+      var pend = (!c.pronto_para_assinar && (c.pendencias||[]).length)
+        ? '<ul class="itens-mini" style="margin:4px 0 0 14px;opacity:.8">'
+          + c.pendencias.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('') + '</ul>'
+        : '';
+      var val = c.valido_ate
+        ? (fmtData(c.valido_ate) + (c.vence_em_dias != null && c.vence_em_dias <= 90
+            ? ('<div class="itens-mini" style="color:'+(c.vence_em_dias < 0 ? 'var(--danger)' : 'var(--warn)')+'">'
+               + (c.vence_em_dias < 0 ? 'vencido' : ('vence em ' + c.vence_em_dias + ' dias')) + '</div>')
+            : ''))
+        : '<span style="opacity:.5">—</span>';
+      var acao = c.status === 'inativo'
+        ? '<span style="opacity:.5">desativado</span>'
+        : '<button class="btn btn-ghost btn-sm" onclick="desativarCertificado('+c.id+')">Desativar</button>';
+      return '<tr><td><strong>'+esc(c.profissional_nome)+'</strong>'
+           + (c.profissional_cpf ? ('<div class="itens-mini" style="opacity:.6">CPF '+esc(c.profissional_cpf)+'</div>') : '')
+           + '</td><td>'+esc(c.profissional_registro||'—')+'</td>'
+           + '<td>'+esc(c.provedor_display)+(c.api_url?('<div class="itens-mini" style="opacity:.6">'+esc(c.api_url)+'</div>'):'')+'</td>'
+           + '<td><span class="badge '+(certStatusMap[c.status]||'badge-gray')+'">'+esc(c.status_display)+'</span>'+pend+'</td>'
+           + '<td>'+val+'</td><td>'+acao+'</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function ajustarCamposCertificado(){
+  var p = document.getElementById('ctProvedor').value;
+  document.getElementById('grpNuvem').style.display = (p === 'vidaas' || p === 'birdid') ? '' : 'none';
+  document.getElementById('grpApiHospital').style.display = (p === 'api_hospital') ? '' : 'none';
+  document.getElementById('grpA1').style.display = (p === 'a1_local') ? '' : 'none';
+}
+
+function abrirNovoCertificado(){
+  ajustarCamposCertificado();
+  var card = document.getElementById('formCertCard');
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function salvarCertificado(){
+  var nome = document.getElementById('ctNome').value.trim();
+  if (!nome) return toast('Informe o nome do médico', false);
+  var corpo = {
+    profissional_nome: nome,
+    profissional_cpf: document.getElementById('ctCpf').value.replace(/\D/g,''),
+    profissional_registro: document.getElementById('ctRegistro').value.trim(),
+    provedor: document.getElementById('ctProvedor').value,
+    valido_ate: document.getElementById('ctValidade').value || null,
+    identificador_provedor: document.getElementById('ctIdent').value.trim(),
+    cliente_id: document.getElementById('ctClienteId').value.trim(),
+    cliente_secreto: document.getElementById('ctClienteSecreto').value,
+    api_url: document.getElementById('ctApiUrl').value.trim(),
+    api_token: document.getElementById('ctApiToken').value,
+    a1_caminho: document.getElementById('ctA1Caminho').value.trim(),
+    a1_senha: document.getElementById('ctA1Senha').value,
+  };
+  try {
+    var r = await fetch('/api/hospital/oncologia/certificados/', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify(corpo) });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    var c = d.certificado || {};
+    toast(c.pronto_para_assinar
+            ? 'Assinante cadastrado e pronto para assinar'
+            : 'Assinante cadastrado como PENDENTE — ainda falta: ' + (c.pendencias||[]).join(' '),
+          !!c.pronto_para_assinar);
+    document.getElementById('formCertCard').style.display = 'none';
+    ['ctNome','ctCpf','ctRegistro','ctIdent','ctClienteId','ctClienteSecreto',
+     'ctApiUrl','ctApiToken','ctA1Caminho','ctA1Senha','ctValidade'].forEach(function(id){ document.getElementById(id).value=''; });
+    carregarCertificados();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function desativarCertificado(id){
+  // Desativa, não apaga: as assinaturas já feitas precisam seguir auditáveis.
+  if (!confirm('Desativar este assinante? As assinaturas já feitas continuam válidas e auditáveis.')) return;
+  try {
+    var r = await fetch('/api/hospital/oncologia/certificados/'+id+'/', { method:'DELETE', credentials:'include', headers: headers() });
+    if (!r.ok) return toast('Não foi possível desativar', false);
+    toast('Assinante desativado', true);
+    carregarCertificados();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
