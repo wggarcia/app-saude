@@ -1174,6 +1174,7 @@ from api.views_governo_sipni import (
 )
 from api.views_hospital_assinatura import (
     api_assinatura_pendentes,
+    api_prescricao_internacao_assinatura,
     api_assinatura_assinar,
     api_assinatura_assinar_lote,
     api_assinatura_verificar,
@@ -3514,6 +3515,9 @@ urlpatterns = [
 
     # ── Assinatura Digital de Prontuário (CFM Res. 2.299/2021) ───────────────
     path('api/hospital/assinatura/kpis',                        api_assinatura_kpis),
+    # Prescrição de internação assinada (CFM 2.299/2021, art. 1º: "Prescrição")
+    path('api/hospital/internacoes/<int:internacao_id>/prescricao/assinatura',  api_prescricao_internacao_assinatura),
+    path('api/hospital/internacoes/<int:internacao_id>/prescricao/assinatura/', api_prescricao_internacao_assinatura),
     path('api/hospital/assinatura/kpis/',                       api_assinatura_kpis),
     path('api/hospital/assinatura/pendentes',                   api_assinatura_pendentes),
     path('api/hospital/assinatura/pendentes/',                  api_assinatura_pendentes),

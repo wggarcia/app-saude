@@ -2615,6 +2615,144 @@ class OncologiaTests(TestCase):
         self.assertEqual(d["estabelecimento"]["crm_pessoa_juridica"], "")
         self.assertEqual(d["estabelecimento"]["diretor_tecnico_nome"], "")
 
+    # ── Prescrição de internação assinada (fora da oncologia) ──────────────
+    def _internacao_com_prescricao(self, empresa, medico="Dra. Helena Duarte"):
+        from .models import (PacienteHospital, InternacaoHospital,
+                             PrescricaoMedica)
+        pac = PacienteHospital.objects.create(
+            empresa=empresa, nome="Paciente Internado", cpf="52998224725")
+        inte = InternacaoHospital.objects.create(
+            empresa=empresa, paciente=pac, diagnostico="Pneumonia",
+            medico_responsavel=medico)
+        for med, dose in (("Ceftriaxona", "1g"), ("Dipirona", "1g")):
+            # PrescricaoMedica não tem empresa: o tenant vem pela internação.
+            PrescricaoMedica.objects.create(
+                internacao=inte, medicamento=med,
+                dose=dose, via="ev", frequencia="12/12h", status="ativa",
+                medico=medico)
+        return inte
+
+    def test_prescricao_de_internacao_assina_com_certificado_do_medico(self):
+        """A Resolução CFM 2.299/2021 lista 'Prescrição' no art. 1º — não é
+        privilégio da oncologia. E o certificado é do MÉDICO (art. 4º)."""
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Rede", "presc-a1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        inte = self._internacao_com_prescricao(empresa)
+        r = client.post(
+            f"/api/hospital/internacoes/{inte.id}/prescricao/assinatura/",
+            data={"signatario_nome": "Dra. Helena Duarte",
+                  "signatario_cpf": "52998224725"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:400])
+        d = r.json()
+        self.assertTrue(d["assinada"])
+        self.assertEqual(d["itens_assinados"], 2)
+        self.assertTrue(d["conforme_cfm"])
+        self.assertEqual(d["formato"], "ICP-Brasil-CAdES-BES")
+
+    def test_acrescentar_item_depois_invalida_a_assinatura(self):
+        """Assina-se o CONJUNTO: se bastasse assinar item a item, alguém
+        acrescentaria uma linha depois sem invalidar nada."""
+        from .models import PrescricaoMedica
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Rede", "presc-a2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        inte = self._internacao_com_prescricao(empresa)
+        client.post(f"/api/hospital/internacoes/{inte.id}/prescricao/assinatura/",
+                    data={"signatario_nome": "Dra. Helena Duarte",
+                          "signatario_cpf": "52998224725"},
+                    content_type="application/json")
+        # Alguém acrescenta um medicamento depois.
+        PrescricaoMedica.objects.create(
+            internacao=inte, medicamento="Morfina",
+            dose="10mg", via="ev", status="ativa")
+        d = client.get(
+            f"/api/hospital/internacoes/{inte.id}/prescricao/assinatura/").json()
+        self.assertFalse(d["assinada"])
+        self.assertEqual(d["assinatura"]["status"], "invalidada")
+        self.assertIn("alterada após a assinatura",
+                      d["assinatura"]["conferencia"]["mensagem"])
+
+    def test_assinatura_de_prescricao_e_estavel_no_tempo(self):
+        """Mesma regressão da oncologia: a hora de emissão não pode fazer a
+        verificação falhar sozinha."""
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Rede", "presc-a3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        inte = self._internacao_com_prescricao(empresa)
+        client.post(f"/api/hospital/internacoes/{inte.id}/prescricao/assinatura/",
+                    data={"signatario_nome": "Dra. Helena Duarte",
+                          "signatario_cpf": "52998224725"},
+                    content_type="application/json")
+        for _ in range(3):
+            d = client.get(
+                f"/api/hospital/internacoes/{inte.id}/prescricao/assinatura/").json()
+            self.assertTrue(d["assinada"])
+            self.assertTrue(d["assinatura"]["conferencia"]["integro"])
+
+    def test_sem_certificado_nenhum_nao_assina(self):
+        empresa = _empresa("Hospital Rede", "presc-a4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        inte = self._internacao_com_prescricao(empresa)
+        r = client.post(
+            f"/api/hospital/internacoes/{inte.id}/prescricao/assinatura/",
+            data={"signatario_nome": "Dra. Helena Duarte"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 503)
+        from .models import AssinaturaDocumento
+        self.assertEqual(
+            AssinaturaDocumento.objects.filter(status="assinada").count(), 0)
+
+    def test_prescricao_vazia_nao_assina(self):
+        from .models import PacienteHospital, InternacaoHospital
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Rede", "presc-a5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._cert(client, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        pac = PacienteHospital.objects.create(empresa=empresa, nome="Sem Itens")
+        inte = InternacaoHospital.objects.create(
+            empresa=empresa, paciente=pac, diagnostico="X")
+        r = client.post(
+            f"/api/hospital/internacoes/{inte.id}/prescricao/assinatura/",
+            data={"signatario_nome": "Dra. Helena Duarte"},
+            content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["codigo"], "prescricao_vazia")
+
+    def test_prescricao_isolada_por_empresa(self):
+        a = _empresa("Hospital A", "presc-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "presc-b@example.com", "hospital_rede")
+        cb = _client_for(b)
+        inte_a = self._internacao_com_prescricao(a)
+        r = cb.get(f"/api/hospital/internacoes/{inte_a.id}/prescricao/assinatura/")
+        self.assertEqual(r.status_code, 404)
+        r = cb.post(f"/api/hospital/internacoes/{inte_a.id}/prescricao/assinatura/",
+                    data={"signatario_nome": "X"}, content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+
+    def test_motor_antigo_de_assinatura_continua_intacto(self):
+        """Regressão: eu sobrescrevi este módulo por engano uma vez. O fluxo de
+        assinatura de evolução clínica, que já existia, tem de seguir de pé."""
+        from api.views_hospital_assinatura import (
+            api_assinatura_pendentes, api_assinatura_assinar,
+            api_assinatura_assinar_lote, hospital_assinatura_page)
+        from api.assinatura_digital import assinar_conteudo, verificar_assinatura
+        for fn in (api_assinatura_pendentes, api_assinatura_assinar,
+                   api_assinatura_assinar_lote, hospital_assinatura_page,
+                   assinar_conteudo, verificar_assinatura):
+            self.assertTrue(callable(fn))
+        # E o motor segue produzindo assinatura verificável sem certificado.
+        ok, ass, h, metodo, erro = assinar_conteudo("conteudo", None, "CRM/MS 1")
+        self.assertTrue(ok)
+        self.assertEqual(metodo, "SHA256")
+        v = verificar_assinatura("conteudo", ass, h)
+        self.assertTrue(v["integro"])
+        self.assertFalse(verificar_assinatura("outro", ass, h)["integro"])
+
     def test_assinatura_isolada_por_empresa(self):
         a = _empresa("Hospital A", "onco-icp-a@example.com", "hospital_rede")
         b = _empresa("Hospital B", "onco-icp-b@example.com", "hospital_rede")

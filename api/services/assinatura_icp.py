@@ -39,8 +39,10 @@ logger = logging.getLogger(__name__)
 ALGORITMO_RESUMO = "SHA-256"
 
 TIPO_PRESCRICAO_QUIMIO = "prescricao_quimio"
+TIPO_PRESCRICAO_INTERNACAO = "prescricao_internacao"
 TIPOS_DOCUMENTO = {
     TIPO_PRESCRICAO_QUIMIO: "Prescrição de quimioterapia",
+    TIPO_PRESCRICAO_INTERNACAO: "Prescrição de internação",
 }
 
 # Tempo máximo esperando a API de assinatura do hospital. Assinar é síncrono na
@@ -463,17 +465,24 @@ class ProvedorA1Local(ProvedorAssinatura):
                 f"Certificado venceu em {nao_depois:%d/%m/%Y}.",
                 codigo="certificado_vencido")
 
+        # Envelope CAdES-BES ANEXADO (PKCS#7 DER), igual ao motor que já roda
+        # em produção (api/assinatura_digital.py). Anexado é autocontido: o
+        # validador do ITI consegue conferir sem receber o conteúdo à parte.
         assinatura = (
             pkcs7.PKCS7SignatureBuilder()
             .set_data(conteudo_bytes)
             .add_signer(cert, chave, hashes.SHA256())
-            .sign(Encoding.DER, [pkcs7.PKCS7Options.DetachedSignature])
+            .sign(Encoding.DER, [pkcs7.PKCS7Options.Binary])
         )
         return {
             "assinatura_b64": base64.b64encode(assinatura).decode("ascii"),
             "provedor": self.nome,
             "assinado_em": agora,
             "certificado": dados_certificado(cert),
+            "formato": "ICP-Brasil-CAdES-BES",
+            # Certificado do próprio profissional: é o que o art. 4º da
+            # Resolução CFM 2.299/2021 exige para ato médico.
+            "conforme_cfm": True,
             # Carimbo de tempo exige Autoridade de Carimbo do Tempo externa:
             # sem ela a data é a do nosso relógio, não a de um terceiro.
             "carimbo_tempo_em": None,
@@ -623,3 +632,146 @@ def status_assinatura(empresa=None, nome=None, cpf=None, registro=None):
             "Não é da empresa fornecedora do software nem do hospital."
         ),
     }
+
+
+def conteudo_canonico_prescricao_internacao(internacao, itens, cfg=None,
+                                            emitido_em=None):
+    """Documento assinável da prescrição de um paciente internado.
+
+    O art. 1º da Resolução CFM 2.299/2021 lista "Prescrição" entre os documentos
+    médicos eletrônicos — não é privilégio da oncologia. Assina-se o CONJUNTO de
+    itens, porque prescrição é um documento, não um medicamento solto: assinar
+    item a item deixaria o conjunto sem garantia e permitiria acrescentar uma
+    linha depois sem invalidar nada.
+    """
+    medico, estabelecimento = _dados_emitente(internacao.empresa, cfg)
+    emitido_em = emitido_em or timezone.now()
+    paciente = getattr(internacao, "paciente", None)
+    linhas = [
+        {
+            "id": i.id,
+            "medicamento": i.medicamento,
+            "dose": i.dose or "",
+            "via": i.via or "",
+            "frequencia": i.frequencia or "",
+            "duracao_dias": i.duracao_dias,
+            "observacoes": i.observacoes or "",
+        }
+        for i in itens
+    ]
+    # Ordena pelo id para não depender da ordem que o banco devolveu.
+    linhas.sort(key=lambda x: x["id"])
+    payload = {
+        "documento": TIPO_PRESCRICAO_INTERNACAO,
+        "versao": 1,
+        "empresa_id": internacao.empresa_id,
+        "internacao_id": internacao.id,
+        "emitido_em": timezone.localtime(emitido_em).isoformat(),
+        "medico": medico,
+        "estabelecimento": estabelecimento,
+        "paciente": {
+            "nome": getattr(paciente, "nome", "") or "",
+            "cpf": getattr(paciente, "cpf", "") or "",
+        },
+        "diagnostico": internacao.diagnostico or "",
+        "leito": str(internacao.leito) if internacao.leito_id else "",
+        "medico_responsavel": internacao.medico_responsavel or "",
+        "itens": linhas,
+    }
+    return _canonizar(payload)
+
+
+def elementos_faltando_art2_internacao(internacao, cfg=None):
+    """Campos obrigatórios do art. 2º ausentes na prescrição de internação."""
+    medico, estab = _dados_emitente(internacao.empresa, cfg)
+    paciente = getattr(internacao, "paciente", None)
+    faltando = []
+    if not medico["nome"]:
+        faltando.append("nome do médico")
+    if not medico["crm"]:
+        faltando.append("CRM do médico")
+    if not medico["endereco"] and not estab["endereco"]:
+        faltando.append("endereço do médico ou do estabelecimento")
+    if not getattr(paciente, "nome", ""):
+        faltando.append("nome do paciente")
+    if not getattr(paciente, "cpf", ""):
+        faltando.append("número do documento legal do paciente")
+    return faltando
+
+
+class ProvedorCertificadoInstitucional(ProvedorAssinatura):
+    """Certificado da INSTITUIÇÃO, guardado em CredenciaisIntegracoes.
+
+    Existe porque o produto já assinava evoluções clínicas com o certificado do
+    hospital antes deste módulo, e quebrar isso deixaria documento assinado sem
+    caminho de verificação. Mantém o fluxo funcionando.
+
+    MAS não satisfaz a Resolução CFM 2.299/2021 para ATO MÉDICO: o art. 4º
+    exige a assinatura do médico, e um certificado institucional identifica a
+    pessoa jurídica, não o profissional. Por isso devolve `conforme_cfm: False`
+    — quem usar precisa saber o que tem na mão.
+    """
+
+    nome = "institucional"
+    rotulo = "Certificado da instituição (não atende ao art. 4º para ato médico)"
+
+    def __init__(self, empresa):
+        self.empresa = empresa
+        self._cred = None
+
+    def _cred_obj(self):
+        if self._cred is None:
+            from api.models import CredenciaisIntegracoes
+            self._cred = CredenciaisIntegracoes.objects.filter(
+                empresa=self.empresa).first()
+        return self._cred
+
+    def requisitos_pendentes(self):
+        cred = self._cred_obj()
+        if not cred or not getattr(cred, "rnds_certificado_pfx_b64", ""):
+            return ["Nenhum certificado institucional configurado."]
+        return [
+            "Este é o certificado da INSTITUIÇÃO. Para ato médico, a Resolução "
+            "CFM 2.299/2021 (art. 4º) exige a assinatura do MÉDICO: cadastre o "
+            "certificado de cada profissional.",
+        ]
+
+    def disponivel(self):
+        cred = self._cred_obj()
+        return bool(cred and getattr(cred, "rnds_certificado_pfx_b64", ""))
+
+    def assinar(self, conteudo_bytes, contexto=None):
+        if not self.disponivel():
+            raise AssinaturaIndisponivel(
+                "Nenhum certificado institucional configurado.",
+                pendencias=self.requisitos_pendentes())
+        from api.assinatura_digital import assinar_conteudo
+        texto = conteudo_bytes.decode("utf-8") if isinstance(
+            conteudo_bytes, bytes) else str(conteudo_bytes)
+        ok, assinatura_b64, _hash, metodo, erro = assinar_conteudo(
+            texto, self._cred_obj(), identificador=self.empresa.nome)
+        if not ok:
+            raise AssinaturaIndisponivel(
+                f"Falha ao assinar com o certificado institucional: {erro}",
+                codigo="falha_certificado_institucional")
+        # O motor cai para SHA-256 quando não consegue usar o certificado. Isso
+        # garante integridade, mas NÃO é assinatura com validade jurídica — e
+        # marcar como assinada seria a mentira que este módulo inteiro evita.
+        if metodo == "SHA256":
+            raise AssinaturaIndisponivel(
+                "O certificado institucional não pôde ser usado e o conteúdo "
+                "receberia apenas resumo SHA-256, sem validade jurídica. "
+                "Nenhum documento foi marcado como assinado.",
+                codigo="apenas_hash_sem_validade",
+                pendencias=self.requisitos_pendentes())
+        return {
+            "assinatura_b64": assinatura_b64,
+            "provedor": self.nome,
+            "formato": metodo,
+            "conforme_cfm": False,
+            "assinado_em": timezone.now(),
+            "certificado": {"titular": self.empresa.nome, "cpf_cnpj": "",
+                            "emissor": "", "numero_serie": "",
+                            "valido_de": None, "valido_ate": None},
+            "carimbo_tempo_em": None,
+        }

@@ -382,3 +382,224 @@ def _evolucao_dict(e):
         "assinado_em":           e.assinado_em.isoformat() if e.assinado_em else None,
         "assinado_digitalmente_em": e.assinado_digitalmente_em.isoformat() if e.assinado_digitalmente_em else None,
     }
+
+
+# ── Prescrição de internação assinada ─────────────────────────────────────────
+# A Resolução CFM 2.299/2021 lista "Prescrição" (art. 1º) entre os documentos
+# médicos eletrônicos — não é privilégio de um módulo. Estes endpoints usam o
+# certificado do PROFISSIONAL (`CertificadoAssinante`), que é o que o art. 4º
+# exige, e caem para o certificado institucional apenas quando é o único
+# disponível — informando que, nesse caso, não se cumpre o art. 4º para ato
+# médico.
+#
+# Assina-se o CONJUNTO de itens ativos, porque prescrição é um documento: item
+# a item, alguém poderia acrescentar uma linha depois sem invalidar nada.
+
+def _provedor_do_documento(empresa, nome=None, cpf=None, registro=None):
+    """Escolhe o certificado: do profissional primeiro, institucional depois."""
+    from .services.assinatura_icp import (ProvedorCertificadoInstitucional,
+                                          localizar_certificado, provedor_para)
+    cfg = localizar_certificado(empresa, nome=nome, cpf=cpf, registro=registro)
+    if cfg is not None:
+        return cfg, provedor_para(cfg)
+    institucional = ProvedorCertificadoInstitucional(empresa)
+    if institucional.disponivel():
+        return None, institucional
+    return None, provedor_para(None)
+
+
+@csrf_exempt
+@api_requer_permissao_modulo("hospital.clinico")
+def api_prescricao_internacao_assinatura(request, internacao_id):
+    """GET/POST /api/hospital/internacoes/<id>/prescricao/assinatura/"""
+    if request.method not in ("GET", "POST"):
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
+
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .models import (AssinaturaDocumento, InternacaoHospital,
+                         PrescricaoMedica)
+    from .services.assinatura_icp import (
+        AssinaturaIndisponivel, TIPO_PRESCRICAO_INTERNACAO, ALGORITMO_RESUMO,
+        conteudo_canonico_prescricao_internacao,
+        elementos_faltando_art2_internacao, resumo_sha256)
+
+    internacao = InternacaoHospital.objects.filter(
+        id=internacao_id, empresa=empresa
+    ).select_related("paciente", "leito").first()
+    if internacao is None:
+        return JsonResponse({"erro": "Internação não encontrada"}, status=404)
+
+    itens = list(PrescricaoMedica.objects.filter(
+        internacao=internacao, status="ativa").order_by("id"))
+    vigente = AssinaturaDocumento.objects.filter(
+        empresa=empresa, tipo_documento=TIPO_PRESCRICAO_INTERNACAO,
+        objeto_id=internacao.id).order_by("-criado_em").first()
+
+    if request.method == "GET":
+        cfg, provedor = _provedor_do_documento(
+            empresa, nome=internacao.medico_responsavel)
+        resposta = {
+            "itens_ativos": len(itens),
+            "provedor": provedor.nome,
+            "provedor_rotulo": provedor.rotulo,
+            "pode_assinar": provedor.disponivel(),
+            "pendencias": provedor.requisitos_pendentes(),
+            "elementos_faltando_art2": elementos_faltando_art2_internacao(
+                internacao, cfg),
+        }
+        if vigente is None:
+            resposta.update({"assinada": False, "assinatura": None})
+            return JsonResponse(resposta)
+        conferencia = _conferir_prescricao(internacao, itens, vigente)
+        vigente.refresh_from_db()
+        resposta.update({
+            "assinada": vigente.status == "assinada",
+            "assinatura": _assinatura_prescricao_dict(vigente, conferencia),
+        })
+        return JsonResponse(resposta)
+
+    try:
+        body = json.loads(request.body or b"{}")
+    except (ValueError, TypeError):
+        return JsonResponse({"erro": "JSON inválido no corpo"}, status=400)
+
+    if not itens:
+        return JsonResponse(
+            {"erro": "Não há itens ativos na prescrição para assinar.",
+             "codigo": "prescricao_vazia"}, status=400)
+
+    if vigente and vigente.status == "assinada":
+        conferencia = _conferir_prescricao(internacao, itens, vigente)
+        if conferencia["integro"]:
+            return JsonResponse({
+                "erro": "Esta prescrição já está assinada e íntegra.",
+                "codigo": "ja_assinada",
+                "assinatura": _assinatura_prescricao_dict(vigente, conferencia),
+            }, status=409)
+
+    signatario = (body.get("signatario_nome")
+                  or internacao.medico_responsavel or "").strip()
+    if not signatario:
+        return JsonResponse(
+            {"erro": "Informe quem está assinando a prescrição.",
+             "codigo": "sem_signatario"}, status=400)
+
+    cfg, provedor = _provedor_do_documento(
+        empresa, nome=signatario, cpf=body.get("signatario_cpf"),
+        registro=body.get("signatario_registro"))
+
+    emitido_em = timezone.now()
+    conteudo = conteudo_canonico_prescricao_internacao(
+        internacao, itens, cfg=cfg, emitido_em=emitido_em)
+    conteudo_hash = resumo_sha256(conteudo)
+    faltando = elementos_faltando_art2_internacao(internacao, cfg)
+
+    comuns = dict(
+        empresa=empresa, tipo_documento=TIPO_PRESCRICAO_INTERNACAO,
+        objeto_id=internacao.id, conteudo_hash=conteudo_hash,
+        algoritmo=ALGORITMO_RESUMO,
+        signatario_nome=signatario[:150],
+        signatario_registro=(body.get("signatario_registro") or "").strip()[:40],
+        certificado_config=cfg, documento_emitido_em=emitido_em)
+
+    try:
+        resultado = provedor.assinar(
+            conteudo.encode("utf-8"),
+            contexto={"tipo_documento": TIPO_PRESCRICAO_INTERNACAO})
+    except AssinaturaIndisponivel as exc:
+        # Registra como FALHA — nunca como assinada.
+        AssinaturaDocumento.objects.create(
+            status="falha", provedor=provedor.nome,
+            motivo_falha=exc.mensagem, **comuns)
+        return JsonResponse({
+            "erro": exc.mensagem, "codigo": exc.codigo,
+            "pendencias": exc.pendencias, "assinada": False,
+            "documento_hash": conteudo_hash,
+            "elementos_faltando_art2": faltando,
+        }, status=503)
+
+    cert = resultado.get("certificado") or {}
+    a = AssinaturaDocumento.objects.create(
+        status="assinada",
+        certificado_titular=(cert.get("titular") or "")[:200],
+        certificado_cpf_cnpj=(cert.get("cpf_cnpj") or "")[:20],
+        certificado_emissor=(cert.get("emissor") or "")[:200],
+        certificado_serie=(cert.get("numero_serie") or "")[:80],
+        certificado_valido_de=cert.get("valido_de"),
+        certificado_valido_ate=cert.get("valido_ate"),
+        assinatura_b64=resultado.get("assinatura_b64", ""),
+        provedor=resultado.get("provedor", provedor.nome),
+        assinado_em=resultado.get("assinado_em") or timezone.now(),
+        carimbo_tempo_em=resultado.get("carimbo_tempo_em"), **comuns)
+
+    conforme_cfm = bool(resultado.get("conforme_cfm"))
+    avisos = []
+    if faltando:
+        avisos.append("Documento incompleto para o art. 2º da Resolução CFM "
+                      "2.299/2021 — falta: " + ", ".join(faltando) + ".")
+    if not conforme_cfm:
+        avisos.append("Assinado com certificado da INSTITUIÇÃO. O art. 4º exige "
+                      "a assinatura do MÉDICO para ato médico — cadastre o "
+                      "certificado do profissional.")
+    return JsonResponse({
+        "assinada": True,
+        "assinatura": _assinatura_prescricao_dict(a, {
+            "integro": True, "hash_atual": conteudo_hash,
+            "hash_assinado": conteudo_hash,
+            "mensagem": "Documento recém-assinado."}),
+        "itens_assinados": len(itens),
+        "formato": resultado.get("formato", ""),
+        "conforme_cfm": conforme_cfm,
+        "elementos_faltando_art2": faltando,
+        "alerta": " ".join(avisos) or None,
+    }, status=201)
+
+
+def _conferir_prescricao(internacao, itens, assinatura):
+    """Recalcula o resumo do CONJUNTO e compara com o que foi assinado."""
+    from .services.assinatura_icp import (
+        conteudo_canonico_prescricao_internacao, resumo_sha256)
+
+    atual = resumo_sha256(conteudo_canonico_prescricao_internacao(
+        internacao, itens, cfg=assinatura.certificado_config,
+        emitido_em=assinatura.documento_emitido_em))
+    integro = (atual == assinatura.conteudo_hash)
+    if not integro and assinatura.status == "assinada":
+        assinatura.status = "invalidada"
+        assinatura.motivo_falha = (
+            "A prescrição mudou depois da assinatura: o resumo recalculado não "
+            "confere com o que foi assinado.")
+        assinatura.save(update_fields=["status", "motivo_falha"])
+    return {
+        "integro": integro,
+        "hash_atual": atual,
+        "hash_assinado": assinatura.conteudo_hash,
+        "mensagem": ("Documento íntegro: confere com o conteúdo assinado."
+                     if integro else
+                     "ATENÇÃO: a prescrição foi alterada após a assinatura. "
+                     "A assinatura não cobre o conteúdo atual."),
+    }
+
+
+def _assinatura_prescricao_dict(a, conferencia=None):
+    d = {
+        "id": a.id,
+        "status": a.status,
+        "status_display": a.get_status_display(),
+        "conteudo_hash": a.conteudo_hash,
+        "algoritmo": a.algoritmo,
+        "signatario_nome": a.signatario_nome,
+        "signatario_registro": a.signatario_registro,
+        "certificado_titular": a.certificado_titular,
+        "provedor": a.provedor,
+        "assinado_em": a.assinado_em.isoformat() if a.assinado_em else None,
+        # Sem carimbo de uma ACT externa a data é a do nosso relógio.
+        "data_com_fe_publica": a.carimbo_tempo_em is not None,
+        "motivo_falha": a.motivo_falha,
+    }
+    if conferencia is not None:
+        d["conferencia"] = conferencia
+    return d
