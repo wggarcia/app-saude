@@ -663,6 +663,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
         autoriza cada assinatura pelo celular. Se o hospital já tem serviço próprio de assinatura,
         use a opção “API de assinatura do hospital”.</div>
       </div>
+      <div id="implantacaoBox" style="margin:0 20px 14px"></div>
       <div id="confBox" style="margin:0 20px 14px"></div>
       <table>
         <thead><tr><th>Profissional</th><th>CRM / RQE</th><th>Provedor</th><th>Situação</th><th>Validade</th><th>Ação</th></tr></thead>
@@ -817,7 +818,7 @@ function setTab(tab) {
   if (tab === 'infusao') carregarInfusao();
   if (tab === 'oral') carregarOral();
   if (tab === 'seguimento') carregarSeguimentos();
-  if (tab === 'certificados') { carregarCertificados(); carregarConformidade(); }
+  if (tab === 'certificados') { carregarImplantacao(); carregarCertificados(); carregarConformidade(); }
   if (tab === 'interacoes') carregarInteracoes();
 }
 
@@ -1063,6 +1064,60 @@ async function emitirPulseira(){
 // ── Certificados de assinantes (por médico, nunca por instalação) ──────────
 var certStatusMap = {ativo:'badge-ok', pendente:'badge-warn', inativo:'badge-gray'};
 
+// ── Roteiro de implantação: o caminho que o hospital novo segue ────────────
+// O status de cada passo vem calculado do estado real do sistema. Checklist
+// que o próprio usuário marca vira ficção.
+var deQuemRotulo = {hospital:'Hospital', 'médico':'Cada médico', medico:'Cada médico'};
+
+async function carregarImplantacao(){
+  var alvo = document.getElementById('implantacaoBox');
+  if (!alvo) return;
+  try {
+    var r = await fetch('/api/hospital/assinatura/implantacao', { credentials:'include', headers: headers() });
+    if (!r.ok) { alvo.innerHTML = ''; return; }
+    var d = await r.json();
+    var passos = (d.passos||[]).map(function(p, i){
+      var icone = p.concluido ? '✓' : (p.obrigatorio ? (p.liberado ? '▸' : '·') : '○');
+      var cor = p.concluido ? 'var(--ok)' : (p.liberado && p.obrigatorio ? 'var(--warn)' : 'var(--muted)');
+      var comoFazer = (p.como_fazer||[]).map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('');
+      var pend = (p.pendencias||[]).length && !p.concluido
+        ? '<div class="itens-mini" style="color:var(--warn);margin-top:4px">' + p.pendencias.map(esc).join(' · ') + '</div>' : '';
+      // Passo opcional não deve parecer pendência: o hospital só precisa dele
+      // se for emitir controlado eletrônico ou quiser parar de imprimir.
+      var selo = p.obrigatorio
+        ? (p.concluido ? '<span class="badge badge-ok">concluído</span>' : '<span class="badge badge-warn">pendente</span>')
+        : '<span class="badge badge-gray">opcional</span>';
+      return '<details style="border-top:1px solid var(--border);padding:10px 0"'+(p.liberado && !p.concluido && p.obrigatorio ? ' open' : '')+'>'
+        + '<summary style="cursor:pointer;display:flex;gap:10px;align-items:center;list-style:none">'
+        + '<span style="color:'+cor+';font-weight:800;font-size:15px;min-width:18px">'+icone+'</span>'
+        + '<span style="flex:1"><strong>'+esc(p.titulo)+'</strong>'
+        + '<div class="itens-mini" style="opacity:.75">'+esc(p.resumo)+'</div></span>'
+        + '<span class="badge badge-info">'+esc(deQuemRotulo[p.de_quem]||p.de_quem)+'</span>' + selo
+        + '</summary>'
+        + (comoFazer ? ('<ul style="margin:8px 0 0 42px;font-size:12.5px;line-height:1.6">'+comoFazer+'</ul>') : '')
+        + '<div class="itens-mini" style="margin:6px 0 0 42px;opacity:.65">Base: '+esc(p.base||'')+'</div>'
+        + (pend ? ('<div style="margin-left:42px">'+pend+'</div>') : '')
+        + '</details>';
+    }).join('');
+
+    alvo.innerHTML =
+      '<div class="alert-box ' + (d.pronto_para_assinar ? 'ab-ok' : 'ab-info') + '">' +
+      '<div class="ab-title">' + (d.pronto_para_assinar
+        ? '✓ Implantação concluída — o hospital já pode emitir documento assinado'
+        : '🧭 Roteiro de implantação — ' + d.concluidos + ' de ' + d.total_obrigatorios + ' passos obrigatórios') + '</div>' +
+      (d.pronto_para_assinar ? '' :
+        ('<div style="margin-top:8px;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">'
+         + '<div style="height:100%;width:'+d.percentual+'%;background:var(--accent)"></div></div>'
+         + (d.proximo_passo_titulo ? ('<div style="margin-top:8px"><strong>Próximo:</strong> '+esc(d.proximo_passo_titulo)+'</div>') : ''))) +
+      '<div style="margin-top:10px">' + passos + '</div>' +
+      '<div class="itens-mini" style="margin-top:10px;opacity:.8;border-top:1px solid var(--border);padding-top:8px">'
+      + '<strong>Quem faz o quê.</strong> Hospital: ' + esc((d.quem_faz_o_que||{}).hospital||'')
+      + ' Médico: ' + esc((d.quem_faz_o_que||{}).medico||'')
+      + ' Fornecedor do software: ' + esc((d.quem_faz_o_que||{}).fornecedor_do_software||'') + '</div>' +
+      '</div>';
+  } catch(e) { alvo.innerHTML = ''; }
+}
+
 async function carregarConformidade(){
   var alvo = document.getElementById('confBox');
   if (!alvo) return;
@@ -1117,7 +1172,7 @@ async function salvarResponsabilidadeTecnica(){
     if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
     toast(d.conforme ? 'Estabelecimento em conformidade' : ('Salvo — ainda falta: ' + (d.pendencias||[]).join(' ')), !!d.conforme);
     document.getElementById('formRtCard').style.display = 'none';
-    carregarConformidade();
+    carregarConformidade(); carregarImplantacao();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
@@ -1204,7 +1259,7 @@ async function salvarCertificado(){
     document.getElementById('formCertCard').style.display = 'none';
     ['ctNome','ctCpf','ctRegistro','ctRqe','ctEndereco','ctIdent','ctClienteId','ctClienteSecreto',
      'ctApiUrl','ctApiToken','ctA1Caminho','ctA1Senha','ctValidade'].forEach(function(id){ document.getElementById(id).value=''; });
-    carregarCertificados();
+    carregarCertificados(); carregarImplantacao();
   } catch(e) { toast('Erro de conexão', false); }
 }
 
@@ -1215,7 +1270,7 @@ async function desativarCertificado(id){
     var r = await fetch('/api/hospital/oncologia/certificados/'+id+'/', { method:'DELETE', credentials:'include', headers: headers() });
     if (!r.ok) return toast('Não foi possível desativar', false);
     toast('Assinante desativado', true);
-    carregarCertificados();
+    carregarCertificados(); carregarImplantacao();
   } catch(e) { toast('Erro de conexão', false); }
 }
 

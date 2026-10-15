@@ -2753,6 +2753,127 @@ class OncologiaTests(TestCase):
         self.assertTrue(v["integro"])
         self.assertFalse(verificar_assinatura("outro", ass, h)["integro"])
 
+    # ── Roteiro de implantação (hospital que acabou de contratar) ──────────
+    def _roteiro(self, client):
+        return client.get("/api/hospital/assinatura/implantacao").json()
+
+    def test_hospital_novo_ve_o_caminho_desde_o_primeiro_acesso(self):
+        """Quem acaba de contratar precisa chegar e já ver o que fazer, na
+        ordem — não descobrir na frente do paciente que não assina."""
+        empresa = _empresa("Hospital Novo", "impl-1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        d = self._roteiro(client)
+        self.assertFalse(d["pronto_para_assinar"])
+        self.assertEqual(d["concluidos"], 0)
+        self.assertEqual(d["proximo_passo"], "responsabilidade_tecnica")
+        ids = [p["id"] for p in d["passos"]]
+        self.assertEqual(ids[:4], ["responsabilidade_tecnica",
+                                   "cadastrar_medicos",
+                                   "certificado_medico",
+                                   "primeira_assinatura"])
+        # Todo passo explica COMO fazer e cita a base normativa.
+        for p in d["passos"]:
+            self.assertTrue(p["como_fazer"], f"{p['id']} sem como_fazer")
+            self.assertTrue(p["base"], f"{p['id']} sem base normativa")
+            self.assertIn(p["de_quem"], ("hospital", "médico"))
+
+    def test_passo_so_libera_depois_do_anterior(self):
+        """Mostrar tudo aberto de uma vez faz o hospital começar pelo fim."""
+        empresa = _empresa("Hospital Novo", "impl-2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        d = self._roteiro(client)
+        por_id = {p["id"]: p for p in d["passos"]}
+        self.assertTrue(por_id["responsabilidade_tecnica"]["liberado"])
+        self.assertFalse(por_id["cadastrar_medicos"]["liberado"])
+        self.assertFalse(por_id["certificado_medico"]["liberado"])
+        # Opcional nunca fica travado — o hospital decide se precisa.
+        self.assertTrue(por_id["sncr"]["liberado"])
+        self.assertFalse(por_id["sncr"]["obrigatorio"])
+
+    def test_roteiro_avanca_conforme_o_hospital_preenche(self):
+        """O status é CALCULADO do estado real: checklist que o usuário marca
+        à mão vira ficção."""
+        caminho, senha = self._certificado_teste()
+        empresa = _empresa("Hospital Novo", "impl-3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+
+        # 1) responsabilidade técnica
+        client.put("/api/hospital/oncologia/conformidade/",
+                   data={"crm_pessoa_juridica": "CRM-MS PJ 555",
+                         "diretor_tecnico_nome": "Dr. Diretor",
+                         "diretor_tecnico_crm": "CRM-MS 111",
+                         "endereco": "Rua do Hospital, 100",
+                         "ciente_informado_em": date.today().isoformat()},
+                   content_type="application/json")
+        d = self._roteiro(client)
+        self.assertEqual(d["concluidos"], 1)
+        self.assertEqual(d["proximo_passo"], "cadastrar_medicos")
+
+        # 2) médico cadastrado com os dados do art. 2º e 3) certificado pronto
+        self._cert(client, provedor="a1_local", a1_caminho=caminho,
+                   a1_senha=senha, profissional_endereco="Av. Central, 50")
+        d = self._roteiro(client)
+        self.assertEqual(d["concluidos"], 3)
+        self.assertEqual(d["proximo_passo"], "primeira_assinatura")
+        self.assertEqual(d["assinantes_prontos"], 1)
+
+        # 4) assina de verdade — aí a implantação fecha
+        protocolo = self._protocolo(empresa)
+        ciclo_id = self._ciclo_pronto(client, protocolo)
+        r = client.post(f"/api/hospital/oncologia/ciclos/{ciclo_id}/assinatura/",
+                        data={"signatario_nome": "Dra. Helena Duarte",
+                              "signatario_cpf": "52998224725"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 201, r.content[:300])
+        d = self._roteiro(client)
+        self.assertTrue(d["pronto_para_assinar"])
+        self.assertIsNone(d["proximo_passo"])
+        self.assertEqual(d["percentual"], 100)
+
+    def test_medico_sem_endereco_trava_o_passo_do_art2(self):
+        """Cadastrar o médico não basta: sem CRM e endereço o documento sai
+        incompleto, e o roteiro não pode dar por feito."""
+        empresa = _empresa("Hospital Novo", "impl-4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        client.put("/api/hospital/oncologia/conformidade/",
+                   data={"crm_pessoa_juridica": "CRM-MS PJ 555",
+                         "diretor_tecnico_nome": "Dr. D", "diretor_tecnico_crm": "C1",
+                         "endereco": "", "ciente_informado_em": date.today().isoformat()},
+                   content_type="application/json")
+        self._cert(client)  # sem endereço do médico nem do estabelecimento
+        d = self._roteiro(client)
+        por_id = {p["id"]: p for p in d["passos"]}
+        self.assertFalse(por_id["cadastrar_medicos"]["concluido"])
+        self.assertTrue(por_id["cadastrar_medicos"]["pendencias"])
+
+    def test_roteiro_diz_de_quem_e_cada_passo(self):
+        """A confusão sobre quem cumpre o quê custou caro — tem de estar na
+        tela, não num documento à parte."""
+        empresa = _empresa("Hospital Novo", "impl-5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        d = self._roteiro(client)
+        quem = d["quem_faz_o_que"]
+        self.assertIn("CRM", quem["hospital"])
+        self.assertIn("certificado", quem["medico"])
+        self.assertIn("ão presta nem intermedeia", quem["fornecedor_do_software"])
+        por_id = {p["id"]: p for p in d["passos"]}
+        self.assertEqual(por_id["certificado_medico"]["de_quem"], "médico")
+        self.assertEqual(por_id["responsabilidade_tecnica"]["de_quem"], "hospital")
+
+    def test_roteiro_isolado_por_empresa(self):
+        caminho, senha = self._certificado_teste()
+        a = _empresa("Hospital A", "impl-a@example.com", "hospital_rede")
+        b = _empresa("Hospital B", "impl-b@example.com", "hospital_rede")
+        ca, cb = _client_for(a), _client_for(b)
+        ca.put("/api/hospital/oncologia/conformidade/",
+               data={"crm_pessoa_juridica": "X", "diretor_tecnico_nome": "D",
+                     "diretor_tecnico_crm": "C", "endereco": "E",
+                     "ciente_informado_em": date.today().isoformat()},
+               content_type="application/json")
+        self._cert(ca, provedor="a1_local", a1_caminho=caminho, a1_senha=senha)
+        self.assertGreater(self._roteiro(ca)["concluidos"], 0)
+        self.assertEqual(self._roteiro(cb)["concluidos"], 0)
+
     def test_assinatura_isolada_por_empresa(self):
         a = _empresa("Hospital A", "onco-icp-a@example.com", "hospital_rede")
         b = _empresa("Hospital B", "onco-icp-b@example.com", "hospital_rede")

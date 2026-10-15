@@ -1175,6 +1175,7 @@ from api.views_governo_sipni import (
 from api.views_hospital_assinatura import (
     api_assinatura_pendentes,
     api_prescricao_internacao_assinatura,
+    api_hospital_implantacao_assinatura,
     api_assinatura_assinar,
     api_assinatura_assinar_lote,
     api_assinatura_verificar,
@@ -3519,6 +3520,8 @@ urlpatterns = [
     path('api/hospital/internacoes/<int:internacao_id>/prescricao/assinatura',  api_prescricao_internacao_assinatura),
     path('api/hospital/internacoes/<int:internacao_id>/prescricao/assinatura/', api_prescricao_internacao_assinatura),
     path('api/hospital/assinatura/kpis/',                       api_assinatura_kpis),
+    path('api/hospital/assinatura/implantacao',                 api_hospital_implantacao_assinatura),
+    path('api/hospital/assinatura/implantacao/',                api_hospital_implantacao_assinatura),
     path('api/hospital/assinatura/pendentes',                   api_assinatura_pendentes),
     path('api/hospital/assinatura/pendentes/',                  api_assinatura_pendentes),
     path('api/hospital/assinatura/assinar-lote',                api_assinatura_assinar_lote),
