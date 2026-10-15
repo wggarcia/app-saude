@@ -376,7 +376,7 @@ class Command(BaseCommand):
             APACOncologia.objects.using(DB).create(
                 empresa=empresa, numero_apac="DEMO-APAC-2001",
                 paciente_nome=f"{TAG} Marina Alves", cid10_principal="C50",
-                procedimento_principal="0304020029 - Quimioterapia de mama",
+                procedimento_principal="0304020029",
                 ciclo_referencia=c_apto, competencia=comp,
                 carater_atendimento="1", data_solicitacao=_dias(20),
                 data_autorizacao=_dias(15), autorizador_nome="Regulação Municipal",
@@ -385,7 +385,7 @@ class Command(BaseCommand):
             APACOncologia.objects.using(DB).create(
                 empresa=empresa, numero_apac="DEMO-APAC-2002",
                 paciente_nome=f"{TAG} Rosa Lima", cid10_principal="C56",
-                procedimento_principal="0304050017 - Quimioterapia de ovário",
+                procedimento_principal="0304050017",
                 ciclo_referencia=c_dose, competencia=comp,
                 carater_atendimento="1", data_solicitacao=_dias(18),
                 data_autorizacao=_dias(10), autorizador_nome="Regulação Municipal",
@@ -396,7 +396,7 @@ class Command(BaseCommand):
             APACOncologia.objects.using(DB).create(
                 empresa=empresa, numero_apac="DEMO-APAC-2003",
                 paciente_nome=f"{TAG} Carlos Prado", cid10_principal="C34",
-                procedimento_principal="0304020010 - Quimioterapia de pulmão",
+                procedimento_principal="0304020010",
                 competencia=comp, carater_atendimento="1",
                 data_solicitacao=_dias(2), valor_solicitado=3100.00,
                 status="submetida")

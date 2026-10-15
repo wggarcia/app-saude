@@ -1246,6 +1246,24 @@ class OncologiaTests(TestCase):
         # seed existe para mostrar.
         d = client.get("/api/hospital/oncologia/seguimentos").json()
         self.assertEqual(d["fora_do_radar"], 1)
+        # O SQLite dos testes NÃO valida tamanho de varchar — o PostgreSQL de
+        # produção valida. Sem checar aqui, um valor longo no seed só estoura
+        # no servidor (foi o que aconteceu com o código SIGTAP da APAC).
+        from django.core.exceptions import ValidationError
+        for modelo in (CicloQuimioterapia, GuiaOncologica, PrescricaoQuimioOral,
+                       SeguimentoOncologico):
+            for obj in modelo.objects.filter(empresa=empresa):
+                for campo in obj._meta.fields:
+                    limite = getattr(campo, "max_length", None)
+                    valor = getattr(obj, campo.name, None)
+                    if limite and isinstance(valor, str) and len(valor) > limite:
+                        self.fail(
+                            f"{modelo.__name__}.{campo.name} tem {len(valor)} "
+                            f"caracteres e o limite é {limite}: {valor!r}")
+        from .models import APACOncologia as _Apac
+        for apac in _Apac.objects.filter(empresa=empresa):
+            self.assertLessEqual(len(apac.procedimento_principal), 10)
+
         oral = PrescricaoQuimioOral.objects.get(empresa=empresa)
         self.assertEqual(oral.dispensacoes.count(), 2)
         self.assertEqual(float(oral.dispensacoes.order_by("-data").first().adesao_pct), 50.0)
