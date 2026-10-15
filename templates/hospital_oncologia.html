@@ -78,6 +78,13 @@ tr:hover td{background:rgba(0,194,255,.03)}
 .dose-table td,.dose-table th{padding:7px 10px;font-size:12px}
 .dose-cap{color:var(--warn);font-weight:700}
 .alerta-box{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.35);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--danger)}
+/* Faixa de aptidão do ciclo — primeira coisa que o oncologista vê no detalhe. */
+.alert-box{border-radius:10px;padding:12px 16px;font-size:12.5px;border:1px solid;margin-bottom:14px;line-height:1.5}
+.alert-box .ab-title{font-weight:800;font-size:13px}
+.ab-ok{background:rgba(0,229,176,.08);border-color:rgba(0,229,176,.35);color:var(--ok)}
+.ab-warn{background:rgba(255,179,71,.08);border-color:rgba(255,179,71,.35);color:var(--warn)}
+.ab-danger{background:rgba(255,77,109,.1);border-color:rgba(255,77,109,.4);color:var(--danger)}
+.ab-info{background:rgba(0,194,255,.07);border-color:rgba(0,194,255,.3);color:var(--muted)}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;font-size:13px}
 .info-grid .k{color:var(--muted);font-size:11px}
 .drogas-mini{font-size:11px;color:var(--muted);max-width:280px}
@@ -99,13 +106,15 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
   </div>
 
-  <div class="kpi-row" style="grid-template-columns:repeat(6,1fr)">
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
     <div class="kpi"><div class="kpi-val" id="kpiCiclosAtivos">—</div><div class="kpi-lbl">Ciclos Ativos</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiCiclosAtrasados">—</div><div class="kpi-lbl">Ciclos Atrasados</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiGuiasVenc">—</div><div class="kpi-lbl">Guias Vencendo/Vencidas</div></div>
     <div class="kpi danger"><div class="kpi-val" id="kpiToxGraves">—</div><div class="kpi-lbl">Toxicidade Grau ≥3 (mês)</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiGlosas">—</div><div class="kpi-lbl">APACs Glosadas (mês)</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiValorAprovado">—</div><div class="kpi-lbl">Valor Aprovado APAC (mês)</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiPrazoEstourado">—</div><div class="kpi-lbl">Autorizações fora do prazo</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiPrazoAguardando">—</div><div class="kpi-lbl">Aguardando resposta da operadora</div></div>
   </div>
 
   <div class="tabs">
@@ -113,6 +122,7 @@ tr:hover td{background:rgba(0,194,255,.03)}
     <button class="tab-btn" data-tab="ciclos" onclick="setTab('ciclos')">Ciclos de Quimioterapia</button>
     <button class="tab-btn" data-tab="apacs" onclick="setTab('apacs')">APAC / SUS</button>
     <button class="tab-btn" data-tab="guias" onclick="setTab('guias')">Guias / Autorizações</button>
+    <button class="tab-btn" data-tab="respostas" onclick="setTab('respostas')">Resposta ao Tratamento</button>
     <button class="tab-btn" data-tab="jornada" onclick="setTab('jornada')">Jornada do Paciente</button>
   </div>
 
@@ -184,6 +194,20 @@ tr:hover td{background:rgba(0,194,255,.03)}
         <div class="form-group"><label>Clearance (mL/min)</label><input type="number" step="0.1" id="cClear"></div>
         <div class="form-group"><label>Bilirrubina (mg/dL)</label><input type="number" step="0.01" id="cBili"></div>
       </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Neutrófilos (/mm³)</label><input type="number" id="cNeutro" placeholder="ex.: 2500"></div>
+        <div class="form-group"><label>Plaquetas (/mm³)</label><input type="number" id="cPlaq" placeholder="ex.: 220000"></div>
+        <div class="form-group"><label>AUC alvo <span style="opacity:.6">(só carboplatina)</span></label><input type="number" step="0.1" id="cAuc" placeholder="ex.: 5"></div>
+      </div>
+      <div class="form-row3" id="rowPrimeiraDose">
+        <div class="form-group"><label>Estadiamento</label><input id="cEstadio" placeholder="ex.: IIIB"></div>
+        <div class="form-group"><label>Intenção do tratamento</label><select id="cIntencao">
+          <option value="">—</option><option value="curativo">Curativo</option>
+          <option value="paliativo">Paliativo</option><option value="adjuvante">Adjuvante</option>
+          <option value="neoadjuvante">Neoadjuvante</option></select></div>
+        <div class="form-group"><label>&nbsp;</label><label style="font-size:12px;color:var(--text)"><input type="checkbox" id="cConfPat"> Diagnóstico confirmado por laudo patológico</label></div>
+      </div>
+      <div class="itens-mini" style="opacity:.75;margin-top:-4px">Hemograma do dia libera ou trava o ciclo (neutrófilos e plaquetas). Estadiamento, intenção e laudo são exigidos na 1ª dose do esquema.</div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" onclick="document.getElementById('formCicloCard').style.display='none'">Cancelar</button>
         <button class="btn btn-primary" onclick="salvarCiclo()">Revisar dose e salvar</button>
@@ -235,8 +259,8 @@ tr:hover td{background:rgba(0,194,255,.03)}
         <button class="btn btn-primary btn-sm" onclick="abrirNovaGuia()">+ Nova Guia</button>
       </div>
       <table>
-        <thead><tr><th>Nº Guia</th><th>Paciente</th><th>Tipo</th><th>Válida até</th><th>Vence em</th><th>Ciclos</th><th>Status</th></tr></thead>
-        <tbody id="guiasBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+        <thead><tr><th>Nº Guia</th><th>Paciente</th><th>Tipo</th><th>Válida até</th><th>Vence em</th><th>Ciclos</th><th>Prazo de resposta<br><span style="font-weight:400;opacity:.6">RN 623/2024 — 5 dias úteis</span></th><th>Status</th></tr></thead>
+        <tbody id="guiasBody"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
       </table>
     </div>
     <div class="form-card" id="formGuiaCard" style="display:none">
@@ -258,6 +282,54 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" onclick="document.getElementById('formGuiaCard').style.display='none'">Cancelar</button>
         <button class="btn btn-primary" onclick="salvarGuia()">Salvar guia</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-respostas">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🎯 Resposta ao Tratamento — critério RECIST 1.1</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaResposta()">+ Nova avaliação</button>
+      </div>
+      <div style="padding:12px 20px 0;font-size:12.5px;color:var(--muted)">
+        RECIST 1.1 (<em>Response Evaluation Criteria in Solid Tumors</em>, versão 1.1) — o sistema classifica sozinho
+        a partir da soma dos maiores diâmetros das lesões-alvo: queda ≥30% sobre a basal = resposta parcial;
+        aumento ≥20% sobre o menor valor já medido (nadir) e ≥5&nbsp;mm = doença progressiva; lesão nova = progressão.
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Data</th><th>Método</th><th>Soma das lesões</th><th>vs. basal</th><th>vs. nadir</th><th>Resposta</th></tr></thead>
+        <tbody id="respostasBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formRespostaCard" style="display:none">
+      <div class="form-card-title">Nova avaliação de resposta</div>
+      <div class="form-row3">
+        <div class="form-group"><label>Paciente *</label><input id="rPaciente"></div>
+        <div class="form-group"><label>CPF</label><input id="rCpf" maxlength="14"></div>
+        <div class="form-group"><label>Data da avaliação *</label><input type="date" id="rData"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Método de imagem</label>
+          <select id="rMetodo">
+            <option value="tc">Tomografia computadorizada</option>
+            <option value="rm">Ressonância magnética</option>
+            <option value="petct">PET-CT (tomografia por emissão de pósitrons)</option>
+            <option value="clinica">Avaliação clínica</option>
+            <option value="outro">Outro</option>
+          </select></div>
+        <div class="form-group"><label>Soma dos diâmetros das lesões-alvo (mm)</label><input type="number" step="0.1" id="rSoma" placeholder="ex.: 72.5"></div>
+        <div class="form-group"><label>Avaliador</label><input id="rAvaliador" placeholder="médico responsável"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" id="rBasal"> É a avaliação basal (antes do tratamento)</label></div>
+        <div class="form-group"><label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" id="rNovas"> Surgiram lesões novas</label></div>
+        <div class="form-group"><label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" id="rSumiu"> Desapareceram todas as lesões-alvo</label></div>
+      </div>
+      <div class="form-group"><label>Justificativa (obrigatória só se a classificação for alterada à mão)</label><input id="rJust"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formRespostaCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarResposta()">Salvar avaliação</button>
       </div>
     </div>
   </div>
@@ -316,12 +388,13 @@ function setTab(tab) {
   if (tab === 'ciclos') carregarCiclos();
   if (tab === 'apacs') carregarApacs();
   if (tab === 'guias') carregarGuias();
+  if (tab === 'respostas') carregarRespostas();
 }
 
-var statusGuiaMap = {vigente:'badge-ok', vencida:'badge-danger', esgotada:'badge-warn', cancelada:'badge-gray'};
+var statusGuiaMap = {vigente:'badge-ok', vencida:'badge-danger', esgotada:'badge-warn', cancelada:'badge-gray', em_analise:'badge-warn', negada:'badge-danger'};
 async function carregarGuias() {
   var tbody = document.getElementById('guiasBody');
-  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="empty">Carregando...</td></tr>';
   try {
     // alerta agregado no topo
     var ra = await fetch('/api/hospital/oncologia/guias/alertas?dias=30', { credentials:'include', headers: headers() });
@@ -333,16 +406,34 @@ async function carregarGuias() {
       } else { box.innerHTML = ''; }
     }
     var r = await fetch('/api/hospital/oncologia/guias', { credentials:'include', headers: headers() });
-    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro ao carregar.</td></tr>'; return; }
     var d = await r.json();
-    if (!d.guias.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma guia registrada.</td></tr>'; return; }
+    if (!d.guias.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma guia registrada.</td></tr>'; return; }
     tbody.innerHTML = d.guias.map(function(g){
       var vence = g.dias_para_vencer < 0 ? ('<span style="color:var(--danger)">vencida há '+(-g.dias_para_vencer)+'d</span>')
                 : (g.dias_para_vencer <= 30 ? ('<span style="color:var(--warn)">'+g.dias_para_vencer+'d</span>') : (g.dias_para_vencer+'d'));
       var ciclos = g.ciclos_autorizados ? (g.ciclos_utilizados+'/'+g.ciclos_autorizados) : (g.ciclos_utilizados+'/∞');
-      return '<tr><td><strong>'+esc(g.numero_guia)+'</strong></td><td>'+esc(g.paciente_nome)+'</td><td>'+esc(g.tipo_display)+'</td><td>'+fmtData(g.data_validade)+'</td><td>'+vence+'</td><td>'+esc(ciclos)+'</td><td><span class="badge '+(statusGuiaMap[g.status]||'badge-gray')+'">'+esc(g.status_display)+'</span></td></tr>';
+      var p = g.prazo_resposta || {};
+      var prazo;
+      if (!p.aplicavel) { prazo = '<span style="opacity:.5">sem data de solicitação</span>'; }
+      else if (p.respondida) {
+        prazo = p.estourado
+          ? '<span style="color:var(--danger)">respondida em '+p.dias_uteis_decorridos+' dias úteis (fora do prazo)</span>'
+          : '<span style="color:var(--ok)">respondida em '+p.dias_uteis_decorridos+' dias úteis</span>';
+      } else if (p.estourado) {
+        prazo = '<span style="color:var(--danger)"><strong>prazo estourado</strong> — '+p.dias_uteis_decorridos+' dias úteis parados</span>';
+      } else if (p.vence_hoje) {
+        prazo = '<span style="color:var(--warn)"><strong>vence hoje</strong></span>';
+      } else {
+        prazo = 'faltam '+p.dias_uteis_restantes+' dia(s) útil(eis)';
+      }
+      var motivo = g.motivo_negativa_display
+        ? '<div class="itens-mini" style="color:var(--danger)">Negada: '+esc(g.motivo_negativa_display)
+          + (g.motivo_negativa_detalhe ? ' — '+esc(g.motivo_negativa_detalhe) : '') + '</div>' : '';
+      return '<tr><td><strong>'+esc(g.numero_guia)+'</strong></td><td>'+esc(g.paciente_nome)+'</td><td>'+esc(g.tipo_display)+'</td><td>'+fmtData(g.data_validade)+'</td><td>'+vence+'</td><td>'+esc(ciclos)+'</td><td>'+prazo+'</td><td><span class="badge '+(statusGuiaMap[g.status]||'badge-gray')+'">'+esc(g.status_display)+'</span></td>'+(motivo?'':'')+'</tr>'
+           + (motivo ? '<tr><td colspan="8" style="padding-top:0;border-top:none">'+motivo+'</td></tr>' : '');
     }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro de conexão.</td></tr>'; }
 }
 function abrirNovaGuia() {
   var card = document.getElementById('formGuiaCard');
@@ -370,6 +461,64 @@ async function salvarGuia() {
   } catch(e) { toast('Erro de conexão', false); }
 }
 
+// ── Resposta ao tratamento (RECIST 1.1) ────────────────────────────────────
+var respostaBadge = {rc:'badge-ok', rp:'badge-ok', de:'badge-gray', dp:'badge-danger', ne:'badge-gray'};
+async function carregarRespostas() {
+  var tbody = document.getElementById('respostasBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/respostas', { credentials:'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.avaliacoes.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma avaliação registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.avaliacoes.map(function(a){
+      function pct(v, ruimSeSobe){
+        if (v == null) return '—';
+        var cor = v > 0 ? (ruimSeSobe ? 'var(--danger)' : 'var(--muted)') : 'var(--ok)';
+        return '<span style="color:'+cor+'">'+(v>0?'+':'')+v.toFixed(1)+'%</span>';
+      }
+      var soma = a.soma_lesoes_mm != null ? (a.soma_lesoes_mm.toFixed(1)+' mm') : '—';
+      var flags = (a.basal ? ' <span class="badge badge-gray">basal</span>' : '')
+                + (a.lesoes_novas ? ' <span class="badge badge-danger">lesão nova</span>' : '')
+                + (a.resposta_automatica ? '' : ' <span class="badge badge-warn">editada</span>');
+      return '<tr><td><strong>'+esc(a.paciente_nome)+'</strong></td><td>'+fmtData(a.data_avaliacao)+'</td><td>'+esc(a.metodo_display)
+           + '</td><td>'+soma+'</td><td>'+pct(a.variacao_vs_basal_pct,true)+'</td><td>'+pct(a.variacao_vs_nadir_pct,true)
+           + '</td><td><span class="badge '+(respostaBadge[a.resposta]||'badge-gray')+'">'+esc(a.resposta_display)+'</span>'+flags+'</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+function abrirNovaResposta() {
+  var card = document.getElementById('formRespostaCard');
+  if (!document.getElementById('rData').value) document.getElementById('rData').value = new Date().toISOString().slice(0,10);
+  card.style.display = 'block'; card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+async function salvarResposta() {
+  var paciente = document.getElementById('rPaciente').value.trim();
+  var data = document.getElementById('rData').value;
+  if (!paciente || !data) return toast('Paciente e data da avaliação são obrigatórios', false);
+  var soma = document.getElementById('rSoma').value;
+  try {
+    var r = await fetch('/api/hospital/oncologia/respostas', { method:'POST', credentials:'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, cpf_paciente: document.getElementById('rCpf').value.replace(/\D/g,''),
+      data_avaliacao: data, metodo: document.getElementById('rMetodo').value,
+      soma_lesoes_mm: soma === '' ? null : parseFloat(soma),
+      basal: document.getElementById('rBasal').checked,
+      lesoes_novas: document.getElementById('rNovas').checked,
+      desaparecimento_total: document.getElementById('rSumiu').checked,
+      avaliador: document.getElementById('rAvaliador').value.trim(),
+      justificativa: document.getElementById('rJust').value.trim(),
+    })});
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    var cls = d.avaliacao && d.avaliacao.resposta_display ? (' — ' + d.avaliacao.resposta_display) : '';
+    toast('Avaliação registrada' + cls, (d.avaliacao||{}).resposta !== 'dp');
+    document.getElementById('formRespostaCard').style.display = 'none';
+    ['rPaciente','rCpf','rSoma','rAvaliador','rJust'].forEach(function(id){ document.getElementById(id).value=''; });
+    ['rBasal','rNovas','rSumiu'].forEach(function(id){ document.getElementById(id).checked=false; });
+    carregarRespostas();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
 async function carregarKpis() {
   try {
     var r = await fetch('/api/hospital/oncologia/kpis', { credentials: 'include', headers: headers() });
@@ -381,6 +530,8 @@ async function carregarKpis() {
     document.getElementById('kpiToxGraves').textContent = d.toxicidades_grau3_mais_mes;
     document.getElementById('kpiGlosas').textContent = d.apac_glosas_mes;
     document.getElementById('kpiValorAprovado').textContent = 'R$ ' + (d.valor_aprovado_mes||0).toLocaleString('pt-BR', {minimumFractionDigits:2});
+    document.getElementById('kpiPrazoEstourado').textContent = d.autorizacoes_prazo_estourado != null ? d.autorizacoes_prazo_estourado : '—';
+    document.getElementById('kpiPrazoAguardando').textContent = d.autorizacoes_aguardando_resposta != null ? d.autorizacoes_aguardando_resposta : '—';
   } catch(e) { document.getElementById('kpiCiclosAtivos').textContent = '!'; }
 }
 
@@ -456,7 +607,9 @@ async function carregarCiclos() {
     tbody.innerHTML = d.ciclos.map(function(c) {
       var cicloTxt = c.numero_ciclo + (c.ciclos_total ? ('/' + c.ciclos_total) : '');
       var atraso = c.atrasado ? ' <span class="badge badge-danger">atrasado</span>' : '';
-      return '<tr class="row-click" onclick="abrirCiclo(' + c.id + ')"><td><strong>' + esc(c.paciente_nome) + '</strong></td><td>' + esc(c.protocolo) + '</td><td>' + esc(c.cid10_principal) + '</td><td>' + esc(cicloTxt) + '</td><td>' + esc(c.sc_m2||'—') + '</td><td>' + fmtData(c.data_inicio) + atraso + '</td><td><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + esc(c.status_display) + '</span></td></tr>';
+      var aptSelo = c.aptidao_status === 'inapto' ? ' <span class="badge badge-danger">inapto</span>'
+                  : c.aptidao_status === 'apto_ressalva' ? ' <span class="badge badge-warn">ressalva</span>' : '';
+      return '<tr class="row-click" onclick="abrirCiclo(' + c.id + ')"><td><strong>' + esc(c.paciente_nome) + '</strong></td><td>' + esc(c.protocolo) + '</td><td>' + esc(c.cid10_principal) + '</td><td>' + esc(cicloTxt) + '</td><td>' + esc(c.sc_m2||'—') + '</td><td>' + fmtData(c.data_inicio) + atraso + aptSelo + '</td><td><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + esc(c.status_display) + '</span></td></tr>';
     }).join('');
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
 }
@@ -473,8 +626,10 @@ function abrirNovoCiclo() {
   card.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 function limparFormCiclo(){
-  ['cPaciente','cCpf','cCid','cInicio','cMedico','cPeso','cAltura','cScPreview','cCreat','cClear','cBili'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['cPaciente','cCpf','cCid','cInicio','cMedico','cPeso','cAltura','cScPreview','cCreat','cClear','cBili','cNeutro','cPlaq','cAuc','cEstadio'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('cNumero').value = '1';
+  document.getElementById('cIntencao').value = '';
+  document.getElementById('cConfPat').checked = false;
 }
 async function salvarCiclo() {
   var paciente = document.getElementById('cPaciente').value.trim();
@@ -497,11 +652,20 @@ async function salvarCiclo() {
       creatinina_mg_dl: parseFloat(document.getElementById('cCreat').value)||null,
       clearance_creatinina: parseFloat(document.getElementById('cClear').value)||null,
       bilirrubina_mg_dl: parseFloat(document.getElementById('cBili').value)||null,
+      neutrofilos: parseInt(document.getElementById('cNeutro').value)||null,
+      plaquetas: parseInt(document.getElementById('cPlaq').value)||null,
+      auc_alvo: parseFloat(document.getElementById('cAuc').value)||null,
+      estadiamento: document.getElementById('cEstadio').value.trim(),
+      intencao_tratamento: document.getElementById('cIntencao').value,
+      confirmacao_patologica: document.getElementById('cConfPat').checked,
       medico_oncologista: document.getElementById('cMedico').value,
     })});
     var d = await r.json().catch(function(){ return {}; });
     if (!r.ok) { return toast(d.erro || 'Erro ao salvar', false); }
-    toast('Ciclo registrado — SC ' + (d.sc_m2||'') + ' m²', true);
+    var apt = (d.aptidao||{}).status;
+    if (apt === 'inapto') toast('Ciclo registrado — ⚠ paciente INAPTO hoje, veja os motivos', false);
+    else if (apt === 'apto_ressalva') toast('Ciclo registrado — apto com ressalva', false);
+    else toast('Ciclo registrado — SC ' + (d.sc_m2||'') + ' m²', true);
     document.getElementById('formCicloCard').style.display = 'none';
     limparFormCiclo();
     carregarCiclos(); carregarKpis();
@@ -536,8 +700,12 @@ function renderCiclo(c) {
   document.getElementById('mcTitulo').textContent = 'Ciclo ' + c.numero_ciclo + (c.protocolo.ciclos_total ? ('/'+c.protocolo.ciclos_total) : '') + ' — ' + c.paciente_nome;
   var doses = (c.doses_calculadas||[]).map(function(d){
     var val = d.dose_calculada!=null ? (d.dose_calculada + ' ' + (d.unidade_calculada||'')) : '—';
-    if (d.cap_aplicado) val = '<span class="dose-cap">' + esc(val) + ' ⚠ cap</span>';
-    return '<tr><td>' + esc(d.droga) + '</td><td>' + esc(d.dose_referencia) + ' ' + esc(d.unidade||'') + '</td><td>' + val + '</td><td>' + esc(d.dia!=null?d.dia:'') + '</td></tr>';
+    if (d.cap_aplicado) val = '<span class="dose-cap">' + esc(val) + ' ⚠ teto</span>';
+    if (d.erro) val = '<span class="dose-cap">' + esc(d.erro) + '</span>';
+    var ref = esc(d.dose_referencia) + ' ' + esc(d.unidade||'');
+    if (d.formula) ref += '<div class="itens-mini" style="opacity:.7">' + esc(d.formula)
+        + (d.tfg_utilizada!=null ? (' · TFG ' + esc(d.tfg_utilizada) + ' mL/min') : '') + '</div>';
+    return '<tr><td>' + esc(d.droga) + '</td><td>' + ref + '</td><td>' + val + '</td><td>' + esc(d.dia!=null?d.dia:'') + '</td></tr>';
   }).join('');
   var toxs = (c.toxicidades||[]).map(function(t){
     var cls = t.grau>=3 ? 'badge-danger' : 'badge-warn';
@@ -550,7 +718,30 @@ function renderCiclo(c) {
   else if (c.status === 'em_curso') acoes = '<button class="btn btn-ok btn-sm" onclick="mudarStatusCiclo(\'concluido\')">Concluir ciclo</button> <button class="btn btn-danger btn-sm" onclick="mudarStatusCiclo(\'suspenso\')">Adiar</button>';
   else if (c.status === 'suspenso') acoes = '<button class="btn btn-primary btn-sm" onclick="mudarStatusCiclo(\'em_curso\')">Retomar</button>';
 
+  // Faixa de aptidão — a primeira coisa que o oncologista precisa ver.
+  var aptMap = {
+    apto:          {cls:'ab-ok',   ico:'✓', tit:'Apto para este ciclo'},
+    apto_ressalva: {cls:'ab-warn', ico:'⚠', tit:'Apto com ressalva'},
+    inapto:        {cls:'ab-danger', ico:'🛑', tit:'INAPTO hoje — adiar ou liberar com justificativa'},
+    nao_avaliado:  {cls:'ab-info', ico:'ℹ', tit:'Aptidão não avaliada'}
+  };
+  var a = aptMap[c.aptidao_status] || aptMap.nao_avaliado;
+  var motivos = (c.aptidao_bloqueios||[]).map(function(b){ return '<li>'+esc(b)+'</li>'; }).join('');
+  var liberado = c.aptidao_liberada_por
+      ? '<div style="margin-top:6px"><strong>Liberado por ' + esc(c.aptidao_liberada_por) + '</strong>'
+        + (c.aptidao_justificativa ? ' — ' + esc(c.aptidao_justificativa) : '') + '</div>' : '';
+  var faixaApt = '<div class="alert-box ' + a.cls + '"><div class="ab-title">' + a.ico + ' ' + a.tit + '</div>'
+      + (motivos ? '<ul style="margin:6px 0 0 16px">' + motivos + '</ul>' : '')
+      + liberado + '</div>';
+
+  // Pré-medicação do protocolo — a outra metade da prescrição.
+  var pre = (c.protocolo.drogas_suporte||[]).map(function(m){
+    return '<tr><td>' + esc(m.droga) + '</td><td>' + esc(m.dose!=null?m.dose:'') + ' ' + esc(m.unidade||'')
+         + '</td><td>' + esc(m.via||'') + '</td><td>' + esc(m.momento||'') + '</td></tr>';
+  }).join('');
+
   document.getElementById('mcBody').innerHTML =
+    faixaApt +
     '<div class="info-grid">' +
       '<div><div class="k">Protocolo</div>' + esc(c.protocolo.codigo) + ' — ' + esc(c.protocolo.nome) + '</div>' +
       '<div><div class="k">Status</div><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + esc(c.status_display) + '</span></div>' +
@@ -563,6 +754,8 @@ function renderCiclo(c) {
     '</div>' +
     '<div><div class="k" style="margin-bottom:6px">Doses calculadas (a partir da SC)</div>' +
       '<table class="dose-table"><thead><tr><th>Droga</th><th>Dose de referência</th><th>Dose calculada</th><th>Dia</th></tr></thead><tbody>' + (doses||'<tr><td colspan="4" class="empty">Sem drogas no protocolo.</td></tr>') + '</tbody></table></div>' +
+    (pre ? ('<div><div class="k" style="margin-bottom:6px">Pré-medicação e suporte</div>' +
+      '<table class="dose-table"><thead><tr><th>Medicamento</th><th>Dose</th><th>Via</th><th>Momento</th></tr></thead><tbody>' + pre + '</tbody></table></div>') : '') +
     (acoes ? ('<div style="display:flex;gap:8px">' + acoes + '</div>') : '') +
     '<div><div class="k" style="margin-bottom:6px">Toxicidades CTCAE</div>' +
       '<table class="dose-table"><thead><tr><th>Data</th><th>Categoria</th><th>Grau</th><th>Conduta</th></tr></thead><tbody>' + toxs + '</tbody></table></div>' +

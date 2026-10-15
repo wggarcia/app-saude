@@ -980,6 +980,9 @@ def api_onco_ciclo_detalhe(request, ciclo_id):
             "id": ciclo.id,
             "protocolo": {"id": ciclo.protocolo.id, "codigo": ciclo.protocolo.codigo,
                           "nome": ciclo.protocolo.nome, "drogas": ciclo.protocolo.drogas,
+                          # A pré-medicação é metade da prescrição: sem ela a tela
+                          # mostra o quimioterápico e esconde o antiemético.
+                          "drogas_suporte": ciclo.protocolo.drogas_suporte or [],
                           "ciclos_total": ciclo.protocolo.ciclos_total},
             "paciente_nome": ciclo.paciente_nome,
             "cpf_paciente": ciclo.cpf_paciente,

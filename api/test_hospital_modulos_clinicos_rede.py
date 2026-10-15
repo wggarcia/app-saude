@@ -726,6 +726,28 @@ class OncologiaTests(TestCase):
         )
         self.assertEqual(r.status_code, 409)
 
+    def test_detalhe_ciclo_traz_pre_medicacao_do_protocolo(self):
+        """A tela do ciclo precisa da pré-medicação junto: antiemético é prescrição,
+        não observação. Sem isto o detalhe mostra o quimioterápico e esconde o resto."""
+        empresa = _empresa("Hospital Rede", "onco-premed@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        protocolo.drogas_suporte = [
+            {"droga": "Ondansetrona", "dose": 8, "unidade": "mg",
+             "via": "IV", "momento": "30 min antes"}
+        ]
+        protocolo.save(update_fields=["drogas_suporte"])
+        ciclo_id = client.post(
+            "/api/hospital/oncologia/ciclos/",
+            data={"protocolo_id": protocolo.id, "paciente_nome": "P",
+                  "cid10_principal": "C18", "data_inicio": date.today().isoformat(),
+                  "peso_kg": 70, "altura_cm": 170},
+            content_type="application/json",
+        ).json()["id"]
+        d = client.get(f"/api/hospital/oncologia/ciclos/{ciclo_id}/").json()
+        self.assertEqual(
+            [m["droga"] for m in d["protocolo"]["drogas_suporte"]], ["Ondansetrona"])
+
     def test_cadastro_protocolo_proprio(self):
         """Hospital pode cadastrar protocolo próprio (POST) além dos seeds."""
         empresa = _empresa("Hospital Rede", "onco-proto@example.com", "hospital_rede")
