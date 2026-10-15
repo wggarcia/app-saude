@@ -12156,6 +12156,19 @@ class ProtocoloOncologico(models.Model):
                                                          verbose_name="Intervalo entre ciclos (dias)")
     drogas           = models.JSONField(default=list,
                                         verbose_name="Drogas (lista: nome, dose, unidade, dia)")
+    # Pré-medicação e suporte (antiemético, hidratação, fator de crescimento).
+    # Nenhum protocolo real existe só com antineoplásico — sem isto, a prescrição
+    # nasce incompleta e o paciente recebe a droga sem a proteção que a diretriz manda.
+    drogas_suporte   = models.JSONField(default=list, blank=True,
+                                        verbose_name="Pré-medicação e suporte "
+                                                     "(lista: nome, dose, unidade, via, momento)")
+    # Limiares laboratoriais que liberam ou travam o ciclo. Vazio = usa o padrão
+    # seguro de APTIDAO_PADRAO. Cada protocolo pode apertar ou afrouxar.
+    criterios_aptidao = models.JSONField(default=dict, blank=True,
+                                         verbose_name="Critérios de aptidão (limiares de exames)")
+    exige_confirmacao_patologica = models.BooleanField(
+        default=True,
+        verbose_name="Exige confirmação patológica do diagnóstico antes da 1ª dose")
     ativo            = models.BooleanField(default=True)
     obs              = models.TextField(blank=True, default="")
     criado_em        = models.DateTimeField(auto_now_add=True)
@@ -12232,6 +12245,36 @@ class CicloQuimioterapia(models.Model):
     guia             = models.ForeignKey("GuiaOncologica", on_delete=models.SET_NULL,
                                          null=True, blank=True, related_name="ciclos",
                                          help_text="Guia/autorização que cobre este ciclo")
+    # ── Aptidão clínica para infundir (hold parameters) ─────────────────────
+    # Antes disto, neutrófilos/plaquetas/clearance eram só campos guardados: o
+    # sistema aceitava registrar ciclo com neutrófilo 300 sem dizer nada.
+    APTIDAO = [
+        ("apto",          "Apto"),
+        ("apto_ressalva", "Apto com ressalva"),
+        ("inapto",        "Inapto — adiar"),
+        ("nao_avaliado",  "Não avaliado (exames ausentes)"),
+    ]
+    aptidao_status   = models.CharField(max_length=14, choices=APTIDAO, default="nao_avaliado",
+                                        db_index=True, verbose_name="Aptidão clínica para o ciclo")
+    aptidao_bloqueios = models.JSONField(default=list, blank=True,
+                                         verbose_name="Motivos que impedem ou ressalvam o ciclo")
+    aptidao_liberada_por = models.CharField(max_length=150, blank=True, default="",
+                                            verbose_name="Médico que liberou apesar da inaptidão")
+    aptidao_justificativa = models.TextField(blank=True, default="",
+                                             verbose_name="Justificativa clínica da liberação")
+    # ── Carboplatina: dose por AUC (Calvert), não por superfície corporal ──
+    auc_alvo         = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True,
+                                           verbose_name="AUC alvo (carboplatina)")
+    # ── Elementos obrigatórios antes da 1ª dose (padrão ASCO/ONS) ──────────
+    confirmacao_patologica = models.BooleanField(
+        default=False, verbose_name="Diagnóstico confirmado por laudo patológico")
+    estadiamento     = models.CharField(max_length=12, blank=True, default="",
+                                        verbose_name="Estadiamento no início do tratamento")
+    intencao_tratamento = models.CharField(
+        max_length=12, blank=True, default="",
+        choices=[("curativo", "Curativo"), ("paliativo", "Paliativo"),
+                 ("adjuvante", "Adjuvante"), ("neoadjuvante", "Neoadjuvante")],
+        verbose_name="Intenção do tratamento")
     obs              = models.TextField(blank=True, default="")
     criado_em        = models.DateTimeField(auto_now_add=True)
     atualizado_em    = models.DateTimeField(auto_now=True)

@@ -175,10 +175,14 @@ def _sc_dubois(peso_kg, altura_cm):
     return round(0.20247 * (altura / 100) ** 0.725 * peso ** 0.425, 4)
 
 
-def _calcular_doses(drogas, sc_m2):
-    """Calcula a dose de cada droga a partir da superfície corporal, aplicando
-    caps absolutos (ex.: Vincristina 2 mg). Drogas em dose fixa (UI, mg/dia) não
-    são multiplicadas pela SC. Retorna lista pronta para exibição/registro."""
+def _calcular_doses(drogas, sc_m2, auc_alvo=None, clearance=None):
+    """Calcula a dose de cada droga do protocolo.
+
+    Três caminhos, nesta ordem:
+      • unidade com AUC  → fórmula de Calvert (carboplatina), usando o clearance;
+      • unidade com m²   → multiplica pela superfície corporal e aplica teto absoluto;
+      • demais           → dose fixa (UI, mg/dia), sem multiplicar.
+    """
     resultado = []
     for d in (drogas or []):
         nome = d.get("droga")
@@ -197,6 +201,27 @@ def _calcular_doses(drogas, sc_m2):
             dose_ref_f = float(dose_ref) if dose_ref is not None else None
         except (TypeError, ValueError):
             dose_ref_f = None
+
+        # Carboplatina e afins: a dose vem do AUC, não da superfície corporal.
+        if "auc" in unidade.lower():
+            alvo = auc_alvo if auc_alvo not in (None, "") else dose_ref_f
+            dose_calc, tfg_usada, teto = _dose_carboplatina_calvert(alvo, clearance)
+            item["auc_alvo"] = float(alvo) if alvo not in (None, "") else None
+            item["tfg_utilizada"] = tfg_usada
+            item["formula"] = "Calvert (AUC × [TFG + 25])"
+            if dose_calc is None:
+                item["erro"] = ("Carboplatina exige AUC alvo e clearance de creatinina "
+                                "para calcular a dose pela fórmula de Calvert.")
+            else:
+                item["dose_calculada"] = dose_calc
+                item["unidade_calculada"] = "mg"
+                item["cap_aplicado"] = teto
+                if teto:
+                    item["observacao"] = (
+                        f"TFG limitada a {CALVERT_TFG_MAXIMA:.0f} mL/min no cálculo "
+                        f"(teto fisiológico) para não superestimar a dose.")
+            resultado.append(item)
+            continue
 
         if dose_ref_f is not None and sc_m2 and "m²" in unidade:
             dose_calc = round(dose_ref_f * float(sc_m2), 2)
@@ -249,6 +274,185 @@ def _alertas_dose_cumulativa(empresa, cpf_paciente, protocolo, doses_novas, Cicl
                 f"{cap['max_cumulativa']} — risco de toxicidade cumulativa."
             )
     return alertas
+
+
+# ── Aptidão clínica para infundir (hold parameters) ─────────────────────────────
+# Antes de qualquer ciclo, a diretriz manda conferir medula, função renal e
+# hepática. Estes são os limiares padrão usados na maioria dos esquemas; cada
+# protocolo pode sobrescrevê-los em `criterios_aptidao`.
+APTIDAO_PADRAO = {
+    "neutrofilos_min": 1500,    # /mm³
+    "plaquetas_min":   100000,  # /mm³
+    "clearance_min":   50,      # mL/min
+    "bilirrubina_max": 1.5,     # mg/dL
+}
+# Margem acima do limiar que ainda acende ressalva (limítrofe).
+APTIDAO_MARGEM_RESSALVA = 0.20
+
+# Ajuste de dose por função orgânica. O sistema SINALIZA — nunca altera a dose
+# sozinho. Quem ajusta é o oncologista; o papel do software é não deixar passar.
+AJUSTE_DOSE_FUNCAO = {
+    "cisplatina":   {"clearance_min": 60,
+                     "alerta": "nefrotóxica — a maioria dos protocolos contraindica "
+                               "abaixo de 60 mL/min ou exige troca por carboplatina"},
+    "metotrexato":  {"clearance_min": 60,
+                     "alerta": "eliminação renal — risco de toxicidade grave com "
+                               "clearance reduzido"},
+    "doxorrubicina": {"bilirrubina_max": 1.5,
+                      "alerta": "metabolismo hepático — reduzir dose conforme bilirrubina"},
+    "paclitaxel":   {"bilirrubina_max": 1.5,
+                     "alerta": "metabolismo hepático — reduzir dose conforme bilirrubina"},
+    "docetaxel":    {"bilirrubina_max": 1.5,
+                     "alerta": "metabolismo hepático — reduzir ou suspender conforme bilirrubina"},
+    "irinotecano":  {"bilirrubina_max": 1.5,
+                     "alerta": "metabolismo hepático — reduzir dose conforme bilirrubina"},
+    "vincristina":  {"bilirrubina_max": 1.5,
+                     "alerta": "metabolismo hepático — reduzir dose conforme bilirrubina"},
+}
+
+# Teto fisiológico da taxa de filtração usada na fórmula de Calvert. Sem ele, um
+# clearance superestimado vira dose excessiva de carboplatina.
+CALVERT_TFG_MAXIMA = 125.0
+
+
+def _limiares_aptidao(protocolo):
+    """Limiares do protocolo sobre o padrão seguro. Valores inválidos são ignorados."""
+    limiares = dict(APTIDAO_PADRAO)
+    custom = getattr(protocolo, "criterios_aptidao", None) or {}
+    if isinstance(custom, dict):
+        for chave, valor in custom.items():
+            if chave in limiares:
+                try:
+                    limiares[chave] = float(valor)
+                except (TypeError, ValueError):
+                    continue
+    return limiares
+
+
+def _avaliar_aptidao_ciclo(protocolo, neutrofilos, plaquetas, clearance, bilirrubina):
+    """Decide se o paciente está apto a receber o ciclo HOJE.
+
+    Devolve (status, bloqueios). NUNCA impede o registro: o ciclo é gravado do
+    mesmo jeito e a decisão continua do oncologista — o que muda é que a ressalva
+    fica registrada, e não perdida numa tela de leitura.
+    """
+    lim = _limiares_aptidao(protocolo)
+    bloqueios, ressalvas = [], []
+
+    def _f(v):
+        try:
+            return float(v) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    neutro, plaq = _f(neutrofilos), _f(plaquetas)
+    clear, bili = _f(clearance), _f(bilirrubina)
+
+    # Sem medula avaliada não há como julgar — honesto, como a adequação clínica.
+    if neutro is None or plaq is None:
+        return "nao_avaliado", [
+            "Hemograma do ciclo não informado (neutrófilos e plaquetas) — "
+            "aptidão não avaliada."
+        ]
+
+    if neutro < lim["neutrofilos_min"]:
+        bloqueios.append(
+            f"Neutrófilos {int(neutro)}/mm³ abaixo do mínimo de "
+            f"{int(lim['neutrofilos_min'])}/mm³ — risco de neutropenia febril.")
+    elif neutro < lim["neutrofilos_min"] * (1 + APTIDAO_MARGEM_RESSALVA):
+        ressalvas.append(
+            f"Neutrófilos {int(neutro)}/mm³ no limite inferior "
+            f"(mínimo {int(lim['neutrofilos_min'])}/mm³).")
+
+    if plaq < lim["plaquetas_min"]:
+        bloqueios.append(
+            f"Plaquetas {int(plaq)}/mm³ abaixo do mínimo de "
+            f"{int(lim['plaquetas_min'])}/mm³ — risco hemorrágico.")
+    elif plaq < lim["plaquetas_min"] * (1 + APTIDAO_MARGEM_RESSALVA):
+        ressalvas.append(
+            f"Plaquetas {int(plaq)}/mm³ no limite inferior "
+            f"(mínimo {int(lim['plaquetas_min'])}/mm³).")
+
+    if clear is not None and clear < lim["clearance_min"]:
+        bloqueios.append(
+            f"Clearance de creatinina {clear:.0f} mL/min abaixo de "
+            f"{lim['clearance_min']:.0f} mL/min — revisar dose e nefrotoxicidade.")
+    if bili is not None and bili > lim["bilirrubina_max"]:
+        bloqueios.append(
+            f"Bilirrubina {bili:.2f} mg/dL acima de "
+            f"{lim['bilirrubina_max']:.2f} mg/dL — revisar dose de drogas hepáticas.")
+
+    if bloqueios:
+        return "inapto", bloqueios + ressalvas
+    if ressalvas:
+        return "apto_ressalva", ressalvas
+    return "apto", []
+
+
+def _alertas_funcao_organica(drogas, clearance, bilirrubina):
+    """Sinaliza drogas do protocolo que exigem ajuste pela função renal/hepática.
+    Não altera dose — apenas não deixa passar em silêncio."""
+    alertas = []
+
+    def _f(v):
+        try:
+            return float(v) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    clear, bili = _f(clearance), _f(bilirrubina)
+    for d in (drogas or []):
+        regra = AJUSTE_DOSE_FUNCAO.get(_norm(d.get("droga")))
+        if not regra:
+            continue
+        nome = (d.get("droga") or "").strip()
+        if (clear is not None and "clearance_min" in regra
+                and clear < regra["clearance_min"]):
+            alertas.append(
+                f"⚠️ {nome}: clearance {clear:.0f} mL/min — {regra['alerta']}.")
+        if (bili is not None and "bilirrubina_max" in regra
+                and bili > regra["bilirrubina_max"]):
+            alertas.append(
+                f"⚠️ {nome}: bilirrubina {bili:.2f} mg/dL — {regra['alerta']}.")
+    return alertas
+
+
+def _dose_carboplatina_calvert(auc_alvo, clearance_ml_min):
+    """Fórmula de Calvert: dose (mg) = AUC × (TFG + 25).
+
+    Carboplatina NÃO é dosada por superfície corporal. Sem isto, o cálculo do
+    módulo errava a dose de um dos quimioterápicos mais usados do mundo.
+    Devolve (dose_mg, tfg_usada, teto_aplicado) ou (None, None, False).
+    """
+    try:
+        auc = float(auc_alvo)
+        tfg = float(clearance_ml_min)
+    except (TypeError, ValueError):
+        return None, None, False
+    if auc <= 0 or tfg <= 0:
+        return None, None, False
+    teto = tfg > CALVERT_TFG_MAXIMA
+    if teto:
+        tfg = CALVERT_TFG_MAXIMA
+    return round(auc * (tfg + 25.0), 2), tfg, teto
+
+
+def _elementos_obrigatorios_primeira_dose(ciclo_numero, protocolo, confirmacao_patologica,
+                                          estadiamento, cid10, intencao):
+    """Checklist do que precisa estar no prontuário ANTES da primeira dose de um
+    esquema novo (padrão ASCO/ONS). Só se aplica ao ciclo 1."""
+    if ciclo_numero != 1:
+        return []
+    faltando = []
+    if getattr(protocolo, "exige_confirmacao_patologica", True) and not confirmacao_patologica:
+        faltando.append("confirmação patológica do diagnóstico")
+    if not (estadiamento or "").strip():
+        faltando.append("estadiamento no início do tratamento")
+    if not (cid10 or "").strip():
+        faltando.append("diagnóstico (CID-10)")
+    if not (intencao or "").strip():
+        faltando.append("intenção do tratamento (curativo/paliativo/adjuvante/neoadjuvante)")
+    return faltando
 
 
 # ── Protocolos ─────────────────────────────────────────────────────────────────
@@ -392,6 +596,7 @@ def api_onco_ciclos(request):
                     "status": c.status,
                     "status_display": c.get_status_display(),
                     "sc_m2": float(c.sc_m2) if c.sc_m2 else None,
+                    "aptidao_status": c.aptidao_status,
                 }
                 for c in ciclos_pag
             ],
@@ -440,7 +645,10 @@ def api_onco_ciclos(request):
                      f"({protocolo.ciclos_total})."}, status=400)
 
     # Doses calculadas (com caps absolutos) + data prevista do próximo ciclo.
-    doses = _calcular_doses(protocolo.drogas, sc_m2)
+    auc_alvo = _num_positivo(data.get("auc_alvo"))
+    clearance_informado = _num_positivo(data.get("clearance_creatinina"))
+    doses = _calcular_doses(protocolo.drogas, sc_m2,
+                            auc_alvo=auc_alvo, clearance=clearance_informado)
     data_prevista = None
     try:
         di = datetime.strptime(str(data_inicio)[:10], "%Y-%m-%d").date()
@@ -478,6 +686,29 @@ def api_onco_ciclos(request):
         empresa, "".join(filter(str.isdigit, cpf_paciente)), protocolo, doses,
         CicloQuimioterapia)
 
+    # ── Aptidão clínica: a medula e os órgãos aguentam este ciclo hoje? ──────
+    neutrofilos_in = data.get("neutrofilos") or None
+    plaquetas_in   = data.get("plaquetas") or None
+    bilirrubina_in = _num_positivo(data.get("bilirrubina_mg_dl"))
+    aptidao_status, aptidao_bloqueios = _avaliar_aptidao_ciclo(
+        protocolo, neutrofilos_in, plaquetas_in, clearance_informado, bilirrubina_in)
+
+    # Drogas que pedem ajuste por função renal/hepática — sinaliza, não ajusta.
+    alertas_orgao = _alertas_funcao_organica(
+        protocolo.drogas, clearance_informado, bilirrubina_in)
+
+    # Elementos que precisam estar no prontuário antes da 1ª dose (ASCO/ONS).
+    confirmacao_pat = bool(data.get("confirmacao_patologica"))
+    estadiamento_in = (data.get("estadiamento") or "").strip()[:12]
+    intencao_in     = (data.get("intencao_tratamento") or "").strip()[:12]
+    faltando_1a = _elementos_obrigatorios_primeira_dose(
+        numero_ciclo, protocolo, confirmacao_pat, estadiamento_in, cid10, intencao_in)
+
+    # Liberação médica quando inapto: registra quem assumiu e por quê (nunca
+    # bloqueia — a decisão clínica continua do oncologista, como no resto do sistema).
+    liberado_por = (data.get("aptidao_liberada_por") or "").strip()[:150]
+    justificativa_apt = (data.get("aptidao_justificativa") or "").strip()
+
     with transaction.atomic():
         identidade = resolver_identidade(
             empresa, nome=paciente_nome, cpf=cpf_paciente,
@@ -503,8 +734,16 @@ def api_onco_ciclos(request):
             creatinina_mg_dl=_num_positivo(data.get("creatinina_mg_dl")),
             clearance_creatinina=_num_positivo(data.get("clearance_creatinina")),
             bilirrubina_mg_dl=_num_positivo(data.get("bilirrubina_mg_dl")),
-            neutrofilos=data.get("neutrofilos") or None,
-            plaquetas=data.get("plaquetas") or None,
+            neutrofilos=neutrofilos_in,
+            plaquetas=plaquetas_in,
+            aptidao_status=aptidao_status,
+            aptidao_bloqueios=aptidao_bloqueios,
+            aptidao_liberada_por=liberado_por,
+            aptidao_justificativa=justificativa_apt,
+            auc_alvo=auc_alvo,
+            confirmacao_patologica=confirmacao_pat,
+            estadiamento=estadiamento_in,
+            intencao_tratamento=intencao_in,
             guia=guia,
             obs=data.get("obs", ""),
         )
@@ -513,12 +752,33 @@ def api_onco_ciclos(request):
             guia.save(update_fields=["ciclos_utilizados"])
             _sync_status_guia(guia)
     caps = [d["droga"] for d in doses if d.get("cap_aplicado")]
+    alertas_aptidao = []
+    if aptidao_status == "inapto":
+        alertas_aptidao.append(
+            "🛑 Paciente INAPTO para este ciclo hoje: "
+            + " ".join(aptidao_bloqueios)
+            + (f" Liberado por {liberado_por}." if liberado_por else
+               " Registre a liberação médica e a justificativa para prosseguir."))
+    elif aptidao_status == "apto_ressalva":
+        alertas_aptidao.append("⚠️ Apto com ressalva: " + " ".join(aptidao_bloqueios))
+    elif aptidao_status == "nao_avaliado":
+        alertas_aptidao.append("ℹ️ " + " ".join(aptidao_bloqueios))
+    if faltando_1a:
+        alertas_aptidao.append(
+            "📋 Primeira dose do esquema sem: " + ", ".join(faltando_1a)
+            + " (padrão ASCO/ONS para início de tratamento).")
     return JsonResponse({
         "id": ciclo.id,
         "sc_m2": sc_m2,
         "doses_calculadas": doses,
         "caps_aplicados": caps,
-        "alertas": alertas_cum + alertas_guia,
+        "aptidao": {
+            "status": aptidao_status,
+            "bloqueios": aptidao_bloqueios,
+            "liberada_por": liberado_por,
+        },
+        "elementos_faltando_1a_dose": faltando_1a,
+        "alertas": alertas_aptidao + alertas_orgao + alertas_cum + alertas_guia,
     }, status=201)
 
 
@@ -563,6 +823,15 @@ def api_onco_ciclo_detalhe(request, ciclo_id):
             "bilirrubina_mg_dl": float(ciclo.bilirrubina_mg_dl) if ciclo.bilirrubina_mg_dl else None,
             "neutrofilos": ciclo.neutrofilos,
             "plaquetas": ciclo.plaquetas,
+            "aptidao_status": ciclo.aptidao_status,
+            "aptidao_status_display": ciclo.get_aptidao_status_display(),
+            "aptidao_bloqueios": ciclo.aptidao_bloqueios,
+            "aptidao_liberada_por": ciclo.aptidao_liberada_por,
+            "aptidao_justificativa": ciclo.aptidao_justificativa,
+            "auc_alvo": float(ciclo.auc_alvo) if ciclo.auc_alvo else None,
+            "confirmacao_patologica": ciclo.confirmacao_patologica,
+            "estadiamento": ciclo.estadiamento,
+            "intencao_tratamento": ciclo.intencao_tratamento,
             "medico_oncologista": ciclo.medico_oncologista,
             "obs": ciclo.obs,
             "toxicidades": [

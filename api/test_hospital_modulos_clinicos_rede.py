@@ -224,6 +224,178 @@ class OncologiaTests(TestCase):
         r = client.get("/api/hospital/oncologia/ciclos/")
         self.assertEqual(r.status_code, 200)
 
+    # ══ Segurança clínica do ciclo ════════════════════════════════════════════
+    def _criar_ciclo(self, client, protocolo, **extra):
+        payload = {
+            "protocolo_id": protocolo.id,
+            "paciente_nome": "Paciente Onco",
+            "cid10_principal": "C18",
+            "data_inicio": date.today().isoformat(),
+            "peso_kg": 70, "altura_cm": 170,
+        }
+        payload.update(extra)
+        return client.post("/api/hospital/oncologia/ciclos/",
+                           data=payload, content_type="application/json")
+
+    def test_aptidao_inapto_quando_neutropenico(self):
+        """Neutrófilo abaixo do limiar: o ciclo é REGISTRADO (o médico nunca é
+        bloqueado), mas sai marcado como inapto e com o motivo gravado."""
+        empresa = _empresa("Hospital Rede", "onco-apt1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(client, protocolo, neutrofilos=300, plaquetas=200000)
+        self.assertEqual(r.status_code, 201, r.content)
+        d = r.json()
+        self.assertEqual(d["aptidao"]["status"], "inapto")
+        self.assertTrue(any("Neutrófilos" in b for b in d["aptidao"]["bloqueios"]))
+        self.assertTrue(any("INAPTO" in a for a in d["alertas"]))
+        from api.models import CicloQuimioterapia
+        self.assertEqual(
+            CicloQuimioterapia.objects.get(id=d["id"]).aptidao_status, "inapto")
+
+    def test_aptidao_inapto_quando_plaquetopenico(self):
+        empresa = _empresa("Hospital Rede", "onco-apt2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(client, protocolo, neutrofilos=2000, plaquetas=40000)
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["aptidao"]["status"], "inapto")
+
+    def test_aptidao_apta_com_hemograma_normal(self):
+        empresa = _empresa("Hospital Rede", "onco-apt3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(client, protocolo, neutrofilos=3000, plaquetas=250000)
+        self.assertEqual(r.json()["aptidao"]["status"], "apto")
+
+    def test_aptidao_ressalva_no_limite(self):
+        """Logo acima do limiar acende ressalva, não bloqueio."""
+        empresa = _empresa("Hospital Rede", "onco-apt4@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(client, protocolo, neutrofilos=1600, plaquetas=250000)
+        self.assertEqual(r.json()["aptidao"]["status"], "apto_ressalva")
+
+    def test_aptidao_nao_avaliada_sem_hemograma(self):
+        """Sem exame não finge veredito — mesma honestidade da adequação clínica."""
+        empresa = _empresa("Hospital Rede", "onco-apt5@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(client, protocolo)
+        self.assertEqual(r.json()["aptidao"]["status"], "nao_avaliado")
+
+    def test_protocolo_pode_apertar_limiar(self):
+        """Protocolo com critério próprio prevalece sobre o padrão."""
+        empresa = _empresa("Hospital Rede", "onco-apt6@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        protocolo.criterios_aptidao = {"neutrofilos_min": 3000}
+        protocolo.save(update_fields=["criterios_aptidao"])
+        r = self._criar_ciclo(client, protocolo, neutrofilos=2000, plaquetas=250000)
+        self.assertEqual(r.json()["aptidao"]["status"], "inapto")
+
+    def test_liberacao_medica_fica_registrada(self):
+        empresa = _empresa("Hospital Rede", "onco-apt7@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(
+            client, protocolo, neutrofilos=300, plaquetas=200000,
+            aptidao_liberada_por="Dra. Oncologista",
+            aptidao_justificativa="Tumor de crescimento rápido; risco de atraso supera o risco hematológico.")
+        self.assertEqual(r.status_code, 201)
+        from api.models import CicloQuimioterapia
+        c = CicloQuimioterapia.objects.get(id=r.json()["id"])
+        self.assertEqual(c.aptidao_liberada_por, "Dra. Oncologista")
+        self.assertIn("crescimento rápido", c.aptidao_justificativa)
+
+    # ══ Carboplatina por AUC (Calvert) ════════════════════════════════════════
+    def test_carboplatina_dose_por_calvert(self):
+        """Carboplatina não é dosada por superfície corporal: AUC × (TFG + 25)."""
+        empresa = _empresa("Hospital Rede", "onco-auc1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa, drogas=[
+            {"droga": "Carboplatina", "dose": 5, "unidade": "AUC", "dia": 1}])
+        r = self._criar_ciclo(client, protocolo, clearance_creatinina=80,
+                              neutrofilos=3000, plaquetas=250000)
+        self.assertEqual(r.status_code, 201, r.content)
+        item = r.json()["doses_calculadas"][0]
+        # 5 × (80 + 25) = 525 mg
+        self.assertAlmostEqual(item["dose_calculada"], 525.0, places=1)
+        self.assertEqual(item["unidade_calculada"], "mg")
+        self.assertIn("Calvert", item["formula"])
+
+    def test_carboplatina_teto_de_tfg(self):
+        """Clearance acima do teto fisiológico não pode inflar a dose."""
+        empresa = _empresa("Hospital Rede", "onco-auc2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa, drogas=[
+            {"droga": "Carboplatina", "dose": 6, "unidade": "AUC", "dia": 1}])
+        r = self._criar_ciclo(client, protocolo, clearance_creatinina=300,
+                              neutrofilos=3000, plaquetas=250000)
+        item = r.json()["doses_calculadas"][0]
+        # TFG limitada a 125 → 6 × 150 = 900 mg
+        self.assertAlmostEqual(item["dose_calculada"], 900.0, places=1)
+        self.assertTrue(item["cap_aplicado"])
+
+    def test_carboplatina_sem_clearance_nao_inventa_dose(self):
+        empresa = _empresa("Hospital Rede", "onco-auc3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa, drogas=[
+            {"droga": "Carboplatina", "dose": 5, "unidade": "AUC", "dia": 1}])
+        r = self._criar_ciclo(client, protocolo, neutrofilos=3000, plaquetas=250000)
+        item = r.json()["doses_calculadas"][0]
+        self.assertIsNone(item["dose_calculada"])
+        self.assertIn("Calvert", item["erro"])
+
+    # ══ Ajuste por função renal/hepática ══════════════════════════════════════
+    def test_cisplatina_alerta_com_clearance_baixo(self):
+        empresa = _empresa("Hospital Rede", "onco-org1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa, drogas=[
+            {"droga": "Cisplatina", "dose": 75, "unidade": "mg/m²", "dia": 1}])
+        r = self._criar_ciclo(client, protocolo, clearance_creatinina=55,
+                              neutrofilos=3000, plaquetas=250000)
+        self.assertTrue(any("Cisplatina" in a and "clearance" in a
+                            for a in r.json()["alertas"]), r.json()["alertas"])
+
+    def test_paclitaxel_alerta_com_bilirrubina_alta(self):
+        empresa = _empresa("Hospital Rede", "onco-org2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa, drogas=[
+            {"droga": "Paclitaxel", "dose": 175, "unidade": "mg/m²", "dia": 1}])
+        r = self._criar_ciclo(client, protocolo, bilirrubina_mg_dl=3.0,
+                              neutrofilos=3000, plaquetas=250000)
+        self.assertTrue(any("Paclitaxel" in a for a in r.json()["alertas"]))
+
+    # ══ Elementos obrigatórios antes da 1ª dose (ASCO/ONS) ════════════════════
+    def test_primeira_dose_cobra_elementos_obrigatorios(self):
+        empresa = _empresa("Hospital Rede", "onco-1a1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(client, protocolo, numero_ciclo=1,
+                              neutrofilos=3000, plaquetas=250000)
+        faltando = r.json()["elementos_faltando_1a_dose"]
+        self.assertIn("confirmação patológica do diagnóstico", faltando)
+        self.assertIn("estadiamento no início do tratamento", faltando)
+
+    def test_primeira_dose_completa_nao_cobra_nada(self):
+        empresa = _empresa("Hospital Rede", "onco-1a2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(
+            client, protocolo, numero_ciclo=1, neutrofilos=3000, plaquetas=250000,
+            confirmacao_patologica=True, estadiamento="IIIB",
+            intencao_tratamento="curativo")
+        self.assertEqual(r.json()["elementos_faltando_1a_dose"], [])
+
+    def test_ciclo_seguinte_nao_cobra_elementos_da_primeira_dose(self):
+        empresa = _empresa("Hospital Rede", "onco-1a3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        r = self._criar_ciclo(client, protocolo, numero_ciclo=3,
+                              neutrofilos=3000, plaquetas=250000)
+        self.assertEqual(r.json()["elementos_faltando_1a_dose"], [])
+
     def test_ciclo_sem_peso_altura_rejeitado(self):
         """Regressão: peso/altura obrigatórios — sem eles não há base de dose."""
         empresa = _empresa("Hospital Rede", "onco-sc@example.com", "hospital_rede")
