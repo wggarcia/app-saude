@@ -1211,6 +1211,7 @@ from api.views_hospital_oncologia import (
     api_onco_apac_detalhe,
     api_onco_kpis,
     api_onco_jornada,
+    api_onco_resumo_ia,
     api_onco_guias,
     api_onco_guias_alertas,
     hospital_oncologia_page,
@@ -3581,6 +3582,8 @@ urlpatterns = [
     path('api/hospital/oncologia/kpis/',                        api_onco_kpis),
     path('api/hospital/oncologia/jornada',                      api_onco_jornada),
     path('api/hospital/oncologia/jornada/',                     api_onco_jornada),
+    path('api/hospital/oncologia/jornada/resumo-ia',            api_onco_resumo_ia),
+    path('api/hospital/oncologia/jornada/resumo-ia/',           api_onco_resumo_ia),
     path('api/hospital/oncologia/respostas',                    api_onco_respostas),
     path('api/hospital/oncologia/respostas/',                   api_onco_respostas),
     # Cadeia fechada: agenda da cadeira → preparo na farmácia → beira do leito

@@ -205,10 +205,32 @@ class Command(BaseCommand):
                 motivo_negativa_detalhe="Laudo anatomopatológico não anexado.")
 
             # ── Ciclos ────────────────────────────────────────────────────────
+            # Marina está no 3º ciclo: os dois anteriores precisam existir, ou o
+            # gráfico de aderência do auditor nasce vazio — e é justamente o
+            # desvio entre previsto e realizado que a operadora cobra. C1 saiu no
+            # prazo, C2 atrasou 9 dias (toxicidade), C3 atrasou 3.
+            for _n, _prev, _real, _st in (
+                (1, 43, 43, "concluido"),
+                (2, 29, 20, "concluido"),
+            ):
+                CicloQuimioterapia.objects.using(DB).create(
+                    empresa=empresa, protocolo=proto_a,
+                    paciente_nome=f"{TAG} Marina Alves", cid10_principal="C50",
+                    numero_ciclo=_n, data_inicio=_dias(_real),
+                    data_prevista=_dias(_prev), status=_st,
+                    peso_kg=64, altura_cm=162, sc_m2=1.6854,
+                    neutrofilos=3100, plaquetas=250000,
+                    creatinina_mg_dl=0.9, bilirrubina_mg_dl=0.6,
+                    aptidao_status="apto", aptidao_bloqueios=[],
+                    estadiamento="IIB", intencao_tratamento="curativa",
+                    confirmacao_patologica=True,
+                    medico_oncologista="Dra. Helena Duarte",
+                )
             c_apto = CicloQuimioterapia.objects.using(DB).create(
                 empresa=empresa, protocolo=proto_a,
                 paciente_nome=f"{TAG} Marina Alves", cid10_principal="C50",
-                numero_ciclo=3, data_inicio=_dias(1), status="em_curso",
+                numero_ciclo=3, data_inicio=_dias(1), data_prevista=_dias(4),
+                status="em_curso",
                 peso_kg=64, altura_cm=162, sc_m2=1.6854,
                 neutrofilos=2800, plaquetas=240000,
                 creatinina_mg_dl=0.9, bilirrubina_mg_dl=0.6,

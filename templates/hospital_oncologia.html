@@ -750,9 +750,12 @@ tr:hover td{background:rgba(0,194,255,.03)}
       <div style="padding:16px 20px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div class="form-group" style="margin-bottom:0"><label>CPF ou nome do paciente</label><input id="jBusca" placeholder="CPF ou nome" style="min-width:260px"></div>
         <button class="btn btn-primary btn-sm" onclick="buscarJornada()">Ver jornada</button>
+        <button class="btn btn-ok btn-sm" id="jBtnIa" onclick="gerarParecerIa()">✦ Parecer com IA</button>
         <div class="drogas-mini" style="max-width:none">Cruza quimioterapia, radioterapia, RHC e APAC pela identidade única do paciente (MPI).</div>
       </div>
       <div id="jResumo" style="padding:0 20px 16px"></div>
+      <div id="jParecer" style="padding:0 20px"></div>
+      <div id="jGraficos" style="padding:0 20px"></div>
       <div id="jTimeline" style="padding:0 20px 24px"><div class="empty">Informe o paciente e clique em "Ver jornada".</div></div>
     </div>
   </div>
@@ -2257,6 +2260,32 @@ async function salvarApac() {
 // ── Jornada oncológica unificada ──────────────────────────────────────────────
 var jornadaIcone = {quimioterapia:'💊', radioterapia:'☢️', rhc:'📋', apac:'🧾', administracao:'💉', resposta:'🎯', quimio_oral:'🏠', seguimento:'🧬'};
 var jornadaCor   = {quimioterapia:'badge-info', radioterapia:'badge-warn', rhc:'badge-ok', apac:'badge-gray', resposta:'badge-ok', administracao:'badge-info', quimio_oral:'badge-warn', seguimento:'badge-ok'};
+// Render da jornada: usado tanto pelo "Ver jornada" quanto pelo parecer com IA
+// (que já devolve a jornada junto). Sem compartilhar, clicar direto no parecer
+// deixava a timeline embaixo dizendo "clique em Ver jornada" — com o parecer do
+// paciente já na tela logo acima.
+function renderJornada(d) {
+  document.getElementById('jResumo').innerHTML =
+    '<div style="font-weight:700;font-size:15px;margin-bottom:6px">' + esc(d.paciente.nome||'—') + (d.paciente.cpf?(' · CPF '+esc(d.paciente.cpf)):'') + '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<span class="badge badge-info">💊 ' + d.resumo.quimioterapia + ' quimio</span>' +
+      '<span class="badge badge-warn">☢️ ' + d.resumo.radioterapia + ' radio</span>' +
+      '<span class="badge badge-ok">📋 ' + d.resumo.rhc + ' RHC</span>' +
+      '<span class="badge badge-gray">🧾 ' + d.resumo.apac + ' APAC</span>' +
+      '<span class="badge badge-info">💉 ' + (d.resumo.administracao||0) + ' administrações</span>' +
+      '<span class="badge badge-warn">🏠 ' + (d.resumo.quimio_oral||0) + ' orais</span>' +
+      (d.resumo.seguimento ? ('<span class="badge badge-ok">🧬 em seguimento</span>') : '') +
+      '<span class="badge badge-ok">🎯 ' + (d.resumo.resposta||0) + ' avaliações de resposta</span>' +
+      (d.desfecho_atual ? ('<span class="badge badge-warn">desfecho atual: ' + esc(d.desfecho_atual) + '</span>') : '') +
+    '</div>';
+  document.getElementById('jTimeline').innerHTML =
+    '<table><thead><tr><th>Data</th><th>Tipo</th><th>Evento</th><th>Status</th></tr></thead><tbody>' +
+    d.timeline.map(function(e){
+      return '<tr><td>' + fmtData(e.data) + '</td><td>' + (jornadaIcone[e.tipo]||'') + ' <span class="badge ' + (jornadaCor[e.tipo]||'badge-gray') + '">' + esc(e.tipo) + '</span></td><td>' + esc(e.titulo) + '</td><td>' + esc(e.status||'—') + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  desenharGraficos(d.metricas);
+}
+
 async function buscarJornada() {
   var termo = document.getElementById('jBusca').value.trim();
   if (!termo) return toast('Informe CPF ou nome', false);
@@ -2265,29 +2294,179 @@ async function buscarJornada() {
   var resumo = document.getElementById('jResumo');
   var tl = document.getElementById('jTimeline');
   resumo.innerHTML = ''; tl.innerHTML = '<div class="empty">Carregando...</div>';
+  // Parecer e gráficos são do paciente anterior: some com eles antes de trocar.
+  document.getElementById('jParecer').innerHTML = '';
+  document.getElementById('jGraficos').innerHTML = '';
   try {
     var r = await fetch('/api/hospital/oncologia/jornada?' + param, { credentials:'include', headers: headers() });
     var d = await r.json().catch(function(){ return {}; });
     if (!r.ok) { tl.innerHTML = '<div class="empty">' + esc(d.erro||'Erro') + '</div>'; return; }
     if (!d.total_eventos) { tl.innerHTML = '<div class="empty">Nenhum evento oncológico encontrado para este paciente.</div>'; return; }
-    resumo.innerHTML =
-      '<div style="font-weight:700;font-size:15px;margin-bottom:6px">' + esc(d.paciente.nome||'—') + (d.paciente.cpf?(' · CPF '+esc(d.paciente.cpf)):'') + '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<span class="badge badge-info">💊 ' + d.resumo.quimioterapia + ' quimio</span>' +
-        '<span class="badge badge-warn">☢️ ' + d.resumo.radioterapia + ' radio</span>' +
-        '<span class="badge badge-ok">📋 ' + d.resumo.rhc + ' RHC</span>' +
-        '<span class="badge badge-gray">🧾 ' + d.resumo.apac + ' APAC</span>' +
-        '<span class="badge badge-info">💉 ' + (d.resumo.administracao||0) + ' administrações</span>' +
-        '<span class="badge badge-warn">🏠 ' + (d.resumo.quimio_oral||0) + ' orais</span>' +
-        (d.resumo.seguimento ? ('<span class="badge badge-ok">🧬 em seguimento</span>') : '') +
-        '<span class="badge badge-ok">🎯 ' + (d.resumo.resposta||0) + ' avaliações de resposta</span>' +
-        (d.desfecho_atual ? ('<span class="badge badge-warn">desfecho atual: ' + esc(d.desfecho_atual) + '</span>') : '') +
-      '</div>';
-    tl.innerHTML = '<table><thead><tr><th>Data</th><th>Tipo</th><th>Evento</th><th>Status</th></tr></thead><tbody>' +
-      d.timeline.map(function(e){
-        return '<tr><td>' + fmtData(e.data) + '</td><td>' + (jornadaIcone[e.tipo]||'') + ' <span class="badge ' + (jornadaCor[e.tipo]||'badge-gray') + '">' + esc(e.tipo) + '</span></td><td>' + esc(e.titulo) + '</td><td>' + esc(e.status||'—') + '</td></tr>';
-      }).join('') + '</tbody></table>';
+    renderJornada(d);
   } catch(e) { tl.innerHTML = '<div class="empty">Erro de conexão.</div>'; }
+}
+
+// ── Painel do auditor: três perguntas, três gráficos ──────────────────────────
+// O auditor não lê 40 linhas de tabela. Ele pergunta: o tumor respondeu? o
+// tratamento andou no prazo? o paciente aguentou? Cada bloco responde uma.
+
+function svgVazio(msg) {
+  return '<div class="empty" style="padding:24px;font-size:13px">' + esc(msg) + '</div>';
+}
+
+// (1) Curva RECIST — a soma das lesões ao longo do tempo.
+function graficoResposta(serie) {
+  if (!serie || serie.length < 1) return svgVazio('Sem avaliação de resposta registrada.');
+  var W = 640, H = 200, ml = 46, mr = 16, mt = 16, mb = 30;
+  var iw = W - ml - mr, ih = H - mt - mb;
+  var vals = serie.map(function(p){ return p.soma_mm; });
+  var vmax = Math.max.apply(null, vals) * 1.1 || 1, vmin = 0;
+  var px = function(i){ return ml + (serie.length === 1 ? iw/2 : iw * i / (serie.length - 1)); };
+  var py = function(v){ return mt + ih - ih * (v - vmin) / (vmax - vmin); };
+  var basal = serie[0].soma_mm;
+  // A cor segue a classificação RECIST, não o sinal da variação contra a basal:
+  // RECIST mede progressão contra o NADIR. Um paciente que caiu de 84 para 52 e
+  // voltou a 68 continua −19% da basal, mas é doença progressiva. Pintar essa
+  // curva de verde contradiria o "Doença progressiva" escrito ao lado.
+  var corResposta = {rc:'#00e5b0', rp:'#00e5b0', de:'#00c2ff', dp:'#ff4d6d', ne:'#5a8fa8'};
+  var ultimoAval = null;
+  for (var k = serie.length - 1; k >= 0; k--) { if (!serie[k].basal) { ultimoAval = serie[k]; break; } }
+  var cor = (ultimoAval && corResposta[ultimoAval.resposta_codigo]) || '#00c2ff';
+  var pontos = serie.map(function(p, i){ return px(i) + ',' + py(p.soma_mm); }).join(' ');
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Curva de resposta RECIST">';
+  // grade + eixo
+  for (var g = 0; g <= 4; g++) {
+    var yy = mt + ih * g / 4;
+    s += '<line x1="' + ml + '" y1="' + yy + '" x2="' + (W-mr) + '" y2="' + yy + '" stroke="rgba(0,194,255,.08)"/>';
+    s += '<text x="' + (ml-8) + '" y="' + (yy+4) + '" text-anchor="end" font-size="10" fill="#5a8fa8">' + Math.round(vmax - (vmax-vmin)*g/4) + '</text>';
+  }
+  // linha da basal: a régua contra a qual a resposta é medida
+  s += '<line x1="' + ml + '" y1="' + py(basal) + '" x2="' + (W-mr) + '" y2="' + py(basal) + '" stroke="#5a8fa8" stroke-dasharray="4 4" stroke-width="1"/>';
+  s += '<text x="' + (W-mr) + '" y="' + (py(basal)-6) + '" text-anchor="end" font-size="10" fill="#5a8fa8">basal</text>';
+  if (serie.length > 1) s += '<polyline points="' + pontos + '" fill="none" stroke="' + cor + '" stroke-width="2.5" stroke-linejoin="round"/>';
+  serie.forEach(function(p, i){
+    s += '<circle cx="' + px(i) + '" cy="' + py(p.soma_mm) + '" r="5" fill="' + (p.lesoes_novas ? '#ff4d6d' : cor) + '"><title>' + esc(fmtData(p.data) + ' · ' + p.soma_mm + ' mm' + (p.variacao_pct !== null ? ' (' + (p.variacao_pct>0?'+':'') + p.variacao_pct + '%)' : '') + ' · ' + (p.resposta||'')) + '</title></circle>';
+    s += '<text x="' + px(i) + '" y="' + (H-10) + '" text-anchor="middle" font-size="10" fill="#5a8fa8">' + esc(fmtData(p.data).slice(0,5)) + '</text>';
+  });
+  s += '<text x="' + (ml-8) + '" y="' + (mt-4) + '" text-anchor="end" font-size="9" fill="#5a8fa8">mm</text>';
+  s += '</svg>';
+  return s;
+}
+
+// (2) Aderência — atraso de cada ciclo contra o previsto.
+function graficoAderencia(lista) {
+  var comPrev = (lista||[]).filter(function(c){ return c.atraso_dias !== null; });
+  if (!comPrev.length) return svgVazio('Nenhum ciclo tinha data prevista — sem desvio a medir.');
+  var W = 640, H = 170, ml = 40, mr = 16, mt = 20, mb = 34;
+  var iw = W - ml - mr, ih = H - mt - mb;
+  var maxA = Math.max(7, Math.max.apply(null, comPrev.map(function(c){ return Math.abs(c.atraso_dias); })));
+  var bw = Math.min(46, iw / comPrev.length - 8);
+  var zeroY = mt + ih / 2;
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Aderência ao cronograma por ciclo">';
+  s += '<line x1="' + ml + '" y1="' + zeroY + '" x2="' + (W-mr) + '" y2="' + zeroY + '" stroke="rgba(0,194,255,.25)"/>';
+  s += '<text x="' + (ml-6) + '" y="' + (zeroY+4) + '" text-anchor="end" font-size="10" fill="#5a8fa8">0</text>';
+  comPrev.forEach(function(c, i){
+    var cx = ml + iw * (i + 0.5) / comPrev.length;
+    var h = Math.abs(c.atraso_dias) / maxA * (ih/2 - 6);
+    // ≤0 no prazo (verde) · 1-7 tolerável (laranja) · >7 é o que a operadora cobra (vermelho)
+    var cor = c.atraso_dias <= 0 ? '#00e5b0' : (c.atraso_dias <= 7 ? '#ffb347' : '#ff4d6d');
+    var y = c.atraso_dias > 0 ? zeroY : zeroY - h;
+    s += '<rect x="' + (cx - bw/2) + '" y="' + y + '" width="' + bw + '" height="' + Math.max(h, 2) + '" rx="3" fill="' + cor + '" opacity=".85"><title>' + esc('Ciclo ' + c.ciclo + ': ' + (c.atraso_dias > 0 ? ('+' + c.atraso_dias + ' dia(s) de atraso') : (c.atraso_dias === 0 ? 'no prazo' : (Math.abs(c.atraso_dias) + ' dia(s) adiantado')))) + '</title></rect>';
+    if (c.atraso_dias > 0) s += '<text x="' + cx + '" y="' + (y + Math.max(h,2) + 13) + '" text-anchor="middle" font-size="10" fill="' + cor + '">+' + c.atraso_dias + '</text>';
+    s += '<text x="' + cx + '" y="' + (H-6) + '" text-anchor="middle" font-size="10" fill="#5a8fa8">C' + c.ciclo + '</text>';
+  });
+  s += '</svg>';
+  return s;
+}
+
+// (3) Tolerância — toxicidades por ciclo e grau.
+function graficoToxicidade(lista) {
+  if (!lista || !lista.length) return svgVazio('Nenhuma toxicidade registrada.');
+  var corGrau = {1:'#00e5b0', 2:'#ffb347', 3:'#ff4d6d', 4:'#ff4d6d', 5:'#ff4d6d'};
+  return '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 8px">' +
+    lista.map(function(t){
+      var c = corGrau[t.grau] || '#5a8fa8';
+      return '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid ' + c + '55;border-radius:20px;padding:5px 12px;font-size:12px">' +
+        '<b style="color:' + c + '">G' + t.grau + '</b>' +
+        '<span>' + esc(t.categoria) + '</span>' +
+        '<span style="color:#5a8fa8;font-size:11px">C' + t.ciclo + '</span>' +
+        (t.ciclo_suspenso ? '<span class="badge badge-danger" style="font-size:9px">suspendeu</span>' : (t.dose_reduzida ? '<span class="badge badge-warn" style="font-size:9px">reduziu dose</span>' : '')) +
+      '</span>';
+    }).join('') + '</div>';
+}
+
+function desenharGraficos(m) {
+  var box = document.getElementById('jGraficos');
+  if (!m) { box.innerHTML = ''; return; }
+  var i = m.indicadores || {};
+  var kpi = function(val, lbl, cls){
+    return '<div class="kpi ' + (cls||'') + '" style="padding:14px"><div class="kpi-val" style="font-size:22px">' + val + '</div><div class="kpi-lbl">' + lbl + '</div></div>';
+  };
+  var cards = [];
+  if (i.variacao_atual_pct !== null && i.variacao_atual_pct !== undefined) {
+    // Verde/vermelho pela classificação RECIST, não pelo sinal da variação:
+    // −19% da basal com doença progressiva não é um cartão verde.
+    var clsResp = {rc:'ok', rp:'ok', de:'', dp:'danger', ne:''};
+    cards.push(kpi(
+      (i.variacao_atual_pct > 0 ? '+' : '') + i.variacao_atual_pct + '%',
+      esc(i.resposta_atual || 'Variação vs. basal'),
+      clsResp[i.resposta_atual_codigo] !== undefined ? clsResp[i.resposta_atual_codigo] : ''));
+  }
+  if (i.aderencia_pct !== null && i.aderencia_pct !== undefined)
+    cards.push(kpi(i.aderencia_pct + '%', 'Ciclos no prazo', i.aderencia_pct >= 80 ? 'ok' : 'warn'));
+  cards.push(kpi(i.toxicidades_grau3_mais || 0, 'Toxicidades grau ≥3', (i.toxicidades_grau3_mais ? 'danger' : 'ok')));
+  cards.push(kpi(i.guias_vencidas || 0, 'Guias vencidas', (i.guias_vencidas ? 'danger' : 'ok')));
+
+  box.innerHTML =
+    '<div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px">' + cards.join('') + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px">' +
+      '<div class="card" style="padding:14px 16px"><div class="card-title" style="margin-bottom:8px">📉 Resposta ao tratamento (RECIST)</div>' + graficoResposta(m.serie_resposta) + '</div>' +
+      '<div class="card" style="padding:14px 16px"><div class="card-title" style="margin-bottom:8px">📅 Aderência ao cronograma</div>' + graficoAderencia(m.aderencia_ciclos) + '</div>' +
+    '</div>' +
+    '<div class="card" style="padding:14px 16px;margin-bottom:16px"><div class="card-title" style="margin-bottom:8px">⚕️ Toxicidades registradas</div>' + graficoToxicidade(m.toxicidades) + '</div>';
+}
+
+// ── Parecer clínico com IA ────────────────────────────────────────────────────
+async function gerarParecerIa() {
+  var termo = document.getElementById('jBusca').value.trim();
+  if (!termo) return toast('Informe CPF ou nome', false);
+  var soDigitos = termo.replace(/\D/g,'');
+  var corpo = (soDigitos.length === 11) ? {cpf: soDigitos} : {nome: termo};
+  var box = document.getElementById('jParecer');
+  var btn = document.getElementById('jBtnIa');
+  btn.disabled = true; btn.textContent = 'Analisando...';
+  box.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px"><div class="empty" style="padding:16px">Lendo a jornada e redigindo o parecer...</div></div>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/jornada/resumo-ia', {
+      method:'POST', credentials:'include',
+      headers: Object.assign({'Content-Type':'application/json'}, headers()),
+      body: JSON.stringify(corpo)
+    });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { box.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px"><div class="empty" style="padding:16px">' + esc(d.erro||'Erro ao gerar parecer') + '</div></div>'; return; }
+    var a = d.analise || {};
+    var cores = {estavel:'badge-ok', atencao:'badge-warn', critico:'badge-danger'};
+    var rotulo = {estavel:'Estável', atencao:'Requer atenção', critico:'Crítico'};
+    box.innerHTML =
+      '<div class="card" style="padding:16px 18px;margin-bottom:16px;border-color:rgba(0,229,176,.3)">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+          '<div class="card-title">✦ Parecer clínico</div>' +
+          '<span class="badge ' + (cores[a.situacao]||'badge-gray') + '">' + esc(rotulo[a.situacao]||a.situacao||'—') + '</span>' +
+          '<span class="badge badge-gray" style="font-size:10px">' + (a.fonte === 'ia' ? 'gerado por IA' : 'resumo por regras') + '</span>' +
+        '</div>' +
+        '<div style="font-size:14px;line-height:1.65">' + esc(a.resumo||'') + '</div>' +
+        ((a.pontos_atencao||[]).length ? ('<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:#ffb347;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Pontos de atenção</div><ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7">' + a.pontos_atencao.map(function(p){ return '<li>' + esc(p) + '</li>'; }).join('') + '</ul></div>') : '') +
+        ((a.recomendacoes||[]).length ? ('<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:#00c2ff;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Recomendações</div><ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7">' + a.recomendacoes.map(function(p){ return '<li>' + esc(p) + '</li>'; }).join('') + '</ul></div>') : '') +
+        '<div style="margin-top:14px;font-size:11px;color:#5a8fa8;border-top:1px solid rgba(0,194,255,.1);padding-top:10px">Apoio à decisão sobre dados já registrados. Não substitui avaliação do médico assistente.</div>' +
+      '</div>';
+    // O parecer já veio com a jornada: desenha resumo, gráficos e timeline de
+    // uma vez, para a tela não ficar pela metade quem clica só no parecer.
+    if (d.jornada) renderJornada(d.jornada);
+  } catch(e) {
+    box.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px"><div class="empty" style="padding:16px">Erro de conexão.</div></div>';
+  } finally {
+    btn.disabled = false; btn.textContent = '✦ Parecer com IA';
+  }
 }
 
 // preview de SC ao digitar peso/altura

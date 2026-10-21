@@ -540,6 +540,235 @@ class OncologiaTests(TestCase):
         self.assertEqual(d["resumo"]["resposta"], 2)
         self.assertEqual(d["desfecho_atual"], "Resposta parcial")
 
+    # ══ Painel do auditor: métricas de gráfico + parecer com IA ═══════════════
+
+    def test_jornada_traz_metricas_sem_quebrar_o_contrato_antigo(self):
+        """As métricas são ADITIVAS: as chaves que a tela antiga lê continuam lá."""
+        empresa = _empresa("Hospital Rede", "onco-met1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        d = client.get("/api/hospital/oncologia/jornada/?nome=Paciente Onco").json()
+        for chave in ("paciente", "resumo", "desfecho_atual", "total_eventos", "timeline"):
+            self.assertIn(chave, d)
+        self.assertIn("metricas", d)
+        self.assertIn("indicadores", d["metricas"])
+
+    def test_metricas_medem_resposta_aderencia_e_toxicidade(self):
+        """Os três números que o auditor olha saem de evento real, não de estimativa."""
+        from .models import ToxicidadeQuimio, CicloQuimioterapia
+        empresa = _empresa("Hospital Rede", "onco-met2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+
+        # Ciclo atrasado 10 dias contra o previsto.
+        cid = self._criar_ciclo(
+            client, protocolo, neutrofilos=2500, plaquetas=220000).json()["id"]
+        ciclo = CicloQuimioterapia.objects.get(id=cid)
+        ciclo.data_prevista = ciclo.data_inicio - timedelta(days=10)
+        ciclo.save(update_fields=["data_prevista"])
+
+        ToxicidadeQuimio.objects.create(
+            empresa=empresa, ciclo=ciclo, categoria="Neutropenia febril",
+            grau=3, data_registro=date.today(), dose_reduzida=True)
+
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        self._aval(client, soma_lesoes_mm=60)
+
+        m = client.get(
+            "/api/hospital/oncologia/jornada/?nome=Paciente Onco").json()["metricas"]
+        i = m["indicadores"]
+        self.assertEqual(i["atraso_maximo_dias"], 10)
+        self.assertEqual(i["aderencia_pct"], 0)          # nenhum ciclo no prazo
+        self.assertEqual(i["toxicidades_grau3_mais"], 1)
+        self.assertEqual(i["doses_reduzidas"], 1)
+        self.assertEqual(i["variacao_atual_pct"], -40.0)  # tumor encolheu 40%
+        self.assertEqual(len(m["serie_resposta"]), 2)
+        self.assertTrue(m["serie_resposta"][0]["basal"])
+
+    def test_serie_de_resposta_poe_a_basal_primeiro_no_mesmo_dia(self):
+        """Regressão: basal e reavaliação no MESMO dia empatavam no sort da
+        timeline e a ordem vinha do banco — a curva do gráfico podia sair de
+        trás para a frente, e a 'variação atual' pegava a basal (None)."""
+        empresa = _empresa("Hospital Rede", "onco-ord1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        self._aval(client, soma_lesoes_mm=60)
+        m = client.get(
+            "/api/hospital/oncologia/jornada/?nome=Paciente Onco").json()["metricas"]
+        self.assertTrue(m["serie_resposta"][0]["basal"])
+        self.assertFalse(m["serie_resposta"][-1]["basal"])
+        self.assertEqual(m["indicadores"]["variacao_atual_pct"], -40.0)
+
+    def test_progressao_entra_como_ponto_de_atencao(self):
+        """Progressão é o achado mais grave: sem esta regra, um paciente com
+        doença progressiva e sem toxicidade saía rotulado 'estável'."""
+        from django.test import override_settings
+        empresa = _empresa("Hospital Rede", "onco-dp1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        self._aval(client, soma_lesoes_mm=40)    # nadir
+        self._aval(client, soma_lesoes_mm=60)    # +50% sobre o nadir → progressão
+        with override_settings(ANTHROPIC_API_KEY=""):
+            d = client.post("/api/hospital/oncologia/jornada/resumo-ia",
+                            data={"nome": "Paciente Onco"},
+                            content_type="application/json").json()
+        self.assertEqual(d["jornada"]["metricas"]["indicadores"]["resposta_atual_codigo"], "dp")
+        self.assertEqual(d["analise"]["situacao"], "atencao")
+        self.assertTrue(any("progressiva" in p.lower()
+                            for p in d["analise"]["pontos_atencao"]))
+
+    def test_parecer_ia_cai_em_regras_sem_chave_e_nunca_falha(self):
+        """Sem ANTHROPIC_API_KEY a tela não pode ficar vazia na frente do auditor."""
+        from django.test import override_settings
+        empresa = _empresa("Hospital Rede", "onco-ia1@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self._aval(client, basal=True, soma_lesoes_mm=100)
+        self._aval(client, soma_lesoes_mm=60)
+
+        with override_settings(ANTHROPIC_API_KEY=""):
+            r = client.post("/api/hospital/oncologia/jornada/resumo-ia",
+                            data={"nome": "Paciente Onco"},
+                            content_type="application/json")
+        self.assertEqual(r.status_code, 200, r.content)
+        d = r.json()
+        self.assertEqual(d["analise"]["fonte"], "regras")
+        self.assertTrue(d["analise"]["resumo"])
+        # vem com a jornada junto: a tela desenha parecer e gráfico numa ida só
+        self.assertIn("metricas", d["jornada"])
+
+    def test_parecer_ia_aponta_toxicidade_grave_como_atencao(self):
+        """Grau ≥3 é sempre ponto de atenção — a regra não depende da IA."""
+        from django.test import override_settings
+        from .models import ToxicidadeQuimio, CicloQuimioterapia
+        empresa = _empresa("Hospital Rede", "onco-ia2@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        cid = self._criar_ciclo(
+            client, protocolo, neutrofilos=2500, plaquetas=220000).json()["id"]
+        ToxicidadeQuimio.objects.create(
+            empresa=empresa, ciclo=CicloQuimioterapia.objects.get(id=cid),
+            categoria="Neutropenia febril", grau=4, data_registro=date.today())
+
+        with override_settings(ANTHROPIC_API_KEY=""):
+            d = client.post("/api/hospital/oncologia/jornada/resumo-ia",
+                            data={"nome": "Paciente Onco"},
+                            content_type="application/json").json()
+        self.assertEqual(d["analise"]["situacao"], "atencao")
+        self.assertTrue(any("grau" in p.lower() for p in d["analise"]["pontos_atencao"]))
+
+    def test_parecer_ia_nao_envia_cpf_nem_nome_para_fora(self):
+        """LGPD: o conteúdo clínico vai para a API, os identificadores diretos
+        não. Nome/CPF/CNS não acrescentam nada ao raciocínio e o nome já está
+        na tela, acima do parecer."""
+        import json as _json
+        from unittest import mock
+        from django.test import override_settings
+        empresa = _empresa("Hospital Rede", "onco-lgpd@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        protocolo = self._protocolo(empresa)
+        self._criar_ciclo(client, protocolo, paciente_nome="Fulano Identificavel",
+                          cpf_paciente="52998224725",
+                          neutrofilos=2500, plaquetas=220000)
+
+        capturado = {}
+
+        class _Resp:
+            content = [mock.Mock(text='{"resumo":"ok","situacao":"estavel",'
+                                      '"pontos_atencao":[],"recomendacoes":[]}')]
+
+        class _Msgs:
+            def create(self, **kw):
+                capturado.update(kw)
+                return _Resp()
+
+        class _Cliente:
+            def __init__(self, **kw):
+                self.messages = _Msgs()
+
+        with override_settings(ANTHROPIC_API_KEY="chave-de-teste"), \
+                mock.patch("anthropic.Anthropic", _Cliente):
+            r = client.post("/api/hospital/oncologia/jornada/resumo-ia",
+                            data={"cpf": "52998224725"},
+                            content_type="application/json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["analise"]["fonte"], "ia")
+
+        enviado = capturado["messages"][0]["content"]
+        self.assertNotIn("52998224725", enviado)
+        self.assertNotIn("Fulano Identificavel", enviado)
+        # mas o conteúdo clínico tem de ir, senão o parecer não teria base
+        corpo = _json.loads(enviado)
+        self.assertIn("timeline", corpo)
+        self.assertIn("metricas", corpo)
+        self.assertNotIn("paciente", corpo)
+        # e a resposta para a tela continua trazendo o paciente
+        self.assertEqual(r.json()["jornada"]["paciente"]["cpf"], "52998224725")
+
+    def test_guia_de_paciente_sem_cpf_entra_nas_metricas(self):
+        """As métricas filtravam guia só por identidade/CPF. O paciente de carga
+        legada (sem os dois) tinha a guia no banco e o KPI 'guias vencidas'
+        mostrava zero — falso negativo no alerta que a operadora pede.
+
+        Tudo via ORM de propósito: criar pela API resolveria a identidade no
+        MPI, o filtro usaria o ramo da identidade e o fallback por nome — que é
+        o que está sendo testado — nunca rodaria.
+        """
+        from .models import (GuiaOncologica, AvaliacaoRespostaOncologica,
+                             IdentidadePaciente)
+        empresa = _empresa("Hospital Rede", "onco-gnm@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        GuiaOncologica.objects.create(
+            empresa=empresa, paciente_nome="Legado Sem Documento",
+            numero_guia="G-LEG-1", data_emissao=date.today() - timedelta(days=200),
+            data_validade=date.today() - timedelta(days=5), ciclos_autorizados=6)
+        AvaliacaoRespostaOncologica.objects.create(
+            empresa=empresa, paciente_nome="Legado Sem Documento",
+            data_avaliacao=date.today(), metodo="tc", basal=True,
+            soma_lesoes_mm=90, resposta="ne")
+        # Garante que o cenário é mesmo o de carga legada: sem MPI.
+        self.assertFalse(IdentidadePaciente.objects.filter(
+            empresa=empresa, nome="Legado Sem Documento").exists())
+
+        m = client.get(
+            "/api/hospital/oncologia/jornada/?nome=Legado Sem Documento").json()["metricas"]
+        self.assertEqual(len(m["guias"]), 1)
+        self.assertEqual(m["indicadores"]["guias_vencidas"], 1)
+
+    def test_identidade_id_nao_numerica_vira_400_e_nao_500(self):
+        """`?identidade_id=abc` derrubava a jornada com 500 (ValueError no
+        filter). Vale para o GET antigo e para o parecer com IA — os dois
+        passam pelo mesmo montador."""
+        empresa = _empresa("Hospital Rede", "onco-idb@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        self.assertEqual(
+            client.get("/api/hospital/oncologia/jornada/?identidade_id=abc").status_code,
+            400)
+        r = client.post("/api/hospital/oncologia/jornada/resumo-ia",
+                        data={"identidade_id": "abc"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_parecer_ia_404_para_paciente_sem_evento(self):
+        empresa = _empresa("Hospital Rede", "onco-ia3@example.com", "hospital_rede")
+        client = _client_for(empresa)
+        r = client.post("/api/hospital/oncologia/jornada/resumo-ia",
+                        data={"nome": "Nao Existe Silva"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+
+    def test_parecer_ia_nao_vaza_paciente_entre_empresas(self):
+        """LGPD: o hospital B não gera parecer do paciente do hospital A."""
+        from django.test import override_settings
+        e1 = _empresa("Hospital Rede", "onco-ia4@example.com", "hospital_rede")
+        e2 = _empresa("Hospital Rede", "onco-ia5@example.com", "hospital_rede")
+        c1, c2 = _client_for(e1), _client_for(e2)
+        self._aval(c1, basal=True, soma_lesoes_mm=100)
+        with override_settings(ANTHROPIC_API_KEY=""):
+            r = c2.post("/api/hospital/oncologia/jornada/resumo-ia",
+                        data={"nome": "Paciente Onco"},
+                        content_type="application/json")
+        self.assertEqual(r.status_code, 404)
+
     # ══ Relógio regulatório da autorização (ANS RN 623/2024 — 5 dias úteis) ═══
     def _guia(self, client, **extra):
         payload = {
@@ -1312,9 +1541,17 @@ class OncologiaTests(TestCase):
         out = StringIO()
         call_command("seed_oncologia_demo", "--apply",
                      "--empresa-id", str(empresa.id), stdout=out)
+        # 5 ciclos: 3 pacientes + os 2 ciclos anteriores da Marina (ela está no
+        # 3º). Sem os anteriores, o gráfico de aderência do auditor nasce vazio
+        # na demonstração — é previsto × realizado que a operadora cobra.
         self.assertEqual(
             CicloQuimioterapia.objects.filter(
-                empresa=empresa, paciente_nome__startswith="[DEMO-ONCO]").count(), 3)
+                empresa=empresa, paciente_nome__startswith="[DEMO-ONCO]").count(), 5)
+        marina = CicloQuimioterapia.objects.filter(
+            empresa=empresa, paciente_nome__endswith="Marina Alves")
+        self.assertEqual(marina.count(), 3)
+        # Todos com data prevista: é dela que sai o desvio do cronograma.
+        self.assertEqual(marina.filter(data_prevista__isnull=True).count(), 0)
         self.assertEqual(GuiaOncologica.objects.filter(empresa=empresa).count(), 3)
         self.assertEqual(
             AdministracaoQuimioterapia.objects.filter(empresa=empresa).count(), 2)
@@ -1356,11 +1593,12 @@ class OncologiaTests(TestCase):
         self.assertEqual(oral.dispensacoes.count(), 2)
         self.assertEqual(float(oral.dispensacoes.order_by("-data").first().adesao_pct), 50.0)
 
-        # Rodar de novo não duplica (é idempotente).
+        # Rodar de novo não duplica (é idempotente) — inclusive os 2 ciclos
+        # anteriores da Marina, que entram fora do bloco dos 3 pacientes.
         call_command("seed_oncologia_demo", "--apply",
                      "--empresa-id", str(empresa.id), stdout=out)
         self.assertEqual(
-            CicloQuimioterapia.objects.filter(empresa=empresa).count(), 3)
+            CicloQuimioterapia.objects.filter(empresa=empresa).count(), 5)
 
         call_command("seed_oncologia_demo", "--apply", "--clear",
                      "--empresa-id", str(empresa.id), stdout=out)

@@ -1464,28 +1464,29 @@ def api_onco_kpis(request):
 
 # ── Jornada Oncológica Unificada ────────────────────────────────────────────────
 
-@require_http_methods(["GET"])
-@api_requer_feature("hospital.oncologia")
-@api_requer_permissao_modulo("hospital.clinico")
-def api_onco_jornada(request):
-    """GET /api/hospital/oncologia/jornada/?cpf=...  (ou ?identidade_id=...)
+def _montar_jornada(empresa, cpf="", identidade_id=None, nome_q=""):
+    """Monta a linha do tempo única do paciente oncológico.
 
-    Linha do tempo única do paciente oncológico cruzando quimioterapia,
-    radioterapia, RHC e APAC pela identidade única (MPI). Responde ao desafio
-    "visão única da jornada, da guia ao desfecho".
+    Extraído de `api_onco_jornada` para que o resumo com IA leia exatamente a
+    mesma jornada que a tela mostra. Se os dois montassem a timeline por conta
+    própria, o texto da IA e a tabela divergiriam na frente do auditor — e é
+    justamente a divergência entre fontes que o módulo existe para acabar.
+
+    Devolve `(payload, erro)`; `erro` é None no caminho feliz.
     """
-    empresa = _hosp(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
-
     from .models import (
         IdentidadePaciente, SessaoRadioterapia, RegistroHospitalarCancer,
     )
     _, CicloQuimioterapia, APACOncologia, _ = _get_onco_models()
 
-    cpf = "".join(filter(str.isdigit, request.GET.get("cpf", "")))[:11]
-    identidade_id = request.GET.get("identidade_id")
-    nome_q = (request.GET.get("nome") or "").strip()
+    # `identidade_id` chega de fora (query string ou corpo JSON): se não for
+    # número, `filter(id=...)` levanta ValueError e a jornada inteira responde
+    # 500. Vira 400 com a mensagem certa em vez de erro de servidor.
+    if identidade_id not in (None, ""):
+        try:
+            identidade_id = int(identidade_id)
+        except (TypeError, ValueError):
+            return None, {"erro": "identidade_id deve ser numérico"}
 
     # Resolve a identidade do paciente
     identidade = None
@@ -1500,8 +1501,7 @@ def api_onco_jornada(request):
             empresa=empresa, nome__iexact=nome_q).order_by("-id").first()
 
     if not identidade and not cpf and not nome_q:
-        return JsonResponse(
-            {"erro": "Informe cpf, identidade_id ou nome do paciente"}, status=400)
+        return None, {"erro": "Informe cpf, identidade_id ou nome do paciente"}
 
     # Filtros: prioriza identidade (MPI); cai para CPF/nome como rede de segurança
     # para registros ainda não vinculados ao MPI.
@@ -1658,7 +1658,13 @@ def api_onco_jornada(request):
 
     # Desfecho: é o que fecha a frase "da guia ao desfecho clínico".
     from .models import AvaliacaoRespostaOncologica
-    for a in _filtro(AvaliacaoRespostaOncologica):
+    # Ordem explícita: o sort final da timeline empata eventos da mesma data e
+    # resolve pela ordem de inserção — que, sem `order_by`, é a que o banco
+    # quiser. Isso bastava para a basal cair DEPOIS da reavaliação do mesmo dia
+    # e a curva do gráfico sair de trás para a frente. `-basal` coloca a linha de
+    # base primeiro (ela é o ponto de partida); `id` é o desempate estável.
+    for a in _filtro(AvaliacaoRespostaOncologica).order_by(
+            "data_avaliacao", "-basal", "id"):
         eventos.append({
             "tipo": "resposta",
             "data": a.data_avaliacao.isoformat(),
@@ -1669,6 +1675,12 @@ def api_onco_jornada(request):
                 "id": a.id,
                 "metodo": a.get_metodo_display(),
                 "basal": a.basal,
+                # O código cru, além do rótulo: a cor do gráfico tem de seguir a
+                # classificação RECIST (que mede progressão contra o NADIR), e
+                # não o sinal da variação contra a basal. Um paciente que caiu
+                # de 84 para 52 e voltou a 68 ainda está −19% da basal, mas é
+                # doença progressiva — pintar de verde seria mentir na tela.
+                "resposta_codigo": a.resposta,
                 "soma_lesoes_mm": (float(a.soma_lesoes_mm)
                                    if a.soma_lesoes_mm is not None else None),
                 "variacao_vs_basal_pct": (float(a.variacao_vs_basal_pct)
@@ -1681,7 +1693,7 @@ def api_onco_jornada(request):
     # Ordena a linha do tempo (eventos sem data vão para o fim)
     eventos.sort(key=lambda e: (e["data"] is None, e["data"] or ""))
 
-    return JsonResponse({
+    payload = {
         "paciente": {
             "identidade_id": identidade.id if identidade else None,
             "nome": identidade.nome if identidade else (nome_q or None),
@@ -1704,7 +1716,309 @@ def api_onco_jornada(request):
              if e["tipo"] == "resposta" and not e["detalhe"].get("basal")), None),
         "total_eventos": len(eventos),
         "timeline": eventos,
-    })
+    }
+    # Métricas do auditor: aditivas. A tela antiga ignora a chave; a nova
+    # desenha gráfico com ela. Nenhum consumidor existente quebra.
+    payload["metricas"] = _metricas_auditor(empresa, _filtro, eventos)
+    return payload, None
+
+
+@require_http_methods(["GET"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_jornada(request):
+    """GET /api/hospital/oncologia/jornada/?cpf=...  (ou ?identidade_id=...)
+
+    Linha do tempo única do paciente oncológico cruzando quimioterapia,
+    radioterapia, RHC e APAC pela identidade única (MPI). Responde ao desafio
+    "visão única da jornada, da guia ao desfecho".
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    payload, erro = _montar_jornada(
+        empresa,
+        cpf="".join(filter(str.isdigit, request.GET.get("cpf", "")))[:11],
+        identidade_id=request.GET.get("identidade_id"),
+        nome_q=(request.GET.get("nome") or "").strip(),
+    )
+    if erro:
+        return JsonResponse(erro, status=400)
+    return JsonResponse(payload)
+
+
+# ── Métricas do auditor (o que vira gráfico) ───────────────────────────────────
+
+def _metricas_auditor(empresa, filtro_paciente, eventos):
+    """Transforma a timeline em séries prontas para gráfico.
+
+    O auditor não lê 40 linhas de tabela: ele olha três perguntas e decide.
+    (1) o tumor respondeu? (2) o tratamento andou no prazo? (3) o paciente
+    aguentou? Cada série abaixo responde uma delas — e nenhuma inventa número:
+    tudo sai de evento já registrado.
+
+    Recebe o MESMO `_filtro` que a jornada usa para achar o paciente (identidade
+    no MPI → CPF → nome). Filtrar as guias por conta própria por identidade/CPF
+    deixava de fora o paciente de carga legada, sem identidade nem CPF: a guia
+    existia no banco e o KPI "guias vencidas" mostrava zero — falso negativo
+    justamente no alerta que a operadora pede.
+    """
+    from .models import ToxicidadeQuimio, GuiaOncologica
+    _, CicloQuimioterapia, _, _ = _get_onco_models()
+
+    # (1) Resposta: a curva da soma das lesões ao longo do tempo (RECIST).
+    serie_resposta = [
+        {
+            "data": e["data"],
+            "soma_mm": e["detalhe"].get("soma_lesoes_mm"),
+            "variacao_pct": e["detalhe"].get("variacao_vs_basal_pct"),
+            "basal": bool(e["detalhe"].get("basal")),
+            "resposta": e["status"],
+            "resposta_codigo": e["detalhe"].get("resposta_codigo"),
+            "lesoes_novas": bool(e["detalhe"].get("lesoes_novas")),
+        }
+        for e in eventos
+        if e["tipo"] == "resposta" and e["detalhe"].get("soma_lesoes_mm") is not None
+    ]
+
+    # (2) Aderência ao cronograma: previsto × realizado, ciclo a ciclo.
+    ciclos_ids = [e["detalhe"]["id"] for e in eventos if e["tipo"] == "quimioterapia"]
+    aderencia, atrasos = [], []
+    qs_ciclos = (CicloQuimioterapia.objects.filter(empresa=empresa, id__in=ciclos_ids)
+                 .order_by("numero_ciclo") if ciclos_ids else [])
+    for c in qs_ciclos:
+        atraso = None
+        # Só é atraso quando havia data prevista: sem previsão não existe desvio.
+        if c.data_prevista and c.data_inicio:
+            atraso = (c.data_inicio - c.data_prevista).days
+            atrasos.append(atraso)
+        aderencia.append({
+            "ciclo": c.numero_ciclo,
+            "previsto": c.data_prevista.isoformat() if c.data_prevista else None,
+            "realizado": c.data_inicio.isoformat() if c.data_inicio else None,
+            "atraso_dias": atraso,
+            "status": c.get_status_display(),
+        })
+
+    # (3) Tolerância: toxicidade por ciclo, com o grau que importa (≥3 é grave).
+    toxicidades = []
+    if ciclos_ids:
+        for t in (ToxicidadeQuimio.objects
+                  .filter(empresa=empresa, ciclo_id__in=ciclos_ids)
+                  .select_related("ciclo").order_by("data_registro")):
+            toxicidades.append({
+                "ciclo": t.ciclo.numero_ciclo,
+                "data": t.data_registro.isoformat(),
+                "categoria": t.categoria,
+                "grau": t.grau,
+                "dose_reduzida": t.dose_reduzida,
+                "ciclo_suspenso": t.ciclo_suspenso,
+            })
+
+    # Guias: o lado regulatório que a operadora cobra.
+    guias = []
+    for g in filtro_paciente(GuiaOncologica).exclude(status="cancelada"):
+        _sync_status_guia(g)
+        guias.append({
+            "numero": g.numero_guia,
+            "status": g.status,
+            "validade": g.data_validade.isoformat() if g.data_validade else None,
+            "ciclos_autorizados": g.ciclos_autorizados,
+            "ciclos_utilizados": g.ciclos_utilizados,
+        })
+
+    graves = [t for t in toxicidades if t["grau"] >= 3]
+    no_prazo = [a for a in atrasos if a <= 0]
+    # A última avaliação que NÃO é a basal: é ela que carrega o veredito clínico.
+    ultima_aval = next((p for p in reversed(serie_resposta) if not p["basal"]), None)
+    return {
+        "serie_resposta": serie_resposta,
+        "aderencia_ciclos": aderencia,
+        "toxicidades": toxicidades,
+        "guias": guias,
+        "indicadores": {
+            "ciclos_total": len(aderencia),
+            "ciclos_com_previsao": len(atrasos),
+            "ciclos_no_prazo": len(no_prazo),
+            "aderencia_pct": (round(100.0 * len(no_prazo) / len(atrasos))
+                              if atrasos else None),
+            "atraso_medio_dias": (round(sum(atrasos) / len(atrasos), 1)
+                                  if atrasos else None),
+            "atraso_maximo_dias": max(atrasos) if atrasos else None,
+            "toxicidades_total": len(toxicidades),
+            "toxicidades_grau3_mais": len(graves),
+            "maior_grau": max((t["grau"] for t in toxicidades), default=None),
+            "doses_reduzidas": sum(1 for t in toxicidades if t["dose_reduzida"]),
+            "ciclos_suspensos": sum(1 for t in toxicidades if t["ciclo_suspenso"]),
+            "guias_vencidas": sum(1 for g in guias if g["status"] == "vencida"),
+            # A basal é o ponto de partida, não um resultado: a variação "atual"
+            # é a da última avaliação que NÃO é a basal (mesma régua do
+            # `desfecho_atual`). Sem este filtro, um paciente avaliado no mesmo
+            # dia da basal mostrava "—" no lugar do número que ele tem.
+            "variacao_atual_pct": ultima_aval["variacao_pct"] if ultima_aval else None,
+            "resposta_atual": ultima_aval["resposta"] if ultima_aval else None,
+            "resposta_atual_codigo": (ultima_aval["resposta_codigo"]
+                                      if ultima_aval else None),
+        },
+    }
+
+
+# ── Resumo clínico da jornada com IA ───────────────────────────────────────────
+
+def _resumo_jornada_fallback(jornada):
+    """Resumo por regras quando não há IA disponível.
+
+    Existe porque a tela não pode ficar vazia na frente do auditor por causa de
+    uma chave de API. O texto é mais seco que o da IA, mas é o mesmo dado — e
+    `fonte` diz honestamente qual dos dois produziu o que está na tela.
+    """
+    m = jornada.get("metricas", {})
+    ind = m.get("indicadores", {})
+    pac = jornada.get("paciente", {})
+    res = jornada.get("resumo", {})
+
+    partes = [
+        f"{pac.get('nome') or 'Paciente'} com {jornada.get('total_eventos', 0)} "
+        f"eventos registrados: {res.get('quimioterapia', 0)} ciclo(s) de "
+        f"quimioterapia, {res.get('radioterapia', 0)} de radioterapia e "
+        f"{res.get('apac', 0)} APAC(s)."
+    ]
+    if jornada.get("desfecho_atual"):
+        var = ind.get("variacao_atual_pct")
+        partes.append(
+            f"Desfecho mais recente: {jornada['desfecho_atual']}"
+            + (f" ({var:+.1f}% em relação à basal)." if var is not None else ".")
+        )
+    if ind.get("aderencia_pct") is not None:
+        partes.append(
+            f"Aderência ao cronograma: {ind['aderencia_pct']}% dos ciclos no prazo"
+            + (f", atraso médio de {ind['atraso_medio_dias']} dia(s)."
+               if ind.get("atraso_medio_dias") else ".")
+        )
+
+    atencao = []
+    # Progressão é o achado mais grave da jornada: o tratamento não está
+    # funcionando. Antes desta regra, um paciente em doença progressiva sem
+    # toxicidade grave saía rotulado "estável" — exatamente o contrário.
+    if ind.get("resposta_atual_codigo") == "dp":
+        atencao.append(
+            "Doença progressiva na última avaliação RECIST — esquema atual sem "
+            "resposta, revisar conduta terapêutica.")
+    if ind.get("toxicidades_grau3_mais"):
+        atencao.append(
+            f"{ind['toxicidades_grau3_mais']} toxicidade(s) grau ≥3 registradas — "
+            "exige revisão de dose e conduta.")
+    if ind.get("guias_vencidas"):
+        atencao.append(f"{ind['guias_vencidas']} guia(s) vencida(s) — "
+                       "tratamento em risco de interrupção administrativa.")
+    if (ind.get("atraso_maximo_dias") or 0) > 7:
+        atencao.append(f"Atraso máximo de {ind['atraso_maximo_dias']} dias entre "
+                       "previsto e realizado.")
+    if ind.get("ciclos_suspensos"):
+        atencao.append(f"{ind['ciclos_suspensos']} ciclo(s) suspenso(s) por toxicidade.")
+
+    # Progressão + toxicidade grave juntas não são "atenção": são caso crítico.
+    critico = (ind.get("resposta_atual_codigo") == "dp"
+               and (ind.get("toxicidades_grau3_mais") or ind.get("ciclos_suspensos")))
+    return {
+        "resumo": " ".join(partes),
+        "situacao": ("critico" if critico else ("atencao" if atencao else "estavel")),
+        "pontos_atencao": atencao,
+        "recomendacoes": [],
+        "fonte": "regras",
+    }
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_feature("hospital.oncologia")
+@api_requer_permissao_modulo("hospital.clinico")
+def api_onco_resumo_ia(request):
+    """POST /api/hospital/oncologia/jornada/resumo-ia
+
+    Lê a jornada já montada e devolve um parecer em linguagem clínica para quem
+    audita. Ataca a dor de fragmentação: em vez de o auditor reconstruir o caso
+    lendo quimio, radio, APAC e guia em telas separadas, ele lê o caso.
+
+    Usa Anthropic quando há chave; cai em resumo por regras se não houver ou se
+    der erro — nunca falha. O campo `fonte` sempre diz quem escreveu.
+    """
+    empresa = _hosp(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    data, erro_json = _parse_json(request)
+    if erro_json:
+        return erro_json
+    jornada, erro = _montar_jornada(
+        empresa,
+        cpf="".join(filter(str.isdigit, str(data.get("cpf") or "")))[:11],
+        identidade_id=data.get("identidade_id"),
+        nome_q=(data.get("nome") or "").strip(),
+    )
+    if erro:
+        return JsonResponse(erro, status=400)
+    if not jornada["total_eventos"]:
+        return JsonResponse(
+            {"erro": "Paciente sem eventos oncológicos registrados."}, status=404)
+
+    from django.conf import settings
+    api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return JsonResponse({"analise": _resumo_jornada_fallback(jornada),
+                             "jornada": jornada})
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        system = (
+            "Você é oncologista clínico escrevendo um parecer de auditoria para a "
+            "equipe assistencial e para a operadora. Receberá a jornada completa de "
+            "UM paciente oncológico (ciclos, toxicidades CTCAE, resposta RECIST, "
+            "guias e APAC). Responda SOMENTE com um JSON válido (sem markdown, sem "
+            'texto fora do JSON) no formato: {"resumo":"<parágrafo único, 3 a 5 '
+            'frases, linguagem clínica objetiva>","situacao":"estavel|atencao|critico",'
+            '"pontos_atencao":["...","..."],"recomendacoes":["...","..."]}. '
+            "Regras: cite apenas dados presentes no JSON recebido; nunca invente "
+            "exame, dose ou data; toxicidade grau ≥3, guia vencida e atraso acima de "
+            "7 dias são sempre ponto de atenção; recomendações são administrativas e "
+            "de monitoramento, NUNCA prescrição ou mudança de dose — a decisão "
+            "terapêutica é do médico assistente. Escreva em português do Brasil. "
+            "Os dados chegam sem identificação do paciente (de propósito): refira-se "
+            "a ele como 'o paciente', nunca invente nome, CPF ou número de registro."
+        )
+        # Sai a jornada clínica inteira (é sobre ela que o parecer fala, e é o
+        # que a tela mostra), mas SEM os identificadores diretos: nome, CPF e
+        # CNS não acrescentam nada ao raciocínio clínico e não precisam sair do
+        # hospital. O nome já está na tela, acima do parecer — quem lê sabe de
+        # quem é. Minimização de dado, não enfeite: o módulo é vendido como
+        # LGPD-first e um auditor de operadora pergunta exatamente isto.
+        jornada_ia = {k: v for k, v in jornada.items() if k != "paciente"}
+        resp = client.messages.create(
+            model="claude-sonnet-4-6", max_tokens=1500,
+            system=system,
+            messages=[{"role": "user",
+                       "content": json.dumps(jornada_ia, ensure_ascii=False)}],
+        )
+        raw = (resp.content[0].text or "").strip()
+        if raw.startswith("```"):
+            raw = raw.strip("`")
+            if raw[:4].lower() == "json":
+                raw = raw[4:]
+            raw = raw.strip()
+        analise = json.loads(raw)
+        analise["fonte"] = "ia"
+        return JsonResponse({"analise": analise, "jornada": jornada})
+    except Exception as exc:
+        from .email_ai import _e_indisponibilidade_ia
+        if _e_indisponibilidade_ia(exc):
+            logger.warning("Resumo IA da jornada — IA indisponível (billing/quota), "
+                           "fallback por regras: %s", exc)
+        else:
+            logger.exception("Resumo IA da jornada — caindo em fallback por regras")
+        return JsonResponse({"analise": _resumo_jornada_fallback(jornada),
+                             "jornada": jornada})
 
 
 # ── Resposta ao tratamento ─────────────────────────────────────────────────────
