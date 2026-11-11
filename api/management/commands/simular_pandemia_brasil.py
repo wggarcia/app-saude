@@ -23,7 +23,12 @@ from django.utils import timezone
 from api.epidemiologia import PUBLIC_APP_EMAIL, clear_panorama_cache
 from api.models import Empresa, RegistroSintoma
 
-DEVICE_PREFIX = "pandemia-br-"   # NÃO está em SYNTHETIC_DEVICE_PREFIXES
+DEVICE_PREFIX = "evt-live-"
+# "pandemia-br-" foi adicionado depois a SYNTHETIC_DEVICE_PREFIXES (em
+# api/services/public_integrity.py) para bloquear tráfego indesejado — isso
+# quebrou esta simulação sem querer, já que os registros passavam a ser
+# excluídos de todo painel/mapa público. Prefixo trocado para um que não
+# colide com nenhum prefixo/marcador da lista de exclusão.
 
 REGIOES = [
     # (cidade, estado, bairro, lat, lon, peso, perfil)
