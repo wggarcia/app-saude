@@ -1533,7 +1533,7 @@ def _briefing_dispersao_block():
     corte = timezone.now() - timedelta(hours=48)
     qs = (
         ProjecaoDispersao.objects
-        .filter(criado_em__gte=corte, horizonte_dias=14)
+        .filter(calculado_em__gte=corte, horizonte_dias=14)
         .order_by("-probabilidade")[:100]
     )
     if not qs:
