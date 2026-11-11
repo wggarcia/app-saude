@@ -1479,7 +1479,11 @@
       const mode = modeFilter.value;
 
       // Heatmap: surtos e radar mostram calor; risco mostra apenas pontos coloridos
-      if (mode !== "risco") {
+      // Guarda contra L.heatLayer indisponível (CDN lento/bloqueado na rede do
+      // usuário) — sem isso, uma exceção aqui travava a função inteira e os
+      // focos/marcadores abaixo nunca eram desenhados, mesmo com o dado certo.
+      if (mode !== "risco" && typeof L.heatLayer === "function") {
+       try {
         const heatPoints = areas
           .filter((area) => area.latitude && area.longitude)
           .map((area) => [area.latitude, area.longitude, intensity(area, maxCases)]);
@@ -1495,6 +1499,11 @@
             1.0: "#ff365f",
           },
         }).addTo(map);
+       } catch (err) {
+         console.error("Heatmap falhou ao renderizar — seguindo sem ele:", err);
+       }
+      } else if (mode !== "risco") {
+        console.warn("L.heatLayer indisponível (lib não carregou) — mapa segue sem camada de calor.");
       }
 
       areas.forEach((area) => {

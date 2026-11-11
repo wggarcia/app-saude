@@ -1130,21 +1130,30 @@
       const bounds = [];
       const isBairroView = levelFilter.value === "bairros";
 
-      if (modeFilter.value !== "risco") {
-        const heatPoints = areas
-          .filter((a) => a.latitude && a.longitude)
-          .map((a) => [a.latitude, a.longitude, intensity(a, maxCases)]);
-        heatLayer = L.heatLayer(heatPoints, {
-          radius: isBairroView ? 55 : 42,
-          blur: isBairroView ? 42 : 34,
-          maxZoom: 10,
-          gradient: {
-            0.18: "#ff6b9d",
-            0.42: "#ff9ec4",
-            0.7: "#ff7a18",
-            1.0: "#ff365f",
-          },
-        }).addTo(map);
+      // Guarda contra L.heatLayer indisponível (CDN lento/bloqueado na rede do
+      // usuário) — sem isso, uma exceção aqui travava a função inteira e os
+      // focos/marcadores abaixo nunca eram desenhados, mesmo com o dado certo.
+      if (modeFilter.value !== "risco" && typeof L.heatLayer === "function") {
+        try {
+          const heatPoints = areas
+            .filter((a) => a.latitude && a.longitude)
+            .map((a) => [a.latitude, a.longitude, intensity(a, maxCases)]);
+          heatLayer = L.heatLayer(heatPoints, {
+            radius: isBairroView ? 55 : 42,
+            blur: isBairroView ? 42 : 34,
+            maxZoom: 10,
+            gradient: {
+              0.18: "#ff6b9d",
+              0.42: "#ff9ec4",
+              0.7: "#ff7a18",
+              1.0: "#ff365f",
+            },
+          }).addTo(map);
+        } catch (err) {
+          console.error("Heatmap falhou ao renderizar — seguindo sem ele:", err);
+        }
+      } else if (modeFilter.value !== "risco") {
+        console.warn("L.heatLayer indisponível (lib não carregou) — mapa segue sem camada de calor.");
       }
 
       areas.forEach((area) => {
