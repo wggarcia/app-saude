@@ -2005,16 +2005,27 @@
       const bounds = [];
 
       // Heatmap: surtos e radar sim; risco não
+      // Guarda contra L.heatLayer indisponível (CDN lento/bloqueado na rede do
+      // usuário) — sem isso, uma exceção aqui travava a função inteira e os
+      // focos/marcadores abaixo nunca eram desenhados, mesmo com o dado certo.
       if (mode !== "risco") {
-        const heatPoints = areas
-          .filter((area) => area.latitude && area.longitude)
-          .map((area) => [area.latitude, area.longitude, Math.max(0.14, activeFocusValue(area) / maxCases)]);
+        if (typeof L.heatLayer === "function") {
+          try {
+            const heatPoints = areas
+              .filter((area) => area.latitude && area.longitude)
+              .map((area) => [area.latitude, area.longitude, Math.max(0.14, activeFocusValue(area) / maxCases)]);
 
-        heatLayer = L.heatLayer(heatPoints, {
-          radius: isBairroView ? 58 : 46,
-          blur: isBairroView ? 42 : 34,
-          gradient: { 0.2: "#17d7a0", 0.45: "#5af0d3", 0.7: "#ff9b54", 1.0: "#ff5574" },
-        }).addTo(map);
+            heatLayer = L.heatLayer(heatPoints, {
+              radius: isBairroView ? 58 : 46,
+              blur: isBairroView ? 42 : 34,
+              gradient: { 0.2: "#17d7a0", 0.45: "#5af0d3", 0.7: "#ff9b54", 1.0: "#ff5574" },
+            }).addTo(map);
+          } catch (err) {
+            console.error("Heatmap falhou ao renderizar — seguindo sem ele:", err);
+          }
+        } else {
+          console.warn("L.heatLayer indisponível (lib não carregou) — mapa segue sem camada de calor.");
+        }
       }
 
       areas.forEach((area) => {
