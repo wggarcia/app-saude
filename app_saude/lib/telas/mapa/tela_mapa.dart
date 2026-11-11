@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -73,16 +74,26 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
   double _currentZoom = 4.2;
   // 'rua' = OpenStreetMap | 'satelite' = ESRI World Imagery
   String _tipoMapa = 'rua';
+  Timer? _autoRefreshTimer;
+  // Mesmo intervalo do painel do gestor (setInterval(loadPanorama, 30000)
+  // em dashboard_governo.html) — mantém o mapa do app tão atualizado quanto
+  // o painel, sem depender do usuário puxar pra atualizar manualmente.
+  static const _autoRefreshInterval = Duration(seconds: 30);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _load();
+    _autoRefreshTimer = Timer.periodic(
+      _autoRefreshInterval,
+      (_) => _refreshOnResume(),
+    );
   }
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
