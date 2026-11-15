@@ -203,9 +203,70 @@ def api_cras_familias(request):
             observacoes=body.get("observacoes", "").strip(),
             unidade_cras_id=body.get("unidade_cras_id") or None,
         )
+        from .services.antifraude_residencia import registrar_e_verificar_cadastro_social
+        registrar_e_verificar_cadastro_social(
+            cpf=f.responsavel_cpf, nis=f.responsavel_nis, empresa=empresa,
+            familia_id=f.id, nome_pessoa=f.responsavel_nome,
+        )
         return JsonResponse({"status": "criado", "id": f.id, **_familia_dict(f)}, status=201)
 
     return JsonResponse({"erro": "Método não permitido"}, status=405)
+
+
+@csrf_exempt
+@api_requer_feature("governo.suas")
+@api_requer_permissao_modulo("governo.suas")
+def api_cras_familia_reativar(request, familia_id):
+    """Reverte a suspensão automática do antifraude cross-município — ver
+    api/services/antifraude_residencia.py. Usado quando o gestor confirma que
+    a suspensão foi um engano (CPF/NIS colidiu por erro de digitação)."""
+    empresa = _gov(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
+
+    from .models import FamiliaCRAS
+    try:
+        f = FamiliaCRAS.objects.get(id=familia_id, empresa=empresa)
+    except FamiliaCRAS.DoesNotExist:
+        return JsonResponse({"erro": "Família não encontrada"}, status=404)
+    if f.situacao != "suspensa":
+        return JsonResponse({"erro": "Este cadastro não está suspenso"}, status=400)
+
+    body = json.loads(request.body or "{}")
+    from .services.antifraude_residencia import contestar_suspensao
+    contestar_suspensao(familia=f, revisado_por=body.get("revisado_por", ""))
+    return JsonResponse({"status": "reativado", "id": f.id, **_familia_dict(f)})
+
+
+@csrf_exempt
+@api_requer_feature("governo.suas")
+@api_requer_permissao_modulo("governo.suas")
+def api_cras_alertas_antifraude(request):
+    empresa = _gov(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+    if request.method != "GET":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
+    from .services.antifraude_residencia import listar_alertas
+    incluir_lidas = request.GET.get("todas") in ("1", "true")
+    return JsonResponse({"alertas": listar_alertas(empresa, incluir_lidas=incluir_lidas)})
+
+
+@csrf_exempt
+@api_requer_feature("governo.suas")
+@api_requer_permissao_modulo("governo.suas")
+def api_cras_alerta_antifraude_lida(request, alerta_id):
+    empresa = _gov(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
+    from .services.antifraude_residencia import marcar_alerta_lido
+    if not marcar_alerta_lido(empresa, alerta_id):
+        return JsonResponse({"erro": "Alerta não encontrado"}, status=404)
+    return JsonResponse({"status": "lido", "id": alerta_id})
 
 
 @csrf_exempt

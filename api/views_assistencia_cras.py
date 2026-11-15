@@ -237,7 +237,61 @@ def api_ass_cras_familias(request):
         situacao=data.get("situacao", "ativo"),
         observacoes=data.get("observacoes", ""),
     )
+    from .services.antifraude_residencia import registrar_e_verificar_cadastro_social
+    registrar_e_verificar_cadastro_social(
+        cpf=f.responsavel_cpf, nis=f.responsavel_nis, empresa=empresa,
+        familia_id=f.id, nome_pessoa=f.responsavel_nome,
+    )
     return JsonResponse({"familia": _familia_dict(f)}, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_permissao_modulo("assistencia.cras_paif")
+def api_ass_cras_familia_reativar(request, familia_id):
+    """Reverte a suspensão automática do antifraude cross-município — ver
+    api/services/antifraude_residencia.py."""
+    empresa = _assoc(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+
+    from .models import FamiliaCRAS
+    try:
+        f = FamiliaCRAS.objects.get(id=familia_id, empresa=empresa)
+    except FamiliaCRAS.DoesNotExist:
+        return JsonResponse({"erro": "Família não encontrada"}, status=404)
+    if f.situacao != "suspensa":
+        return JsonResponse({"erro": "Este cadastro não está suspenso"}, status=400)
+
+    body = json.loads(request.body or "{}")
+    from .services.antifraude_residencia import contestar_suspensao
+    contestar_suspensao(familia=f, revisado_por=body.get("revisado_por", ""))
+    return JsonResponse({"familia": _familia_dict(f)})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@api_requer_permissao_modulo("assistencia.cras_paif")
+def api_ass_cras_alertas_antifraude(request):
+    empresa = _assoc(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+    from .services.antifraude_residencia import listar_alertas
+    incluir_lidas = request.GET.get("todas") in ("1", "true")
+    return JsonResponse({"alertas": listar_alertas(empresa, incluir_lidas=incluir_lidas)})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@api_requer_permissao_modulo("assistencia.cras_paif")
+def api_ass_cras_alerta_antifraude_lida(request, alerta_id):
+    empresa = _assoc(request)
+    if not empresa:
+        return JsonResponse({"erro": "Acesso restrito"}, status=403)
+    from .services.antifraude_residencia import marcar_alerta_lido
+    if not marcar_alerta_lido(empresa, alerta_id):
+        return JsonResponse({"erro": "Alerta não encontrado"}, status=404)
+    return JsonResponse({"status": "lido", "id": alerta_id})
 
 
 @csrf_exempt

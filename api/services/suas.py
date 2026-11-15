@@ -60,6 +60,10 @@ def familia_dict(f):
         "unidade_cras_nome": f.unidade_cras.nome if f.unidade_cras else None,
         "data_cadastro": str(f.data_cadastro),
         "observacoes": f.observacoes,
+        "motivo_suspensao": f.motivo_suspensao,
+        "suspenso_em": f.suspenso_em.isoformat() if f.suspenso_em else None,
+        "contestado_em": f.contestado_em.isoformat() if f.contestado_em else None,
+        "contestado_por": f.contestado_por,
         "criado_em": f.criado_em.isoformat(),
     }
 

@@ -56,6 +56,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .badge-danger{background:rgba(255,77,109,.15);color:var(--danger)}
 .badge-info{background:rgba(167,139,250,.15);color:var(--purple)}
 .badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.af-alertas{margin:14px 20px 4px;display:flex;flex-direction:column;gap:8px}
+.af-alerta{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:10px;background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.3)}
+.af-alerta.suspensao{background:rgba(255,77,109,.08);border-color:rgba(255,77,109,.3)}
+.af-alerta-body{flex:1;font-size:13px;line-height:1.45}
+.af-alerta-body b{display:block;margin-bottom:2px}
+.af-alerta-data{font-size:11px;color:var(--muted);margin-top:4px}
+.af-motivo{display:block;font-size:11px;color:var(--warn);margin-top:4px;max-width:260px}
 .tab-bar{display:flex;gap:4px;padding:0 20px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);overflow-x:auto}
 .tab-btn{padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;font-family:Manrope,sans-serif;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -161,6 +168,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
       </div>
       <div id="crasFamilias" class="sub-panel cras" style="display:none">
+        <div id="alertasAntifraude" class="af-alertas" style="display:none"></div>
         <div class="card-header" style="border-bottom:none">
           <span class="card-title">Famílias Cadastradas</span>
           <div class="filters">
@@ -177,8 +185,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
         <div style="overflow-x:auto">
           <table>
-            <thead><tr><th>Responsável</th><th>CPF</th><th>NIS</th><th>Integrantes</th><th>Renda/per capita</th><th>PBF</th><th>BPC</th><th>Situação</th></tr></thead>
-            <tbody id="tbFamilias"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+            <thead><tr><th>Responsável</th><th>CPF</th><th>NIS</th><th>Integrantes</th><th>Renda/per capita</th><th>PBF</th><th>BPC</th><th>Situação</th><th>Ações</th></tr></thead>
+            <tbody id="tbFamilias"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
           </table>
         </div>
         <div id="paginacaoFamilias" style="padding:12px 20px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)"></div>
@@ -816,17 +824,27 @@ async function carregarFamilias(page) {
   if (sit) params.set('situacao', sit);
   const r = await fetch('/api/assistencia-social/cras/familias?' + params).then(r=>r.json());
   const tb = document.getElementById('tbFamilias');
-  if (!r.familias?.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma família encontrada</td></tr>'; return; }
-  tb.innerHTML = r.familias.map(f=>`<tr>
-    <td><b>${f.responsavel_nome}</b></td>
-    <td>${f.responsavel_cpf||'—'}</td>
-    <td>${f.responsavel_nis||'—'}</td>
-    <td>${f.num_integrantes}</td>
+  carregarAlertasAntifraude();
+  if (!r.familias?.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma família encontrada</td></tr>'; return; }
+  tb.innerHTML = r.familias.map(f=>{
+    const suspRecad = f.situacao === 'suspensa' && f.motivo_suspensao;
+    const sit = suspRecad
+      ? `<span class="badge badge-danger">Suspensa — recadastro em outro município</span><span class="af-motivo">${esc(f.motivo_suspensao)}</span>`
+      : badgeSit(f.situacao);
+    const acoes = suspRecad
+      ? `<button class="btn btn-warn btn-sm" style="white-space:nowrap" onclick="reativarFamilia(${Number(f.id)})">Reativar (foi engano)</button>`
+      : '—';
+    return `<tr>
+    <td><b>${esc(f.responsavel_nome)}</b></td>
+    <td>${esc(f.responsavel_cpf)||'—'}</td>
+    <td>${esc(f.responsavel_nis)||'—'}</td>
+    <td>${esc(f.num_integrantes)}</td>
     <td>${fmtMoeda(f.renda_familiar_total / Math.max(f.num_integrantes,1))}</td>
     <td>${sim_nao(f.marcador_pbf)}</td>
     <td>${sim_nao(f.marcador_bpc)}</td>
-    <td>${badgeSit(f.situacao)}</td>
-  </tr>`).join('');
+    <td>${sit}</td>
+    <td>${acoes}</td>
+  </tr>`;}).join('');
   // popula select de família no modal de atendimento/visita
   const opts = '<option value="">Selecione…</option>' + r.familias.map(f=>`<option value="${f.id}">${f.responsavel_nome}</option>`).join('');
   const selA = document.getElementById('aCrasFamilia');
@@ -838,6 +856,39 @@ async function carregarFamilias(page) {
     <button class="btn btn-ghost btn-sm" ${familiaPage<=1?'disabled':''} onclick="carregarFamilias(${familiaPage-1})">← Anterior</button>
     <span>Página ${familiaPage} de ${r.paginas} (${fmt(r.total)} registros)</span>
     <button class="btn btn-ghost btn-sm" ${familiaPage>=r.paginas?'disabled':''} onclick="carregarFamilias(${familiaPage+1})">Próxima →</button>` : `<span>${fmt(r.total)} registros</span>`;
+}
+
+// ─── Antifraude de cadastro cross-município ──────────────────────────────────
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+async function carregarAlertasAntifraude() {
+  const box = document.getElementById('alertasAntifraude');
+  let r;
+  try { r = await fetch('/api/assistencia-social/cras/alertas-antifraude').then(r=>r.json()); }
+  catch (e) { box.style.display = 'none'; return; }
+  const alertas = r.alertas || [];
+  if (!alertas.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.innerHTML = alertas.map(a => `<div class="af-alerta ${a.tipo === 'suspensao_registro' ? 'suspensao' : ''}">
+      <div class="af-alerta-body">
+        <b>${esc(a.titulo)}</b>
+        ${esc(a.mensagem)}
+        <div class="af-alerta-data">${a.criado_em ? esc(new Date(a.criado_em).toLocaleString('pt-BR')) : ''}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="marcarAlertaLido(${Number(a.id)})">Marcar como lido</button>
+    </div>`).join('');
+  box.style.display = 'flex';
+}
+async function marcarAlertaLido(id) {
+  await fetch(`/api/assistencia-social/cras/alertas-antifraude/${id}/lida`, {method:'POST'});
+  carregarAlertasAntifraude();
+}
+async function reativarFamilia(id) {
+  if (!confirm('Reativar este cadastro? Use só se a suspensão foi um engano (ex.: CPF/NIS digitado errado) ou se a família realmente mantém vínculo nos dois municípios.')) return;
+  const r = await fetch(`/api/assistencia-social/cras/familias/${id}/reativar`, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}).then(r=>r.json());
+  if (r.erro) { alert(r.erro); return; }
+  carregarFamilias();
 }
 
 // ─── Atendimentos CRAS ────────────────────────────────────────────────────────

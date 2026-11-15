@@ -14993,6 +14993,14 @@ class FamiliaCRAS(models.Model):
     situacao                 = models.CharField(max_length=30, choices=SITUACAO_CHOICES, default="em_acompanhamento")
     data_cadastro            = models.DateField(auto_now_add=True)
     observacoes              = models.TextField(blank=True, default="")
+    # Antifraude de recadastro cross-município (ver api/services/antifraude_residencia.py):
+    # quando a mesma pessoa (CPF/NIS) se cadastra em OUTRO município, este
+    # registro é suspenso automaticamente (situacao="suspensa") em vez de
+    # apagado, preservando histórico. O gestor original pode contestar.
+    motivo_suspensao         = models.TextField(blank=True, default="")
+    suspenso_em              = models.DateTimeField(null=True, blank=True)
+    contestado_em            = models.DateTimeField(null=True, blank=True)
+    contestado_por           = models.CharField(max_length=160, blank=True, default="")
     criado_em                = models.DateTimeField(auto_now_add=True)
     atualizado_em            = models.DateTimeField(auto_now=True)
 
@@ -15177,6 +15185,66 @@ class CadUnicoFamilia(models.Model):
 
     def __str__(self):
         return f"CadÚnico: {self.responsavel_nome} (NIS: {self.responsavel_nis})"
+
+
+# ─── Antifraude de Cadastro Social cross-município ──────────────────────────
+#
+# Cada município é um tenant isolado por RLS (empresa_id) — por padrão nenhum
+# município enxerga o cadastro social de outro, de propósito (LGPD). O modelo
+# abaixo é uma exceção DELIBERADA e MUITO ESTREITA a essa regra: um índice
+# central que guarda só CPF/NIS + qual empresa tem o cadastro ATIVO hoje, para
+# detectar quando a mesma pessoa se recadastra em outro município (ex.: pra
+# driblar falta de remédio/benefício na cidade de origem).
+#
+# SEM campo empresa_id de propósito — isso tira a tabela do alcance do
+# aplicar_rls_cobertura (só cobre tabelas com empresa_id NOT NULL), então ela
+# nunca ganha RLS automaticamente. A proteção aqui é 100% de camada de
+# aplicação: NUNCA expor este model via API pública nem por tenant — só
+# api/services/antifraude_residencia.py deve tocar nele, sempre pela conexão
+# "owner".
+class IndiceCadastroSocial(models.Model):
+    cpf              = models.CharField(max_length=11, blank=True, default="", db_index=True)
+    nis              = models.CharField(max_length=11, blank=True, default="", db_index=True)
+    nome_pessoa      = models.CharField(max_length=200, blank=True, default="")
+    empresa_ativa    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="+")
+    modelo_origem    = models.CharField(max_length=30, default="familia_cras")
+    registro_ativo_id = models.PositiveIntegerField(null=True, blank=True)
+    data_ativacao    = models.DateTimeField(default=_tz_models.now)
+    historico        = models.JSONField(default=list, blank=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Índice de Cadastro Social (cross-município)"
+        verbose_name_plural = "Índices de Cadastro Social (cross-município)"
+
+    def __str__(self):
+        return f"Índice {self.cpf or self.nis} → empresa {self.empresa_ativa_id}"
+
+
+class AlertaAntifraudeSocial(models.Model):
+    TIPO_CHOICES = [
+        ("suspensao_registro",         "Registro suspenso por recadastro em outro município"),
+        ("registro_anterior_detectado", "Cidadão com registro anterior em outro município"),
+    ]
+
+    empresa      = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="alertas_antifraude_social")
+    tipo         = models.CharField(max_length=40, choices=TIPO_CHOICES)
+    titulo       = models.CharField(max_length=200)
+    mensagem     = models.TextField()
+    cpf          = models.CharField(max_length=11, blank=True, default="")
+    nis          = models.CharField(max_length=11, blank=True, default="")
+    registro_id  = models.PositiveIntegerField(null=True, blank=True)
+    lida         = models.BooleanField(default=False)
+    criado_em    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Alerta Antifraude Social"
+        verbose_name_plural = "Alertas Antifraude Social"
+        ordering            = ["-criado_em"]
+        indexes             = [models.Index(fields=["empresa", "lida"])]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.empresa.nome}"
 
 
 class BeneficiarioBPC(models.Model):

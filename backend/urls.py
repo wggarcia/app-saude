@@ -1519,7 +1519,8 @@ from api.views_governo_icp_brasil import (api_gov_icp_assinar_prescricao, api_go
 from api.views_hospital_whatsapp_agendamento import (api_hosp_wa_status, api_hosp_wa_enviar_lembrete, api_hosp_wa_confirmar, api_hosp_wa_historico, api_hosp_wa_webhook, api_hosp_wa_kpis, hospital_whatsapp_agendamento_page)
 from api.views_governo_suas_cras import (
     api_cras_unidades, api_cras_unidade_detalhe,
-    api_cras_familias, api_cras_familia_detalhe,
+    api_cras_familias, api_cras_familia_detalhe, api_cras_familia_reativar,
+    api_cras_alertas_antifraude, api_cras_alerta_antifraude_lida,
     api_cras_atendimentos, api_cras_atendimento_detalhe,
     api_cras_visitas, api_cras_kpis,
 )
@@ -1541,7 +1542,8 @@ from api.views_governo_suas_gestao import (
 )
 from api.views_assistencia_cras import (
     api_ass_cras_unidades, api_ass_cras_unidade_detalhe,
-    api_ass_cras_familias, api_ass_cras_familia_detalhe,
+    api_ass_cras_familias, api_ass_cras_familia_detalhe, api_ass_cras_familia_reativar,
+    api_ass_cras_alertas_antifraude, api_ass_cras_alerta_antifraude_lida,
     api_ass_cras_atendimentos, api_ass_cras_atendimento_detalhe,
     api_ass_cras_visitas, api_ass_cras_visita_detalhe,
     api_ass_prontuarios_paif, api_ass_prontuario_paif_detalhe,
@@ -3976,6 +3978,12 @@ urlpatterns = [
     path('api/governo/suas/cras/familias/',                     api_cras_familias),
     path('api/governo/suas/cras/familias/<int:familia_id>',     api_cras_familia_detalhe),
     path('api/governo/suas/cras/familias/<int:familia_id>/',    api_cras_familia_detalhe),
+    path('api/governo/suas/cras/familias/<int:familia_id>/reativar',  api_cras_familia_reativar),
+    path('api/governo/suas/cras/familias/<int:familia_id>/reativar/', api_cras_familia_reativar),
+    path('api/governo/suas/cras/alertas-antifraude',                     api_cras_alertas_antifraude),
+    path('api/governo/suas/cras/alertas-antifraude/',                    api_cras_alertas_antifraude),
+    path('api/governo/suas/cras/alertas-antifraude/<int:alerta_id>/lida',  api_cras_alerta_antifraude_lida),
+    path('api/governo/suas/cras/alertas-antifraude/<int:alerta_id>/lida/', api_cras_alerta_antifraude_lida),
     path('api/governo/suas/cras/atendimentos',                  api_cras_atendimentos),
     path('api/governo/suas/cras/atendimentos/',                 api_cras_atendimentos),
     path('api/governo/suas/cras/atendimentos/<int:atendimento_id>',  api_cras_atendimento_detalhe),
@@ -4061,6 +4069,12 @@ urlpatterns = [
     path('api/assistencia-social/cras/familias/',                                 api_ass_cras_familias),
     path('api/assistencia-social/cras/familias/<int:familia_id>',                 api_ass_cras_familia_detalhe),
     path('api/assistencia-social/cras/familias/<int:familia_id>/',                api_ass_cras_familia_detalhe),
+    path('api/assistencia-social/cras/familias/<int:familia_id>/reativar',       api_ass_cras_familia_reativar),
+    path('api/assistencia-social/cras/familias/<int:familia_id>/reativar/',      api_ass_cras_familia_reativar),
+    path('api/assistencia-social/cras/alertas-antifraude',                       api_ass_cras_alertas_antifraude),
+    path('api/assistencia-social/cras/alertas-antifraude/',                      api_ass_cras_alertas_antifraude),
+    path('api/assistencia-social/cras/alertas-antifraude/<int:alerta_id>/lida',  api_ass_cras_alerta_antifraude_lida),
+    path('api/assistencia-social/cras/alertas-antifraude/<int:alerta_id>/lida/', api_ass_cras_alerta_antifraude_lida),
     path('api/assistencia-social/cras/atendimentos',                              api_ass_cras_atendimentos),
     path('api/assistencia-social/cras/atendimentos/',                             api_ass_cras_atendimentos),
     path('api/assistencia-social/cras/atendimentos/<int:atendimento_id>',         api_ass_cras_atendimento_detalhe),
