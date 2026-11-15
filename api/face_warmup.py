@@ -23,22 +23,16 @@ logger = logging.getLogger(__name__)
 
 _ja_aqueceu = False
 
-# Comandos em que NÃO se deve aquecer (não estão servindo requisições)
-_COMANDOS_SEM_WARMUP = {
-    "migrate", "makemigrations", "shell", "shell_plus", "test", "collectstatic",
-    "createsuperuser", "dumpdata", "loaddata", "check", "showmigrations",
-    "sqlmigrate", "createcachetable", "compilemessages", "makemessages",
-}
-
 
 def _deve_aquecer() -> bool:
+    # Lista de permissão, não de bloqueio: cada processo aquecido ocupa ~1,3 GB.
+    # A lista de bloqueio antiga deixava todo comando de cron e o rqworker
+    # carregarem o modelo, e isso esgotou a RAM do VPS (quedas de nov/2026).
     if os.environ.get("VITA_FACE_WARMUP", "1") == "0":
         return False
     argv = sys.argv or []
-    for cmd in _COMANDOS_SEM_WARMUP:
-        if cmd in argv:
-            return False
-    return True
+    executavel = os.path.basename(argv[0]) if argv else ""
+    return "gunicorn" in executavel or "runserver" in argv
 
 
 def _aquecer():
