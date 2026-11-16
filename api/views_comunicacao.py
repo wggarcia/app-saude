@@ -320,9 +320,11 @@ def api_encerrar_video(request, sessao_id):
 # ─── Colaborador-side pages ───────────────────────────────────────────────────
 
 def _resolve_alias(codigo):
-    return ColaboradorAliasCorporativo.objects.select_related("empresa").filter(
-        alias_publico=codigo
-    ).first()
+    from .services.rls import localizar_e_fixar
+    return localizar_e_fixar(
+        ColaboradorAliasCorporativo, lambda a: a.empresa_id,
+        select_related=("empresa",), alias_publico=codigo,
+    )
 
 
 def colaborador_chat(request, codigo):

@@ -8924,6 +8924,10 @@ class CredenciaisIntegracoes(models.Model):
     )
     rnds_ativo              = models.BooleanField(default=False)
     rnds_ultima_transmissao = models.DateTimeField(null=True, blank=True)
+    rnds_cns_profissional   = models.CharField(max_length=15, blank=True, default="",
+                                               help_text="CNS do profissional enviado no cabeçalho Authorization da RNDS")
+    rnds_uf                 = models.CharField(max_length=2, blank=True, default="",
+                                               help_text="UF do CNES — escolhe o servidor estadual da RNDS em produção (usa sus_uf se vazio)")
 
     # ── NF-e / SEFAZ ──────────────────────────────────────────────────────────
     # Certificado e-CNPJ A1/A3 para emissão de NF-e (diferente do ICP-Brasil RNDS)
@@ -9094,8 +9098,21 @@ class CredenciaisIntegracoes(models.Model):
     def sus_configurado(self) -> bool:
         return bool(self.sus_cnes and self.sus_login_scnes and self.sus_senha_cripto and self.sus_ativo)
 
+    def rnds_pendencias(self) -> list:
+        """O que falta para o cliente da RNDS (api/services/rnds_fhir.py) conseguir operar."""
+        faltando = []
+        if not self.rnds_certificado_pfx_b64:
+            faltando.append("certificado ICP-Brasil")
+        if not self.rnds_cns_profissional:
+            faltando.append("CNS do profissional")
+        if self.rnds_ambiente == "producao" and not (self.rnds_uf or self.sus_uf):
+            faltando.append("UF do estabelecimento (obrigatória em produção)")
+        if not self.rnds_ativo:
+            faltando.append("integração marcada como ativa")
+        return faltando
+
     def rnds_configurado(self) -> bool:
-        return bool(self.rnds_cpf_gestor and self.rnds_certificado_pfx_b64 and self.rnds_ativo)
+        return not self.rnds_pendencias()
 
     def set_nfe_certificado_senha(self, senha_plain: str):
         if senha_plain:
@@ -13551,6 +13568,10 @@ class VisitaDomiciliar(models.Model):
     uuid_esus        = models.CharField(max_length=40, blank=True, default="",
                                          verbose_name="UUID e-SUS")
     transmitido_esus = models.BooleanField(default=False)
+    ORIGEM = [("manual", "Registrada no SoloCRT"), ("pec", "Importada do PEC")]
+    origem           = models.CharField(max_length=10, choices=ORIGEM, default="manual")
+    # Id do registro no sistema de origem (PEC) — chave de idempotência da ingestão.
+    uuid_origem      = models.CharField(max_length=64, blank=True, default="", db_index=True)
     obs              = models.TextField(blank=True, default="")
     criado_em        = models.DateTimeField(auto_now_add=True)
 
@@ -13564,6 +13585,13 @@ class VisitaDomiciliar(models.Model):
             models.Index(fields=["empresa", "transmitido_esus"]),
             models.Index(fields=["acs", "data_visita"]),
             models.Index(fields=["cpf_paciente"]),
+        ]
+        constraints         = [
+            models.UniqueConstraint(
+                fields=["empresa", "uuid_origem"],
+                condition=~models.Q(uuid_origem=""),
+                name="visita_dom_uuid_origem_unico",
+            ),
         ]
 
     def __str__(self):

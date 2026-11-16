@@ -101,7 +101,12 @@ def _login_conta(request, portal_tipo=None):
     usuario = None
 
     if not empresa:
-        usuario = EmpresaUsuario.objects.filter(email=email, ativo=True).select_related("empresa").first()
+        # Ainda não há tenant: o sub-usuário é localizado pela conexão sem RLS.
+        from .services.rls import localizar_e_fixar
+        usuario = localizar_e_fixar(
+            EmpresaUsuario, lambda u: u.empresa_id,
+            select_related=("empresa",), email=email, ativo=True,
+        )
         empresa = usuario.empresa if usuario else None
 
     if not empresa:

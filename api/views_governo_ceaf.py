@@ -5,10 +5,8 @@ dispensação de medicamentos de alto custo e relatório HÓRUS/BNAFAR.
 Portaria GM/MS 1.554/2013 | RDC ANVISA 204/2017
 
 Integração HÓRUS/BNAFAR: RNDS FHIR R4 MedicationDispense
-  • Autenticação: certificado ICP-Brasil A1/A3 (PKCS#12) por empresa
-  • Endpoint prod:  https://ehr.saude.gov.br/api/fhir/r4/Bundle
-  • Endpoint hmg:   https://ehr-hmg.saude.gov.br/api/fhir/r4/Bundle
-  • Profile FHIR:   BRDispensacaoMedicamento-1.0
+  • Transmissão pelo cliente único api/services/rnds_fhir.py
+  • Profile FHIR:   BRDispensacaoMedicamento-1.0 (só se confirma na homologação da RNDS)
   • Credenciais configuradas em: Integrações → RNDS
 """
 import json

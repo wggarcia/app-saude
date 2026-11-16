@@ -6,7 +6,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F as models_F
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -653,9 +652,16 @@ def api_integracao_webhook(request, sistema):
         return JsonResponse({"erro": "use POST"}, status=405)
 
     # Localiza integração pela empresa via header X-Empresa-Id
-    empresa_id = request.headers.get("X-Empresa-Id") or request.GET.get("empresa_id")
+    empresa_id = (request.headers.get("X-Empresa-Id") or request.GET.get("empresa_id") or "").strip()
     if not empresa_id:
         return JsonResponse({"erro": "X-Empresa-Id obrigatório"}, status=400)
+    if not empresa_id.isdigit():
+        return JsonResponse({"erro": "X-Empresa-Id inválido"}, status=400)
+
+    # Webhook sem sessão: o tenant é o informado; a assinatura HMAC abaixo prova
+    # que o chamador conhece o segredo dessa empresa antes de qualquer gravação.
+    from .services.rls import fixar_tenant
+    fixar_tenant(int(empresa_id))
 
     integracao = IntegracaoRH.objects.filter(
         empresa_id=empresa_id, sistema=sistema
@@ -663,7 +669,9 @@ def api_integracao_webhook(request, sistema):
     if not integracao:
         return JsonResponse({"erro": "integração não encontrada"}, status=404)
 
-    # Valida assinatura HMAC
+    # Valida assinatura HMAC — sem segredo, qualquer um assinaria com chave vazia.
+    if not integracao.webhook_secret:
+        return JsonResponse({"erro": "integração sem segredo configurado"}, status=401)
     secret = integracao.webhook_secret.encode()
     sig_header = request.headers.get("X-Signature", "")
     body = request.body
@@ -1368,39 +1376,8 @@ def _2fa_ativo_para(request):
 
 def _empresa_por_api_key(request):
     """Autentica via header Authorization: ApiKey <chave> e registra uso."""
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("ApiKey "):
-        return None, None
-    chave = auth[7:].strip()
-    if not chave:
-        return None, None
-    # Lookup direto por hash indexado (O(1)) — não guardamos a chave crua,
-    # então comparamos hash com hash.
-    chave_hash = ApiKeyEmpresa.hash_de(chave)
-    key = (
-        ApiKeyEmpresa.objects.filter(ativa=True, chave_hash=chave_hash)
-        .select_related("empresa")
-        .first()
-    )
-    if not key:
-        return None, None
-
-    now = timezone.now()
-    key.total_chamadas += 1
-    key.ultimo_uso_em = now
-    key.save(update_fields=["total_chamadas", "ultimo_uso_em"])
-
-    ano_mes = now.strftime("%Y-%m")
-    endpoint = request.path[:120]
-    UsoApiEmpresa.objects.update_or_create(
-        empresa=key.empresa, api_key=key, ano_mes=ano_mes, endpoint=endpoint,
-        defaults={"chamadas": 0},
-    )
-    UsoApiEmpresa.objects.filter(
-        empresa=key.empresa, api_key=key, ano_mes=ano_mes, endpoint=endpoint
-    ).update(chamadas=models_F("chamadas") + 1)
-
-    return key.empresa, key
+    from .services.integracao_auth import empresa_por_api_key
+    return empresa_por_api_key(request)
 
 
 def api_dados_empresa(request):

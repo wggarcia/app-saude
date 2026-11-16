@@ -20,6 +20,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils import timezone
 
 from .services.auth_session import empresa_autenticada_from_request
+from .services.rnds_fhir import transmitir_bundle
 from .access_control import (
     api_requer_permissao_modulo,
     api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
@@ -39,11 +40,11 @@ def _hosp(request):
 
 def _hosp_gerencia(request):
     """Acesso restrito a operações sensíveis RNDS: exige setor hospital + perfil gerência."""
-    from .access_control import principal_pode_operacao_setorial
+    from .access_control import principal_e_gerencia
     emp = empresa_autenticada_from_request(request)
     if not emp or get_setor(emp) != "hospital":
         return None
-    if not principal_pode_operacao_setorial(request, "rnds_gerencia"):
+    if not principal_e_gerencia(request):
         return None
     return emp
 
@@ -186,7 +187,7 @@ def api_hospital_rnds_transmitir_alta(request, internacao_id):
     )
 
     # Tenta transmitir
-    ok, protocolo, erro = _transmitir_rnds(bundle, cred, empresa)
+    ok, protocolo, erro = transmitir_bundle(bundle, cred)
 
     tx.status         = "transmitido" if ok else "erro"
     tx.protocolo_rnds = protocolo or ""
@@ -250,7 +251,7 @@ def api_hospital_rnds_transmitir_rac(request, prontuario_id):
         status          = "pendente",
     )
 
-    ok, protocolo, erro = _transmitir_rnds(bundle, cred, empresa)
+    ok, protocolo, erro = transmitir_bundle(bundle, cred)
 
     tx.status         = "transmitido" if ok else "erro"
     tx.protocolo_rnds = protocolo or ""
@@ -289,7 +290,7 @@ def api_hospital_rnds_reprocessar(request, tx_id):
         return JsonResponse({"aviso": "Transmissão já foi bem-sucedida.", "protocolo": tx.protocolo_rnds})
 
     cred = _get_cred(empresa)
-    ok, protocolo, erro = _transmitir_rnds(tx.bundle_fhir, cred, empresa)
+    ok, protocolo, erro = transmitir_bundle(tx.bundle_fhir, cred)
 
     tx.status     = "transmitido" if ok else "erro"
     tx.protocolo_rnds = protocolo or ""
@@ -639,113 +640,6 @@ def _gerar_bundle_rac(prontuario, empresa):
             },
         }] if cid else []) + alergia_entries + med_entries,
     }
-
-
-# ── Transmissão HTTP real ao RNDS ─────────────────────────────────────────────
-
-def _transmitir_rnds(bundle_fhir, cred, empresa):
-    """
-    Envia Bundle FHIR ao RNDS via HTTPS.
-    Retorna (ok: bool, protocolo: str | None, erro: str | None).
-    Usa o mesmo padrão do e-SUS (views_governo_esus.py): token OAuth2 + mTLS.
-    """
-    try:
-        import requests as req
-        import tempfile
-        import base64
-        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
-
-        ambiente = getattr(cred, "rnds_ambiente", "homologacao")
-        _URLS = {
-            "homologacao": "https://sandbox.rnds.saude.gov.br/api/fhir/r4",
-            "producao":    "https://ehr.saude.gov.br/api/fhir/r4",
-        }
-        base_url = _URLS.get(ambiente, _URLS["homologacao"])
-
-        # Carrega certificado PKCS#12
-        pfx_b64 = getattr(cred, "rnds_certificado_pfx_b64", "")
-        if not pfx_b64:
-            return False, None, "Certificado RNDS não carregado"
-
-        pfx_bytes = base64.b64decode(pfx_b64)
-        senha     = cred.get_rnds_certificado_senha() if hasattr(cred, "get_rnds_certificado_senha") else ""
-        senha_bytes = senha.encode() if senha else None
-
-        priv_key, cert, _ = pkcs12.load_key_and_certificates(pfx_bytes, senha_bytes)
-        pem_cert = cert.public_bytes(Encoding.PEM)
-        pem_key  = priv_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
-
-        # Escreve PEM temporários com permissões restritas (0o600 — apenas processo atual)
-        import os as _os
-        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as fc:
-            cert_path = fc.name
-        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as fk:
-            key_path = fk.name
-        _os.chmod(cert_path, 0o600)
-        _os.chmod(key_path, 0o600)
-        with open(cert_path, "wb") as fc:
-            fc.write(pem_cert)
-        with open(key_path, "wb") as fk:
-            fk.write(pem_key)
-
-        try:
-            response = req.post(
-                f"{base_url}/Bundle",
-                json=bundle_fhir,
-                cert=(cert_path, key_path),
-                headers={
-                    "Content-Type":  "application/fhir+json",
-                    "X-Authorization-Server": "Bearer",
-                    "RNDS-AUTH-TOKEN": _obter_token_rnds(cred, cert_path, key_path, ambiente),
-                },
-                timeout=30,
-            )
-
-            if response.status_code in (200, 201):
-                protocolo = (
-                    response.json().get("id") or
-                    response.headers.get("Location", "").split("/")[-1]
-                )
-                return True, protocolo, None
-            else:
-                return False, None, f"HTTP {response.status_code}: {response.text[:300]}"
-
-        finally:
-            import os
-            for p in (cert_path, key_path):
-                try:
-                    os.unlink(p)
-                except Exception:
-                    pass
-
-    except ImportError:
-        return False, None, "Instale 'cryptography' e 'requests' para transmissão RNDS"
-    except Exception as e:
-        logger.exception("Erro ao transmitir ao RNDS: %s", e)
-        return False, None, str(e)[:500]
-
-
-def _obter_token_rnds(cred, cert_path, key_path, ambiente):
-    """
-    Obtém token OAuth2 do RNDS usando certificado digital.
-    Referência: https://rnds-guia.saude.gov.br/docs/rnds/autenticacao/
-    """
-    try:
-        import requests as req
-        _AUTH_URLS = {
-            "homologacao": "https://ehr-auth.saude.gov.br/api/token",
-            "producao":    "https://ehr-auth.saude.gov.br/api/token",
-        }
-        auth_url = _AUTH_URLS.get(ambiente, _AUTH_URLS["homologacao"])
-        resp = req.post(
-            auth_url,
-            data={"grant_type": "client_credentials"},
-            cert=(cert_path, key_path),
-            timeout=15,
-        )
-        return resp.json().get("access_token", "")
-    except Exception:
-        return ""
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────

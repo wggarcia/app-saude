@@ -19,7 +19,11 @@ _TOKEN_TTL_HOURS = 2
 
 def _encontrar_por_email(email):
     """Returns (empresa_or_none, usuario_or_none) for the given email."""
-    usuario = EmpresaUsuario.objects.filter(email__iexact=email, ativo=True).first()
+    # Rota pública: sem tenant ainda; o sub-usuário (sob RLS) só aparece sem RLS.
+    from .services.rls import localizar_e_fixar
+    usuario = localizar_e_fixar(
+        EmpresaUsuario, lambda u: u.empresa_id, email__iexact=email, ativo=True,
+    )
     if usuario:
         return None, usuario
     empresa = Empresa.objects.filter(email__iexact=email).first()
@@ -97,13 +101,19 @@ def solicitar_reset_senha(request):
 
 
 def redefinir_senha(request, token_str):
+    from .services.rls import localizar_e_fixar
     try:
         token_uuid = uuid.UUID(str(token_str))
-        token_obj = PasswordResetToken.objects.select_related("empresa", "usuario").get(
-            token=token_uuid,
-            usado=False,
-        )
-    except (PasswordResetToken.DoesNotExist, ValueError):
+    except ValueError:
+        return render(request, "nova_senha.html", {"erro": "Link inválido ou já utilizado."})
+    # O join com o sub-usuário (sob RLS) volta vazio sem tenant — e aí nenhuma senha
+    # seria trocada. Localiza sem RLS e fixa o tenant da conta antes de gravar.
+    token_obj = localizar_e_fixar(
+        PasswordResetToken,
+        lambda t: t.usuario.empresa_id if t.usuario_id else t.empresa_id,
+        select_related=("empresa", "usuario"), token=token_uuid, usado=False,
+    )
+    if token_obj is None:
         return render(request, "nova_senha.html", {"erro": "Link inválido ou já utilizado."})
 
     if timezone.now() > token_obj.expira_em:
@@ -128,6 +138,9 @@ def redefinir_senha(request, token_str):
     elif token_obj.empresa:
         token_obj.empresa.senha = nova_senha
         token_obj.empresa.save(update_fields=["senha"])
+    else:
+        logger.error("Reset de senha sem conta alvo: token_id=%s", token_obj.pk)
+        return render(request, "nova_senha.html", {"erro": "Link inválido ou já utilizado."})
 
     token_obj.usado = True
     token_obj.save(update_fields=["usado"])

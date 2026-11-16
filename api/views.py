@@ -3524,7 +3524,10 @@ def apagar_meus_dados_lgpd(request):
 
     device_id = device_id[:120]
 
-    sintomas_anonimizados = RegistroSintoma.objects.filter(device_id=device_id).update(
+    # Os registros do aparelho podem estar em qualquer tenant (RLS): sem a conexão
+    # sem RLS a anonimização atingiria 0 linhas e o titular nem saberia.
+    from .services.rls import objetos_sem_rls
+    sintomas_anonimizados = objetos_sem_rls(RegistroSintoma).filter(device_id=device_id).update(
         device_id="",
         ip=None,
     )

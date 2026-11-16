@@ -114,20 +114,13 @@ def _liberar_dispositivos_ociosos(empresa):
 
 
 def _rls_set_empresa_auth(empresa_id: int) -> None:
-    """
-    Define app.empresa_id (SET SESSION) para queries RLS durante o fluxo de autenticação.
+    """Define o tenant RLS durante o fluxo de autenticação (nunca quebra o login).
 
-    Usa is_local=False (SET SESSION) — necessário com psycopg3, cujo modo "autobegin"
-    não garante persistência de SET LOCAL entre cursors dentro do mesmo atomic().
+    Passa pelo _rls_set_empresa do middleware, que marca a conexão — sem a marca,
+    o _rls_limpar da próxima requisição não saberia que precisa zerar o tenant.
     """
-    from django.db import connection
-    if connection.vendor != "postgresql":
-        return
-    try:
-        with connection.cursor() as cur:
-            cur.execute("SELECT set_config('app.empresa_id', %s, false)", [str(empresa_id)])
-    except Exception:
-        pass  # nunca quebra o login por falha de RLS
+    from .rls import fixar_tenant
+    fixar_tenant(empresa_id)
 
 
 def registrar_dispositivo_login(empresa, request, dados):
@@ -278,6 +271,9 @@ def registrar_sessao_aba(token):
 
 def resolver_sessao_empresa_por_token(token, require_active_empresa=False):
     payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+    # Mesmo passo do EmpresaMiddleware: o tenant vem do JWT assinado e precisa
+    # estar fixado antes de ler EmpresaUsuario (tabela sob RLS).
+    _rls_set_empresa_auth(payload["empresa_id"])
     empresa_filters = {"id": payload["empresa_id"]}
     if require_active_empresa:
         empresa_filters["ativo"] = True

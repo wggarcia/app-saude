@@ -120,9 +120,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
       A integração completa com a Rede Nacional de Dados em Saúde (RNDS) exige, em ambiente de produção:
       <ul>
         <li>Certificado digital ICP-Brasil (A3) do estabelecimento de saúde cadastrado no CNES</li>
-        <li>Autenticação OAuth2 via Serviço de Autenticação da RNDS (CONASS/CONASEMS)</li>
-        <li>Serialização das fichas nos padrões FHIR R4 (HL7) conforme o Manual de Integração e-SUS</li>
-        <li>Endpoint: <code style="background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px">https://ehr.saude.gov.br/api/fhir/r4</code></li>
+        <li>Token de acesso gerado no servidor de autenticação da RNDS com esse certificado</li>
+        <li>CNS do profissional responsável, enviado em cada requisição</li>
+        <li>Servidor da RNDS do seu estado (em produção há um endereço por UF)</li>
       </ul>
     </div>
   </div>

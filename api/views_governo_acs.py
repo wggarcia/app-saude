@@ -3,17 +3,12 @@ ACS — Agente Comunitário de Saúde + Visitas Domiciliares + Fichas de Acompan
 e-SUS Atenção Básica / CDS — Portaria MS 1.412/2013.
 
 Transmissão ao SISAB:
-  O SISAB NÃO disponibiliza REST API pública para sistemas externos.
-  A integração oficial é feita pelo software PEC (Prontuário Eletrônico do Cidadão)
-  através do protocolo Thrift / envio local → sincronização nacional.
-
-  Este módulo implementa a abordagem oficial para sistemas externos:
-    1. Geração do arquivo CDS JSON (FichaVisitaDomiciliarMestre) no padrão
-       e-SUS AB — Documentação Técnica UFSC/DAB/MS
-    2. Download do arquivo JSON pelo operador
-    3. Importação no PEC via: Configurações → Importar CDS
-  Ref: https://integracao.esusab.ufsc.br/ledi/documentacao/
-       Portaria GM/MS 1.412/2013 | Manual e-SUS AB v3.x
+  O SISAB não tem API REST pública. Sistemas de terceiros entregam ao PEC
+  arquivos LEDI APS (Thrift ou XML), que o PEC sincroniza com o nacional.
+  Este módulo gera um .zip de arquivos .esus no modelo LEDI APS 8.7 para o
+  operador importar no PEC (ver serializar_ficha_ledi para a ressalva do XSD).
+  No sentido inverso, visitas já registradas no PEC entram pela ingestão
+  (api_ingestao_visitas_pec) e nunca são reexportadas.
 """
 import json
 import logging
@@ -202,6 +197,7 @@ def api_visitas_lista(request):
                     "gestante": v.gestante,
                     "transmitido_esus": v.transmitido_esus,
                     "uuid_esus": v.uuid_esus,
+                    "origem": v.origem,
                 }
                 for v in qs.order_by("-data_visita")[:300]
             ],
@@ -299,167 +295,260 @@ def api_visitas_transmitir_esus(request):
     """
     POST /api/governo/acs/visitas/transmitir-esus/
 
-    Gera arquivo CDS JSON (FichaVisitaDomiciliarMestre) no padrão oficial
-    e-SUS AB para importação no PEC (Prontuário Eletrônico do Cidadão).
-
-    Retorna JSON com:
-      - cds_json_b64: arquivo CDS em base64 (para download)
-      - instrucoes: passo a passo de importação no PEC
-
-    Para download direto: GET /api/governo/acs/visitas/exportar-cds/
+    Prévia da exportação LEDI APS das visitas pendentes: quantas fichas sairão,
+    quais visitas ficam de fora por falta de dado obrigatório. O arquivo em si
+    é baixado em GET /api/governo/acs/visitas/exportar-cds/ (.zip de .esus).
     """
     empresa = get_empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    _, VisitaDomiciliar, _ = _get_acs_models()
+    body = json.loads(request.body) if request.body else {}
+    visitas = _visitas_exportaveis(empresa, body.get("data_inicio"))
+    if not visitas:
+        return JsonResponse({"ok": True, "fichas": 0, "visitas": 0,
+                             "mensagem": "Nenhuma visita pendente para exportação"})
 
-    body     = json.loads(request.body) if request.body else {}
-    data_ini = body.get("data_inicio")
-
-    pendentes = VisitaDomiciliar.objects.filter(
-        empresa=empresa,
-        transmitido_esus=False,
-    ).select_related("acs")
-
-    if data_ini:
-        pendentes = pendentes.filter(data_visita__gte=data_ini)
-
-    total = pendentes.count()
-    if total == 0:
-        return JsonResponse({"ok": True, "fichas": 0, "mensagem": "Nenhuma ficha pendente para exportação"})
-
-    cds = _gerar_cds_fichas_visita(list(pendentes[:500]), empresa)
-    cds_bytes = json.dumps(cds, ensure_ascii=False, indent=2).encode("utf-8")
-    cds_b64   = __import__("base64").b64encode(cds_bytes).decode()
-
-    # Marca como "cds_gerado" — não marcamos transmitido_esus=True até importação confirmada
+    pacotes, pendencias = montar_fichas_visita_ledi(visitas, empresa)
     return JsonResponse({
         "ok": True,
-        "fichas": total,
-        "uuid_lote": cds["uuidLoteOrigem"],
-        "cds_json_b64": cds_b64,
-        "status": "cds_gerado_pendente_importacao_pec",
+        "visitas": sum(len(p["ficha"]["visitasDomiciliares"]) for p in pacotes),
+        "fichas": len(pacotes),
+        "visitas_com_pendencia": pendencias,
+        "status": "arquivo_gerado_pendente_importacao_pec",
+        "aviso": AVISO_FORMATO_LEDI,
         "instrucoes": [
-            "1. Baixe o arquivo CDS via GET /api/governo/acs/visitas/exportar-cds/",
-            "2. No PEC da sua UBS: Configurações → Transmissão de Dados → Importar CDS",
-            "3. Selecione o arquivo JSON exportado",
-            "4. Aguarde confirmação de importação no PEC",
-            "5. Após importação, confirme via PATCH das visitas com {\"transmitido_esus\": true}",
+            "1. Baixe o arquivo .zip (botão Exportar).",
+            "2. No PEC da UBS, importe os arquivos .esus do pacote.",
+            "3. Confira no PEC se as fichas foram aceitas.",
+            "4. Só depois confirme a transmissão das visitas aqui.",
         ],
-        "referencia": "e-SUS AB — FichaVisitaDomiciliarMestre | https://integracao.esusab.ufsc.br/",
+        "referencia": "LEDI APS 8.7 — Ficha de Visita Domiciliar e Territorial",
     })
 
 
 @require_http_methods(["GET"])
 @api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_visitas_exportar_cds(request):
-    """GET /api/governo/acs/visitas/exportar-cds/ — baixa arquivo CDS JSON para importação no PEC."""
+    """GET /api/governo/acs/visitas/exportar-cds/ — baixa o .zip com um .esus por ficha."""
     empresa = get_empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    _, VisitaDomiciliar, _ = _get_acs_models()
+    visitas = _visitas_exportaveis(empresa, request.GET.get("data_inicio"))
+    pacotes, _ = montar_fichas_visita_ledi(visitas, empresa)
+    if not pacotes:
+        return JsonResponse({"erro": "Nenhuma visita pendente com os dados obrigatórios do e-SUS "
+                                     "(CNS do ACS, CNES e código IBGE)."}, status=404)
 
-    data_ini = request.GET.get("data_inicio")
-    qs = VisitaDomiciliar.objects.filter(
-        empresa=empresa, transmitido_esus=False
-    ).select_related("acs")
-    if data_ini:
-        qs = qs.filter(data_visita__gte=data_ini)
-
-    visitas = list(qs[:500])
-    cds = _gerar_cds_fichas_visita(visitas, empresa)
-
-    filename = f"esus_cds_visitas_{date.today().isoformat()}.json"
-    response = HttpResponse(
-        json.dumps(cds, ensure_ascii=False, indent=2).encode("utf-8"),
-        content_type="application/json; charset=utf-8",
-    )
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response = HttpResponse(empacotar_zip_esus(pacotes), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="esus_visitas_{date.today().isoformat()}.zip"'
     return response
 
 
-# Mapeamentos e-SUS CDS — turno, motivo, desfecho
-_TURNO_CDS    = {"M": 1, "T": 2, "N": 3}
-_MOTIVO_CDS   = {
-    "cadastramento":        [1],   # Cadastramento/Atualização
-    "visita_rotineira":     [2],   # Visita de Rotina
-    "acompanhamento":       [3],   # Acompanhamento
-    "busca_ativa":          [4],   # Busca Ativa
-    "pre_natal":            [5],   # Pré-natal
-    "puericultura":         [6],   # Puericultura
-    "pessoa_idosa":         [7],   # Atenção à Pessoa Idosa
-    "portador_doenca_cronica": [8],
-    "saude_mental":         [9],
-    "domiciliado":          [10],
-    "egresso_internacao":   [11],
-    "obito":                [12],  # Verificação de Óbito
-    "outro":                [13],
+def _visitas_exportaveis(empresa, data_ini=None):
+    """Pendentes de envio, criadas no SoloCRT. Visita que veio do PEC já está no
+    e-SUS — reexportar duplicaria a produção no SISAB."""
+    _, VisitaDomiciliar, _ = _get_acs_models()
+    qs = (VisitaDomiciliar.objects
+          .filter(empresa=empresa, transmitido_esus=False)
+          .exclude(origem="pec")
+          .select_related("acs"))
+    if data_ini:
+        qs = qs.filter(data_visita__gte=data_ini)
+    return list(qs.order_by("acs_id", "data_visita", "id")[:2000])
+
+
+# ── LEDI APS 8.7 — Ficha de Visita Domiciliar e Territorial ───────────────────
+# Dicionário oficial: integracao.esusaps.bridge.ufsc.tech (dicionario-fvd.html,
+# dicionario.html, camada-transporte.html, header-transport.html, versao.html).
+
+LEDI_VERSAO = {"major": 8, "minor": 7, "revision": 0}
+LEDI_TIPO_DADO_VISITA_DOMICILIAR = 8
+LEDI_TP_CDS_ORIGEM = 3
+LEDI_MAX_VISITAS_POR_FICHA = 99
+CBO_ACS = "515105"
+SOFTWARE_NOME = "SoloCRT"
+SOFTWARE_VERSAO = "2.0"
+LEDI_TIPO_IMOVEL_DOMICILIO = 1
+LEDI_MOTIVO_GESTANTE = 5
+LEDI_MOTIVO_OUTROS = 28
+AVISO_FORMATO_LEDI = (
+    "Arquivo montado segundo o modelo de dados LEDI APS 8.7 (Ficha de Visita "
+    "Domiciliar e Territorial). Os arquivos XSD oficiais não são públicos, então "
+    "o formato precisa ser validado na primeira importação num PEC antes de uso "
+    "em produção."
+)
+
+_TURNO_CDS = {"M": 1, "T": 2, "N": 3}
+_DESFECHO_CDS = {"visita_realizada": 1, "recusou": 2, "ausente": 3}
+_MOTIVO_CDS = {
+    "cadastramento":           [1],
+    "visita_rotineira":        [29],
+    "acompanhamento":          [30],   # rotulado "Acompanhamento de Condicionalidades" (Bolsa Família)
+    "busca_ativa":             [LEDI_MOTIVO_OUTROS],  # LEDI não tem código de busca ativa
+    "pre_natal":               [LEDI_MOTIVO_GESTANTE],
+    "puericultura":            [8],
+    "pessoa_idosa":            [38],
+    "portador_doenca_cronica": [16],
+    "saude_mental":            [22],
+    "domiciliado":             [19],
+    "egresso_internacao":      [25],
+    "obito":                   [LEDI_MOTIVO_OUTROS],  # LEDI não tem código de verificação de óbito
+    "outro":                   [LEDI_MOTIVO_OUTROS],
 }
-_DESFECHO_CDS = {
-    "visita_realizada": 1,
-    "ausente":          2,
-    "recusou":          3,
-}
 
 
-def _gerar_cds_fichas_visita(visitas, empresa):
-    """
-    Gera estrutura FichaVisitaDomiciliarMestre conforme documentação técnica
-    e-SUS AB (UFSC/DAB/MS) para importação no PEC.
+def _epoch_ms(d):
+    from datetime import datetime, time as dtime
+    from zoneinfo import ZoneInfo
+    if isinstance(d, str):
+        d = date.fromisoformat(d)
+    return int(datetime.combine(d, dtime.min, tzinfo=ZoneInfo("America/Sao_Paulo")).timestamp() * 1000)
 
-    Formato: https://integracao.esusab.ufsc.br/ledi/documentacao/
-    """
-    # Pega info do primeiro ACS para cabeçalho (lote por UBS/equipe)
-    cnes_usf  = visitas[0].acs.cnes_usf  if visitas else ""
-    ine_equipe = visitas[0].acs.ine_equipe if visitas else ""
+
+def _so_digitos(valor):
+    return "".join(c for c in str(valor or "") if c.isdigit())
+
+
+def _ibge_fallback(empresa):
     try:
         from .models import CredenciaisIntegracoes
         cred = CredenciaisIntegracoes.objects.filter(empresa=empresa).first()
-        ibge = (getattr(cred, "sus_ibge", "") or getattr(cred, "rnds_ibge", "")) if cred else ""
+        return (getattr(cred, "sus_ibge", "") or getattr(cred, "rnds_ibge", "")) if cred else ""
     except Exception:
-        ibge = ""
+        return ""
 
-    filhos = []
-    for v in visitas:
-        motivos_raw = _MOTIVO_CDS.get(v.motivo, [13])
-        filhos.append({
-            "uuid":          v.uuid_esus or str(uuid.uuid4()),
-            "turno":         _TURNO_CDS.get(v.turno, 1),
-            # statusVisita: 1=Visita Realizada, 2=Fora da Microárea, 3=Busca Ativa
-            "statusVisita":  _DESFECHO_CDS.get(v.desfecho, 1),
-            "motivoVisita": {
-                "motivoVisita": motivos_raw,
-            },
-            # Dados do cidadão
-            "cnsCidadao":         v.cns_paciente or "",
-            "cpfCidadao":         v.cpf_paciente or "",
-            "nomeCidadao":        v.paciente_nome,
-            # Gestante
-            **({"gestantePuerperaFlag": True} if v.gestante else {}),
-            # Dados clínicos opcionais
-            **({"pesoAcompanhamentoNutricional": float(v.peso_kg)} if v.peso_kg else {}),
-            **({"pressaoArterialMmHg": f"{v.pa_sistolica}x{v.pa_diastolica}"} if v.pa_sistolica else {}),
-            # Profissional / ACS
-            "profissionalCNS":   v.acs.cns or "",
-            "profissionalNome":  v.acs.nome,
-            "microArea":         v.acs.microarea or "",
-            "dataVisita":        v.data_visita.isoformat(),
-        })
 
+def _dado_instalacao(empresa):
     return {
-        # Cabeçalho do lote CDS
-        "uuidLoteOrigem":       str(uuid.uuid4()),
-        "cnesUnidadeSaude":     cnes_usf,
-        "codigoIbgeMunicipio":  ibge,
-        "ineEquipeSaude":       ine_equipe,
-        # dataEnvio em ms (timestamp Unix)
-        "dataEnvio":            int(time.time() * 1000),
-        "versaoEsusab":         "3.2",
-        "sistemaOrigem":        "SoloCRT",
-        "fichasVisitaDomiciliarChild": filhos,
+        "contraChave": f"{SOFTWARE_NOME} - {SOFTWARE_VERSAO}",
+        "uuidInstalacao": str(uuid.uuid5(uuid.NAMESPACE_URL, f"solocrt:empresa:{empresa.id}")),
+        "cpfOuCnpj": _so_digitos(getattr(empresa, "cnpj", "")),
+        "nomeOuRazaoSocial": empresa.nome,
     }
+
+
+def _visita_child(v):
+    motivos = list(_MOTIVO_CDS.get(v.motivo, [LEDI_MOTIVO_OUTROS]))
+    if v.gestante and LEDI_MOTIVO_GESTANTE not in motivos:
+        motivos.append(LEDI_MOTIVO_GESTANTE)
+    child = {
+        "turno": _TURNO_CDS.get(v.turno, 1),
+        "motivosVisita": motivos,
+        "desfecho": _DESFECHO_CDS.get(v.desfecho, 1),
+        "stForaArea": False,
+        "tipoDeImovel": LEDI_TIPO_IMOVEL_DOMICILIO,
+    }
+    if v.acs.microarea:
+        child["microarea"] = v.acs.microarea
+    if v.cns_paciente:
+        child["cnsCidadao"] = _so_digitos(v.cns_paciente)
+    if v.cpf_paciente:
+        child["cpfCidadao"] = _so_digitos(v.cpf_paciente)
+    if v.peso_kg is not None:
+        child["pesoAcompanhamentoNutricional"] = float(v.peso_kg)
+    if v.pa_sistolica:
+        child["pressaoSistolica"] = int(v.pa_sistolica)
+    if v.pa_diastolica:
+        child["pressaoDiastolica"] = int(v.pa_diastolica)
+    if v.glicemia is not None:
+        child["glicemia"] = float(v.glicemia)
+    return child
+
+
+def montar_fichas_visita_ledi(visitas, empresa):
+    """Agrupa por profissional + dia (o header LEDI é de lotação única) e quebra
+    em fichas de até 99 visitas. Visita sem CNS do ACS, CNES ou IBGE não entra:
+    o PEC rejeitaria a ficha inteira. Devolve (pacotes, pendencias)."""
+    ibge_padrao = _ibge_fallback(empresa)
+    instalacao = _dado_instalacao(empresa)
+    grupos, pendencias = {}, []
+
+    for v in visitas:
+        acs = v.acs
+        cns = _so_digitos(acs.cns)
+        cnes = _so_digitos(acs.cnes_usf)
+        ibge = _so_digitos(acs.municipio_ibge) or _so_digitos(ibge_padrao)
+        faltando = [n for n, val, tam in (("CNS do ACS", cns, 15), ("CNES", cnes, 7), ("código IBGE", ibge, 7))
+                    if len(val) != tam]
+        if faltando:
+            pendencias.append({"visita_id": v.id, "acs": acs.nome, "faltando": faltando})
+            continue
+        chave = (acs.id, v.data_visita)
+        grupos.setdefault(chave, {"acs": acs, "cns": cns, "cnes": cnes, "ibge": ibge,
+                                  "data": v.data_visita, "visitas": []})["visitas"].append(v)
+
+    pacotes = []
+    for g in grupos.values():
+        ine = _so_digitos(g["acs"].ine_equipe)
+        for i in range(0, len(g["visitas"]), LEDI_MAX_VISITAS_POR_FICHA):
+            lote = g["visitas"][i:i + LEDI_MAX_VISITAS_POR_FICHA]
+            uuid_ficha = str(uuid.uuid4())
+            header = {
+                "profissionalCNS": g["cns"],
+                "cboCodigo_2002": CBO_ACS,
+                "cnes": g["cnes"],
+                "dataAtendimento": _epoch_ms(g["data"]),
+                "codigoIbgeMunicipio": g["ibge"],
+            }
+            if ine:
+                header["ine"] = ine
+            ficha = {
+                "uuidFicha": uuid_ficha,
+                "tpCdsOrigem": LEDI_TP_CDS_ORIGEM,
+                "headerTransport": header,
+                "visitasDomiciliares": [_visita_child(v) for v in lote],
+            }
+            envelope = {
+                "uuidDadoSerializado": uuid_ficha,
+                "tipoDadoSerializado": LEDI_TIPO_DADO_VISITA_DOMICILIAR,
+                "cnesDadoSerializado": g["cnes"],
+                "codIbge": g["ibge"],
+                "remetente": instalacao,
+                "originadora": instalacao,
+                "versao": LEDI_VERSAO,
+            }
+            if ine:
+                envelope["ineDadoSerializado"] = ine
+            pacotes.append({"envelope": envelope, "ficha": ficha,
+                            "visita_ids": [v.id for v in lote]})
+    return pacotes, pendencias
+
+
+def _xml_valor(el, nome, valor):
+    from xml.etree.ElementTree import SubElement
+    if isinstance(valor, dict):
+        filho = SubElement(el, nome)
+        for k, val in valor.items():
+            _xml_valor(filho, k, val)
+    elif isinstance(valor, list):
+        for item in valor:
+            _xml_valor(el, nome, item)
+    else:
+        SubElement(el, nome).text = ("true" if valor else "false") if isinstance(valor, bool) else str(valor)
+
+
+def serializar_ficha_ledi(pacote) -> bytes:
+    """ÚNICO ponto de serialização. Sem os XSD oficiais, os elementos levam o nome
+    exato dos campos do dicionário LEDI, sem namespace. Trocar só esta função
+    quando o formato for validado num PEC real."""
+    from xml.etree.ElementTree import Element, tostring
+    raiz = Element("DadoTransporte")
+    for k, val in pacote["envelope"].items():
+        _xml_valor(raiz, k, val)
+    _xml_valor(raiz, "dadoSerializado", {"FichaVisitaDomiciliarMaster": pacote["ficha"]})
+    return tostring(raiz, encoding="utf-8", xml_declaration=True)
+
+
+def empacotar_zip_esus(pacotes) -> bytes:
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in pacotes:
+            zf.writestr(f"{p['envelope']['uuidDadoSerializado']}.esus", serializar_ficha_ledi(p))
+    return buf.getvalue()
 
 
 # ── Fichas de Acompanhamento ───────────────────────────────────────────────────

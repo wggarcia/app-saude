@@ -235,7 +235,11 @@ def sst_sec_gestao_page(request):
 
 def _cliente_por_token(token):
     from .models import ClienteConsultoriaSST
-    return ClienteConsultoriaSST.objects.filter(token_acesso=token, ativo=True).first()
+    from .services.rls import localizar_e_fixar
+    # Rota pública: sem tenant ainda — localiza sem RLS e fixa o tenant da consultoria.
+    return localizar_e_fixar(
+        ClienteConsultoriaSST, lambda c: c.empresa_id, token_acesso=token, ativo=True,
+    )
 
 
 def portal_sec_page(request, token):

@@ -29,6 +29,9 @@ def _rls_set_empresa(empresa_id: int) -> None:
     from django.db import connection
     if connection.vendor != "postgresql":
         return
+    # Marca antes de executar: _rls_limpar() confia nesta marca para saber se a
+    # conexão pode estar carregando um tenant. Este é o único lugar que grava o valor.
+    connection._rls_tenant = empresa_id
     try:
         with connection.cursor() as cur:
             cur.execute(
@@ -41,6 +44,29 @@ def _rls_set_empresa(empresa_id: int) -> None:
             "RLS set_empresa falhou empresa_id=%s tipo=%s: %s",
             empresa_id, type(exc).__name__, exc,
         )
+
+
+def _rls_limpar() -> None:
+    """
+    Zera o tenant RLS no início de cada requisição.
+
+    O valor é de sessão e a conexão é reaproveitada (conn_max_age), então sem
+    isto uma requisição que não define tenant herdaria o da requisição anterior
+    nessa mesma conexão — enxergando dados de outro cliente.
+    """
+    from django.db import connection
+    if connection.vendor != "postgresql" or getattr(connection, "_rls_tenant", None) is None:
+        return
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT set_config('app.empresa_id', '', false)")
+        connection._rls_tenant = None
+    except Exception as exc:
+        # Falhar aqui deixaria o tenant anterior ativo: derruba a conexão para
+        # que a próxima query abra uma nova, sem valor herdado.
+        logger.error("RLS limpar falhou tipo=%s: %s", type(exc).__name__, exc)
+        connection.close()
+        connection._rls_tenant = None
 SESSION_TOUCH_INTERVAL = timedelta(minutes=1)
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 
@@ -165,6 +191,7 @@ class EmpresaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        _rls_limpar()
         rotas_livres_exatas = {
             "/",
             "/healthz",   # liveness p/ balanceador — sem login, sem tenant
@@ -217,6 +244,7 @@ class EmpresaMiddleware:
             "/portal-sec/",        # Portal do Cliente SEC — página pública da consultoria (token no URL)
             "/api/portal-sec/",    # Portal do Cliente SEC — APIs públicas via token
             "/api/integracao-sst/",  # API de integração ERP/RH/Folha — auth própria via token no header
+            "/api/governo/acs/ingestao/",  # coletor PEC do município — auth própria via ApiKey no header
             "/cipa/votar/",        # Votação CIPA — página pública do eleitor (token no URL)
             "/api/cipa/votar/",    # Votação CIPA — API pública do voto secreto (token no URL)
             "/os/ciencia/",        # Ordem de Serviço — página pública de ciência do trabalhador (token)
@@ -304,7 +332,9 @@ class EmpresaMiddleware:
             if totem_tok:
                 try:
                     from .models import TotemDispositivo
-                    disp = (TotemDispositivo.objects
+                    from .services.rls import alias_sem_rls
+                    # Ainda não há tenant: a busca do token precisa da conexão sem RLS.
+                    disp = (TotemDispositivo.objects.using(alias_sem_rls())
                             .filter(token=totem_tok, ativo=True)
                             .select_related("empresa").first())
                     if disp and disp.empresa and disp.empresa.ativo:

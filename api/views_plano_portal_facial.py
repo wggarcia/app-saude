@@ -26,19 +26,21 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .middleware import _rls_set_empresa
 from .models import BeneficiarioPlano, PortalFacialOperadora
 from .views_hospital_totem import _extrair_embedding, _thumbnail, LIMIAR_FACE_MATCH
 from .views_plano_saude import _ps_auth
 
 
 def _operadora_por_token(token):
-    cfg = (PortalFacialOperadora.objects
-           .filter(token=token, ativo=True)
-           .select_related("empresa").first())
+    # A própria config é tabela sob RLS: sem tenant ainda, só aparece pela busca
+    # sem RLS; achada, o tenant é fixado na operadora (escopa as queries seguintes).
+    from .services.rls import localizar_e_fixar
+    cfg = localizar_e_fixar(
+        PortalFacialOperadora, lambda c: c.empresa_id if c.empresa and c.empresa.ativo else None,
+        select_related=("empresa",), token=token, ativo=True,
+    )
     if not cfg or not cfg.empresa or not cfg.empresa.ativo:
         return None
-    _rls_set_empresa(cfg.empresa_id)   # escopa as queries à operadora
     return cfg.empresa
 
 

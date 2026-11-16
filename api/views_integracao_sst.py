@@ -21,7 +21,6 @@ import logging
 import secrets
 
 from django.http import JsonResponse
-from django.utils import timezone
 
 from .access_control import api_requer_feature, requer_feature_pacote, requer_permissao_modulo, principal_pode_operacao_setorial
 
@@ -134,17 +133,8 @@ def sst_integracao_page(request):
 
 def _autenticar_token(request, endpoint):
     """Resolve a empresa a partir do header X-API-Token. Registra log e ultimo_uso."""
-    from .models import TokenIntegracaoSST, LogIntegracaoSST
-    valor = request.META.get("HTTP_X_API_TOKEN", "") or request.headers.get("X-API-Token", "")
-    if not valor:
-        return None, None
-    t = TokenIntegracaoSST.objects.filter(token_hash=_hash_token(valor), ativo=True).select_related("empresa").first()
-    if not t:
-        return None, None
-    t.ultimo_uso = timezone.now()
-    t.save(update_fields=["ultimo_uso"])
-    LogIntegracaoSST.objects.create(token=t, endpoint=endpoint, metodo=request.method, status_code=200)
-    return t.empresa, t
+    from .services.integracao_auth import empresa_por_token_sst
+    return empresa_por_token_sst(request, endpoint, _hash_token)
 
 
 def api_integracao_funcionarios(request):

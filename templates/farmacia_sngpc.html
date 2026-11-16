@@ -126,6 +126,10 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
           <select id="rndsRxAmbiente"><option value="homologacao">Homologação</option><option value="producao">Produção</option></select>
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label>CNS do profissional responsável *</label><input id="rndsRxCnsProf" placeholder="15 dígitos" maxlength="15" inputmode="numeric"></div>
+        <div class="form-group"><label>UF da farmácia (obrigatória em produção)</label><input id="rndsRxUf" placeholder="SP" maxlength="2" style="text-transform:uppercase"></div>
+      </div>
       <div class="form-group"><label>Certificado ICP-Brasil (.pfx / .p12)</label><input type="file" id="rndsRxFile" accept=".pfx,.p12"></div>
       <div class="form-group"><label>Senha do Certificado</label><input type="password" id="rndsRxSenha" placeholder="Deixe vazio para manter a atual"></div>
       <div style="display:flex;gap:10px">
@@ -242,9 +246,18 @@ async function carregarStatusRnds() {
   document.getElementById('rndsRxCnes').value = s.cnes || '';
   document.getElementById('rndsRxIbge').value = s.ibge || '';
   document.getElementById('rndsRxAmbiente').value = s.ambiente || 'homologacao';
-  document.getElementById('rndsStatusBadge').innerHTML = s.configurado
+  document.getElementById('rndsRxCnsProf').value = s.cns_profissional || '';
+  document.getElementById('rndsRxUf').value = s.uf || '';
+  const badge = document.getElementById('rndsStatusBadge');
+  badge.innerHTML = s.configurado
     ? '<span class="badge badge-ok">✅ Configurado</span>'
     : '<span class="badge badge-warn">⚠️ Não configurado</span>';
+  if (!s.configurado && s.pendencias && s.pendencias.length) {
+    const falta = document.createElement('span');
+    falta.style.cssText = 'font-size:12px;color:var(--muted);margin-left:8px';
+    falta.textContent = 'Falta: ' + s.pendencias.join(', ');
+    badge.appendChild(falta);
+  }
 }
 
 async function salvarRndsFarm() {
@@ -262,7 +275,9 @@ async function salvarRndsFarm() {
       reader.readAsDataURL(file);
     });
   }
-  const body = {cpf_gestor, cnes, ibge, ambiente, ativo: true};
+  const cns_profissional = v('rndsRxCnsProf').replace(/\D/g, '');
+  const uf = v('rndsRxUf').toUpperCase();
+  const body = {cpf_gestor, cnes, ibge, ambiente, ativo: true, cns_profissional, uf};
   if (certificado_pfx_b64) body.certificado_pfx_b64 = certificado_pfx_b64;
   if (senha) body.certificado_senha = senha;
   const r = await api('/api/integracoes/credenciais/rnds/', {method:'POST', body:JSON.stringify(body)});

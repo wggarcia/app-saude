@@ -415,9 +415,14 @@ def api_cipa_votantes(request, eleicao_id):
 
 def _votante_por_token(token):
     from .models import VotanteCIPA
+    from .services.rls import localizar_e_fixar
     if not token:
         return None
-    return VotanteCIPA.objects.select_related("eleicao", "funcionario").filter(token=token).first()
+    # Rota pública: sem tenant ainda; o join com a eleição (sob RLS) exige a busca sem RLS.
+    return localizar_e_fixar(
+        VotanteCIPA, lambda v: v.eleicao.empresa_id,
+        select_related=("eleicao", "funcionario"), token=token,
+    )
 
 
 def cipa_votar_page(request, token):

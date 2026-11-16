@@ -42,9 +42,13 @@ from .views_plano_tiss_recepcao import (
 
 # ── auth por token público ───────────────────────────────────────────────────
 def _token_prestador(token):
-    try:
-        pt = PortalPrestadorToken.objects.select_related("prestador__empresa").get(token=token, ativo=True)
-    except PortalPrestadorToken.DoesNotExist:
+    # Rota pública: sem tenant ainda; o join com o prestador (sob RLS) exige a busca sem RLS.
+    from .services.rls import localizar_e_fixar
+    pt = localizar_e_fixar(
+        PortalPrestadorToken, lambda t: t.prestador.empresa_id,
+        select_related=("prestador__empresa",), token=token, ativo=True,
+    )
+    if pt is None:
         return None, None
     if pt.expira_em and pt.expira_em < date.today():
         return None, None

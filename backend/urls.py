@@ -1322,6 +1322,7 @@ from api.views_plano_tuss import (
     api_tuss_kpis,
     plano_tuss_page,
 )
+from api.views_governo_acs_ingestao import api_ingestao_visitas_pec
 from api.views_governo_acs import (
     api_acs_lista,
     api_acs_detalhe,
@@ -3776,6 +3777,8 @@ urlpatterns = [
     path('api/governo/vigilancia-sanitaria/estabelecimentos/',  api_vigsan_estabelecimentos),
     path('api/governo/vigilancia-sanitaria/estabelecimentos/<int:estab_id>/alvaras/',   api_vigsan_alvaras),
     path('api/governo/vigilancia-sanitaria/estabelecimentos/<int:estab_id>/inspecoes/', api_vigsan_inspecoes),
+    path('api/governo/acs/ingestao/visitas',                    api_ingestao_visitas_pec),
+    path('api/governo/acs/ingestao/visitas/',                   api_ingestao_visitas_pec),
     path('api/governo/acs/kpis',                                api_acs_kpis),
     path('api/governo/acs/kpis/',                               api_acs_kpis),
     path('api/governo/acs/<int:acs_id>',                        api_acs_detalhe),

@@ -695,11 +695,14 @@ def portal_aso_publico(request, token):
         return render(request, "sst_aso_portal.html", {"erro": "Muitas tentativas. Aguarde 1 minuto."})
     cache.set(rl_key, ip_count + 1, timeout=60)
 
-    try:
-        comp = ASOCompartilhamento.objects.select_related(
-            "aso__funcionario", "empresa_origem"
-        ).get(token=token, ativo=True)
-    except ASOCompartilhamento.DoesNotExist:
+    # Rota pública: sem tenant ainda. O join com o ASO (sob RLS) só funciona
+    # pela conexão sem RLS; o tenant é o dono do ASO.
+    from .services.rls import localizar_e_fixar
+    comp = localizar_e_fixar(
+        ASOCompartilhamento, lambda c: c.aso.empresa_id,
+        select_related=("aso__funcionario", "empresa_origem"), token=token, ativo=True,
+    )
+    if not comp:
         return render(request, "sst_aso_portal.html", {"erro": "Link inválido ou expirado."})
 
     if timezone.now() > comp.expira_em:

@@ -501,7 +501,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <option value="">Todas as visitas</option>
               <option value="true">Pendentes de transmissão e-SUS</option>
             </select>
-            <button class="btn btn-ghost" onclick="exportarCdsEsus()">⬇️ Exportar CDS e-SUS</button>
+            <button class="btn btn-ghost" onclick="exportarCdsEsus()" title="Pacote .zip no modelo LEDI APS 8.7 para importar no PEC">⬇️ Exportar para o PEC (.zip)</button>
             <button class="btn btn-primary" onclick="abrirModalVisita()">+ Registrar Visita</button>
           </div>
         </div>
@@ -1759,6 +1759,10 @@ async function toggleAtivoAcs(acsId, novoAtivo) {
   carregarAcsKpis();
 }
 
+function _escAcs(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 async function carregarVisitasDomiciliares() {
   const pendente = document.getElementById('filtroVisitaPendente')?.value || '';
   let url = '/api/governo/acs/visitas/?';
@@ -1769,12 +1773,14 @@ async function carregarVisitasDomiciliares() {
   if (!_visitas.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma visita registrada</td></tr>'; return; }
   tb.innerHTML = _visitas.map(vi => `<tr>
     <td>${new Date(vi.data_visita+'T00:00:00').toLocaleDateString('pt-BR')}</td>
-    <td>${vi.acs_nome}</td>
-    <td>${vi.paciente_nome}</td>
-    <td>${vi.motivo_display}</td>
-    <td>${vi.desfecho_display}</td>
-    <td>${vi.transmitido_esus ? '<span style="color:var(--ok)">Transmitido</span>' : '<span style="color:var(--warn)">Pendente</span>'}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="verVisita(${vi.id})">👁 Ver</button></td>
+    <td>${_escAcs(vi.acs_nome)}</td>
+    <td>${_escAcs(vi.paciente_nome) || '—'}</td>
+    <td>${_escAcs(vi.motivo_display)}</td>
+    <td>${_escAcs(vi.desfecho_display)}</td>
+    <td>${vi.origem === 'pec'
+      ? '<span style="color:var(--ok)" title="Registrada no tablet/PEC — já está no e-SUS">Origem: PEC</span>'
+      : (vi.transmitido_esus ? '<span style="color:var(--ok)">Transmitido</span>' : '<span style="color:var(--warn)">Pendente</span>')}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="verVisita(${Number(vi.id)})">👁 Ver</button></td>
   </tr>`).join('');
 }
 
@@ -1815,10 +1821,15 @@ function verVisita(visitaId) {
 
 async function exportarCdsEsus() {
   const r = await api('/api/governo/acs/visitas/transmitir-esus/', {method:'POST', body:JSON.stringify({})});
-  if (!r.fichas) { _t(r.mensagem || 'Nenhuma ficha pendente para exportação', 'info'); return; }
+  const pend = (r.visitas_com_pendencia || []).length;
+  if (!r.fichas) {
+    _t(pend ? `${pend} visita(s) sem CNS do ACS, CNES ou código IBGE — complete o cadastro do ACS` : (r.mensagem || 'Nenhuma visita pendente para exportação'), 'info');
+    return;
+  }
   window.open('/api/governo/acs/visitas/exportar-cds/', '_blank');
-  if (confirm(`${r.fichas} ficha(s) exportada(s) em CDS para o e-SUS.\n\nApós importar o arquivo no PEC (Configurações → Importar CDS), confirmar a transmissão dessas visitas?`)) {
-    const pendentes = _visitas.filter(vi => !vi.transmitido_esus).map(vi => vi.id);
+  const avisoPend = pend ? `\n\n${pend} visita(s) ficaram de fora por falta de CNS do ACS, CNES ou código IBGE.` : '';
+  if (confirm(`Pacote .zip com ${r.fichas} ficha(s) (${r.visitas} visita(s)) no modelo LEDI APS 8.7.${avisoPend}\n\nO formato ainda precisa ser validado na primeira importação no PEC. Importe os arquivos .esus no PEC e só confirme se ele aceitou as fichas.\n\nO PEC aceitou e você quer marcar essas visitas como transmitidas?`)) {
+    const pendentes = _visitas.filter(vi => !vi.transmitido_esus && vi.origem !== 'pec').map(vi => vi.id);
     for (const id of pendentes) {
       await api(`/api/governo/acs/visitas/${id}/`, {method:'PATCH', body:JSON.stringify({transmitido_esus: true})});
     }

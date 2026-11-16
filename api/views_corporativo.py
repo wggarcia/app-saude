@@ -48,6 +48,8 @@ def _resolver_empresa_por_codigo(codigo):
     empresa = get_object_or_404(Empresa, codigo_acesso_corporativo=codigo, ativo=True)
     if setor_conta(empresa) != "empresa":
         raise ValueError("codigo indisponivel para setor nao corporativo")
+    from .services.rls import fixar_tenant
+    fixar_tenant(empresa.id)
     return empresa
 
 

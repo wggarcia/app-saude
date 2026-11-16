@@ -306,7 +306,13 @@ def refinar_geo_registro(registro_id):
     de privacidade). Idempotente: se a região já estiver correta, não faz nada.
     """
     import logging
+    from .services.rls import preservar_tenant
     log = logging.getLogger("api")
+    with preservar_tenant():
+        _refinar_geo_registro_como_populacao(registro_id, log)
+
+
+def _refinar_geo_registro_como_populacao(registro_id, log):
     try:
         from .models import RegistroSintoma, Empresa
         # Respeita o tenant público (mesmo do INSERT). RLS hoje é inerte (owner

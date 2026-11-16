@@ -70,6 +70,9 @@ def _status_seguro(cred: CredenciaisIntegracoes) -> dict:
             "cpf_gestor":          cred.rnds_cpf_gestor or None,
             "cnes":                cred.rnds_cnes or None,
             "ibge":                cred.rnds_ibge or None,
+            "cns_profissional":    cred.rnds_cns_profissional or None,
+            "uf":                  cred.rnds_uf or cred.sus_uf or None,
+            "pendencias":          cred.rnds_pendencias(),
             "certificado_salvo":   bool(cred.rnds_certificado_pfx_b64),
             "certificado_senha_salva": bool(cred.rnds_certificado_senha_cripto),
             "ambiente":            cred.rnds_ambiente,
@@ -374,89 +377,38 @@ def api_credenciais_ans_testar(request):
 @require_http_methods(["POST"])
 def api_credenciais_rnds_testar(request):
     """
-    Testa certificado ICP-Brasil + autenticação OAuth2 RNDS.
-    POST /api/integracoes/credenciais/rnds/testar/
-
-    Tenta obter token Bearer via mTLS — sem transmitir nenhum dado.
+    Testa certificado ICP-Brasil + credenciamento na RNDS gerando um token novo.
+    POST /api/integracoes/credenciais/rnds/testar/ — não transmite nenhum dado.
     """
+    from .services.rnds_fhir import RNDS_AUTH_URLS, ambiente_de, testar_conexao
+
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
         return empresa
 
     cred = _get_ou_criar_credenciais(empresa)
-    if not cred.rnds_configurado():
+    if not cred.rnds_certificado_pfx_b64:
         return JsonResponse({
             "ok":   False,
-            "erro": "Credenciais RNDS não configuradas. Cadastre certificado ICP-Brasil primeiro.",
+            "erro": "Cadastre o certificado ICP-Brasil antes de testar.",
         }, status=400)
 
-    import base64
-    import os
-    import tempfile
-    import requests as req
-
-    _RNDS_TOKEN = {
-        "producao":    "https://ehr.saude.gov.br/api/token",
-        "homologacao": "https://ehr-hmg.saude.gov.br/api/token",
-    }
-
-    cert_path = key_path = None
-    try:
-        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
-        from cryptography.hazmat.backends import default_backend
-
-        pfx_bytes   = base64.b64decode(cred.rnds_certificado_pfx_b64)
-        senha_bytes = cred.get_rnds_certificado_senha().encode() or b""
-        private_key, cert, _ = pkcs12.load_key_and_certificates(
-            pfx_bytes, senha_bytes, backend=default_backend()
-        )
-
-        cert_file = tempfile.NamedTemporaryFile(suffix=".crt", delete=False)
-        key_file  = tempfile.NamedTemporaryFile(suffix=".key", delete=False)
-        cert_file.write(cert.public_bytes(Encoding.PEM))
-        cert_file.close()
-        key_file.write(private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()))
-        key_file.close()
-        cert_path, key_path = cert_file.name, key_file.name
-
-        ambiente  = cred.rnds_ambiente or "homologacao"
-        token_url = _RNDS_TOKEN.get(ambiente, _RNDS_TOKEN["homologacao"])
-
-        resp = req.post(
-            token_url,
-            cert=(cert_path, key_path),
-            data={"grant_type": "client_credentials", "scope": "write"},
-            timeout=30,
-            verify=True,
-        )
-
-        if resp.status_code in (200, 201):
-            token = resp.json().get("access_token", "")
-            return JsonResponse({
-                "ok":             True,
-                "ambiente":       ambiente,
-                "cnes":           cred.rnds_cnes,
-                "token_prefixo":  str(token)[:12] + "…" if token else "",
-                "endpoint_token": token_url,
-                "mensagem":       "Certificado ICP-Brasil válido. Token RNDS obtido com sucesso.",
-            })
-        else:
-            return JsonResponse({
-                "ok":          False,
-                "status_http": resp.status_code,
-                "ambiente":    ambiente,
-                "erro":        f"RNDS retornou HTTP {resp.status_code}: {resp.text[:300]}",
-            })
-
-    except Exception as ex:
-        return JsonResponse({"ok": False, "erro": str(ex)[:300]})
-    finally:
-        for p in [cert_path, key_path]:
-            if p:
-                try:
-                    os.unlink(p)
-                except Exception:
-                    pass
+    ambiente = ambiente_de(cred)
+    r = testar_conexao(cred)
+    if r.ok:
+        return JsonResponse({
+            "ok":             True,
+            "ambiente":       ambiente,
+            "cnes":           cred.rnds_cnes,
+            "endpoint_token": RNDS_AUTH_URLS[ambiente],
+            "mensagem":       "Certificado aceito pela RNDS. Token de acesso gerado.",
+        })
+    return JsonResponse({
+        "ok":          False,
+        "status_http": r.status_http,
+        "ambiente":    ambiente,
+        "erro":        r.erro,
+    })
 
 
 @csrf_exempt
@@ -591,6 +543,8 @@ def api_credenciais_rnds_salvar(request):
       "cpf_gestor":          "12345678901",
       "cnes":                "1234567",
       "ibge":                "3550308",
+      "cns_profissional":    "123456789012345",
+      "uf":                  "SP",
       "certificado_pfx_b64": "<base64 do arquivo .pfx>",
       "certificado_senha":   "senha_do_pfx",
       "ambiente":            "homologacao" | "producao",
@@ -618,6 +572,8 @@ def api_credenciais_rnds_salvar(request):
     senha_pfx     = (body.get("certificado_senha")    or "").strip()
     ambiente      = body.get("ambiente", "homologacao")
     ativo         = bool(body.get("ativo", True))
+    cns_prof      = "".join(ch for ch in str(body.get("cns_profissional") or "") if ch.isdigit())
+    uf            = (body.get("uf") or "").strip().upper()
 
     if not cpf_gestor or not cnes:
         return JsonResponse(
@@ -627,6 +583,11 @@ def api_credenciais_rnds_salvar(request):
         return JsonResponse(
             {"erro": "ambiente deve ser 'homologacao' ou 'producao'."}, status=400
         )
+    if cns_prof and len(cns_prof) != 15:
+        return JsonResponse({"erro": "O CNS do profissional tem 15 dígitos."}, status=400)
+    from .services.rnds_fhir import UFS_VALIDAS
+    if uf and uf not in UFS_VALIDAS:
+        return JsonResponse({"erro": "UF inválida. Use a sigla do estado, ex.: SP."}, status=400)
 
     # Valida PFX antes de salvar (evita salvar certificado corrompido)
     cred_existente = _get_ou_criar_credenciais(empresa)
@@ -653,6 +614,10 @@ def api_credenciais_rnds_salvar(request):
     cred.rnds_ibge       = ibge
     cred.rnds_ambiente   = ambiente
     cred.rnds_ativo      = ativo
+    if "cns_profissional" in body:
+        cred.rnds_cns_profissional = cns_prof
+    if "uf" in body:
+        cred.rnds_uf = uf
 
     if pfx_b64:
         cred.rnds_certificado_pfx_b64 = pfx_b64
@@ -662,9 +627,13 @@ def api_credenciais_rnds_salvar(request):
     cred.atualizado_por = body.get("atualizado_por", "")
     cred.save()
 
+    pendencias = cred.rnds_pendencias()
     return JsonResponse({
         "ok":       True,
-        "mensagem": "Credenciais RNDS/ICP-Brasil salvas com segurança.",
+        "mensagem": (
+            "Credenciais RNDS salvas. Falta: " + ", ".join(pendencias) + "."
+            if pendencias else "Credenciais RNDS salvas com segurança."
+        ),
         "status":   _status_seguro(cred)["rnds_esus"],
     })
 

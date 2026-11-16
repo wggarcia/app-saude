@@ -408,8 +408,14 @@ def api_psicossocial_responder_publico(request, token):
 
     try:
         from .models import AvaliacaoPsicossocial, QuestaoAvaliacaoPsicossocial, RespostaPsicossocial
+        from .services.rls import localizar_e_fixar
 
-        av = AvaliacaoPsicossocial.objects.get(link_token=token, status="ativa")
+        # Rota pública: sem tenant ainda — localiza sem RLS e fixa o tenant da avaliação.
+        av = localizar_e_fixar(
+            AvaliacaoPsicossocial, lambda a: a.empresa_id, link_token=token, status="ativa",
+        )
+        if av is None:
+            raise AvaliacaoPsicossocial.DoesNotExist
         data = _json(request)
         respostas = data.get("respostas", [])
 
@@ -668,12 +674,13 @@ def sst_psicossocial_responder_page(request, token):
     """Página pública (sem auth) para o colaborador responder o questionário psicossocial."""
     from django.shortcuts import render
     from .models import AvaliacaoPsicossocial
+    from .services.rls import localizar_e_fixar
 
-    try:
-        av = AvaliacaoPsicossocial.objects.select_related("empresa").get(
-            link_token=token, status="ativa"
-        )
-    except AvaliacaoPsicossocial.DoesNotExist:
+    av = localizar_e_fixar(
+        AvaliacaoPsicossocial, lambda a: a.empresa_id,
+        select_related=("empresa",), link_token=token, status="ativa",
+    )
+    if av is None:
         return render(request, "sst_psicossocial_responder.html", {
             "erro": "Este questionário não está disponível ou o link é inválido.",
             "av": None,

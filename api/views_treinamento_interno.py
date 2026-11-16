@@ -590,10 +590,18 @@ def sst_curso_interno_page(request):
 
 # ── Página pública do funcionário (sem login, via token) ──────────────────────
 
+def _matricula_publica(*select_related, **filtros):
+    """Rota pública: ainda não há tenant, então a matrícula é localizada sem
+    RLS e o tenant é fixado na empresa dela."""
+    from .services.rls import localizar_e_fixar
+    return localizar_e_fixar(
+        MatriculaCursoInterno, lambda m: m.empresa_id, select_related=select_related, **filtros,
+    )
+
+
 def curso_interno_publico_page(request, token):
-    try:
-        matricula = MatriculaCursoInterno.objects.select_related("curso", "funcionario", "empresa").get(token_acesso=token)
-    except MatriculaCursoInterno.DoesNotExist:
+    matricula = _matricula_publica("curso", "funcionario", "empresa", token_acesso=token)
+    if not matricula:
         raise Http404
     return render(request, "curso_interno_publico.html", {
         "matricula": matricula,
@@ -605,9 +613,8 @@ def curso_interno_publico_page(request, token):
 
 def api_curso_interno_publico_material(request, token):
     """GET — serve o material de apoio (PDF) sem exigir login, validado pelo token da matrícula."""
-    try:
-        matricula = MatriculaCursoInterno.objects.select_related("curso").get(token_acesso=token)
-    except MatriculaCursoInterno.DoesNotExist:
+    matricula = _matricula_publica("curso", token_acesso=token)
+    if not matricula:
         raise Http404
     if not matricula.curso.material_arquivo:
         raise Http404
@@ -617,9 +624,8 @@ def api_curso_interno_publico_material(request, token):
 @csrf_exempt
 def api_curso_interno_publico_concluir(request, token):
     """POST — o funcionário marca o curso como concluído a partir da página pública."""
-    try:
-        matricula = MatriculaCursoInterno.objects.select_related("curso", "funcionario", "empresa").get(token_acesso=token)
-    except MatriculaCursoInterno.DoesNotExist:
+    matricula = _matricula_publica("curso", "funcionario", "empresa", token_acesso=token)
+    if not matricula:
         raise Http404
     if request.method != "POST":
         return JsonResponse({"erro": "método não permitido"}, status=405)
@@ -632,11 +638,11 @@ def api_curso_interno_publico_concluir(request, token):
 
 def api_curso_interno_publico_certificado_pdf(request, token):
     """GET — o funcionário baixa/visualiza o próprio certificado a partir da página pública."""
-    try:
-        matricula = MatriculaCursoInterno.objects.select_related(
-            "curso", "curso__modelo_certificado", "curso__assinatura_treinador", "funcionario", "empresa",
-        ).get(token_acesso=token)
-    except MatriculaCursoInterno.DoesNotExist:
+    matricula = _matricula_publica(
+        "curso", "curso__modelo_certificado", "curso__assinatura_treinador", "funcionario", "empresa",
+        token_acesso=token,
+    )
+    if not matricula:
         raise Http404
     if matricula.status != MatriculaCursoInterno.STATUS_CONCLUIDO:
         return JsonResponse({"erro": "Curso ainda não concluído"}, status=400)
@@ -652,9 +658,10 @@ def api_curso_interno_publico_certificado_pdf(request, token):
 # ── Verificação pública do certificado (via QR code) ──────────────────────────
 
 def certificado_verificar_page(request, numero_certificado):
-    matricula = MatriculaCursoInterno.objects.select_related("curso", "funcionario", "empresa").filter(
+    matricula = _matricula_publica(
+        "curso", "funcionario", "empresa",
         numero_certificado=numero_certificado, status=MatriculaCursoInterno.STATUS_CONCLUIDO,
-    ).first()
+    )
     return render(request, "certificado_verificar.html", {
         "valido": bool(matricula),
         "matricula": matricula,

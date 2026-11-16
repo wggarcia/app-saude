@@ -25,6 +25,7 @@ from .access_control import (
     requer_setor, requer_operacao_page, requer_permissao_modulo,
 )
 from .services.auth_session import empresa_autenticada_from_request
+from .services.rnds_fhir import transmitir_bundle
 from .views_dashboard import contexto_navegacao_setorial
 
 logger = logging.getLogger(__name__)
@@ -53,12 +54,6 @@ _IMUNO_CATALOGO = {
     "meningite": ("20",  "http://www.saude.gov.br/fhir/r4/CodeSystem/BRSIGTAP"),
     "varicela":  ("30",  "http://www.saude.gov.br/fhir/r4/CodeSystem/BRSIGTAP"),
 }
-
-_RNDS_URLS = {
-    "homologacao": "https://sandbox.rnds.saude.gov.br/api/fhir/r4",
-    "producao":    "https://ehr.saude.gov.br/api/fhir/r4",
-}
-
 
 def _gov(request):
     emp = empresa_autenticada_from_request(request)
@@ -194,7 +189,7 @@ def api_sipni_transmitir(request):
     for i in range(0, total, 50):
         lote       = registros[i: i + 50]
         bundle     = _gerar_bundle_immunization(lote, empresa, cred, competencia)
-        ok, prot, err = _transmitir_rnds_sipni(bundle, cred)
+        ok, prot, err = transmitir_bundle(bundle, cred)
         if ok:
             transmitidos += len(lote)
             protocolo     = prot or protocolo
@@ -254,7 +249,7 @@ def api_sipni_reprocessar(request, tx_id):
     cred     = _get_cred(empresa)
     registros = _coletar_registros(empresa, tx.competencia)
     bundle   = _gerar_bundle_immunization(registros, empresa, cred, tx.competencia)
-    ok, prot, err = _transmitir_rnds_sipni(bundle, cred)
+    ok, prot, err = transmitir_bundle(bundle, cred)
 
     tx.transmitidos  = len(registros) if ok else 0
     tx.erros         = 0 if ok else len(registros)
@@ -395,59 +390,6 @@ def _gerar_bundle_immunization(registros, empresa, cred, competencia):
         "timestamp":    timezone.now().isoformat(),
         "entry":        entries,
     }
-
-
-def _transmitir_rnds_sipni(bundle, cred):
-    """Envia Bundle ao RNDS via HTTPS. Retorna (ok, protocolo, erro)."""
-    try:
-        import requests as req
-        import tempfile
-        import base64
-        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
-
-        ambiente = getattr(cred, "rnds_ambiente", "homologacao")
-        base_url = _RNDS_URLS.get(ambiente, _RNDS_URLS["homologacao"])
-
-        pfx_b64 = getattr(cred, "rnds_certificado_pfx_b64", "")
-        if not pfx_b64:
-            return False, None, "Certificado RNDS não carregado"
-
-        pfx_bytes   = base64.b64decode(pfx_b64)
-        senha       = cred.get_rnds_certificado_senha() if hasattr(cred, "get_rnds_certificado_senha") else ""
-        senha_bytes = senha.encode() if senha else None
-
-        priv_key, cert, _ = pkcs12.load_key_and_certificates(pfx_bytes, senha_bytes)
-        pem_cert = cert.public_bytes(Encoding.PEM)
-        pem_key  = priv_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
-
-        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as fc:
-            fc.write(pem_cert); cert_path = fc.name
-        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as fk:
-            fk.write(pem_key); key_path = fk.name
-
-        try:
-            resp = req.post(
-                f"{base_url}/Bundle",
-                json=bundle,
-                cert=(cert_path, key_path),
-                headers={"Content-Type": "application/fhir+json"},
-                timeout=30,
-            )
-            if resp.status_code in (200, 201):
-                protocolo = resp.json().get("id") or resp.headers.get("Location", "").split("/")[-1]
-                return True, protocolo, None
-            return False, None, f"HTTP {resp.status_code}: {resp.text[:300]}"
-        finally:
-            import os
-            for p in (cert_path, key_path):
-                try: os.unlink(p)
-                except Exception: pass
-
-    except ImportError:
-        return False, None, "Instale 'cryptography' e 'requests'"
-    except Exception as e:
-        logger.exception("Erro SIPNI: %s", e)
-        return False, None, str(e)[:500]
 
 
 def _tx_dict(t):

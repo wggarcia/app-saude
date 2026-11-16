@@ -232,15 +232,23 @@ def _assinatura_to_dict(assinatura, request=None):
     }
 
 
+def _assinatura_publica(token, *select_related, **filtros):
+    """Rota pública por token: ainda não há tenant, então a assinatura é
+    localizada sem RLS e o tenant é fixado na empresa dela."""
+    from .services.rls import localizar_e_fixar
+    return localizar_e_fixar(
+        AssinaturaDocumentoSST, lambda a: a.empresa_id,
+        select_related=select_related, token=token, **filtros,
+    )
+
+
 def api_public_prontuario_pdf(request, token):
     """GET /api/public/sst/prontuario/<token>/pdf/ — serve o PDF do prontuário via token público."""
     from django.http import HttpResponse
     from .pdf_sst import gerar_pdf_prontuario
     from .models import ASOOcupacional, ExameOcupacional, CATOcupacional, AfastamentoSST
 
-    assinatura = AssinaturaDocumentoSST.objects.filter(
-        token=token, tipo_documento="prontuario"
-    ).select_related("funcionario", "empresa").first()
+    assinatura = _assinatura_publica(token, "funcionario", "empresa", tipo_documento="prontuario")
 
     if not assinatura:
         return JsonResponse({"erro": "link não encontrado"}, status=404)
@@ -346,7 +354,7 @@ def api_sst_assinatura_detalhe(request, token):
 
 
 def pagina_assinatura_sst(request, token):
-    assinatura = AssinaturaDocumentoSST.objects.filter(token=token).select_related("empresa", "funcionario").first()
+    assinatura = _assinatura_publica(token, "empresa", "funcionario")
     return render(request, "assinatura_sst.html", {
         "assinatura": assinatura,
         "meta": _assinatura_meta(assinatura) if assinatura else None,
@@ -356,7 +364,7 @@ def pagina_assinatura_sst(request, token):
 
 
 def pagina_validar_assinatura(request, token):
-    assinatura = AssinaturaDocumentoSST.objects.filter(token=token).select_related("empresa", "funcionario").first()
+    assinatura = _assinatura_publica(token, "empresa", "funcionario")
     return render(request, "assinatura_sst.html", {
         "assinatura": assinatura,
         "meta": _assinatura_meta(assinatura) if assinatura else None,
@@ -366,7 +374,7 @@ def pagina_validar_assinatura(request, token):
 
 
 def api_public_validar_assinatura_sst(request, token):
-    assinatura = AssinaturaDocumentoSST.objects.filter(token=token).select_related("empresa", "funcionario").first()
+    assinatura = _assinatura_publica(token, "empresa", "funcionario")
     if not assinatura:
         return JsonResponse({"valida": False, "erro": "assinatura não encontrada"}, status=404)
     return JsonResponse({
@@ -381,7 +389,7 @@ def api_public_validar_assinatura_sst(request, token):
 def api_public_assinar_sst(request, token):
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
-    assinatura = AssinaturaDocumentoSST.objects.filter(token=token).select_related("empresa").first()
+    assinatura = _assinatura_publica(token, "empresa")
     if not assinatura:
         return JsonResponse({"erro": "assinatura não encontrada"}, status=404)
     if assinatura.status == "cancelado":

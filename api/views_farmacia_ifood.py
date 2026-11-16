@@ -167,7 +167,13 @@ def api_ifood_webhook(request):
     if not merchant_id:
         return JsonResponse({"erro": "merchantId ausente"}, status=400)
 
-    config = IntegracaoIfood.objects.filter(merchant_id=merchant_id, ativo=True).select_related("empresa").first()
+    # Webhook sem sessão: a config (sob RLS) é localizada sem RLS e o tenant é
+    # fixado na farmácia antes de gravar o pedido.
+    from .services.rls import localizar_e_fixar
+    config = localizar_e_fixar(
+        IntegracaoIfood, lambda c: c.empresa_id,
+        select_related=("empresa",), merchant_id=merchant_id, ativo=True,
+    )
     if not config:
         return JsonResponse({"erro": "Estabelecimento não configurado"}, status=404)
 

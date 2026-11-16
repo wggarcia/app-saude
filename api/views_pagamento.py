@@ -492,9 +492,14 @@ def webhook(request):
     empresa_id = str(payment.get("externalReference") or "").strip()
     payment_id = str(payment.get("id") or "").strip()
 
+    from .services.rls import fixar_tenant
+
+    # Webhook sem sessão: o tenant é a empresa do pagamento e precisa estar fixado
+    # antes da checagem de duplicidade e do registro (FinanceiroEventoSaaS sob RLS).
     if empresa_id and (_asaas_status_aprovado(status_pag) or _asaas_status_aprovado(evento)):
         empresa = Empresa.objects.filter(id=empresa_id).first()
         if empresa:
+            fixar_tenant(empresa.id)
             _processar_pagamento_aprovado(
                 empresa,
                 "Webhook Asaas",
@@ -507,6 +512,7 @@ def webhook(request):
         # o middleware já bloqueia plano expirado.
         empresa = Empresa.objects.filter(id=empresa_id).first()
         if empresa:
+            fixar_tenant(empresa.id)
             _registrar_inadimplencia_webhook(
                 empresa, payment_id=payment_id, valor=payment.get("value"),
                 origem=(evento or status_pag),
@@ -532,6 +538,8 @@ def sucesso(request):
             if ref and _asaas_status_aprovado(pagamento.get("status")):
                 empresa = Empresa.objects.filter(id=ref).first()
                 if empresa:
+                    from .services.rls import fixar_tenant
+                    fixar_tenant(empresa.id)
                     _processar_pagamento_aprovado(
                         empresa,
                         "Retorno Asaas verificado",

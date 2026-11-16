@@ -4888,6 +4888,9 @@ def _rh_resolver_token(token):
         return None
     if t.expira_em and t.expira_em < date.today():
         return None
+    # Rota pública: o tenant das leituras seguintes (vidas, solicitações) é a operadora.
+    from .services.rls import fixar_tenant
+    fixar_tenant(t.contrato.empresa_operadora_id)
     return t, t.contrato, t.contrato.empresa_operadora
 
 

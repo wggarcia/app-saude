@@ -2,10 +2,9 @@
 views_governo_esus.py
 e-SUS / RNDS — envio de fichas ao ecossistema nacional de saúde digital.
 
-Integração real com RNDS (Rede Nacional de Dados em Saúde) via:
-  • Certificado ICP-Brasil A1/A3 emitido em nome da prefeitura/secretaria
-  • OAuth2 mTLS → token Bearer → POST FHIR R4 ao endpoint RNDS
-  • Fichas: fichaAtendimentoIndividual, fichaVacinacao, fichaAtividadeColetiva
+Integração com RNDS (Rede Nacional de Dados em Saúde) pelo cliente único
+api/services/rnds_fhir.py (token no servidor Auth + servidor EHR por UF).
+O perfil Encounter enviado aqui só se confirma na homologação da RNDS.
 
 Quando o certificado RNDS está configurado em CredenciaisIntegracoes:
   → transmissão real ao RNDS
@@ -16,13 +15,8 @@ Referência:
   https://rnds-guia.saude.gov.br/
   https://simplifier.net/redenacionaldedadosemsaude
 """
-import base64
-import hashlib
-import json
 import logging
-import os
-import tempfile
-from datetime import date, datetime
+from datetime import date
 
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -38,12 +32,6 @@ from .models import AtendimentoUBS, CredenciaisIntegracoes, LogESUS
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
 
 logger = logging.getLogger(__name__)
-
-# ── Endpoints RNDS ────────────────────────────────────────────────────────────
-_RNDS_AUTH_PROD = "https://ehr.saude.gov.br/api/fhir/r4"
-_RNDS_AUTH_HML  = "https://ehr-hmg.saude.gov.br/api/fhir/r4"
-_RNDS_TOKEN_PROD = "https://ehr.saude.gov.br/api/token"
-_RNDS_TOKEN_HML  = "https://ehr-hmg.saude.gov.br/api/token"
 
 
 def _e(request):
@@ -140,114 +128,41 @@ def api_esus_enviar_fichas(request):
 
 
 def _enviar_fichas_rnds_real(empresa, pendentes_qs, total, cred):
-    """Transmissão real ao RNDS via certificado ICP-Brasil + OAuth2 + FHIR R4."""
-    cert_path = key_path = None
-    try:
-        import requests as req
-        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
-        from cryptography.hazmat.backends import default_backend
+    """Transmissão ao RNDS pelo cliente único (api/services/rnds_fhir.py)."""
+    from .services.rnds_fhir import ambiente_de, enviar_bundle
 
-        # Carrega certificado ICP-Brasil
-        pfx_bytes = base64.b64decode(cred.rnds_certificado_pfx_b64)
-        senha_bytes = cred.get_rnds_certificado_senha().encode() or b""
-        private_key, cert, _ = pkcs12.load_key_and_certificates(
-            pfx_bytes, senha_bytes, backend=default_backend()
-        )
+    atendimentos = list(pendentes_qs.select_related("prontuario")[:200])
+    bundle = _montar_bundle_fhir(atendimentos, cred)
+    r = enviar_bundle(cred, bundle)
 
-        cert_file = tempfile.NamedTemporaryFile(suffix=".crt", delete=False)
-        key_file = tempfile.NamedTemporaryFile(suffix=".key", delete=False)
-        cert_file.write(cert.public_bytes(Encoding.PEM))
-        cert_file.close()
-        key_file.write(private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()))
-        key_file.close()
-        cert_path, key_path = cert_file.name, key_file.name
-
-        ambiente = cred.rnds_ambiente
-        token_url = _RNDS_TOKEN_PROD if ambiente == "producao" else _RNDS_TOKEN_HML
-        fhir_base = _RNDS_AUTH_PROD if ambiente == "producao" else _RNDS_AUTH_HML
-
-        # OAuth2 mTLS — obtém token Bearer
-        token_resp = req.post(
-            token_url,
-            cert=(cert_path, key_path),
-            data={"grant_type": "client_credentials", "scope": "write"},
-            timeout=30,
-            verify=True,
-        )
-        token_resp.raise_for_status()
-        token = token_resp.json().get("access_token", "")
-        if not token:
-            raise RuntimeError("Token RNDS não obtido.")
-
-        # Serializa fichas em Bundle FHIR R4
-        atendimentos = list(pendentes_qs.select_related("prontuario")[:200])
-        bundle = _montar_bundle_fhir(atendimentos, cred)
-        bundle_json = json.dumps(bundle, ensure_ascii=False)
-
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/fhir+json; charset=utf-8",
-            "X-Authorization-Server": f"Bearer {token}",
-        }
-
-        resp = req.post(
-            f"{fhir_base}/Bundle",
-            data=bundle_json.encode("utf-8"),
-            headers=headers,
-            cert=(cert_path, key_path),
-            timeout=120,
-            verify=True,
-        )
-
-        if resp.status_code in (200, 201):
-            pendentes_qs.update(enviado_esus=True)
-            log = LogESUS.objects.create(
-                empresa=empresa,
-                ficha_tipo="fichaAtendimentoIndividual",
-                registros_enviados=total,
-                status="enviado",
-                resposta_rnds=resp.json() if resp.text else {"ok": True},
-            )
-            # Atualiza metadados de transmissão
-            cred.rnds_ultima_transmissao = timezone.now()
-            cred.save(update_fields=["rnds_ultima_transmissao"])
-            return JsonResponse({
-                "ok": True,
-                "enviados": total,
-                "log_id": log.id,
-                "modo": "rnds_real",
-                "ambiente": ambiente,
-                "mensagem": f"{total} ficha(s) transmitida(s) ao RNDS com sucesso.",
-            })
-        else:
-            erro_msg = f"RNDS retornou HTTP {resp.status_code}: {resp.text[:500]}"
-            log = LogESUS.objects.create(
-                empresa=empresa,
-                ficha_tipo="fichaAtendimentoIndividual",
-                registros_enviados=total,
-                status="erro",
-                resposta_rnds={"status_http": resp.status_code, "erro": resp.text[:2000]},
-            )
-            return JsonResponse({"ok": False, "erro": erro_msg, "log_id": log.id}, status=502)
-
-    except Exception as ex:
-        msg = str(ex)[:500]
-        logger.exception("Erro ao transmitir fichas RNDS: %s", msg)
-        LogESUS.objects.create(
+    if r.ok:
+        pendentes_qs.filter(id__in=[a.id for a in atendimentos]).update(enviado_esus=True)
+        log = LogESUS.objects.create(
             empresa=empresa,
             ficha_tipo="fichaAtendimentoIndividual",
-            registros_enviados=total,
-            status="erro",
-            resposta_rnds={"erro": msg},
+            registros_enviados=len(atendimentos),
+            status="enviado",
+            resposta_rnds=r.dados or {"ok": True, "protocolo": r.protocolo},
         )
-        return JsonResponse({"ok": False, "erro": msg}, status=500)
-    finally:
-        for p in [cert_path, key_path]:
-            if p:
-                try:
-                    os.unlink(p)
-                except Exception:
-                    pass
+        cred.rnds_ultima_transmissao = timezone.now()
+        cred.save(update_fields=["rnds_ultima_transmissao"])
+        return JsonResponse({
+            "ok": True,
+            "enviados": len(atendimentos),
+            "log_id": log.id,
+            "modo": "rnds_real",
+            "ambiente": ambiente_de(cred),
+            "mensagem": f"{len(atendimentos)} ficha(s) transmitida(s) ao RNDS.",
+        })
+
+    log = LogESUS.objects.create(
+        empresa=empresa,
+        ficha_tipo="fichaAtendimentoIndividual",
+        registros_enviados=total,
+        status="erro",
+        resposta_rnds={"status_http": r.status_http, "erro": r.erro[:2000]},
+    )
+    return JsonResponse({"ok": False, "erro": r.erro, "log_id": log.id}, status=502)
 
 
 def _montar_bundle_fhir(atendimentos, cred):

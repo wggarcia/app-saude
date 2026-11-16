@@ -123,6 +123,17 @@ tr:hover td{background:rgba(0,194,255,.03)}
         </select>
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>CNS do profissional responsável *</label>
+        <input type="text" id="rndsCnsProf" placeholder="15 dígitos" maxlength="15" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>UF do estabelecimento</label>
+        <input type="text" id="rndsUf" placeholder="SP" maxlength="2" style="text-transform:uppercase">
+        <span style="font-size:11px;color:var(--muted);margin-top:4px">Obrigatória em produção</span>
+      </div>
+    </div>
     <div class="form-group">
       <label>Certificado ICP-Brasil (.p12 / .pfx)</label>
       <input type="file" id="rndsCert" accept=".p12,.pfx" style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
@@ -329,9 +340,18 @@ async function abrirModalRnds() {
     document.getElementById('rndsCnes').value = s.cnes        || '';
     document.getElementById('rndsIbge').value = s.ibge        || '';
     document.getElementById('rndsAmbiente').value = s.ambiente || 'homologacao';
-    document.getElementById('rndsStatusBadge').innerHTML = s.configurado
+    document.getElementById('rndsCnsProf').value = s.cns_profissional || '';
+    document.getElementById('rndsUf').value = s.uf || '';
+    var badge = document.getElementById('rndsStatusBadge');
+    badge.innerHTML = s.configurado
       ? '<span class="badge badge-ok">✓ Configurado</span>'
       : '<span class="badge badge-warn">⚠️ Não configurado</span>';
+    if (!s.configurado && s.pendencias && s.pendencias.length) {
+      var falta = document.createElement('div');
+      falta.style.cssText = 'font-size:12px;color:var(--muted);margin-top:6px';
+      falta.textContent = 'Falta: ' + s.pendencias.join(', ');
+      badge.appendChild(falta);
+    }
   } catch(e) {}
 }
 function fecharModalRnds() {
@@ -345,7 +365,10 @@ async function salvarRnds() {
   var amb  = document.getElementById('rndsAmbiente').value;
   var senha = document.getElementById('rndsSenha').value;
   if (!cpf || !cnes) return toast('CPF do gestor e CNES são obrigatórios', false);
-  var body = { cpf_gestor: cpf, cnes: cnes, ibge: ibge, ambiente: amb, ativo: true };
+  var cnsProf = document.getElementById('rndsCnsProf').value.replace(/\D/g,'');
+  var uf = document.getElementById('rndsUf').value.trim().toUpperCase();
+  var body = { cpf_gestor: cpf, cnes: cnes, ibge: ibge, ambiente: amb, ativo: true,
+               cns_profissional: cnsProf, uf: uf };
   var certFile = document.getElementById('rndsCert').files[0];
   if (certFile) {
     var reader = new FileReader();

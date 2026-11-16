@@ -277,9 +277,14 @@ def sst_ordem_servico_page(request):
 
 def _ciencia_por_token(token):
     from .models import OrdemServicoCiencia
+    from .services.rls import localizar_e_fixar
     if not token:
         return None
-    return OrdemServicoCiencia.objects.select_related("ordem", "funcionario").filter(token=token).first()
+    # Rota pública: sem tenant ainda; o join com a OS (sob RLS) exige a busca sem RLS.
+    return localizar_e_fixar(
+        OrdemServicoCiencia, lambda c: c.ordem.empresa_id,
+        select_related=("ordem", "funcionario"), token=token,
+    )
 
 
 def os_ciencia_page(request, token):

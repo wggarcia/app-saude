@@ -253,6 +253,16 @@ def onboarding_snapshot(empresa, agora=None):
 def _resumo_vigilancia_publica(agora):
     """Resumo epidemiológico nacional do app da população para o console.
 
+    Lê como o tenant da população e devolve o tenant do chamador ao terminar.
+    """
+    from .rls import preservar_tenant
+    with preservar_tenant():
+        return _resumo_vigilancia_publica_como_populacao(agora)
+
+
+def _resumo_vigilancia_publica_como_populacao(agora):
+    """Resumo epidemiológico nacional do app da população para o console.
+
     Surfacing da camada pública (focos, casos, estados, doenças, crescimento)
     que antes não aparecia no painel administrativo. Tolerante a falhas.
     """
@@ -899,15 +909,12 @@ def build_owner_saude_sistema(dono=None):
     try:
         emp_pub = Empresa.objects.filter(email="populacao@solocrt.com").first()
         if emp_pub:
-            try:
-                from api.middleware import _rls_set_empresa
-                _rls_set_empresa(emp_pub.id)
-            except Exception:
-                pass
-            ultimo = (
-                RegistroSintoma.objects.filter(empresa=emp_pub)
-                .order_by("-data_registro").values_list("data_registro", flat=True).first()
-            )
+            from .rls import tenant_temporario
+            with tenant_temporario(emp_pub.id):
+                ultimo = (
+                    RegistroSintoma.objects.filter(empresa=emp_pub)
+                    .order_by("-data_registro").values_list("data_registro", flat=True).first()
+                )
             if ultimo:
                 horas = round((agora - ultimo).total_seconds() / 3600, 1)
                 nivel = "ok" if horas < 48 else "atencao" if horas < 168 else "critico"
