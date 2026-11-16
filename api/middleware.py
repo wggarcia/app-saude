@@ -55,18 +55,42 @@ def _rls_limpar() -> None:
     nessa mesma conexão — enxergando dados de outro cliente.
     """
     from django.db import connection
-    if connection.vendor != "postgresql" or getattr(connection, "_rls_tenant", None) is None:
+    if connection.vendor != "postgresql":
+        return
+    if getattr(connection, "_rls_tenant", None) is None and not getattr(connection, "_rls_bypass", False):
         return
     try:
         with connection.cursor() as cur:
-            cur.execute("SELECT set_config('app.empresa_id', '', false)")
+            cur.execute(
+                "SELECT set_config('app.empresa_id', '', false), set_config('app.rls_bypass', '', false)"
+            )
         connection._rls_tenant = None
+        connection._rls_bypass = False
     except Exception as exc:
-        # Falhar aqui deixaria o tenant anterior ativo: derruba a conexão para
-        # que a próxima query abra uma nova, sem valor herdado.
+        # Falhar aqui deixaria o tenant/bypass anterior ativo: derruba a conexão
+        # para que a próxima query abra uma nova, sem valor herdado.
         logger.error("RLS limpar falhou tipo=%s: %s", type(exc).__name__, exc)
         connection.close()
         connection._rls_tenant = None
+        connection._rls_bypass = False
+
+
+def _rls_liberar_dono() -> None:
+    """
+    Libera o RLS para a requisição do dono da plataforma (console operacional),
+    que por função lê e grava dados de todos os clientes. A policy tenant_isolation
+    aceita app.rls_bypass = 'dono' (ver aplicar_rls_cobertura). Só chamar depois
+    de validar o owner_token; _rls_limpar() desfaz na próxima requisição.
+    """
+    from django.db import connection
+    if connection.vendor != "postgresql":
+        return
+    connection._rls_bypass = True
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT set_config('app.rls_bypass', 'dono', false)")
+    except Exception as exc:
+        logger.error("RLS liberar dono falhou tipo=%s: %s", type(exc).__name__, exc)
 SESSION_TOUCH_INTERVAL = timedelta(minutes=1)
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 
@@ -205,6 +229,12 @@ class EmpresaMiddleware:
             "/erro/",
             "/pendente/",
             "/api/platform/status",
+            # Logins públicos por caminho exato: um prefixo "/api/login" liberaria também
+            # /api/login-modulo, que exige a sessão já aberta (request.empresa).
+            "/api/login",
+            "/api/login-empresa",
+            "/api/login-empresa-api",
+            "/api/login-governo",
             "/api/epidemiologia",   # panorama agregado público (DATASUS/SINAN) — consumido cross-segmento; sem dado de tenant. Match exato: /briefing e /projecao-ml seguem protegidos.
             "/api/epidemiologia/dispersao",  # projeção de dispersão (SEIR + mobilidade) — mesmo caráter agregado/público do panorama; sem dado de tenant. Consumida pela sala de situação (Governo) e pelo mapa público.
             "/logout/",
@@ -249,7 +279,6 @@ class EmpresaMiddleware:
             "/api/cipa/votar/",    # Votação CIPA — API pública do voto secreto (token no URL)
             "/os/ciencia/",        # Ordem de Serviço — página pública de ciência do trabalhador (token)
             "/api/os/ciencia/",    # Ordem de Serviço — API pública de ciência (token no URL)
-            "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",
             "/api/email/",
@@ -402,6 +431,7 @@ class EmpresaMiddleware:
                     if request.path.startswith("/api/"):
                         return JsonResponse({"erro": "sessão operacional encerrada"}, status=401)
                     return redirect("/operacao-central/")
+                _rls_liberar_dono()
                 _touch_sessao_principal(dono)
                 request.dono_saas = dono
                 return self.get_response(request)

@@ -33,6 +33,11 @@ def _encontrar_por_email(email):
 
 
 def _criar_token(empresa, usuario):
+    # A tabela está sob RLS: o token sempre nasce com a empresa (a do sub-usuário,
+    # quando for o caso) e com o tenant fixado — senão o banco recusa a linha.
+    from .services.rls import fixar_tenant
+    empresa = empresa or usuario.empresa
+    fixar_tenant(empresa.id)
     expira_em = timezone.now() + timedelta(hours=_TOKEN_TTL_HOURS)
     return PasswordResetToken.objects.create(
         empresa=empresa,

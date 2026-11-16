@@ -19,8 +19,12 @@ def _conexao_pg():
     conn = mock.MagicMock()
     conn.vendor = "postgresql"
     conn._rls_tenant = None
+    conn._rls_bypass = False
     cursor = conn.cursor.return_value.__enter__.return_value
     return conn, cursor
+
+
+_SQL_LIMPAR = "SELECT set_config('app.empresa_id', '', false), set_config('app.rls_bypass', '', false)"
 
 
 class RlsLimparTests(SimpleTestCase):
@@ -36,7 +40,7 @@ class RlsLimparTests(SimpleTestCase):
         conn._rls_tenant = 7
         with mock.patch("django.db.connection", conn):
             mw._rls_limpar()
-        cur.execute.assert_called_once_with("SELECT set_config('app.empresa_id', '', false)")
+        cur.execute.assert_called_once_with(_SQL_LIMPAR)
         self.assertIsNone(conn._rls_tenant)
 
     def test_limpar_nao_consulta_o_banco_sem_tenant(self):
@@ -61,7 +65,7 @@ class RlsLimparTests(SimpleTestCase):
             mw._rls_set_empresa(11)   # requisição 1 autentica o cliente 11
             mw._rls_limpar()          # requisição 2 (pública) começa
         enviados = [c.args for c in cur.execute.call_args_list]
-        self.assertEqual(enviados[-1], ("SELECT set_config('app.empresa_id', '', false)",))
+        self.assertEqual(enviados[-1], (_SQL_LIMPAR,))
         self.assertIsNone(conn._rls_tenant)
 
 
