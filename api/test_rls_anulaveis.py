@@ -47,6 +47,23 @@ class PolicySqlTests(SimpleTestCase):
         self.assertEqual(params, [list(cmd.TABELAS_ANULAVEIS_ISOLADAS)])
 
 
+class PolicyIndiretaSqlTests(SimpleTestCase):
+    def test_filha_isola_pelo_pai_e_aceita_a_liberacao_do_dono(self):
+        from .management.commands import aplicar_rls_indireto as ind
+        sql = ind._policy_sql("api_filha", '"pai_id" IN (SELECT id FROM "api_pai" WHERE empresa_id = 1)')
+        self.assertIn('("pai_id" IN (SELECT id FROM "api_pai" WHERE empresa_id = 1)) OR '
+                      "current_setting('app.rls_bypass', true) = 'dono'", sql)
+        self.assertEqual(sql.count("app.rls_bypass"), 2)  # USING e WITH CHECK
+
+    def test_filhas_novas_de_setembro_sao_achadas_em_1_hop(self):
+        from django.apps import apps
+        from .management.commands import aplicar_rls_indireto as ind
+        for nome in ("VotoCIPA", "VotanteCIPA", "CandidatoCIPA", "AcessoSECLog",
+                     "CompartilhamentoSEC", "CotacaoFornecedorOPME", "LogIntegracaoSST"):
+            _, _, hops = ind._descobrir_caminho(apps.get_model("api", nome))
+            self.assertEqual(hops, 1, nome)
+
+
 class LiberacaoDonoTests(SimpleTestCase):
     def test_liberar_dono_grava_e_marca(self):
         conn, cur = _conexao_pg()

@@ -41,6 +41,9 @@ echo "==> [4/6] RLS cobertura (self-healing)"
 # que ainda não tenha — impede drift quando uma migration cria tabela de tenant
 # nova sem RLS. Idempotente; roda como owner (APP_DATABASE_URL= vazio).
 APP_DATABASE_URL= "$PYTHON_BIN" "$APP_DIR/manage.py" aplicar_rls_cobertura
+# Tabelas filhas (sem empresa_id, isoladas pela FK ao pai). Só 1-hop: o 2-hop é
+# heurístico e continua manual (--incluir-2hop após revisar o --dry-run).
+APP_DATABASE_URL= "$PYTHON_BIN" "$APP_DIR/manage.py" aplicar_rls_indireto
 
 echo "==> [4b/6] base de indicação clínica OPME (Camada 1, fonte A — idempotente)"
 APP_DATABASE_URL= "$PYTHON_BIN" "$APP_DIR/manage.py" seed_indicacao_clinica_opme

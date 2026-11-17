@@ -62,7 +62,13 @@ def _descobrir_caminho(model):
     return None, None, 0
 
 
+_BYPASS_DONO = "current_setting('app.rls_bypass', true) = 'dono'"
+
+
 def _policy_sql(tabela, using):
+    # Mesma liberação do console do dono que aplicar_rls_cobertura usa nas tabelas
+    # com empresa_id: só o EmpresaMiddleware liga, após validar o owner_token.
+    using = f"({using}) OR {_BYPASS_DONO}"
     return (
         f'ALTER TABLE "{tabela}" ENABLE ROW LEVEL SECURITY;\n'
         f'DROP POLICY IF EXISTS tenant_isolation ON "{tabela}";\n'
