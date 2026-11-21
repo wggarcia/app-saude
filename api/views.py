@@ -2181,7 +2181,7 @@ def registrar_sintoma(request):
 
     # 🧠 classificação bayesiana — passa estado para prior geográfico
     dados_classificacao = {**dados, "estado": geo.get("estado", ""), "cidade": geo.get("cidade", "")}
-    grupo, classificacao = classificar_padrao(dados_classificacao, setor="governo")
+    grupo, classificacao, diferencial = classificar_padrao_completo(dados_classificacao, setor="governo")
     resultado_cidadao = _classificar_cidadao(dados_classificacao, estado=geo.get("estado", ""))
     confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
 
@@ -2250,6 +2250,7 @@ def registrar_sintoma(request):
         empresa=empresa,
         grupo=grupo,
         classificacao=classificacao,
+        diferencial=diferencial,
         ip=ip,
         device_id=device_id,
         confianca=confianca,
@@ -2327,7 +2328,7 @@ def registrar_sintoma_publico(request):
     # casa de quem enviou a partir do dado salvo.
     latitude, longitude = generalizar_coordenada(latitude, longitude, raio_metros=200)
     dados_classificacao = {**dados, "estado": geo.get("estado", ""), "cidade": geo.get("cidade", "")}
-    grupo, classificacao = classificar_padrao(dados_classificacao, setor="governo")
+    grupo, classificacao, diferencial = classificar_padrao_completo(dados_classificacao, setor="governo")
     resultado_cidadao = _classificar_cidadao(dados_classificacao, estado=geo.get("estado", ""))
     confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
     if location_source != "current":
@@ -2435,6 +2436,7 @@ def registrar_sintoma_publico(request):
         condado=geo.get("condado"),
         grupo=grupo,
         classificacao=classificacao,
+        diferencial=diferencial,
         ip=ip,
         device_id=device_id,
         confianca=confianca,
@@ -2903,6 +2905,21 @@ def classificar_padrao(dados, setor: str = "governo"):
     Retorna (grupo, classificacao) para compatibilidade com os endpoints legados.
     Para resultado completo usar api.utils_ia.classificar_padrao diretamente.
     """
+    grupo, classificacao, _ranking = classificar_padrao_completo(dados, setor=setor)
+    return grupo, classificacao
+
+
+def classificar_padrao_completo(dados, setor: str = "governo"):
+    """
+    Igual a classificar_padrao, mas devolve TAMBÉM o diferencial estruturado.
+
+    O ranking do motor era calculado e descartado aqui: só o vencedor sobrevivia,
+    como texto dentro de `classificacao`. Quem ficasse em 2º lugar sumia da
+    vigilância. Esta versão o devolve para ser persistido em
+    RegistroSintoma.diferencial — sem alterar nenhum cálculo clínico.
+
+    Retorna (grupo, classificacao, diferencial_top5).
+    """
     from api.classificador_doencas import classificar, DOENCAS_BRASIL
     # Passa estado para que o prior geográfico seja consistente com o classificador cidadão.
     estado = dados.get("estado") or dados.get("uf") or ""
@@ -2925,7 +2942,18 @@ def classificar_padrao(dados, setor: str = "governo"):
         else:
             classificacao = f"{doenca} ({confianca}% confiança)"
 
-    return grupo, classificacao[:300]
+    # O diferencial que antes se perdia. Espelha exatamente o ranking do motor —
+    # nenhuma doença é promovida ou rebaixada aqui.
+    ranking = [
+        {
+            "doenca": item.get("doenca"),
+            "confianca": item.get("confianca"),
+            "score": item.get("score"),
+        }
+        for item in (resultado.get("ranking") or [])[:5]
+    ]
+
+    return grupo, classificacao[:300], ranking
 
 def resumo_estados(request):
     # Dados epidemiológicos são sempre da empresa pública (app da população).

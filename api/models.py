@@ -170,6 +170,15 @@ class RegistroSintoma(models.Model):
     grupo = models.CharField(max_length=50, null=True, blank=True)
     classificacao = models.CharField(max_length=300, null=True, blank=True)
 
+    # Diferencial completo que o motor calculou para ESTE caso (top 5).
+    # Antes era descartado: só o vencedor sobrevivia, dentro de `classificacao`,
+    # como texto truncado em 300 caracteres. Isso apagava da vigilância toda
+    # hipótese que ficasse em 2º lugar — um caso com Mpox a 83% do líder era
+    # indistinguível de um sem Mpox nenhum. Aqui o diferencial fica consultável,
+    # derivado só do que a pessoa relatou (nenhuma doença é promovida).
+    # Formato: [{"doenca": str, "confianca": int, "score": float}, ...]
+    diferencial = models.JSONField(null=True, blank=True)
+
     # 🔐 SEGURANÇA (NOVO)
     ip = models.GenericIPAddressField(null=True, blank=True)
     device_id = models.CharField(max_length=120, null=True, blank=True)

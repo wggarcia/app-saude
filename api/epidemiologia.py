@@ -830,6 +830,93 @@ def _build_disease_probabilities(symptom_counts, total_cases, risco_oficial_doen
     return probabilities
 
 
+# O classificador e o panorama nomeiam três doenças de formas diferentes. Os
+# painéis do gestor agregam pelo nome, então o diferencial é traduzido para o
+# vocabulário que as telas já usam — senão "Gripe" viraria duas séries distintas.
+_NOME_CLASSIFICADOR_PARA_PANORAMA = {
+    "Gripe (Influenza)": "Gripe",
+    "Bronquite / DPOC Agudização": "Bronquite",
+}
+
+
+def _diferenciais_por_grupo(group_fields, empresa_pub=None):
+    """Soma os diferenciais JÁ calculados caso a caso, agrupados como a camada.
+
+    Por que isto existe: o mapa recalculava a probabilidade a partir de TAXAS DE
+    SINTOMA agregadas, sem enxergar a anamnese de ninguém. Num foco onde as
+    pessoas marcaram febre e calafrios, Malária ranqueava alto — mesmo que todas
+    tivessem negado viagem a área endêmica e estivessem no Rio. O classificador
+    individual já sabia disso e a descartava; o mapa refazia a conta às cegas e
+    chegava a uma resposta pior.
+
+    Aqui o foco herda o diferencial que o motor produziu para cada pessoa, com
+    todo o contexto (exposições, vacinas, comorbidades, local). Nenhuma doença é
+    promovida: é a soma do que os próprios relatos sustentam.
+
+    Devolve {chave_do_grupo: {doenca: score_somado}}, só para os grupos que têm
+    pelo menos um caso com diferencial gravado.
+    """
+    from collections import defaultdict
+
+    queryset = (
+        RegistroSintoma.objects
+        .filter(data_registro__gte=timezone.now() - timedelta(days=FOCUS_DECAY_WINDOW_DAYS))
+        .exclude(diferencial__isnull=True)
+        .exclude(latitude__isnull=True)
+        .exclude(longitude__isnull=True)
+        .exclude(q_registro_sintoma_sintetico())
+    )
+    if empresa_pub is not None:
+        try:
+            queryset = queryset.using("owner").filter(empresa=empresa_pub)
+        except Exception:
+            queryset = queryset.filter(empresa=empresa_pub)
+    else:
+        queryset = _scope_public_population_queryset(queryset)
+
+    for field in group_fields:
+        queryset = queryset.exclude(**{f"{field}__isnull": True}).exclude(**{field: ""})
+
+    acumulado = defaultdict(lambda: defaultdict(float))
+    for linha in queryset.values(*group_fields, "diferencial").iterator(chunk_size=2000):
+        diferencial = linha.get("diferencial")
+        if not isinstance(diferencial, list):
+            continue
+        chave = tuple(linha.get(f) for f in group_fields)
+        for item in diferencial:
+            if not isinstance(item, dict):
+                continue
+            doenca = item.get("doenca")
+            score = item.get("score")
+            if not doenca or not isinstance(score, (int, float)):
+                continue
+            doenca = _NOME_CLASSIFICADOR_PARA_PANORAMA.get(doenca, doenca)
+            acumulado[chave][doenca] += float(score)
+
+    return {k: dict(v) for k, v in acumulado.items() if v}
+
+
+def _probabilidades_do_diferencial(scores, total_cases, risco_oficial_doenca_map=None, estado_uf=None):
+    """Converte os scores somados do diferencial no MESMO formato que o painel
+    do gestor já consome — só a origem do número muda, não o contrato."""
+    calibradas = dict(scores)
+    calculo_ml_oficial_doencas = []
+
+    # Mantém a calibração com notificação oficial (DATASUS/SINAN) do caminho antigo.
+    if estado_uf and risco_oficial_doenca_map:
+        for doenca in list(calibradas):
+            oficial = (risco_oficial_doenca_map or {}).get(doenca, {}).get(estado_uf)
+            if oficial is not None:
+                calibradas[doenca] *= 0.85 + (0.40 * max(min(oficial, 1.0), 0.0))
+                calculo_ml_oficial_doencas.append(doenca)
+
+    probabilities = _normalize_probabilities(calibradas)
+    for item in probabilities:
+        item["estimated_cases"] = int(round(total_cases * item["probability"] / 100))
+        item["calculo_ml_oficial"] = item["name"] in calculo_ml_oficial_doencas
+    return probabilities
+
+
 def _attach_active_probabilities(probabilities, activity_percent):
     activity_factor = max(min(activity_percent / 100, 1.0), 0.0)
 
@@ -942,6 +1029,9 @@ def _serialize_layer(level, group_fields, risco_oficial_map=None, risco_oficial_
     risco_oficial_map = risco_oficial_map or {}
     risco_oficial_doenca_map = risco_oficial_doenca_map or {}
     rows = _build_layer_queryset(group_fields, empresa_pub=empresa_pub)
+    # Diferenciais reais por grupo. Vazio enquanto não houver casos novos com
+    # diferencial gravado — nesse caso cada foco cai no cálculo antigo.
+    diferenciais = _diferenciais_por_grupo(group_fields, empresa_pub=empresa_pub)
     max_total = max((float(row.get("active_cases") or 0) for row in rows), default=1)
     max_recent = max((row["recent_24h"] for row in rows), default=1)
     areas = []
@@ -959,11 +1049,24 @@ def _serialize_layer(level, group_fields, risco_oficial_map=None, risco_oficial_
         }
         symptom_breakdown = _serialize_symptoms(symptom_counts, raw_total_cases)
         dominant_symptom = symptom_breakdown[0]["label"] if symptom_breakdown else "Sem dados"
-        disease_probabilities = _build_disease_probabilities(
-            symptom_counts, raw_total_cases,
-            risco_oficial_doenca_map=risco_oficial_doenca_map,
-            estado_uf=_estado_para_uf(normalized_state),
-        )
+        # Preferir o diferencial que o classificador já calculou por pessoa (com
+        # anamnese). Só cai no cálculo por taxa de sintoma quando o grupo ainda
+        # não tem nenhum caso com diferencial gravado (registros anteriores à
+        # migração 0269, por exemplo).
+        _chave_grupo = tuple(row.get(f) for f in group_fields)
+        _scores_diferencial = diferenciais.get(_chave_grupo)
+        if _scores_diferencial:
+            disease_probabilities = _probabilidades_do_diferencial(
+                _scores_diferencial, raw_total_cases,
+                risco_oficial_doenca_map=risco_oficial_doenca_map,
+                estado_uf=_estado_para_uf(normalized_state),
+            )
+        else:
+            disease_probabilities = _build_disease_probabilities(
+                symptom_counts, raw_total_cases,
+                risco_oficial_doenca_map=risco_oficial_doenca_map,
+                estado_uf=_estado_para_uf(normalized_state),
+            )
         for disease in disease_probabilities:
             disease["active_estimated_cases"] = _active_case_value(total_cases * disease["probability"] / 100)
         activity_percent = _activity_percent(total_cases, int(row["recent_24h"] or 0))
