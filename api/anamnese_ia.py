@@ -39,9 +39,13 @@ logger = logging.getLogger("api")
 # confiar: ANAMNESE_IA_MODELO=claude-haiku-5-5 no .env.
 MODELO_RACIOCINIO = getattr(settings, "ANAMNESE_IA_MODELO", "") or "claude-sonnet-5-5"
 
-# Saída curta: a hipótese é uma palavra, a justificativa são 2-3 frases. 700
-# sobrava e saída custa 5x a entrada.
-MAX_TOKENS = 350
+# Teto de saída, não alvo: cobra-se o que é gerado, não o que é reservado. A
+# resposta real tem ~180 tokens, então a folga aqui não custa nada — ela existe
+# como rede de segurança caso o desligamento do pensamento não pegue (SDK
+# antigo, modelo que ignore o campo). Com 350 e pensamento ligado, o modelo
+# gastou tudo pensando e devolveu vazio; essa folga impede que isso se repita
+# em silêncio.
+MAX_TOKENS = 900
 
 # ── Quando NÃO vale chamar a IA ───────────────────────────────────────────────
 # A maior economia não é o modelo: é não chamar. Num quadro onde o motor já
@@ -287,12 +291,16 @@ def avaliar(dados: dict[str, Any], ranking: list[dict], conhecidas: set[str]) ->
             # Pensamento desligado de propósito. Os modelos atuais pensam por
             # padrão, e os tokens de pensamento saem do MESMO orçamento do
             # max_tokens — no primeiro teste real o Haiku gastou os 350 inteiros
-            # pensando, parou em stop_reason=max_tokens e não escreveu uma linha
-            # de resposta.
+            # pensando, parou em stop_reason=max_tokens e não escreveu uma linha.
             # Aqui o raciocínio pesado já foi feito: o motor bayesiano entrega o
             # diferencial pronto, e a tarefa é escolher dentro dele e justificar
             # em três frases. Não precisa deliberar, precisa responder.
-            thinking={"type": "disabled"},
+            #
+            # Vai por extra_body porque o SDK fixado no projeto (anthropic
+            # 0.40.0) não conhece o parâmetro `thinking` e rejeita de cara —
+            # assim o campo chega à API sem exigir upgrade do SDK, que mexeria
+            # com os outros onze serviços de uma vez.
+            extra_body={"thinking": {"type": "disabled"}},
         )
 
         # Nunca assumir que o primeiro bloco é texto: com pensamento ligado o
