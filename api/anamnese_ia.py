@@ -284,10 +284,35 @@ def avaliar(dados: dict[str, Any], ranking: list[dict], conhecidas: set[str]) ->
             max_tokens=MAX_TOKENS,
             system=_system_prompt(),
             messages=[{"role": "user", "content": conteudo}],
+            # Pensamento desligado de propósito. Os modelos atuais pensam por
+            # padrão, e os tokens de pensamento saem do MESMO orçamento do
+            # max_tokens — no primeiro teste real o Haiku gastou os 350 inteiros
+            # pensando, parou em stop_reason=max_tokens e não escreveu uma linha
+            # de resposta.
+            # Aqui o raciocínio pesado já foi feito: o motor bayesiano entrega o
+            # diferencial pronto, e a tarefa é escolher dentro dele e justificar
+            # em três frases. Não precisa deliberar, precisa responder.
+            thinking={"type": "disabled"},
         )
-        obj = _extrair_json(resposta.content[0].text)
+
+        # Nunca assumir que o primeiro bloco é texto: com pensamento ligado o
+        # primeiro é o bloco de thinking, e `content[0].text` lê o lugar errado
+        # (ou None). Procurar o bloco de texto explicitamente.
+        bruto = next(
+            (b.text for b in (resposta.content or [])
+             if getattr(b, "type", None) == "text" and getattr(b, "text", None)),
+            None,
+        )
+        if not bruto:
+            logger.warning(
+                "anamnese_ia: resposta sem texto (stop_reason=%s). Sem hipótese para este caso.",
+                getattr(resposta, "stop_reason", "?"),
+            )
+            return None
+
+        obj = _extrair_json(bruto)
         if not isinstance(obj, dict):
-            logger.warning("anamnese_ia: resposta sem JSON utilizável.")
+            logger.warning("anamnese_ia: resposta sem JSON utilizável: %r", bruto[:200])
             return None
 
         try:
