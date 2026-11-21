@@ -2470,7 +2470,14 @@ def registrar_sintoma_publico(request):
         # perde nada, porque ali ela não acrescentaria.
         from api.anamnese_ia import vale_chamar_ia
 
-        if vale_chamar_ia(diferencial):
+        _enviar_ia = vale_chamar_ia(diferencial)
+        # Registra a decisão: sem isto, campo vazio confundiria "dispensado de
+        # propósito" com "falhou" ou "não rodou", e quem analisasse depois não
+        # saberia que os casos com hipótese são só os ambíguos.
+        RegistroSintoma.objects.filter(pk=registro.pk).update(
+            hipotese_ia_dispensada=not _enviar_ia
+        )
+        if _enviar_ia:
             from api.tasks import run_async
             _rid_ia = registro.pk
             transaction.on_commit(

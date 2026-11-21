@@ -198,6 +198,17 @@ class RegistroSintoma(models.Model):
     hipotese_ia_raciocinio = models.TextField(null=True, blank=True)
     hipotese_ia_modelo     = models.CharField(max_length=60, null=True, blank=True)
     hipotese_ia_em         = models.DateTimeField(null=True, blank=True)
+    # Por que a IA não opinou neste caso. Sem isto, campo vazio significaria três
+    # coisas ao mesmo tempo — não rodou, foi dispensado de propósito, ou a IA
+    # falhou — e quem analisasse depois não saberia distinguir.
+    # True  = dispensado porque o motor decidiu com folga (economia deliberada)
+    # False = foi enviado à IA
+    # null  = anterior a este campo, ou a IA estava desligada
+    #
+    # Importante para quem for analisar: os casos COM hipótese são uma amostra
+    # ENVIESADA — só os ambíguos. Não dá para medir "com que frequência a IA
+    # discorda do motor" a partir deles sem contar os dispensados.
+    hipotese_ia_dispensada = models.BooleanField(null=True, blank=True)
 
     class Meta:
         indexes = [
