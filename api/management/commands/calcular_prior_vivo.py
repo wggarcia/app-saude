@@ -27,6 +27,20 @@ FATOR_MAX = 2.0
 PERIODOS_RECENTES = 4
 MIN_AMOSTRAS = 8  # abaixo disso não há série suficiente para afirmar nada
 
+# Volume a partir do qual a razão merece crédito total.
+#
+# Sem isto o método produz falso positivo em doença rara: a primeira execução
+# com dado real deu fator 2,00x para Hantavirose/RO indo de 0,1 para 0,2
+# notificação média — ruído de um caso a mais tratado como surto, e logo nas
+# doenças onde o alarme falso mais assusta.
+#
+# A correção é encolher o fator na direção de 1,0 conforme o volume cai
+# (shrinkage): com base de 40+ notificações o sinal vale integral; com 0,1 ele
+# praticamente desaparece. Não há degrau — uma série que cresce ganha crédito
+# proporcional ao que ela sustenta.
+VOLUME_CONFIANCA = 40.0
+VOLUME_MINIMO = 1.0  # abaixo disto nem registra: não há o que medir
+
 # O registro oficial e o classificador escrevem alguns nomes de formas
 # diferentes (acento, nome completo). Sem isto, o fator cairia num nome que o
 # prior não conhece e seria descartado silenciosamente.
@@ -108,8 +122,24 @@ class Command(BaseCommand):
                     sem_serie += 1
                     continue
 
-                fator = media_recente / media_base
-                fator = max(FATOR_MIN, min(fator, FATOR_MAX))
+                # Volume insuficiente: a razão seria ruído de um ou dois casos.
+                if max(media_base, media_recente) < VOLUME_MINIMO:
+                    sem_serie += 1
+                    continue
+
+                fator_bruto = media_recente / media_base
+                fator_bruto = max(FATOR_MIN, min(fator_bruto, FATOR_MAX))
+
+                # Encolhe na direção de 1,0 conforme o volume cai. É o que impede
+                # "0,1 virou 0,2" de valer o mesmo que "500 virou 1000".
+                peso = min(media_base / VOLUME_CONFIANCA, 1.0)
+                fator = 1.0 + (fator_bruto - 1.0) * peso
+
+                # Depois do encolhimento sobrou ruído: não vale ocupar linha nem
+                # ajustar prior nenhum.
+                if abs(fator - 1.0) < 0.02:
+                    sem_serie += 1
+                    continue
 
                 linhas.append((doenca, uf, fator, media_recente, media_base, len(base)))
 
