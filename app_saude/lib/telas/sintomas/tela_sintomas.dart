@@ -163,7 +163,7 @@ const _perguntas = [
   _PerguntaSintoma(
     key: 'exantema_vesicular',
     pergunta: 'As manchas na pele têm bolhinhas com líquido?',
-    dica: 'Vesículas pruriginosas — bolinhas transparentes que coçam muito',
+    dica: 'Bolinhas com líquido na pele — podem doer ou coçar',
     emoji: '💧',
   ),
   _PerguntaSintoma(
@@ -586,6 +586,10 @@ class _TelaSintomasState extends State<TelaSintomas> {
         contatoConfirmado: _contatoConfirmado,
         vacinadoFebreAmarela: _vacinadoFebreAmarela,
         temComorbidade: _temComorbidade,
+        temDiabetes: _temDiabetes,
+        temHipertensao: _temHipertensao,
+        temDoencaPulmonar: _temDoencaPulmonar,
+        temImunossupressao: _temImunossupressao,
         exposicaoCarrapato: _exposicaoCarrapato,
         exposicaoTriatomideo: _exposicaoTriatomideo,
       );

@@ -145,7 +145,13 @@ class RegistroSintoma(models.Model):
     contato_roedores        = models.BooleanField(null=True, blank=True)
     contato_caso_confirmado = models.BooleanField(null=True, blank=True)
     vacinado_febre_amarela  = models.BooleanField(null=True, blank=True)
-    tem_comorbidade         = models.BooleanField(null=True, blank=True)
+    tem_comorbidade         = models.BooleanField(null=True, blank=True)  # OR das 4 abaixo — mantido p/ retrocompat
+    # Comorbidades granulares (Fase 0) — coletadas no app, antes colapsadas no OR acima.
+    # Preservam a informação clínica individual (ex.: imunossupressão muda conduta de Mpox/sarampo).
+    tem_diabetes            = models.BooleanField(null=True, blank=True)
+    tem_hipertensao         = models.BooleanField(null=True, blank=True)
+    tem_doenca_pulmonar     = models.BooleanField(null=True, blank=True)
+    tem_imunossupressao     = models.BooleanField(null=True, blank=True)
     exposicao_carrapato     = models.BooleanField(null=True, blank=True)  # contato carrapato → febre maculosa
     exposicao_triatomideo   = models.BooleanField(null=True, blank=True)  # contato barbeiro → doença de chagas
 
@@ -173,6 +179,16 @@ class RegistroSintoma(models.Model):
     validade_epidemiologica = models.CharField(max_length=60, default="sinal_colaborativo")
     fonte_referencia = models.CharField(max_length=160, null=True, blank=True)
     revisado = models.BooleanField(default=False)
+
+    # ── Fase 1 — hipótese do cérebro LLM (ADITIVA) ────────────────────────────
+    # NÃO substitui `grupo`/`classificacao` (que os painéis do gestor agregam).
+    # Preenchida em background pela fila RQ; null = IA não rodou ou indisponível.
+    hipotese_ia            = models.CharField(max_length=80, null=True, blank=True)
+    hipotese_ia_confianca  = models.IntegerField(null=True, blank=True)
+    hipotese_ia_concorda   = models.BooleanField(null=True, blank=True)  # concorda com o motor?
+    hipotese_ia_raciocinio = models.TextField(null=True, blank=True)
+    hipotese_ia_modelo     = models.CharField(max_length=60, null=True, blank=True)
+    hipotese_ia_em         = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [

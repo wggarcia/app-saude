@@ -145,6 +145,11 @@ class PublicApiService {
     bool? contatoConfirmado,
     bool? vacinadoFebreAmarela,
     bool? temComorbidade,
+    // Fase 0 — comorbidades granulares (preservadas individualmente)
+    bool? temDiabetes,
+    bool? temHipertensao,
+    bool? temDoencaPulmonar,
+    bool? temImunossupressao,
     // Phase 2 — novos campos de anamnese
     bool? exposicaoCarrapato,
     bool? exposicaoTriatomideo,
@@ -199,6 +204,11 @@ class PublicApiService {
     if (contatoConfirmado != null) body['contato_caso_confirmado'] = contatoConfirmado;
     if (vacinadoFebreAmarela != null) body['vacinado_febre_amarela'] = vacinadoFebreAmarela;
     if (temComorbidade != null) body['tem_comorbidade'] = temComorbidade;
+    // Fase 0 — comorbidades granulares
+    if (temDiabetes != null) body['tem_diabetes'] = temDiabetes;
+    if (temHipertensao != null) body['tem_hipertensao'] = temHipertensao;
+    if (temDoencaPulmonar != null) body['tem_doenca_pulmonar'] = temDoencaPulmonar;
+    if (temImunossupressao != null) body['tem_imunossupressao'] = temImunossupressao;
     // Phase 2
     if (exposicaoCarrapato != null) body['exposicao_carrapato'] = exposicaoCarrapato;
     if (exposicaoTriatomideo != null) body['exposicao_triatomideo'] = exposicaoTriatomideo;

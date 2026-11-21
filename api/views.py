@@ -2233,6 +2233,11 @@ def registrar_sintoma(request):
         contato_caso_confirmado=dados.get("contato_caso_confirmado"),
         vacinado_febre_amarela=dados.get("vacinado_febre_amarela"),
         tem_comorbidade=dados.get("tem_comorbidade"),
+        # Comorbidades granulares (Fase 0) — preservadas individualmente.
+        tem_diabetes=dados.get("tem_diabetes"),
+        tem_hipertensao=dados.get("tem_hipertensao"),
+        tem_doenca_pulmonar=dados.get("tem_doenca_pulmonar"),
+        tem_imunossupressao=dados.get("tem_imunossupressao"),
         exposicao_carrapato=dados.get("exposicao_carrapato"),
         exposicao_triatomideo=dados.get("exposicao_triatomideo"),
         latitude=latitude,
@@ -2414,6 +2419,11 @@ def registrar_sintoma_publico(request):
         contato_caso_confirmado=dados.get("contato_caso_confirmado"),
         vacinado_febre_amarela=dados.get("vacinado_febre_amarela"),
         tem_comorbidade=dados.get("tem_comorbidade"),
+        # Comorbidades granulares (Fase 0) — preservadas individualmente.
+        tem_diabetes=dados.get("tem_diabetes"),
+        tem_hipertensao=dados.get("tem_hipertensao"),
+        tem_doenca_pulmonar=dados.get("tem_doenca_pulmonar"),
+        tem_imunossupressao=dados.get("tem_imunossupressao"),
         exposicao_carrapato=dados.get("exposicao_carrapato"),
         exposicao_triatomideo=dados.get("exposicao_triatomideo"),
         latitude=latitude,
@@ -2443,6 +2453,18 @@ def registrar_sintoma_publico(request):
         _rid = registro.pk
         transaction.on_commit(
             lambda: run_async("api.utils_geo.refinar_geo_registro", _rid)
+        )
+
+    # Fase 1 — cérebro LLM (ADITIVO): reavalia o quadro em BACKGROUND e grava a
+    # hipótese nos campos `hipotese_ia*`. Não altera `grupo`/`classificacao`, não
+    # entra na resposta abaixo e não bloqueia o envio: a resposta ao cidadão
+    # continua vindo do classificador determinístico. Se a IA estiver fora, o
+    # registro simplesmente fica sem hipótese_ia (fail-open).
+    if not simulacao_autorizada:
+        from api.tasks import run_async
+        _rid_ia = registro.pk
+        transaction.on_commit(
+            lambda: run_async("api.anamnese_ia.refinar_hipotese_ia", _rid_ia)
         )
 
     return JsonResponse({
