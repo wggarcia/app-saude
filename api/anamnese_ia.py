@@ -75,11 +75,60 @@ CONFIANCA_DISPENSA_IA = 52     # abaixo disto o motor está perdido: manda ver
 RAZAO_DISPUTA = 0.80           # 2º a 80%+ do 1º: disputa real, vale a chamada
 
 
+# Doenças em que ERRAR CUSTA CARO, mesmo quando o motor não as põe em primeiro.
+#
+# Vieram de um teste real que reprovou o portão: um caso com lesão vesicular
+# trouxe Gripe > COVID > Mpox, e a disputa entre 1º e 2º (0,499) ficou abaixo do
+# limiar — então a IA foi dispensada e ninguém olhou o Mpox, que estava em 3º
+# com 38% da pontuação do líder. Economizei US$ 0,0002 e descartei exatamente o
+# caso que motivou este sistema.
+#
+# O erro de desenho era tratar "vale chamar a IA?" como questão de EMPATE. Em
+# saúde é questão de CONSEQUÊNCIA: gripe contra COVID empatados importam pouco,
+# porque a conduta é parecida; Mpox em terceiro importa muito, porque é
+# notificação compulsória e muda isolamento e rastreio de contatos.
+#
+# Lista: notificação compulsória e/ou alta letalidade. Fora dela ficam as
+# comuns de fundo (gripe, resfriado, COVID, viroses), cuja presença não
+# qualifica caso nenhum como digno de atenção extra.
+DOENCAS_SENTINELA = {
+    "Mpox", "Sarampo", "Meningite", "Febre Amarela", "Febre Maculosa",
+    "Hantavirose", "Difteria", "Coqueluche", "Tuberculose", "Leptospirose",
+    "Malaria", "Raiva Humana", "Cólera", "Peste", "Febre Tifoide",
+    "Leishmaniose Visceral", "Hanseníase", "Doença de Chagas",
+}
+
+# Piso para a sentinela contar: abaixo disto é ruído de cauda, não hipótese.
+PARTICIPACAO_SENTINELA = 0.20
+
+
+def _tem_sentinela_relevante(diferencial) -> bool:
+    """Alguma doença de alta consequência aparece com peso real no diferencial?"""
+    try:
+        score_lider = diferencial[0].get("score") or 0
+        if score_lider <= 0:
+            return False
+        for item in diferencial:
+            if item.get("doenca") in DOENCAS_SENTINELA:
+                if (item.get("score") or 0) / score_lider >= PARTICIPACAO_SENTINELA:
+                    return True
+    except (AttributeError, IndexError, TypeError):
+        return False
+    return False
+
+
 def vale_chamar_ia(diferencial) -> bool:
     """Decide se o caso merece uma chamada paga.
 
-    Chama quando o motor está inseguro (confiança baixa) ou quando o 2º lugar
-    está colado no 1º. Caso contrário, o motor já respondeu.
+    Três portas, nesta ordem de importância:
+      1. Alguma doença de alta consequência (DOENCAS_SENTINELA) aparece com
+         peso real — chama, por mais isolado que esteja o líder.
+      2. O motor está inseguro (confiança baixa) — chama.
+      3. O 2º está colado no 1º — chama.
+
+    A primeira existe porque as outras duas, sozinhas, descartaram um caso com
+    lesão vesicular e Mpox em terceiro. Empate não é o que define relevância
+    clínica; consequência é.
 
     Na dúvida (diferencial ausente ou malformado), chama — perder um caso
     ambíguo é pior que gastar uma fração de centavo.
@@ -89,6 +138,10 @@ def vale_chamar_ia(diferencial) -> bool:
 
     primeiro = diferencial[0]
     if not isinstance(primeiro, dict):
+        return True
+
+    # Porta 1 — consequência antes de empate.
+    if _tem_sentinela_relevante(diferencial):
         return True
 
     confianca = primeiro.get("confianca") or 0
