@@ -2465,11 +2465,17 @@ def registrar_sintoma_publico(request):
     # Interruptor: desligado por padrão (settings.ANAMNESE_IA_ATIVA). Com ele
     # off nem enfileira — custo zero, nenhuma chamada paga.
     if not simulacao_autorizada and getattr(settings, "ANAMNESE_IA_ATIVA", False):
-        from api.tasks import run_async
-        _rid_ia = registro.pk
-        transaction.on_commit(
-            lambda: run_async("api.anamnese_ia.refinar_hipotese_ia", _rid_ia)
-        )
+        # Só enfileira o que vale a chamada paga: casos onde o motor ficou em
+        # dúvida. Quadro decidido com folga não vai para a IA — economiza e não
+        # perde nada, porque ali ela não acrescentaria.
+        from api.anamnese_ia import vale_chamar_ia
+
+        if vale_chamar_ia(diferencial):
+            from api.tasks import run_async
+            _rid_ia = registro.pk
+            transaction.on_commit(
+                lambda: run_async("api.anamnese_ia.refinar_hipotese_ia", _rid_ia)
+            )
 
     return JsonResponse({
         "status": "ok",

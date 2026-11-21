@@ -32,9 +32,59 @@ from django.utils import timezone
 
 logger = logging.getLogger("api")
 
-# Modelo forte para o raciocínio clínico (Haiku fica para tarefas de extração).
-MODELO_RACIOCINIO = "claude-sonnet-5-5"
-MAX_TOKENS = 700
+# Modelo, por setting — para trocar sem deploy e medir Haiku contra Sonnet nos
+# seus próprios casos. Haiku 5.5 é ~20x mais barato ($0,10/$0,50 contra $2/$10);
+# a tarefa aqui é escolher dentro de uma lista fechada que o motor já ranqueou,
+# não redigir parecer, então ele tem boa chance de dar conta. Medir antes de
+# confiar: ANAMNESE_IA_MODELO=claude-haiku-5-5 no .env.
+MODELO_RACIOCINIO = getattr(settings, "ANAMNESE_IA_MODELO", "") or "claude-sonnet-5-5"
+
+# Saída curta: a hipótese é uma palavra, a justificativa são 2-3 frases. 700
+# sobrava e saída custa 5x a entrada.
+MAX_TOKENS = 350
+
+# ── Quando NÃO vale chamar a IA ───────────────────────────────────────────────
+# A maior economia não é o modelo: é não chamar. Num quadro onde o motor já
+# decidiu com folga (febre + tosse + coriza → resfriado disparado), a IA custa e
+# não acrescenta. Ela ganha o pão onde o motor fica em dúvida — que é o caso do
+# registro 168882: Gripe 63 contra Mpox 60, quase empate, e a segunda hipótese
+# mudava a conduta.
+#
+# Com estes limiares, só a minoria ambígua é enviada. É também a decisão
+# clinicamente correta, não só a barata.
+CONFIANCA_DISPENSA_IA = 70     # motor acima disto e isolado: resolve sozinho
+RAZAO_DISPUTA = 0.60           # 2º/1º acima disto: disputa real, vale a IA
+
+
+def vale_chamar_ia(diferencial) -> bool:
+    """Decide se o caso merece uma chamada paga.
+
+    Chama quando o motor está inseguro (confiança baixa) ou quando o 2º lugar
+    está colado no 1º. Caso contrário, o motor já respondeu.
+
+    Na dúvida (diferencial ausente ou malformado), chama — perder um caso
+    ambíguo é pior que gastar uma fração de centavo.
+    """
+    if not isinstance(diferencial, list) or not diferencial:
+        return True
+
+    primeiro = diferencial[0]
+    if not isinstance(primeiro, dict):
+        return True
+
+    confianca = primeiro.get("confianca") or 0
+    if confianca < CONFIANCA_DISPENSA_IA:
+        return True
+
+    if len(diferencial) < 2 or not isinstance(diferencial[1], dict):
+        return False  # líder confiante e sem concorrente
+
+    score_1 = primeiro.get("score") or 0
+    score_2 = diferencial[1].get("score") or 0
+    if score_1 <= 0:
+        return True
+
+    return (score_2 / score_1) >= RAZAO_DISPUTA
 
 # Comorbidades granulares da Fase 0 — não estão em CAMPOS_ANAMNESE.
 _COMORBIDADES = ("tem_diabetes", "tem_hipertensao", "tem_doenca_pulmonar", "tem_imunossupressao")

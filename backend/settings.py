@@ -61,6 +61,12 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 # Para ligar: ANAMNESE_IA_ATIVA=true no .env + restart do serviço.
 ANAMNESE_IA_ATIVA = env_bool("ANAMNESE_IA_ATIVA", default=False)
 
+# Modelo do cérebro, trocável sem deploy — para medir custo contra qualidade nos
+# seus próprios casos. `claude-haiku-5-5` custa ~20x menos que o Sonnet ($0,10/
+# $0,50 contra $2/$10) e a tarefa é escolher dentro de uma lista fechada que o
+# motor já ranqueou, não redigir parecer. Testar antes de adotar.
+ANAMNESE_IA_MODELO = os.environ.get("ANAMNESE_IA_MODELO", "")
+
 # ── Assinatura digital ICP-Brasil ─────────────────────────────────────────────
 # ATENÇÃO: em SaaS multi-tenant a assinatura NÃO se configura aqui.
 # Prescrição é ato médico: quem assina é o MÉDICO (pessoa física, e-CPF
