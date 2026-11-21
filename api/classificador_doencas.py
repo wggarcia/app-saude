@@ -1159,7 +1159,11 @@ SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     # Novas doenças expandidas
     "Bronquite / DPOC Agudização": ["tosse"],  # nome completo (bate com DOENCAS_BRASIL); sem tosse não é bronquite
     "Tuberculose":    ["tosse"],           # TB pulmonar sem tosse é rara no cidadão sintomático
-    "Varicela":       ["exantema"],        # sem exantema, não é varicela
+    # Vesícula É o sinal que define a varicela. A regra antiga exigia só
+    # "exantema" (manchas), então quem respondia "Sim" para bolhinhas e "Não"
+    # para manchas tinha a varicela ZERADA — a doença mais comum do quadro
+    # vesicular não podia ser levantada a partir do seu próprio sinal.
+    "Varicela":       ["exantema", "exantema_vesicular"],
     "Mpox":           ["exantema_vesicular", "febre"],  # tríade: vesículas + febre + contato
     "Febre Maculosa": ["febre", "exantema"],  # tríade: febre+exantema+mialgia — precisa de ≥1
     "Coqueluche":     ["tosse"],           # tosse paroxística é obrigatória
@@ -1623,18 +1627,52 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
                       "Febre Maculosa", "Chikungunya", "Zika", "Malaria"):
             return min(prior, 0.05)
 
-    # ── Varicela / Mpox — exantema vesicular: diferenciação pela exposição ────
+    # ── Varicela / Mpox — exantema vesicular ─────────────────────────────────
+    # Antes aqui só havia exposição (contato confirmado), e o prior decidia o
+    # resto: varicela 0,80 contra Mpox 0,25, porque varicela é mais comum. Era
+    # o prior vencendo a clínica — um caso com lesão dolorosa no rosto e íngua
+    # ainda saía varicela.
+    #
+    # Com as perguntas de desempate, a EVIDÊNCIA decide. Cada achado move o
+    # prior na direção que a literatura sustenta, e os achados se somam:
+    # três apontando Mpox pesam mais que um.
     if dados.get("exantema_vesicular"):
-        if doenca == "Varicela":
-            # Sem contato confirmado: Varicela domina (muito mais comum que Mpox)
-            mpox_contato = dados.get("contato_caso_confirmado") and dados.get("febre")
-            return max(prior, 0.50 if mpox_contato else 0.80)
+        # Sinais que separam. None = não perguntado, e não conta para nenhum
+        # lado — nunca tratar ausência de resposta como resposta.
+        _pro_mpox = sum(1 for c in ("vesicula_dolorosa", "linfonodo_aumentado",
+                                    "lesao_face_palmas")
+                        if dados.get(c) is True)
+        _contra_mpox = sum(1 for c in ("vesicula_dolorosa", "linfonodo_aumentado",
+                                       "lesao_face_palmas")
+                           if dados.get(c) is False)
+        _pro_varicela = 1 if dados.get("vesiculas_estagios_variados") is True else 0
+        _perguntou = (_pro_mpox + _contra_mpox + _pro_varicela) > 0
+
         if doenca == "Mpox":
-            # Vesículas + contato direto: Mpox considerado clinicamente
+            if _pro_mpox >= 2:
+                # Dois ou mais achados característicos: a clínica fala mais alto
+                # que a raridade da doença.
+                return max(prior, 0.75)
+            if _pro_mpox == 1:
+                return max(prior, 0.45)
+            if _contra_mpox >= 2 or _pro_varicela:
+                # Negado onde deveria estar presente: afasta de verdade.
+                return min(prior, 0.05)
+            # Ninguém perguntou — volta ao critério antigo, por exposição.
             if dados.get("contato_caso_confirmado") and dados.get("febre"):
                 return max(prior, 0.55)
-            elif dados.get("febre") and dados.get("dor_corpo"):
-                return max(prior, 0.25)  # febre antes das vesículas aponta para Mpox
+            if dados.get("febre") and dados.get("dor_corpo"):
+                return max(prior, 0.25)
+
+        if doenca == "Varicela":
+            if _pro_mpox >= 2:
+                return min(prior, 0.20)   # os achados apontam para o outro lado
+            if _pro_varicela or _contra_mpox >= 2:
+                return max(prior, 0.85)
+            if _perguntou:
+                return max(prior, 0.55)
+            mpox_contato = dados.get("contato_caso_confirmado") and dados.get("febre")
+            return max(prior, 0.50 if mpox_contato else 0.80)
         # Vesículas com líquido tornam outras arboviroses muito menos prováveis
         if doenca in ("Dengue", "Chikungunya", "Zika"):
             return min(prior, 0.10)

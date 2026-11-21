@@ -128,6 +128,17 @@ class RegistroSintoma(models.Model):
     ulcera_cutanea     = models.BooleanField(default=False)  # úlcera de Bauru → leishmaniose tegumentar
     mancha_anestesia   = models.BooleanField(default=False)  # mancha insensível ao toque → hanseníase
 
+    # ── Desempate das vesículas (varicela × Mpox) ─────────────────────────────
+    # O sintoma "bolhinhas com líquido" sozinho não separa as duas, e o prior
+    # resolvia a favor da comum. Estes quatro campos movem a decisão para a
+    # evidência. Nulável de propósito: null = não foi perguntado (build antiga
+    # do app), que é diferente de "não" — mesmo erro das comorbidades, que
+    # viravam um único booleano e apagavam a imunossupressão.
+    vesicula_dolorosa          = models.BooleanField(null=True, blank=True)  # dói mais que coça → Mpox
+    linfonodo_aumentado        = models.BooleanField(null=True, blank=True)  # íngua → Mpox
+    lesao_face_palmas          = models.BooleanField(null=True, blank=True)  # início no rosto / palmas e plantas → Mpox
+    vesiculas_estagios_variados = models.BooleanField(null=True, blank=True)  # fases diferentes juntas → Varicela
+
     # Intensidade da febre (escala: None, baixa<38.5, moderada 38.5-39.5, alta>39.5)
     intensidade_febre = models.CharField(max_length=10, blank=True, default="",
         choices=[("", "Não informado"), ("baixa", "Baixa"), ("moderada", "Moderada"), ("alta", "Alta")])

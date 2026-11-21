@@ -2238,6 +2238,12 @@ def registrar_sintoma(request):
         tem_hipertensao=dados.get("tem_hipertensao"),
         tem_doenca_pulmonar=dados.get("tem_doenca_pulmonar"),
         tem_imunossupressao=dados.get("tem_imunossupressao"),
+        # Desempate das vesículas (varicela × Mpox). Nulável: ausente = não
+        # perguntado (app antigo), que não é o mesmo que "não".
+        vesicula_dolorosa=dados.get("vesicula_dolorosa"),
+        linfonodo_aumentado=dados.get("linfonodo_aumentado"),
+        lesao_face_palmas=dados.get("lesao_face_palmas"),
+        vesiculas_estagios_variados=dados.get("vesiculas_estagios_variados"),
         exposicao_carrapato=dados.get("exposicao_carrapato"),
         exposicao_triatomideo=dados.get("exposicao_triatomideo"),
         latitude=latitude,
@@ -2425,6 +2431,12 @@ def registrar_sintoma_publico(request):
         tem_hipertensao=dados.get("tem_hipertensao"),
         tem_doenca_pulmonar=dados.get("tem_doenca_pulmonar"),
         tem_imunossupressao=dados.get("tem_imunossupressao"),
+        # Desempate das vesículas (varicela × Mpox). Nulável: ausente = não
+        # perguntado (app antigo), que não é o mesmo que "não".
+        vesicula_dolorosa=dados.get("vesicula_dolorosa"),
+        linfonodo_aumentado=dados.get("linfonodo_aumentado"),
+        lesao_face_palmas=dados.get("lesao_face_palmas"),
+        vesiculas_estagios_variados=dados.get("vesiculas_estagios_variados"),
         exposicao_carrapato=dados.get("exposicao_carrapato"),
         exposicao_triatomideo=dados.get("exposicao_triatomideo"),
         latitude=latitude,
