@@ -131,6 +131,10 @@ class PublicApiService {
 
   static Future<Map<String, dynamic>> enviarSintomas({
     required Map<String, bool> sintomas,
+    // Respostas de desempate (ex.: dói/coça, íngua). Só vai o que foi
+    // perguntado — ausente vira null no backend, que é "não perguntado" e não
+    // "não".
+    Map<String, bool> desempate = const {},
     required double latitude,
     required double longitude,
     String locationSource = 'current',
@@ -204,6 +208,8 @@ class PublicApiService {
     if (contatoConfirmado != null) body['contato_caso_confirmado'] = contatoConfirmado;
     if (vacinadoFebreAmarela != null) body['vacinado_febre_amarela'] = vacinadoFebreAmarela;
     if (temComorbidade != null) body['tem_comorbidade'] = temComorbidade;
+    // Desempate: envia só as que foram respondidas.
+    desempate.forEach((chave, valor) => body[chave] = valor);
     // Fase 0 — comorbidades granulares
     if (temDiabetes != null) body['tem_diabetes'] = temDiabetes;
     if (temHipertensao != null) body['tem_hipertensao'] = temHipertensao;

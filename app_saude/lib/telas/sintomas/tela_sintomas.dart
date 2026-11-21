@@ -15,6 +15,7 @@ class _PerguntaSintoma {
     this.emoji = '',
     this.isUrgencia = false,
     this.followup, // 'febre' | 'articular'
+    this.condicionalDe, // só aparece se este sintoma foi respondido "Sim"
   });
   final String key;
   final String pergunta;
@@ -22,6 +23,11 @@ class _PerguntaSintoma {
   final String emoji;
   final bool isUrgencia;
   final String? followup;
+
+  // Perguntas de desempate: só fazem sentido se a "porta" foi aberta. Quem não
+  // tem bolhinhas nunca vê pergunta sobre bolhinhas — o formulário fica mais
+  // fundo sem ficar mais longo.
+  final String? condicionalDe;
 }
 
 // ─── Perguntas de sintomas — ordem clínica neutra, sem nome de doença ────────
@@ -165,6 +171,35 @@ const _perguntas = [
     pergunta: 'As manchas na pele têm bolhinhas com líquido?',
     dica: 'Bolinhas com líquido na pele — podem doer ou coçar',
     emoji: '💧',
+  ),
+  // ── Desempate: varicela × Mpox (só aparece se marcou bolhinhas) ──────────
+  _PerguntaSintoma(
+    key: 'vesicula_dolorosa',
+    pergunta: 'As bolhinhas doem mais do que coçam?',
+    dica: 'Pense no que incomoda mais: a dor ou a coceira',
+    emoji: '😖',
+    condicionalDe: 'exantema_vesicular',
+  ),
+  _PerguntaSintoma(
+    key: 'linfonodo_aumentado',
+    pergunta: 'Tem íngua — caroço no pescoço, axila ou virilha?',
+    dica: 'Caroço que dói ao apertar, do tamanho de um grão de feijão ou maior',
+    emoji: '🔘',
+    condicionalDe: 'exantema_vesicular',
+  ),
+  _PerguntaSintoma(
+    key: 'lesao_face_palmas',
+    pergunta: 'Começou no rosto, ou apareceu nas palmas das mãos ou plantas dos pés?',
+    dica: 'Onde surgiram as primeiras bolhinhas',
+    emoji: '🤲',
+    condicionalDe: 'exantema_vesicular',
+  ),
+  _PerguntaSintoma(
+    key: 'vesiculas_estagios_variados',
+    pergunta: 'Há bolhinhas novas e feridas já com casquinha ao mesmo tempo?',
+    dica: 'Umas acabando de surgir enquanto outras já secaram',
+    emoji: '🫧',
+    condicionalDe: 'exantema_vesicular',
   ),
   _PerguntaSintoma(
     key: 'perda_peso',
@@ -343,12 +378,36 @@ class _TelaSintomasState extends State<TelaSintomas> {
   Duration? _cooldown;
 
   // ── Totais ──
+  // Respostas de desempate ficam FORA de _sintomas: não são sintomas, são
+  // qualificadores. E só o que foi perguntado entra aqui — o que não entrar vai
+  // ausente para o backend, onde null significa "não perguntado", diferente de
+  // "não". Foi o erro das comorbidades, que viravam um único booleano.
+  final Map<String, bool> _desempate = {};
+
+  bool _perguntaVisivel(_PerguntaSintoma p) =>
+      p.condicionalDe == null || (_sintomas[p.condicionalDe] ?? false);
+
   int get _totalSintomas => _sintomas.values.where((v) => v).length;
 
   // ── Progresso global ──
   int get _progressoAtual =>
-      _fase == 0 ? _index : (_perguntas.length + _index);
-  int get _progressoTotal => _perguntas.length + _anamneseItems.length;
+      _fase == 0
+          ? _perguntas.take(_index).where(_perguntaVisivel).length
+          : (_perguntasVisiveis + _index);
+
+  int get _perguntasVisiveis => _perguntas.where(_perguntaVisivel).length;
+
+  // Total conta só o que ESTA pessoa vai ver. Mostrar "1 de 42" para quem vai
+  // responder 38 desanima no meio do caminho, e o número muda sozinho quando
+  // uma porta abre — que é honesto: a entrevista realmente ficou maior.
+  int get _progressoTotal => _perguntasVisiveis + _anamneseItems.length;
+
+  int _ultimaPerguntaVisivel() {
+    for (var i = _perguntas.length - 1; i >= 0; i--) {
+      if (_perguntaVisivel(_perguntas[i])) return i;
+    }
+    return 0;
+  }
 
   // ── Limpar tudo ──
   void _limparTudo() {
@@ -356,6 +415,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
       for (final key in _sintomas.keys) {
         _sintomas[key] = false;
       }
+      _desempate.clear();
       _intensidadeFebre = null;
       _intensidadeArticular = null;
       _diasSintomas = null;
@@ -384,8 +444,14 @@ class _TelaSintomasState extends State<TelaSintomas> {
     setState(() {
       _followupAtivo = null;
       if (_fase == 0) {
-        if (_index < _perguntas.length - 1) {
-          _index++;
+        // Pula o que a porta não abriu (ex.: perguntas de bolhinhas para quem
+        // não tem bolhinhas).
+        var prox = _index + 1;
+        while (prox < _perguntas.length && !_perguntaVisivel(_perguntas[prox])) {
+          prox++;
+        }
+        if (prox < _perguntas.length) {
+          _index = prox;
         } else {
           _fase = 1;
           _index = 0;
@@ -410,11 +476,19 @@ class _TelaSintomasState extends State<TelaSintomas> {
         _index = _anamneseItems.length - 1;
         return;
       }
-      if (_index > 0) {
+      if (_fase == 0) {
+        // Volta pulando o que a porta não abriu — senão o usuário cai numa
+        // pergunta que nem deveria ver e fica preso nela.
+        var ant = _index - 1;
+        while (ant >= 0 && !_perguntaVisivel(_perguntas[ant])) {
+          ant--;
+        }
+        if (ant >= 0) _index = ant;
+      } else if (_index > 0) {
         _index--;
-      } else if (_fase == 1) {
+      } else {
         _fase = 0;
-        _index = _perguntas.length - 1;
+        _index = _ultimaPerguntaVisivel();
       }
     });
   }
@@ -422,7 +496,11 @@ class _TelaSintomasState extends State<TelaSintomas> {
   // ── Responder sintoma (Sim/Não) ──
   void _responderSintoma(bool valor) async {
     final pergunta = _perguntas[_index];
-    _sintomas[pergunta.key] = valor;
+    if (pergunta.condicionalDe != null) {
+      _desempate[pergunta.key] = valor;
+    } else {
+      _sintomas[pergunta.key] = valor;
+    }
 
     // Sintoma de urgência com Sim → mostrar alerta antes de continuar
     if (valor && pergunta.isUrgencia) {
@@ -573,6 +651,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
 
       final result = await PublicApiService.enviarSintomas(
         sintomas: Map<String, bool>.from(_sintomas),
+        desempate: Map<String, bool>.from(_desempate),
         latitude: location.latitude,
         longitude: location.longitude,
         locationSource: location.source,
