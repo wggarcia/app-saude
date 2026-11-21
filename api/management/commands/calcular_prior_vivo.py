@@ -23,9 +23,21 @@ from django.core.management.base import BaseCommand
 FATOR_MIN = 0.5
 FATOR_MAX = 2.0
 
+# Atraso de notificação: as últimas semanas do SINAN estão SEMPRE incompletas,
+# porque os casos ainda não foram digitados. Lidas como se fossem reais, viram
+# uma queda que não existe.
+#
+# A segunda execução com dado real mostrou o estrago: Dengue/RJ aparecia caindo
+# de 464 para 1,2 notificações médias e levava o fator mínimo de 0,5x — a dengue
+# seria rebaixada pela metade em quase todo o Brasil, por causa de digitação
+# atrasada. Falso negativo, e justamente na doença que mais mata aqui.
+#
+# Por isso a cauda é descartada inteira, e o "agora" é medido antes dela.
+PERIODOS_DESCARTADOS = 4
+
 # Períodos recentes que formam o "agora"; o resto da série é a linha de base.
 PERIODOS_RECENTES = 4
-MIN_AMOSTRAS = 8  # abaixo disso não há série suficiente para afirmar nada
+MIN_AMOSTRAS = 12  # cauda descartada + janela recente + base mínima
 
 # Volume a partir do qual a razão merece crédito total.
 #
@@ -110,6 +122,13 @@ class Command(BaseCommand):
                     continue
 
                 periodos = sorted(por_periodo)  # "2026-S21" ordena bem lexicograficamente
+
+                # Fora a cauda incompleta — ela não representa o que aconteceu.
+                periodos = periodos[:-PERIODOS_DESCARTADOS]
+                if len(periodos) < PERIODOS_RECENTES + 4:
+                    sem_serie += 1
+                    continue
+
                 recentes = [por_periodo[p] for p in periodos[-PERIODOS_RECENTES:]]
                 base = [por_periodo[p] for p in periodos[:-PERIODOS_RECENTES]]
                 if not base:
