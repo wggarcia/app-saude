@@ -1321,6 +1321,14 @@ CAMPOS_ANAMNESE = [
     "vacinado_febre_amarela", "tem_comorbidade",
     # Phase 2
     "exposicao_carrapato", "exposicao_triatomideo",
+    # Desempate vesicular (Varicela × Mpox). Entram aqui, e não em
+    # TODOS_SINTOMAS, porque TODOS_SINTOMAS faz bool() e achataria null em
+    # False — e aqui null ("não foi perguntado") é diferente de "não".
+    # Sem estes campos a reconstrução perde os discriminadores e o motor
+    # recai no prior: o registro 168884 saiu Mpox 0.772 no envio e virava
+    # Varicela 0.864 ao ser reconstruído no worker da IA.
+    "vesicula_dolorosa", "linfonodo_aumentado",
+    "lesao_face_palmas", "vesiculas_estagios_variados",
 ]
 
 

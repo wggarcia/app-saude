@@ -182,6 +182,14 @@ _ROTULOS = {
     "exposicao_carrapato": "contato com carrapato",
     "exposicao_triatomideo": "contato com barbeiro (triatomíneo)",
     "inicio_abrupto": "início abrupto dos sintomas",
+    # Desempate vesicular. Sem estes rótulos o modelo não enxerga as
+    # respostas e reclama do que lhe foi informado: no registro 168884 a
+    # pessoa respondeu que TEM íngua e o modelo escreveu "linfadenopatia...
+    # não relatada" para justificar Varicela.
+    "vesicula_dolorosa": "lesão vesicular que dói mais do que coça",
+    "linfonodo_aumentado": "linfonodo aumentado (íngua) em pescoço, axila ou virilha",
+    "lesao_face_palmas": "lesões iniciadas na face ou acometendo palmas/plantas",
+    "vesiculas_estagios_variados": "vesículas em estágios simultâneos diferentes",
 }
 
 
@@ -344,25 +352,40 @@ def avaliar(dados: dict[str, Any], ranking: list[dict], conhecidas: set[str]) ->
         import anthropic
 
         client = anthropic.Anthropic(api_key=api_key)
-        resposta = client.messages.create(
-            model=MODELO_RACIOCINIO,
-            max_tokens=MAX_TOKENS,
-            system=_system_prompt(),
-            messages=[{"role": "user", "content": conteudo}],
-            # Pensamento desligado de propósito. Os modelos atuais pensam por
-            # padrão, e os tokens de pensamento saem do MESMO orçamento do
-            # max_tokens — no primeiro teste real o Haiku gastou os 350 inteiros
-            # pensando, parou em stop_reason=max_tokens e não escreveu uma linha.
-            # Aqui o raciocínio pesado já foi feito: o motor bayesiano entrega o
-            # diferencial pronto, e a tarefa é escolher dentro dele e justificar
-            # em três frases. Não precisa deliberar, precisa responder.
-            #
-            # Vai por extra_body porque o SDK fixado no projeto (anthropic
-            # 0.40.0) não conhece o parâmetro `thinking` e rejeita de cara —
-            # assim o campo chega à API sem exigir upgrade do SDK, que mexeria
-            # com os outros onze serviços de uma vez.
-            extra_body={"thinking": {"type": "disabled"}},
-        )
+
+        # Pensamento desligado de propósito. Os modelos atuais pensam por
+        # padrão, e os tokens de pensamento saem do MESMO orçamento do
+        # max_tokens — no primeiro teste real o Haiku gastou os 350 inteiros
+        # pensando, parou em stop_reason=max_tokens e não escreveu uma linha.
+        # Aqui o raciocínio pesado já foi feito: o motor bayesiano entrega o
+        # diferencial pronto, e a tarefa é escolher dentro dele e justificar
+        # em três frases. Não precisa deliberar, precisa responder.
+        #
+        # Vai por extra_body porque o SDK fixado no projeto (anthropic
+        # 0.40.0) não conhece o parâmetro `thinking` e rejeita de cara —
+        # assim o campo chega à API sem exigir upgrade do SDK, que mexeria
+        # com os outros onze serviços de uma vez.
+        def _chamar(modo_thinking: str):
+            return client.messages.create(
+                model=MODELO_RACIOCINIO,
+                max_tokens=MAX_TOKENS,
+                system=_system_prompt(),
+                messages=[{"role": "user", "content": conteudo}],
+                extra_body={"thinking": {"type": modo_thinking}},
+            )
+
+        try:
+            resposta = _chamar("disabled")
+        except Exception as exc:
+            # Nem todo modelo aceita o mesmo valor: o Sonnet 5.5 recusa
+            # "disabled" com 400 e diz, na própria mensagem, para mandar
+            # "between_tools". Sem este fallback, trocar ANAMNESE_IA_MODELO
+            # de Haiku para Sonnet derruba a anamnese inteira em silêncio
+            # (fail-open: o registro fica só com o motor do Bayes).
+            if "between_tools" not in str(exc):
+                raise
+            logger.info("anamnese_ia: modelo exige thinking=between_tools — repetindo.")
+            resposta = _chamar("between_tools")
 
         # Nunca assumir que o primeiro bloco é texto: com pensamento ligado o
         # primeiro é o bloco de thinking, e `content[0].text` lê o lugar errado
