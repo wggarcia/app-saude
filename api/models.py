@@ -1093,6 +1093,47 @@ class FonteOficialAgregado(models.Model):
         return f"{self.fonte_id} - {self.indicador} - {local} - {self.periodo}"
 
 
+class PriorVivoEpidemiologico(models.Model):
+    """Quanto uma doença está fora do SEU PRÓPRIO normal, por estado (Fase 2).
+
+    O prior do classificador é uma tabela fixa escrita à mão: Gripe 0,55, Mpox
+    0,01. Números plausíveis, mas congelados — não sabem que a dengue explodiu
+    no Rio neste mês nem que o surto acabou. Era a "calibragem estranha": um
+    quadro clínico específico perdia para o que é genericamente comum.
+
+    Este modelo guarda um `fator` por (doença, estado), medido contra o próprio
+    histórico daquela doença naquele estado, a partir de notificação oficial
+    (SINAN/DATASUS em FonteOficialAgregado).
+
+    Por que contra o próprio histórico, e não comparando doenças entre si:
+    dengue tem ~21 mil linhas na base e coqueluche ~880. Essa diferença reflete
+    o esforço de coleta de cada sistema, não a prevalência real — usá-la como
+    prior criaria uma hierarquia inventada. Já "a dengue está 2x acima da média
+    dela mesma no RJ" é um fato defensável.
+
+    Fator 1,0 = atividade normal. >1 acima do usual, <1 abaixo. Limitado a uma
+    faixa estreita de propósito: o sinal ajusta o prior, nunca o substitui.
+
+    Sem FK para Empresa (dado público agregado), como FonteOficialAgregado.
+    """
+
+    doenca = models.CharField(max_length=80)          # nome como em DOENCAS_BRASIL
+    estado = models.CharField(max_length=10)          # UF
+    fator = models.FloatField(default=1.0)            # recente / linha de base
+    valor_recente = models.FloatField(null=True, blank=True)
+    valor_base = models.FloatField(null=True, blank=True)
+    amostras = models.IntegerField(default=0)         # períodos usados na base
+    fonte_indicador = models.CharField(max_length=80, blank=True, default="")
+    calculado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("doenca", "estado")
+        indexes = [models.Index(fields=["estado", "doenca"])]
+
+    def __str__(self):
+        return f"{self.doenca} · {self.estado} · fator {self.fator:.2f}"
+
+
 # ── MOBILIDADE E DISPERSÃO EPIDEMIOLÓGICA ─────────────────────────────────────
 # Igual a FonteOficialAgregado: dado público AGREGADO, sem FK para Empresa e
 # portanto fora da RLS (ver api/migrations/0085_rls_policies.py, que cobre só

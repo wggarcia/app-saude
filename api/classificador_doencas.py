@@ -1082,7 +1082,59 @@ def _prior_geografico(doenca: str, estado: str | None) -> float:
     }
     doenca = _alias.get(doenca, doenca)
     priors_uf = PRIOR_GEOGRAFICO.get(uf, _PRIOR_DEFAULT)
-    return priors_uf.get(doenca, _PRIOR_DEFAULT.get(doenca, 0.05))
+    prior = priors_uf.get(doenca, _PRIOR_DEFAULT.get(doenca, 0.05))
+
+    # Fase 2 — prior vivo: ajusta pela atividade REAL da doença naquela UF,
+    # medida contra o próprio histórico dela em notificação oficial. Sem dado,
+    # o fator é 1.0 e o prior fixo da literatura prevalece, como antes.
+    fator = _fator_prior_vivo(doenca, uf)
+    if fator != 1.0:
+        prior = max(0.001, min(prior * fator, 0.95))
+    return prior
+
+
+# ── Prior vivo (Fase 2) ───────────────────────────────────────────────────────
+# _prior_geografico roda em laço quente (uma vez por doença, por registro), então
+# os fatores ficam num cache de processo. A tabela muda quando o comando
+# calcular_prior_vivo roda — não a cada requisição.
+_PRIOR_VIVO_CACHE: dict = {"fatores": None, "carregado_em": 0.0}
+_PRIOR_VIVO_TTL_S = 1800  # 30 min
+
+
+def limpar_cache_prior_vivo():
+    """Chamado pelo comando calcular_prior_vivo após gravar."""
+    _PRIOR_VIVO_CACHE["fatores"] = None
+    _PRIOR_VIVO_CACHE["carregado_em"] = 0.0
+
+
+def _fator_prior_vivo(doenca: str, uf: str) -> float:
+    """Fator de atividade da doença naquela UF (1.0 = normal, sem sinal).
+
+    Degrada em silêncio: qualquer falha (tabela ausente, banco indisponível,
+    migração ainda não aplicada) devolve 1.0 e o classificador segue com o
+    prior fixo. O prior vivo nunca pode derrubar a triagem.
+    """
+    if not uf or not doenca:
+        return 1.0
+
+    from time import time as _time
+
+    agora = _time()
+    cache = _PRIOR_VIVO_CACHE
+    if cache["fatores"] is None or (agora - cache["carregado_em"]) > _PRIOR_VIVO_TTL_S:
+        fatores: dict = {}
+        try:
+            from .models import PriorVivoEpidemiologico
+
+            qs = PriorVivoEpidemiologico.objects.using("owner").values("doenca", "estado", "fator")
+            for linha in qs.iterator(chunk_size=2000):
+                fatores[(linha["doenca"], linha["estado"])] = float(linha["fator"] or 1.0)
+        except Exception:
+            fatores = {}  # sem tabela/banco: segue com prior fixo
+        cache["fatores"] = fatores
+        cache["carregado_em"] = agora
+
+    return cache["fatores"].get((doenca, uf), 1.0)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
