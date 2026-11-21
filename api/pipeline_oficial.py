@@ -127,8 +127,51 @@ FONTES_CSV_CONFIG = {
 # Fontes oficiais publicadas apenas em .csv.zip (incompativel com HTTP Range).
 # Exigem um worker que baixe o zip completo (com teto de tamanho), descompacte
 # em streaming e agregue sem persistir microdados brutos.
+def _resolver_url_do_ano(config):
+    """Resolve a URL anual do SINAN para o ano corrente.
+
+    Os arquivos do SINAN são por ano: DENGBR25, DENGBR26, e assim por diante.
+    A URL estava fixa em 2025, então na virada do ano o pipeline continuou
+    baixando o arquivo velho. Dengue, chikungunya e zika colapsaram para os
+    respingos de notificação atrasada que caem no arquivo do ano anterior — a
+    série nacional passou a mostrar 13 casos de dengue por semana no Brasil
+    inteiro. O defeito passou ~10 meses despercebido (achado em 21/11/2026),
+    porque a coleta continuava "funcionando": baixava, processava, não dava
+    erro. Só trazia o ano errado.
+
+    Tenta o ano corrente e cai para o anterior se o arquivo ainda não existir
+    (acontece no começo de janeiro, antes do MS publicar o do ano novo).
+    Devolve (url, versao_fonte).
+    """
+    template = config.get("url_ano_template")
+    if not template:
+        return config.get("url"), config.get("versao_fonte")
+
+    import datetime
+
+    import requests
+
+    ano_atual = datetime.date.today().year
+    for candidato in (ano_atual, ano_atual - 1):
+        yy = f"{candidato % 100:02d}"
+        url = template.format(yy=yy)
+        try:
+            resposta = requests.head(url, timeout=20, allow_redirects=True)
+            if resposta.status_code == 200:
+                versao = (config.get("versao_ano_template") or "").format(yy=yy)
+                return url, (versao or config.get("versao_fonte"))
+        except Exception:
+            continue
+
+    # Nenhum ano respondeu: mantém o configurado e deixa a coleta falhar com o
+    # erro real da rede, em vez de inventar uma URL.
+    return config.get("url"), config.get("versao_fonte")
+
+
 FONTES_ZIP_CONFIG = {
     "sinan_agravos": {
+        "url_ano_template": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Dengue/csv/DENGBR{yy}.csv.zip",
+        "versao_ano_template": "DENGBR{yy}",
         "url": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Dengue/csv/DENGBR25.csv.zip",
         "delimiter": ",",
         "encoding": "latin-1",
@@ -145,6 +188,8 @@ FONTES_ZIP_CONFIG = {
         "max_download_bytes": 250_000_000,  # teto de seguranca para o zip
     },
     "sinan_chikungunya": {
+        "url_ano_template": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Chikungunya/csv/CHIKBR{yy}.csv.zip",
+        "versao_ano_template": "CHIKBR{yy}",
         "url": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Chikungunya/csv/CHIKBR25.csv.zip",
         "delimiter": ",",
         "encoding": "latin-1",
@@ -161,6 +206,8 @@ FONTES_ZIP_CONFIG = {
         "max_download_bytes": 250_000_000,
     },
     "sinan_zika": {
+        "url_ano_template": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Zikavirus/csv/ZIKABR{yy}.csv.zip",
+        "versao_ano_template": "ZIKABR{yy}",
         "url": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Zikavirus/csv/ZIKABR25.csv.zip",
         "delimiter": ",",
         "encoding": "latin-1",
@@ -1305,6 +1352,11 @@ def preparar_execucao_fonte_oficial(
 
     zip_config = FONTES_ZIP_CONFIG.get(fonte_id)
     if zip_config:
+        # Resolve o arquivo do ANO CORRENTE. Sem isto o pipeline segue baixando
+        # o do ano anterior para sempre, como fez por ~10 meses em 2026.
+        _url, _versao = _resolver_url_do_ano(zip_config)
+        if _url and _url != zip_config.get("url"):
+            zip_config = {**zip_config, "url": _url, "versao_fonte": _versao}
         return _processar_zip_oficial(
             execucao,
             fonte_id,
