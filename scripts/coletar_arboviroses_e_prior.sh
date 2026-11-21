@@ -17,8 +17,14 @@
 # A ordem importa: o prior vivo roda DEPOIS da coleta, senão recalcula em cima
 # do dado velho. Por isso é um script só, encadeado, e não três linhas de cron.
 #
-# Agendado para domingo de madrugada, antes do treino do modelo (segunda 04:30),
-# para que o modelo treine sobre dado fresco.
+# Agendado para o dia 1 de cada mês, 02:00 (`0 2 1 * *`), por decisão do dono:
+# a coleta é pesada e mensal alivia o servidor.
+#
+# O custo dessa escolha, para quem for mexer depois: o prior vivo já descarta os
+# 4 períodos mais recentes por atraso de notificação, e agora soma a isso até ~4
+# semanas de espera pela próxima coleta. Na prática o sinal pode estar ~2 meses
+# atrás do presente. Para ajustar o prior isso é aceitável — não é sistema de
+# alerta precoce. Se um dia virar alerta, precisa voltar a ser semanal.
 set -uo pipefail
 
 APP_DIR="/opt/soluscrt"
