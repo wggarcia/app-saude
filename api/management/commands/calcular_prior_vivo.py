@@ -129,9 +129,33 @@ class Command(BaseCommand):
                     sem_serie += 1
                     continue
 
-                recentes = [por_periodo[p] for p in periodos[-PERIODOS_RECENTES:]]
-                base = [por_periodo[p] for p in periodos[:-PERIODOS_RECENTES]]
-                if not base:
+                janela = periodos[-PERIODOS_RECENTES:]
+                recentes = [por_periodo[p] for p in janela]
+
+                # Linha de base SAZONAL: as mesmas semanas do ano anterior.
+                #
+                # Usar a média do ano inteiro parecia razoável e estava errado:
+                # a dengue caía para o fator mínimo em dez estados de uma vez,
+                # simplesmente porque novembro é baixa estação e a média anual
+                # carrega o pico de março. Isso é sazonalidade, não anomalia — e
+                # o classificador já tem bônus sazonal próprio, então o prior
+                # vivo estaria penalizando a mesma coisa duas vezes.
+                #
+                # Comparar com as mesmas semanas do ano passado remove a estação
+                # da conta e responde a pergunta certa: está pior que no ano
+                # anterior nesta época?
+                base = []
+                for p in janela:
+                    try:
+                        ano, resto = p.split("-", 1)
+                        anterior = f"{int(ano) - 1}-{resto}"
+                    except (ValueError, AttributeError):
+                        continue
+                    if anterior in por_periodo:
+                        base.append(por_periodo[anterior])
+
+                # Sem o mesmo período no ano anterior não há comparação honesta.
+                if len(base) < max(2, PERIODOS_RECENTES // 2):
                     sem_serie += 1
                     continue
 
