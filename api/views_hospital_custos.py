@@ -519,7 +519,7 @@ def api_custos_margem_ia_analise(request):
             f"Custo por categoria: {por_categoria}"
         )
         resp = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=900,
+            model="claude-sonnet-5-5", max_tokens=900,
             system=system, messages=[{"role": "user", "content": user_msg}],
         )
         raw = (resp.content[0].text or "").strip()

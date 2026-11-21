@@ -1996,7 +1996,7 @@ def api_onco_resumo_ia(request):
         # LGPD-first e um auditor de operadora pergunta exatamente isto.
         jornada_ia = {k: v for k, v in jornada.items() if k != "paciente"}
         resp = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=1500,
+            model="claude-sonnet-5-5", max_tokens=1500,
             system=system,
             messages=[{"role": "user",
                        "content": json.dumps(jornada_ia, ensure_ascii=False)}],

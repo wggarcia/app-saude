@@ -580,7 +580,7 @@ def assistente_sst(request):
 
         for _ in range(_MAX_TOOL_ROUNDS):
             response = client.messages.create(
-                model="claude-sonnet-4-6",
+                model="claude-sonnet-5-5",
                 max_tokens=1024,
                 system=system,
                 tools=TOOLS,

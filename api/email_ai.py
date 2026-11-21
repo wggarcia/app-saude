@@ -492,7 +492,7 @@ Separe cada seção com exatamente essas marcações:
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-5-5",
             max_tokens=1500,
             system=system,
             messages=[{"role": "user", "content": user_msg}],

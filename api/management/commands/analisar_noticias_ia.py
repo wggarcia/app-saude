@@ -29,7 +29,7 @@ from django.db import transaction
 
 from api.models import NoticiaEpidemiologica
 
-MODEL_ID = "claude-haiku-4-5"
+MODEL_ID = "claude-haiku-5-5"
 # Volume real observado: 240-330 notícias/dia (picos de até ~1200 em dias
 # de alta cobertura GDELT). O cron roda 1x/dia — a cota precisa cobrir o
 # dia inteiro, senão o backlog de não-traduzidas cresce indefinidamente.

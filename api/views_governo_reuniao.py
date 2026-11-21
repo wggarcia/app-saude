@@ -310,7 +310,7 @@ Seja formal e objetivo. Use linguagem técnica administrativa adequada à gestã
 Formate com Markdown (negrito para títulos de seção, listas para encaminhamentos)."""
 
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-5-5",
             max_tokens=2500,
             messages=[{"role": "user", "content": prompt}],
         )

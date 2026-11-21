@@ -554,7 +554,7 @@ def paciente_exame_explicar(request, pk):
             f"Laudo do médico: {r.laudo or '—'}"
         )
         resp = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=600,
+            model="claude-sonnet-5-5", max_tokens=600,
             system=system, messages=[{"role": "user", "content": user_msg}],
         )
         texto = (resp.content[0].text or "").strip()

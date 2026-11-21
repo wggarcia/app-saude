@@ -13,7 +13,7 @@ import os
 
 from django.core.management.base import BaseCommand
 
-MODEL_ID = "claude-haiku-4-5"
+MODEL_ID = "claude-haiku-5-5"
 
 
 class Command(BaseCommand):

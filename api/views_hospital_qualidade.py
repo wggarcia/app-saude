@@ -393,7 +393,7 @@ def api_qualidade_ia_analise(request, pk):
             f"Ação já tomada: {inc.acao_tomada or '—'}"
         )
         resp = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=1200,
+            model="claude-sonnet-5-5", max_tokens=1200,
             system=system, messages=[{"role": "user", "content": user_msg}],
         )
         raw = (resp.content[0].text or "").strip()

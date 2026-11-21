@@ -14258,7 +14258,7 @@ class NoticiaEpidemiologica(models.Model):
     publicado_em        = models.DateTimeField(null=True, blank=True)
     criado_em           = models.DateTimeField(auto_now_add=True)
 
-    # ── Análise gerada pelo Agente IA (claude-haiku-4-5) ──────────────────────
+    # ── Análise gerada pelo Agente IA (claude-haiku-5-5) ──────────────────────
     ia_analisado        = models.BooleanField(default=False)
     ia_score_risco      = models.FloatField(null=True, blank=True)    # 0.0 – 10.0
     ia_cid10            = models.CharField(max_length=10, blank=True, default="")

@@ -33,7 +33,7 @@ from django.utils import timezone
 logger = logging.getLogger("api")
 
 # Modelo forte para o raciocínio clínico (Haiku fica para tarefas de extração).
-MODELO_RACIOCINIO = "claude-sonnet-4-6"
+MODELO_RACIOCINIO = "claude-sonnet-5-5"
 MAX_TOKENS = 700
 
 # Comorbidades granulares da Fase 0 — não estão em CAMPOS_ANAMNESE.
