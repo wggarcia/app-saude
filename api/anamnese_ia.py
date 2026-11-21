@@ -52,8 +52,23 @@ MAX_TOKENS = 350
 #
 # Com estes limiares, só a minoria ambígua é enviada. É também a decisão
 # clinicamente correta, não só a barata.
-CONFIANCA_DISPENSA_IA = 70     # motor acima disto e isolado: resolve sozinho
-RAZAO_DISPUTA = 0.60           # 2º/1º acima disto: disputa real, vale a IA
+# Os dois números abaixo foram MEDIDOS, não escolhidos. A primeira versão usava
+# confiança < 70, e a medição mostrou que isso era inútil: a confiança do líder
+# vai de 49 a 67 nos dados reais (mediana 58), então "< 70" era sempre verdade e
+# o portão nunca dispensava ninguém. Economia que não existia.
+#
+# O que de fato discrimina é a disputa entre 1º e 2º. Distribuição medida sobre
+# 2.167 diferenciais: p25=0,60 · mediana=0,81 · p75=0,90. Ou seja, na metade dos
+# casos o 2º lugar tem 81%+ da pontuação do 1º — o motor vive em dúvida.
+#
+# 0,80 corta metade do volume. E é o teto que ainda deixa passar o caso que
+# motivou tudo isto: o registro 168882 (Gripe 63 x Mpox 60) tem razão 0,83. Em
+# 0,85 a IA nunca veria o Mpox — economia que custaria exatamente o achado.
+#
+# Ressalva honesta: a amostra medida é majoritariamente sintética (simulação e
+# seed), não tráfego real. Revisar quando houver envio de gente de verdade.
+CONFIANCA_DISPENSA_IA = 52     # abaixo disto o motor está perdido: manda ver
+RAZAO_DISPUTA = 0.80           # 2º a 80%+ do 1º: disputa real, vale a chamada
 
 
 def vale_chamar_ia(diferencial) -> bool:
