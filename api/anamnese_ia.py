@@ -258,6 +258,11 @@ def refinar_hipotese_ia(registro_id):
 
 def _refinar(registro_id):
     try:
+        # Interruptor (defesa em profundidade: o enfileiramento já checa, mas
+        # uma chamada direta ao módulo também precisa respeitar a flag).
+        if not getattr(settings, "ANAMNESE_IA_ATIVA", False):
+            return
+
         from .models import Empresa, RegistroSintoma
         from .classificador_doencas import DOENCAS_BRASIL, classificar
 

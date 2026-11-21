@@ -54,6 +54,13 @@ SECRET_KEY = os.environ.get(
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
+# ── Cérebro LLM da anamnese (Fase 1) — INTERRUPTOR ───────────────────────────
+# DESLIGADO por padrão de propósito: com ele ligado, CADA envio de sintoma do
+# app público dispara uma chamada paga ao Claude. Ligue só depois de validar o
+# caminho completo contra a API real (um envio de teste, conferir hipotese_ia).
+# Para ligar: ANAMNESE_IA_ATIVA=true no .env + restart do serviço.
+ANAMNESE_IA_ATIVA = env_bool("ANAMNESE_IA_ATIVA", default=False)
+
 # ── Assinatura digital ICP-Brasil ─────────────────────────────────────────────
 # ATENÇÃO: em SaaS multi-tenant a assinatura NÃO se configura aqui.
 # Prescrição é ato médico: quem assina é o MÉDICO (pessoa física, e-CPF

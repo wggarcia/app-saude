@@ -2460,7 +2460,9 @@ def registrar_sintoma_publico(request):
     # entra na resposta abaixo e não bloqueia o envio: a resposta ao cidadão
     # continua vindo do classificador determinístico. Se a IA estiver fora, o
     # registro simplesmente fica sem hipótese_ia (fail-open).
-    if not simulacao_autorizada:
+    # Interruptor: desligado por padrão (settings.ANAMNESE_IA_ATIVA). Com ele
+    # off nem enfileira — custo zero, nenhuma chamada paga.
+    if not simulacao_autorizada and getattr(settings, "ANAMNESE_IA_ATIVA", False):
         from api.tasks import run_async
         _rid_ia = registro.pk
         transaction.on_commit(
