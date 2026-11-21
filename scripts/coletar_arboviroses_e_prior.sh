@@ -41,8 +41,22 @@ export APP_DATABASE_URL=
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') — início =====" >> "$LOG"
 
+# As TabNet entram aqui pelo mesmo motivo que as arboviroses: a checagem de
+# sanidade encontrou cinco delas desabadas (sífilis adquirida em 2% do esperado,
+# Aids parada em 2025-M01) e o histórico mostrou a causa — última execução em
+# 25/06/2026, todas "concluídas". Não quebraram: ninguém nunca as agendou.
+# Foram rodadas à mão uma vez e esquecidas.
+#
+# São rápidas (TabNet devolve agregado, não arquivo grande): ~1 min cada.
+FONTES_TABNET="tabnet_tuberculose tabnet_meningite tabnet_leptospirose tabnet_hantavirose
+tabnet_chagas tabnet_hepatites tabnet_coqueluche tabnet_esquistossomose tabnet_difteria
+tabnet_febre_maculosa tabnet_hanseniase tabnet_sifilis_gestante tabnet_sifilis_congenita
+tabnet_sifilis_adquirida tabnet_sarampo_rubeola tabnet_febre_tifoide
+tabnet_leishmaniose_visceral tabnet_leishmaniose_tegumentar tabnet_paralisia_flacida_aguda
+tabnet_varicela tabnet_colera tabnet_raiva tabnet_peste tabnet_aids"
+
 falhas=0
-for fonte in sinan_agravos sinan_chikungunya sinan_zika; do
+for fonte in sinan_agravos sinan_chikungunya sinan_zika $FONTES_TABNET; do
     echo "--- $fonte ---" >> "$LOG"
     if "$PY" manage.py processar_fonte_oficial "$fonte" \
         --executar-download --max-linhas 3000000 >> "$LOG" 2>&1; then
@@ -63,5 +77,13 @@ fi
 echo "--- prior vivo ---" >> "$LOG"
 "$PY" manage.py calcular_prior_vivo --aplicar >> "$LOG" 2>&1 \
     || echo "    FALHOU" >> "$LOG"
+
+# Checagem de sanidade DEPOIS de coletar: se alguma fonte continuar desabada ou
+# parada mesmo após a coleta, é problema de verdade — não falta de execução.
+# Foi assim que descobrimos as cinco TabNet esquecidas desde junho.
+echo "--- sanidade das fontes ---" >> "$LOG"
+if ! "$PY" manage.py checar_sanidade_fontes >> "$LOG" 2>&1; then
+    echo "    ATENCAO: ha fonte suspeita — ver detalhes acima neste log" >> "$LOG"
+fi
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') — fim (falhas: $falhas) =====" >> "$LOG"
