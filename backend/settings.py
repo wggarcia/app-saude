@@ -67,6 +67,16 @@ ANAMNESE_IA_ATIVA = env_bool("ANAMNESE_IA_ATIVA", default=False)
 # motor já ranqueou, não redigir parecer. Testar antes de adotar.
 ANAMNESE_IA_MODELO = os.environ.get("ANAMNESE_IA_MODELO", "")
 
+# Chamar a IA em TODO envio, sem o portão de casos ambíguos. Decisão do dono
+# após o portão ter descartado um caso com lesão vesicular e Mpox no
+# diferencial: ele preferiu pagar por todos a arriscar perder um.
+#
+# O custo dobra (o portão dispensava ~metade), mas segue baixo: na ordem de
+# US$ 8,5 mil para 50 milhões de envios em Haiku 5.5.
+#
+# Para voltar ao portão: ANAMNESE_IA_SEMPRE=false no .env + restart.
+ANAMNESE_IA_SEMPRE = env_bool("ANAMNESE_IA_SEMPRE", default=True)
+
 # ── Assinatura digital ICP-Brasil ─────────────────────────────────────────────
 # ATENÇÃO: em SaaS multi-tenant a assinatura NÃO se configura aqui.
 # Prescrição é ato médico: quem assina é o MÉDICO (pessoa física, e-CPF

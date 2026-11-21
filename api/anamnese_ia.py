@@ -133,6 +133,14 @@ def vale_chamar_ia(diferencial) -> bool:
     Na dúvida (diferencial ausente ou malformado), chama — perder um caso
     ambíguo é pior que gastar uma fração de centavo.
     """
+    # Porta 0 — o dono pediu a IA em todo envio, depois de o portão ter
+    # descartado um caso com lesão vesicular e Mpox no diferencial. Entre pagar
+    # por todos e arriscar perder um, ele escolheu pagar. Decisão dele, e o
+    # custo cabe: dobra o volume, mas segue na casa de US$ 8,5 mil para 50
+    # milhões de envios.
+    if getattr(settings, "ANAMNESE_IA_SEMPRE", True):
+        return True
+
     if not isinstance(diferencial, list) or not diferencial:
         return True
 
