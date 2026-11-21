@@ -75,6 +75,21 @@ class Command(BaseCommand):
             periodos = sorted(serie)
             ultimo = periodos[-1]
 
+            # Fontes anuais (Aids publica um ponto por ano, rotulado M01) não
+            # podem ser medidas com régua de semana — a primeira versão desta
+            # checagem acusou "série parada" num indicador que estava
+            # perfeitamente em dia. Alarme falso é pior que alarme nenhum:
+            # ensina a ignorar o painel, que foi como a falha do SINAN
+            # sobreviveu 10 meses.
+            if _e_serie_anual(periodos):
+                ano_ultimo = _ano_do_periodo(ultimo)
+                from datetime import date
+                if ano_ultimo and date.today().year - ano_ultimo > 2:
+                    problemas.append(
+                        f"{doenca} ({indicador}): série anual parada — último ano {ano_ultimo}"
+                    )
+                continue  # série anual não entra na comparação semanal abaixo
+
             # 1. A série parou de andar?
             # Compara pela posição na própria série: se os últimos períodos
             # publicados somem, o indicador congelou.
@@ -127,6 +142,27 @@ class Command(BaseCommand):
             "(foi o que quebrou dengue/chikungunya/zika por ~10 meses em 2026)."
         )
         raise SystemExit(1)
+
+
+def _ano_do_periodo(periodo: str):
+    try:
+        return int(str(periodo).split("-", 1)[0])
+    except (ValueError, AttributeError, IndexError):
+        return None
+
+
+def _e_serie_anual(periodos) -> bool:
+    """Série com no máximo um ponto por ano é anual, não mensal.
+
+    Aids publica um valor por ano rotulado como M01 (2023-M01, 2024-M01...).
+    Medir isso com régua de semana produz "série parada" num indicador em dia —
+    foi o alarme falso que esta checagem deu na primeira execução.
+    """
+    anos = [_ano_do_periodo(p) for p in periodos]
+    anos = [a for a in anos if a]
+    if len(anos) < 3:
+        return False
+    return len(set(anos)) == len(anos)
 
 
 def _periodo_menos(periodo: str, n: int) -> str:
