@@ -11,6 +11,8 @@ const _kUltimoEnvioSintomas = 'sintoma_ultimo_envio_utc';
 const _kCooldownHoras = 168; // 7 dias
 
 class PublicApiService {
+  // Mantida em sincronia com pubspec.yaml na publicação.
+  static const String _versaoApp = '1.0.29+30';
   static const _timeout = Duration(seconds: 12);
 
   static Uri _uri(String path, [Map<String, dynamic>? query]) {
@@ -157,6 +159,7 @@ class PublicApiService {
     // Phase 2 — novos campos de anamnese
     bool? exposicaoCarrapato,
     bool? exposicaoTriatomideo,
+    bool? mordeduraAnimal,
   }) async {
     final deviceId = await DeviceService.getDeviceId();
 
@@ -218,6 +221,10 @@ class PublicApiService {
     // Phase 2
     if (exposicaoCarrapato != null) body['exposicao_carrapato'] = exposicaoCarrapato;
     if (exposicaoTriatomideo != null) body['exposicao_triatomideo'] = exposicaoTriatomideo;
+    if (mordeduraAnimal != null) body['mordedura_animal'] = mordeduraAnimal;
+    // Procedência: de qual build veio o registro. Barato de enviar e a
+    // única forma de rastrear um dado estranho até a versão que o gerou.
+    body['app_versao'] = 'app_saude $_versaoApp';
 
     final response = await http
         .post(

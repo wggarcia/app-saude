@@ -108,11 +108,67 @@ Um sintoma-porta respondido **"Sim"** abre 2 a 4 perguntas específicas. Quem n�
 - **Não perguntar o que não discrimina.** Cada pergunta acima separa candidatos. Pergunta que não separa é só atrito.
 - **Não deixar obrigatória.** "Não sei" tem que ser resposta válida — e `null` ≠ `False`.
 
-## Ordem sugerida
+## Estado da implementação — 21/11/2026
 
-1. Vesículas (fecha varicela × Mpox, o caso que originou tudo)
-2. Manchas e tosse (maior cobertura: 13 doenças)
-3. Icterícia e diarreia
-4. O resto
+As **10 portas estão implementadas**. 25 perguntas condicionais, 25 campos
+nuláveis no modelo, discriminadores ligados no classificador e rótulos
+entregues ao LLM.
 
-Começar por um comprova o mecanismo antes de escrever 28 perguntas.
+| Porta | Perguntas | Doenças que separa | Verificado |
+|---|---|---|---|
+| Vesículas | 4 | Varicela × Mpox | ✅ |
+| Manchas | 4 | Sarampo, Zika, Dengue, Febre Maculosa, Chikungunya | ✅ |
+| Tosse | 2 (+suor noturno) | Tuberculose, Coqueluche, agudas | ✅ |
+| Icterícia | 3 | Hepatite, Leptospirose, Febre Amarela | ✅ |
+| Diarreia | 3 | Febre Tifoide, Esquistossomose, Gastroenterite | ⚠️ ver Cólera |
+| Dor articular | 2 | Chikungunya × Dengue × Zika | ✅ |
+| Falta de ar | 2 | Hantavirose, Bronquite/DPOC | ✅ |
+| Perda de peso | 2 | Leishmaniose Visceral × Tuberculose | ✅ |
+| Úlcera | 2 | Leishmaniose Tegumentar | ✅ |
+| Febre | 2 | Malária, Dengue, Febre Amarela | ✅ |
+
+Duas perguntas servem a duas portas cada — suor noturno (tosse e perda de
+peso) e febre que baixou e voltou (febre e icterícia). Por isso `condicionalDe`
+virou `condicionaisDe`, uma lista.
+
+**Teste:** 13 de 14 casos-sonda mudam para a doença esperada, e 600 casos
+aleatórios sem respostas de desempate dão resultado idêntico ao de antes — ou
+seja, app antigo não muda de comportamento (`null` continua sendo "não
+perguntado").
+
+### Catálogo ampliado — 21/11/2026
+
+Três doenças foram acrescentadas ao `DOENCAS_BRASIL`, que foi de 26 para **29**:
+**Cólera** (A00), **Difteria** (A36.0) e **Peste** (A20.0).
+
+Não são doenças novas no sistema. As três já tinham série oficial do SINAN
+importada, prior vivo calculado, opção de notificação para o gestor e nome na
+`DOENCAS_SENTINELA` do `anamnese_ia` — a lista do "isto não pode passar
+batido". Faltava só a entrada no catálogo, e sem ela nem o motor bayesiano
+podia rankeá-las nem o LLM podia nomeá-las, porque o prompt o prende à mesma
+lista. O portão de relevância clínica procurava por elas em todo envio e nunca
+as encontraria.
+
+Prior deliberadamente quase nulo (0,002 / 0,002 / 0,001): são raras, e é a
+evidência que deve levantá-las. Em 600 casos aleatórios sem respostas de
+desempate, nenhuma das três aparece como hipótese principal e **nenhum**
+resultado mudou em relação a antes.
+
+Duas perguntas novas, na porta da dor de garganta, para a difteria ser
+detectável: placa aderente e pescoço inchado. E a pergunta da íngua passou a
+ter duas portas — com bolhinhas separa Mpox de varicela; com febre e sem
+bolhinhas é o bubão da peste.
+
+**Total: 52 perguntas de sintoma — 25 fixas e 27 condicionais, em 11 portas.**
+
+### ⚠️ Raiva Humana continua inalcançável
+
+É a quarta sentinela, e ficou de fora de propósito. Para ser detectável
+precisaria de uma pergunta de exposição que não existe — mordedura ou
+arranhadura de animal — e de sinais que o formulário não coleta (hidrofobia,
+aerofobia, agitação). Acrescentá-la sem isso criaria no catálogo o mesmo
+problema que a cólera tinha nas perguntas: um nome sem caminho até ele.
+
+Soma-se que a raiva humana se manifesta num estágio em que ninguém está
+respondendo formulário no celular. **Decisão pendente:** ou entra com pergunta
+de exposição própria, ou sai da `DOENCAS_SENTINELA`, onde hoje é código morto.

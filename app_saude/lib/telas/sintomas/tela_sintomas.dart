@@ -15,7 +15,7 @@ class _PerguntaSintoma {
     this.emoji = '',
     this.isUrgencia = false,
     this.followup, // 'febre' | 'articular'
-    this.condicionalDe, // só aparece se este sintoma foi respondido "Sim"
+    this.condicionaisDe = const [], // só aparece se ALGUM destes foi "Sim"
   });
   final String key;
   final String pergunta;
@@ -27,7 +27,12 @@ class _PerguntaSintoma {
   // Perguntas de desempate: só fazem sentido se a "porta" foi aberta. Quem não
   // tem bolhinhas nunca vê pergunta sobre bolhinhas — o formulário fica mais
   // fundo sem ficar mais longo.
-  final String? condicionalDe;
+  //
+  // É uma lista porque um mesmo achado pode servir a duas portas: suor noturno
+  // discrimina tanto na tosse (tuberculose) quanto no emagrecimento
+  // (tuberculose × leishmaniose), e febre que baixou e voltou discrimina na
+  // febre (dengue) e na icterícia (febre amarela). Vazia = pergunta fixa.
+  final List<String> condicionaisDe;
 }
 
 // ─── Perguntas de sintomas — ordem clínica neutra, sem nome de doença ────────
@@ -40,6 +45,14 @@ const _perguntas = [
     dica: 'Temperatura acima de 37,5°C nas últimas 24 horas',
     emoji: '🌡️',
     followup: 'febre',
+  ),
+  // ── Desempate: febre em ciclos → Malária ────────────────────────────────
+  _PerguntaSintoma(
+    key: 'febre_ciclica',
+    pergunta: 'A febre vem em ciclos — calafrio forte, depois febre, depois suor?',
+    dica: 'Episódios que se repetem com hora quase marcada, com melhora entre eles',
+    emoji: '🔁',
+    condicionaisDe: ['febre'],
   ),
   _PerguntaSintoma(
     key: 'cansaco',
@@ -77,17 +90,62 @@ const _perguntas = [
     dica: 'Seca, com catarro ou persistente',
     emoji: '🫁',
   ),
+  // ── Desempate: tosse → Tuberculose × Coqueluche ─────────────────────────
+  _PerguntaSintoma(
+    key: 'tosse_mais_3_semanas',
+    pergunta: 'Está tossindo há mais de 3 semanas?',
+    dica: 'Conte desde o primeiro dia de tosse, mesmo que tenha melhorado no meio',
+    emoji: '📅',
+    condicionaisDe: ['tosse'],
+  ),
+  _PerguntaSintoma(
+    key: 'tosse_paroxistica',
+    pergunta: 'A tosse vem em acessos seguidos, com guincho ou vômito no fim?',
+    dica: 'Crises em que não consegue respirar entre uma tosse e outra',
+    emoji: '😤',
+    condicionaisDe: ['tosse'],
+  ),
   _PerguntaSintoma(
     key: 'falta_ar',
     pergunta: 'Tem falta de ar?',
     dica: 'Dificuldade para respirar — mesmo em repouso ou ao menor esforço',
     emoji: '💨',
   ),
+  // ── Desempate: falta de ar → Hantavirose × causa cardíaca ───────────────
+  _PerguntaSintoma(
+    key: 'dispneia_subita_pos_febre',
+    pergunta: 'A falta de ar começou de repente, poucos dias depois da febre?',
+    dica: 'De uma hora para outra, e não aos poucos',
+    emoji: '⏱️',
+    condicionaisDe: ['falta_ar'],
+  ),
+  _PerguntaSintoma(
+    key: 'dispneia_piora_deitado',
+    pergunta: 'A falta de ar piora quando você deita?',
+    dica: 'Precisa de travesseiro alto ou de sentar para respirar melhor',
+    emoji: '🛏️',
+    condicionaisDe: ['falta_ar'],
+  ),
   _PerguntaSintoma(
     key: 'dor_garganta',
     pergunta: 'Tem dor de garganta?',
     dica: 'Ao engolir ou em repouso',
     emoji: '😮',
+  ),
+  // ── Desempate: dor de garganta → Difteria ───────────────────────────────
+  _PerguntaSintoma(
+    key: 'placa_na_garganta',
+    pergunta: 'Tem placa branca ou acinzentada na garganta?',
+    dica: 'Uma casca grudada na garganta ou nas amígdalas, difícil de soltar',
+    emoji: '🦷',
+    condicionaisDe: ['dor_garganta'],
+  ),
+  _PerguntaSintoma(
+    key: 'pescoco_inchado',
+    pergunta: 'O pescoço está inchado dos dois lados?',
+    dica: 'Pescoço visivelmente mais grosso, não só um caroço',
+    emoji: '🧣',
+    condicionaisDe: ['dor_garganta'],
   ),
   _PerguntaSintoma(
     key: 'coriza',
@@ -108,11 +166,55 @@ const _perguntas = [
     emoji: '🦴',
     followup: 'articular',
   ),
+  // ── Desempate: dor articular → Chikungunya ──────────────────────────────
+  _PerguntaSintoma(
+    key: 'artralgia_simetrica',
+    pergunta: 'A dor pega os dois lados ao mesmo tempo — as duas mãos, os dois pés?',
+    dica: 'Mesmas juntas dos dois lados do corpo',
+    emoji: '🤝',
+    condicionaisDe: ['dor_articular'],
+  ),
+  _PerguntaSintoma(
+    key: 'artralgia_mais_2_semanas',
+    pergunta: 'A dor nas juntas já dura mais de 2 semanas?',
+    dica: 'Mesmo que tenha melhorado e voltado',
+    emoji: '📆',
+    condicionaisDe: ['dor_articular'],
+  ),
   _PerguntaSintoma(
     key: 'exantema',
     pergunta: 'Surgiram manchas ou vermelhidão na pele?',
     dica: 'Rash, bolinhas, manchas espalhadas — pode coçar',
     emoji: '🔴',
+  ),
+  // ── Desempate: manchas → Sarampo × Zika × Dengue × Febre Maculosa ───────
+  _PerguntaSintoma(
+    key: 'exantema_craniocaudal',
+    pergunta: 'As manchas começaram no rosto e foram descendo pelo corpo?',
+    dica: 'Primeiro rosto e pescoço, depois tronco, depois pernas',
+    emoji: '⬇️',
+    condicionaisDe: ['exantema'],
+  ),
+  _PerguntaSintoma(
+    key: 'exantema_pruriginoso',
+    pergunta: 'As manchas coçam muito?',
+    dica: 'Coceira forte, a ponto de atrapalhar o sono',
+    emoji: '🖐️',
+    condicionaisDe: ['exantema'],
+  ),
+  _PerguntaSintoma(
+    key: 'exantema_palmo_plantar',
+    pergunta: 'Tem manchas nas palmas das mãos ou nas plantas dos pés?',
+    dica: 'Olhe as duas mãos e os dois pés antes de responder',
+    emoji: '✋',
+    condicionaisDe: ['exantema'],
+  ),
+  _PerguntaSintoma(
+    key: 'exantema_apos_febre',
+    pergunta: 'As manchas apareceram quando a febre baixou?',
+    dica: 'Primeiro a febre passou, depois surgiram as manchas',
+    emoji: '🌡️',
+    condicionaisDe: ['exantema'],
   ),
   _PerguntaSintoma(
     key: 'conjuntivite',
@@ -132,6 +234,28 @@ const _perguntas = [
     dica: 'Mais de 3 evacuações líquidas por dia',
     emoji: '🚽',
   ),
+  // ── Desempate: diarreia → Cólera × disenteria × Febre Tifoide ───────────
+  _PerguntaSintoma(
+    key: 'fezes_agua_arroz',
+    pergunta: 'As fezes estão muito aquosas, parecendo água de arroz?',
+    dica: 'Líquidas e esbranquiçadas, quase sem resíduo',
+    emoji: '🍚',
+    condicionaisDe: ['diarreia'],
+  ),
+  _PerguntaSintoma(
+    key: 'fezes_com_sangue',
+    pergunta: 'As fezes têm sangue ou muco?',
+    dica: 'Sangue vivo, fezes escuras como piche, ou catarro nas fezes',
+    emoji: '🩸',
+    condicionaisDe: ['diarreia'],
+  ),
+  _PerguntaSintoma(
+    key: 'febre_alta_prolongada',
+    pergunta: 'Está com febre alta contínua há mais de uma semana?',
+    dica: 'Febre que quase não baixa, todos os dias',
+    emoji: '🔥',
+    condicionaisDe: ['diarreia'],
+  ),
   _PerguntaSintoma(
     key: 'dor_abdominal',
     pergunta: 'Tem dor na barriga?',
@@ -143,6 +267,28 @@ const _perguntas = [
     pergunta: 'A pele ou os olhos ficaram amarelados?',
     dica: 'Icterícia — coloração amarela na pele ou no branco dos olhos',
     emoji: '🟡',
+  ),
+  // ── Desempate: icterícia → Hepatite × Leptospirose × Febre Amarela ──────
+  _PerguntaSintoma(
+    key: 'urina_escura_fezes_claras',
+    pergunta: 'A urina está escura e as fezes claras?',
+    dica: 'Urina cor de Coca-Cola, fezes esbranquiçadas como massa de vidraceiro',
+    emoji: '🧪',
+    condicionaisDe: ['ictericia'],
+  ),
+  _PerguntaSintoma(
+    key: 'dor_panturrilha',
+    pergunta: 'Sente dor forte na batata da perna?',
+    dica: 'Dor na panturrilha que piora ao apertar',
+    emoji: '🦵',
+    condicionaisDe: ['ictericia'],
+  ),
+  _PerguntaSintoma(
+    key: 'febre_bifasica',
+    pergunta: 'A febre baixou e voltou depois de um ou dois dias?',
+    dica: 'Chegou a melhorar e então piorou de novo',
+    emoji: '📉',
+    condicionaisDe: ['febre', 'ictericia'],
   ),
   _PerguntaSintoma(
     key: 'manchas_hemorragicas',
@@ -178,28 +324,30 @@ const _perguntas = [
     pergunta: 'As bolhinhas doem mais do que coçam?',
     dica: 'Pense no que incomoda mais: a dor ou a coceira',
     emoji: '😖',
-    condicionalDe: 'exantema_vesicular',
+    condicionaisDe: ['exantema_vesicular'],
   ),
   _PerguntaSintoma(
     key: 'linfonodo_aumentado',
     pergunta: 'Tem íngua — caroço no pescoço, axila ou virilha?',
     dica: 'Caroço que dói ao apertar, do tamanho de um grão de feijão ou maior',
     emoji: '🔘',
-    condicionalDe: 'exantema_vesicular',
+    // Duas portas: com bolhinhas separa Mpox de varicela; com febre e sem
+    // bolhinhas é o bubão da peste, que o catálogo não alcançava.
+    condicionaisDe: ['exantema_vesicular', 'febre'],
   ),
   _PerguntaSintoma(
     key: 'lesao_face_palmas',
     pergunta: 'Começou no rosto, ou apareceu nas palmas das mãos ou plantas dos pés?',
     dica: 'Onde surgiram as primeiras bolhinhas',
     emoji: '🤲',
-    condicionalDe: 'exantema_vesicular',
+    condicionaisDe: ['exantema_vesicular'],
   ),
   _PerguntaSintoma(
     key: 'vesiculas_estagios_variados',
     pergunta: 'Há bolhinhas novas e feridas já com casquinha ao mesmo tempo?',
     dica: 'Umas acabando de surgir enquanto outras já secaram',
     emoji: '🫧',
-    condicionalDe: 'exantema_vesicular',
+    condicionaisDe: ['exantema_vesicular'],
   ),
   _PerguntaSintoma(
     key: 'perda_peso',
@@ -207,11 +355,41 @@ const _perguntas = [
     dica: 'Perda de peso involuntária nas últimas semanas',
     emoji: '⚖️',
   ),
+  // ── Desempate: emagrecimento → Leishmaniose Visceral × Tuberculose ──────
+  _PerguntaSintoma(
+    key: 'barriga_inchada',
+    pergunta: 'A barriga está inchada, ou sente um volume do lado esquerdo?',
+    dica: 'Barriga crescendo sem ganhar peso, ou peso embaixo das costelas à esquerda',
+    emoji: '🫃',
+    condicionaisDe: ['perda_peso'],
+  ),
+  _PerguntaSintoma(
+    key: 'sudorese_noturna',
+    pergunta: 'Tem suor à noite que chega a molhar a roupa?',
+    dica: 'Suor durante o sono, a ponto de precisar trocar de roupa ou lençol',
+    emoji: '💦',
+    condicionaisDe: ['tosse', 'perda_peso'],
+  ),
   _PerguntaSintoma(
     key: 'ulcera_cutanea',
     pergunta: 'Tem uma ferida ou úlcera na pele que não cicatriza?',
     dica: 'Ferida com bordas elevadas, indolor — comum em áreas expostas',
     emoji: '🔵',
+  ),
+  // ── Desempate: úlcera → Leishmaniose Tegumentar ─────────────────────────
+  _PerguntaSintoma(
+    key: 'ulcera_indolor_bordas',
+    pergunta: 'A ferida é indolor e tem as bordas elevadas?',
+    dica: 'Não dói ao tocar, e a borda é mais alta que o fundo',
+    emoji: '⭕',
+    condicionaisDe: ['ulcera_cutanea'],
+  ),
+  _PerguntaSintoma(
+    key: 'ulcera_mais_1_mes',
+    pergunta: 'A ferida está aberta há mais de um mês?',
+    dica: 'Sem cicatrizar, mesmo com pomada ou curativo',
+    emoji: '🗓️',
+    condicionaisDe: ['ulcera_cutanea'],
   ),
   _PerguntaSintoma(
     key: 'mancha_anestesia',
@@ -317,6 +495,17 @@ const _anamneseItems = [
     dica: 'Inseto preto achatado que pica à noite — Doença de Chagas',
     emoji: '🦟',
   ),
+  // Mordedura de animal. Vale por si, independentemente da classificação: a
+  // profilaxia antirrábica é tempo-dependente, e quem responde "sim" aqui
+  // precisa procurar serviço de saúde mesmo que nada mais no quadro aponte
+  // raiva. É também o único caminho pelo qual a Raiva Humana pode ser
+  // alcançada — sem exposição, o catálogo nunca chegaria nela.
+  _ItemAnamnese(
+    tipo: _TipoAnamnese.simNao,
+    pergunta: 'Foi mordido, arranhado ou lambido por algum animal?',
+    dica: 'Cão, gato, morcego, macaco ou animal silvestre — nos últimos meses',
+    emoji: '🐕',
+  ),
 ];
 
 // ─── Tela principal ───────────────────────────────────────────────────────────
@@ -362,6 +551,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
   // Phase 2
   bool? _exposicaoCarrapato;
   bool? _exposicaoTriatomideo;
+  bool? _mordeduraAnimal;
 
   // Computed: true se qualquer condição crônica foi marcada Sim
   bool? get _temComorbidade {
@@ -385,7 +575,8 @@ class _TelaSintomasState extends State<TelaSintomas> {
   final Map<String, bool> _desempate = {};
 
   bool _perguntaVisivel(_PerguntaSintoma p) =>
-      p.condicionalDe == null || (_sintomas[p.condicionalDe] ?? false);
+      p.condicionaisDe.isEmpty ||
+      p.condicionaisDe.any((porta) => _sintomas[porta] ?? false);
 
   int get _totalSintomas => _sintomas.values.where((v) => v).length;
 
@@ -431,6 +622,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
       _temImunossupressao = null;
       _exposicaoCarrapato = null;
       _exposicaoTriatomideo = null;
+      _mordeduraAnimal = null;
       _lastResult = null;
       _fase = 0;
       _index = 0;
@@ -496,7 +688,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
   // ── Responder sintoma (Sim/Não) ──
   void _responderSintoma(bool valor) async {
     final pergunta = _perguntas[_index];
-    if (pergunta.condicionalDe != null) {
+    if (pergunta.condicionaisDe.isNotEmpty) {
       _desempate[pergunta.key] = valor;
     } else {
       _sintomas[pergunta.key] = valor;
@@ -564,12 +756,47 @@ class _TelaSintomasState extends State<TelaSintomas> {
           _exposicaoCarrapato = valor as bool?;
         case 12:
           _exposicaoTriatomideo = valor as bool?;
+        case 13:
+          _mordeduraAnimal = valor as bool?;
       }
     });
+    // Mordedura de animal é a única resposta de anamnese que exige algo da
+    // pessoa AGORA. A profilaxia antirrábica depende de começar cedo, e a
+    // raiva é praticamente 100% letal depois que os sintomas aparecem — não
+    // dá para deixar esse aviso só para o resultado no fim do questionário.
+    // Diferente do alerta de urgência dos sintomas, este não desfaz a
+    // resposta: a pessoa foi mordida, isso é fato, e o registro continua.
+    if (_index == 13 && valor == true) {
+      await _mostrarAvisoAntirrabico();
+      if (!mounted) return;
+    }
     if (valor != null) {
       await Future.delayed(const Duration(milliseconds: 150));
       _avancar();
     }
+  }
+
+  Future<void> _mostrarAvisoAntirrabico() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Procure atendimento'),
+        content: const Text(
+          'Mordedura, arranhadura ou lambedura de animal pode exigir vacina '
+          'antirrábica.\n\nA profilaxia funciona quando começa cedo — procure '
+          'uma unidade de saúde o quanto antes, mesmo que a ferida pareça '
+          'pequena ou já tenha cicatrizado, e mesmo sem nenhum sintoma.\n\n'
+          'Lave o local com água e sabão.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendi'),
+          ),
+        ],
+      ),
+    );
   }
 
   dynamic _valorAnamnese(int idx) {
@@ -587,6 +814,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
       10 => _temImunossupressao,
       11 => _exposicaoCarrapato,
       12 => _exposicaoTriatomideo,
+      13 => _mordeduraAnimal,
       _ => null,
     };
   }
@@ -671,6 +899,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
         temImunossupressao: _temImunossupressao,
         exposicaoCarrapato: _exposicaoCarrapato,
         exposicaoTriatomideo: _exposicaoTriatomideo,
+        mordeduraAnimal: _mordeduraAnimal,
       );
 
       final local = result['local'] as Map<String, dynamic>? ?? {};
@@ -1129,6 +1358,19 @@ class _TelaSintomasState extends State<TelaSintomas> {
             : p.pergunta)
         .toList();
 
+    // As respostas de desempate não são sintomas — ficam fora de _sintomas e,
+    // por isso, não apareciam aqui. Quem respondeu "tenho íngua" via a tela
+    // dizer "1 sintoma registrado" e nada mais, sem como conferir o que de
+    // fato ia ser enviado. Em vigilância, conferir antes de enviar não é
+    // detalhe: é o que torna o dado auditável por quem o forneceu.
+    final detalhes = _perguntas
+        .where((p) => p.condicionaisDe.isNotEmpty && _desempate.containsKey(p.key))
+        .map((p) => (
+              texto: p.emoji.isNotEmpty ? '${p.emoji} ${p.pergunta}' : p.pergunta,
+              resposta: _desempate[p.key]! ? 'Sim' : 'Não',
+            ))
+        .toList();
+
     return ListView(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -1161,7 +1403,9 @@ class _TelaSintomasState extends State<TelaSintomas> {
               ),
               const SizedBox(height: 6),
               Text(
-                '${sintomasAtivos.length} sintoma${sintomasAtivos.length != 1 ? 's' : ''} registrado${sintomasAtivos.length != 1 ? 's' : ''}. Envio anônimo e voluntário.',
+                '${sintomasAtivos.length} sintoma${sintomasAtivos.length != 1 ? 's' : ''} registrado${sintomasAtivos.length != 1 ? 's' : ''}'
+                '${detalhes.isEmpty ? '' : ' e ${detalhes.length} resposta${detalhes.length != 1 ? 's' : ''} de detalhamento'}'
+                '. Envio anônimo e voluntário.',
                 style: const TextStyle(
                   color: Color(0xFF9FC5D9),
                   fontSize: 14,
@@ -1217,6 +1461,59 @@ class _TelaSintomasState extends State<TelaSintomas> {
                     '  Articular: intensidade $_intensidadeArticular',
                     style: const TextStyle(
                         color: Color(0xFF9FC5D9), fontSize: 13),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Respostas de desempate — o que a porta aberta perguntou
+        if (detalhes.isNotEmpty) ...[
+          const Text(
+            'Respostas de detalhamento',
+            style: TextStyle(
+              color: Color(0xFF6A9AB5),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0B2333),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final d in detalhes)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          d.texto,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            height: 1.35,
+                          ),
+                        ),
+                        Text(
+                          '  ${d.resposta}',
+                          style: TextStyle(
+                            color: d.resposta == 'Sim'
+                                ? const Color(0xFF4FD1C5)
+                                : const Color(0xFF9FC5D9),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),

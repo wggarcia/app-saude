@@ -61,6 +61,12 @@ _NOME_OFICIAL_PARA_CLASSIFICADOR = {
     "Doenca de Chagas": "Doença de Chagas",
     "Hanseniase": "Hanseníase",
     "Colera": "Cólera",
+    # A série oficial junta as duas doenças num nome só. Sem esta linha o
+    # fator de atividade do sarampo caía num nome fora do classificador e era
+    # descartado em silêncio — o próprio comentário acima avisa que é isso
+    # que acontece. Aproximação assumida: a rubéola não existe no catálogo,
+    # então a série inteira calibra o sarampo.
+    "Sarampo e Rubeola": "Sarampo",
 }
 
 

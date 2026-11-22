@@ -66,6 +66,11 @@ ANAMNESE_IA_ATIVA = env_bool("ANAMNESE_IA_ATIVA", default=False)
 # $0,50 contra $2/$10) e a tarefa é escolher dentro de uma lista fechada que o
 # motor já ranqueou, não redigir parecer. Testar antes de adotar.
 ANAMNESE_IA_MODELO = os.environ.get("ANAMNESE_IA_MODELO", "")
+# Modelo caro, usado SÓ quando o barato discorda do motor numa divergência que
+# muda conduta (~10% dos casos na bateria). Vazio = sem escalada.
+# Medido: Haiku sozinho R$ 1,04/mil envios e erra 2 em 20; Sonnet sozinho
+# R$ 20,76/mil e acerta 20; com escalada, R$ 3,12/mil e acerta 19.
+ANAMNESE_IA_MODELO_DIFICIL = os.environ.get("ANAMNESE_IA_MODELO_DIFICIL", "")
 
 # Chamar a IA em TODO envio, sem o portão de casos ambíguos. Decisão do dono
 # após o portão ter descartado um caso com lesão vesicular e Mpox no

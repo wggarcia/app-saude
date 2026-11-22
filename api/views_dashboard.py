@@ -2123,3 +2123,103 @@ def api_dono_auditoria(request):
         })
 
     return JsonResponse({"registros": registros, "total": qs.count()})
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FASE 4 — ciclo de aprendizado: a entrada do desfecho confirmado
+#
+# O consumidor já existia há tempo: `calibrar_pesos_feedback()` no classificador
+# compara o que o motor disse com o que foi confirmado e devolve acurácia e os
+# erros mais frequentes. Ele nunca teve o que ler — em 2.167 registros de
+# produção, ZERO tinham `doenca_confirmada`, porque nenhuma tela ou rota
+# gravava o campo. A metade cara estava pronta e sem entrada.
+#
+# É a Fase 4 que responde à única pergunta que nenhum teste sintético responde:
+# o sistema acerta na vida real? Até aqui, tudo o que se pode afirmar é que ele
+# faz o que foi projetado para fazer.
+# ──────────────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_confirmar_desfecho(request):
+    """Grava o desfecho confirmado de um registro (UBS, laboratório, vigilância).
+
+    Só o governo grava, e só no próprio tenant. O campo é livre de escrita
+    posterior — desfecho pode ser corrigido quando o exame muda a conclusão.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if empresa.tipo_conta != Empresa.TIPO_GOVERNO:
+        return JsonResponse({"erro": "acesso restrito ao governo"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    id_anonimo = (dados.get("registro_id") or "").strip()
+    if not id_anonimo:
+        return JsonResponse({"erro": "informe registro_id"}, status=400)
+
+    confirmada = (dados.get("doenca_confirmada") or "").strip()
+    from .classificador_doencas import DOENCAS_BRASIL
+    # Lista fechada, pela mesma razão que vale para o LLM: nome livre não casa
+    # com o catálogo e a calibração descartaria a linha em silêncio.
+    # "" é válido e significa desfazer uma confirmação anterior.
+    if confirmada and confirmada not in DOENCAS_BRASIL:
+        return JsonResponse({
+            "erro": "doença fora do catálogo",
+            "aceitas": sorted(DOENCAS_BRASIL),
+        }, status=400)
+
+    # id_anonimo é UUID: valor malformado faz o ORM levantar ValidationError e
+    # a rota devolver 500. Entrada de usuário não pode derrubar o endpoint —
+    # id inválido é "não encontrado", não erro de servidor.
+    import uuid as _uuid
+    try:
+        _uuid.UUID(id_anonimo)
+    except (ValueError, AttributeError, TypeError):
+        return JsonResponse({"erro": "registro não encontrado"}, status=404)
+
+    registro = RegistroSintoma.objects.filter(
+        id_anonimo=id_anonimo, empresa=empresa
+    ).first()
+    if not registro:
+        return JsonResponse({"erro": "registro não encontrado"}, status=404)
+
+    # update() direto: não dispara save() nem recalcula classificação. O
+    # desfecho é verdade de fora; ele não deve reescrever o que o motor disse,
+    # senão a comparação entre os dois perde o sentido.
+    RegistroSintoma.objects.filter(pk=registro.pk).update(
+        doenca_confirmada=confirmada or None
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "registro_id": id_anonimo,
+        "doenca_confirmada": confirmada or None,
+        # Devolve o que o motor e a IA tinham dito, para fechar o laço na tela.
+        "motor_disse": registro.classificacao,
+        "ia_disse": registro.hipotese_ia or None,
+        "acertou": bool(confirmada and registro.classificacao
+                        and confirmada.lower() in (registro.classificacao or "").lower()),
+    })
+
+
+def api_calibracao_classificador(request):
+    """Relatório de acurácia a partir dos desfechos confirmados.
+
+    Não altera peso nenhum automaticamente — a própria função deixa isso claro.
+    Recalibrar motor clínico a partir de dado de campo é decisão humana.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if empresa.tipo_conta != Empresa.TIPO_GOVERNO:
+        return JsonResponse({"erro": "acesso restrito ao governo"}, status=403)
+
+    from .classificador_doencas import calibrar_pesos_feedback
+    qs = RegistroSintoma.objects.filter(empresa=empresa)
+    return JsonResponse(calibrar_pesos_feedback(qs))

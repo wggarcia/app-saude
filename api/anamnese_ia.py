@@ -39,13 +39,29 @@ logger = logging.getLogger("api")
 # confiar: ANAMNESE_IA_MODELO=claude-haiku-5-5 no .env.
 MODELO_RACIOCINIO = getattr(settings, "ANAMNESE_IA_MODELO", "") or "claude-sonnet-5-5"
 
+# Modelo caro, chamado SÓ quando o barato dá sinal de que o caso é difícil.
+# A bateria de 20 casos mostrou onde o barato quebra: ele rebaixa doença rara
+# para doença comum (disse Varicela onde havia os quatro achados de Mpox, o
+# mesmo erro do registro 168884). O que esses casos têm em comum é serem
+# justamente os que o barato NÃO consegue resolver sozinho — e ele avisa,
+# discordando do motor. Daí a escalada: paga-se caro só onde o barato
+# levantou a mão. Vazio = sem escalada, roda só o barato.
+MODELO_DIFICIL = getattr(settings, "ANAMNESE_IA_MODELO_DIFICIL", "") or ""
+
 # Teto de saída, não alvo: cobra-se o que é gerado, não o que é reservado. A
-# resposta real tem ~180 tokens, então a folga aqui não custa nada — ela existe
-# como rede de segurança caso o desligamento do pensamento não pegue (SDK
-# antigo, modelo que ignore o campo). Com 350 e pensamento ligado, o modelo
-# gastou tudo pensando e devolveu vazio; essa folga impede que isso se repita
-# em silêncio.
-MAX_TOKENS = 900
+# resposta real tem ~180 a 300 tokens, então a folga aqui não custa nada — ela
+# existe como rede de segurança caso o desligamento do pensamento não pegue
+# (SDK antigo, modelo que ignore o campo). Com 350 e pensamento ligado, o
+# modelo gastou tudo pensando e devolveu vazio.
+# Subiu de 900 para 1600 depois que um caso de dengue voltou com o JSON cortado
+# no meio da frase: a resposta foi descartada inteira e o registro ficou sem
+# hipótese. Teto curto não economiza nada e transforma resposta boa em perda.
+MAX_TOKENS = 1600
+
+# Qual valor de "thinking" cada modelo aceita, descoberto na primeira chamada.
+# Sem esta memória o Sonnet gasta um 400 em TODO envio antes da chamada boa:
+# medido na bateria de 20 casos, foram 20 idas e voltas desperdiçadas.
+_MODO_THINKING: dict[str, str] = {}
 
 # ── Quando NÃO vale chamar a IA ───────────────────────────────────────────────
 # A maior economia não é o modelo: é não chamar. Num quadro onde o motor já
@@ -91,12 +107,7 @@ RAZAO_DISPUTA = 0.80           # 2º a 80%+ do 1º: disputa real, vale a chamada
 # Lista: notificação compulsória e/ou alta letalidade. Fora dela ficam as
 # comuns de fundo (gripe, resfriado, COVID, viroses), cuja presença não
 # qualifica caso nenhum como digno de atenção extra.
-DOENCAS_SENTINELA = {
-    "Mpox", "Sarampo", "Meningite", "Febre Amarela", "Febre Maculosa",
-    "Hantavirose", "Difteria", "Coqueluche", "Tuberculose", "Leptospirose",
-    "Malaria", "Raiva Humana", "Cólera", "Peste", "Febre Tifoide",
-    "Leishmaniose Visceral", "Hanseníase", "Doença de Chagas",
-}
+from .classificador_doencas import DOENCAS_SENTINELA  # fonte única
 
 # Piso para a sentinela contar: abaixo disto é ruído de cauda, não hipótese.
 PARTICIPACAO_SENTINELA = 0.20
@@ -190,6 +201,32 @@ _ROTULOS = {
     "linfonodo_aumentado": "linfonodo aumentado (íngua) em pescoço, axila ou virilha",
     "lesao_face_palmas": "lesões iniciadas na face ou acometendo palmas/plantas",
     "vesiculas_estagios_variados": "vesículas em estágios simultâneos diferentes",
+    # Desempate das demais portas. Sem rótulo o campo não aparece no bloco de
+    # dados e o modelo reclama de informação que, na verdade, foi coletada.
+    "exantema_craniocaudal": "exantema iniciado na face com progressão craniocaudal",
+    "exantema_pruriginoso": "exantema intensamente pruriginoso",
+    "exantema_palmo_plantar": "exantema em palmas e plantas",
+    "exantema_apos_febre": "exantema surgido na defervescência",
+    "tosse_mais_3_semanas": "tosse há mais de 3 semanas",
+    "tosse_paroxistica": "tosse paroxística com guincho ou vômito pós-tussígeno",
+    "sudorese_noturna": "sudorese noturna que encharca as roupas",
+    "urina_escura_fezes_claras": "colúria com acolia fecal",
+    "dor_panturrilha": "mialgia intensa de panturrilhas",
+    "fezes_agua_arroz": "fezes aquosas em água de arroz",
+    "fezes_com_sangue": "fezes com sangue ou muco",
+    "febre_alta_prolongada": "febre alta contínua por mais de uma semana",
+    "artralgia_simetrica": "artralgia simétrica (mesmas articulações bilateralmente)",
+    "artralgia_mais_2_semanas": "artralgia persistente há mais de 2 semanas",
+    "dispneia_subita_pos_febre": "dispneia de instalação súbita dias após a febre",
+    "dispneia_piora_deitado": "ortopneia (dispneia que piora em decúbito)",
+    "barriga_inchada": "distensão abdominal ou massa em hipocôndrio esquerdo",
+    "ulcera_indolor_bordas": "úlcera indolor de bordas elevadas",
+    "ulcera_mais_1_mes": "úlcera aberta há mais de um mês",
+    "febre_ciclica": "febre cíclica com calafrio e sudorese (acesso malárico)",
+    "febre_bifasica": "curva febril bifásica (remissão seguida de recrudescência)",
+    "placa_na_garganta": "placa branco-acinzentada aderente em orofaringe",
+    "pescoco_inchado": "edema cervical difuso (pescoço de touro)",
+    "mordedura_animal": "mordedura, arranhadura ou lambedura por mamífero",
 }
 
 
@@ -233,6 +270,11 @@ def _system_prompt() -> str:
         "sintomas negados, exposições, comorbidades, tempo de doença e o "
         "contexto local. NÃO se fixe apenas na queixa mais chamativa: "
         "um achado isolado não decide o quadro.\n"
+        "3b. \"concorda_com_motor\" significa UMA coisa só: a sua hipótese é "
+        "a mesma que o motor colocou em primeiro lugar. É true quando o nome "
+        "coincide, mesmo que a sua confiança seja diferente da dele; é false "
+        "quando você escolhe outra doença ou Inconclusivo. Não use este campo "
+        "para expressar dúvida — para isso existe a confiança.\n"
         "4. Você recebe o diferencial já calculado por um motor bayesiano. "
         "Use-o como referência, mas discorde dele quando a evidência clínica "
         "mandar — e explique por quê.\n"
@@ -245,8 +287,8 @@ def _system_prompt() -> str:
         '{"hipotese": "<nome exato da lista ou Inconclusivo>", '
         '"confianca": <inteiro 0-100>, '
         '"concorda_com_motor": <true|false>, '
-        '"raciocinio": "<2 a 3 frases, em português, citando os achados que '
-        'sustentam e os que afastam>"}'
+        '"raciocinio": "<2 a 3 frases, em português, no máximo 450 caracteres, '
+        'citando os achados que sustentam e os que afastam>"}'
     )
 
 
@@ -310,8 +352,18 @@ def _extrair_json(raw: str) -> dict | None:
         pass
     inicio, fim = texto.find("{"), texto.rfind("}")
     if inicio != -1 and fim > inicio:
+        trecho = texto[inicio:fim + 1]
         try:
-            return json.loads(texto[inicio:fim + 1])
+            return json.loads(trecho)
+        except Exception:
+            pass
+        # Última tentativa: strict=False aceita quebra de linha e tabulação
+        # DENTRO da string. O modelo às vezes escreve o raciocínio em duas
+        # linhas, e o parser padrão recusa — a resposta estava correta e era
+        # descartada inteira. Custou um caso na bateria: o Sonnet acertou a
+        # Zika, o JSON não passou, e ficou valendo a Varicela errada do Haiku.
+        try:
+            return json.loads(trecho, strict=False)
         except Exception:
             return None
     return None
@@ -332,18 +384,110 @@ def _casar_doenca(nome: str, conhecidas: set[str]) -> str:
     return "Inconclusivo"
 
 
-def avaliar(dados: dict[str, Any], ranking: list[dict], conhecidas: set[str]) -> dict | None:
+# Viroses banais. A divergência entre duas delas não muda conduta nenhuma:
+# gripe ou resfriado, o encaminhamento é o mesmo e nenhuma vigilância é
+# acionada. Medido na bateria: o caso-controle escalava por "Resfriado" contra
+# "Gripe" e gastava o modelo caro para trocar seis por meia dúzia.
+_COMUNS_DE_FUNDO = {
+    "Gripe (Influenza)", "Resfriado Viral", "COVID-19",
+    "Gastroenterite Viral", "Bronquite / DPOC Agudização",
+}
+
+
+def _merece_segunda_opiniao(avaliacao: dict | None, ranking: list[dict]) -> bool:
+    """Escala quando o barato DISCORDA do motor e a divergência tem consequência.
+
+    O sinal é a discordância, e ele sai de graça da chamada já feita. Quando os
+    dois concordam, o caso é fácil e pagar de novo não compra nada — na bateria
+    de 20 casos o modelo caro confirmou todos os concordantes, um por um.
+    Quando discordam, alguém está errado, e foi exatamente aí que o barato
+    falhou: Mpox virando Varicela, Zika virando Varicela.
+
+    A exceção são as viroses de fundo: trocar gripe por resfriado não muda
+    conduta nem aciona vigilância, então não vale a chamada cara.
+
+    Sem avaliação (IA fora do ar, resposta inválida) não escala: o problema não
+    era o modelo, e repetir num modelo caro só multiplica a falha.
+    """
+    if not avaliacao:
+        return False
+    if not ranking:
+        return False
+    lider = ranking[0].get("doenca")
+    hipotese = avaliacao.get("hipotese")
+
+    # Sinal 2: sentinela forte que ninguém escolheu.
+    # O sinal da discordância não cobre o caso em que o barato CONCORDA com o
+    # motor e os dois passam por cima de uma doença de alta consequência que
+    # está logo atrás. Aconteceu na bateria: Peste em 5º com 56% do líder, o
+    # Haiku repetiu "Leptospirose" e ninguém conferiu.
+    # O corte em 55% do líder foi medido: acrescenta 5,8% de escalada em 600
+    # casos. "Sentinela em qualquer posição" custaria 62% e "no top-3", 26%.
+    # Note que NÃO se dispensa o caso em que o líder já é sentinela: duas
+    # sentinelas diferentes pedem condutas diferentes. Leptospirose e Peste
+    # lideravam juntas no caso da bateria, e tratar uma como se fosse a outra
+    # erra isolamento e rastreio de contatos.
+    lider_score = ranking[0].get("score") or 0.0
+    if lider_score > 0:
+        for x in ranking[1:]:
+            if (x.get("doenca") in DOENCAS_SENTINELA
+                    and x.get("doenca") != hipotese
+                    and (x.get("score") or 0.0) >= 0.55 * lider_score):
+                return True
+
+    # Sinal 1: discordância com consequência.
+    if hipotese == lider:
+        return False
+    return not (hipotese in _COMUNS_DE_FUNDO and lider in _COMUNS_DE_FUNDO)
+
+
+def avaliar_com_escalada(dados: dict[str, Any], ranking: list[dict],
+                         conhecidas: set[str]) -> dict | None:
+    """Barato em todo envio; caro só onde o barato não basta.
+
+    Medido: o modelo caro acertou os 20 casos da bateria e o barato errou 2,
+    mas custa ~20x. Rodar o caro em tudo seria pagar R$ 20 por mil envios para
+    corrigir uma minoria. Aqui o barato faz a triagem da própria triagem.
+    """
+    avaliacao = avaliar(dados, ranking, conhecidas)
+    if not MODELO_DIFICIL or MODELO_DIFICIL == MODELO_RACIOCINIO:
+        return avaliacao
+    if not _merece_segunda_opiniao(avaliacao, ranking):
+        return avaliacao
+
+    forte = avaliar(dados, ranking, conhecidas, modelo=MODELO_DIFICIL)
+    if not forte:
+        # O caro falhou (billing, timeout). A opinião do barato continua
+        # valendo mais que nenhuma — nunca descartar o que já se pagou.
+        return avaliacao
+    logger.info("anamnese_ia: caso escalado de %s para %s (%s → %s).",
+                MODELO_RACIOCINIO, MODELO_DIFICIL,
+                avaliacao.get("hipotese"), forte.get("hipotese"))
+    return forte
+
+
+def avaliar(dados: dict[str, Any], ranking: list[dict], conhecidas: set[str],
+            modelo: str | None = None) -> dict | None:
     """Chama o LLM. Devolve dict com a hipótese, ou None se a IA não puder rodar
     (sem chave, billing, timeout, resposta inválida) — o chamador segue com o motor."""
+    _modelo = modelo or MODELO_RACIOCINIO
     api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
     if not api_key:
         logger.info("anamnese_ia: ANTHROPIC_API_KEY ausente — mantendo só o motor.")
         return None
 
+    # Fase 3 — fundamentação: critério oficial do MS para as hipóteses do topo.
+    # Só as 3 primeiras: mandar 30 protocolos num caso de 3 candidatos é gasto
+    # sem ganho. Vazio quando nenhuma delas tem protocolo verificado, e aí o
+    # prompt não muda em nada.
+    from .protocolos_ms import bloco_protocolos
+    _protocolos = bloco_protocolos([x.get("doenca") for x in ranking if x.get("doenca")])
+
     conteudo = (
         f"{_bloco_dados(dados)}\n\n"
         f"{_bloco_ranking(ranking)}\n\n"
-        "LISTA FECHADA DE DOENÇAS PERMITIDAS:\n"
+        + (f"{_protocolos}\n\n" if _protocolos else "")
+        + "LISTA FECHADA DE DOENÇAS PERMITIDAS:\n"
         + ", ".join(sorted(conhecidas))
         + "\n\nResponda apenas o JSON."
     )
@@ -367,44 +511,68 @@ def avaliar(dados: dict[str, Any], ranking: list[dict], conhecidas: set[str]) ->
         # com os outros onze serviços de uma vez.
         def _chamar(modo_thinking: str):
             return client.messages.create(
-                model=MODELO_RACIOCINIO,
+                model=_modelo,
                 max_tokens=MAX_TOKENS,
                 system=_system_prompt(),
                 messages=[{"role": "user", "content": conteudo}],
                 extra_body={"thinking": {"type": modo_thinking}},
             )
 
-        try:
-            resposta = _chamar("disabled")
-        except Exception as exc:
-            # Nem todo modelo aceita o mesmo valor: o Sonnet 5.5 recusa
-            # "disabled" com 400 e diz, na própria mensagem, para mandar
-            # "between_tools". Sem este fallback, trocar ANAMNESE_IA_MODELO
-            # de Haiku para Sonnet derruba a anamnese inteira em silêncio
-            # (fail-open: o registro fica só com o motor do Bayes).
-            if "between_tools" not in str(exc):
-                raise
-            logger.info("anamnese_ia: modelo exige thinking=between_tools — repetindo.")
-            resposta = _chamar("between_tools")
+        _modo = _MODO_THINKING.get(_modelo, "disabled")
 
-        # Nunca assumir que o primeiro bloco é texto: com pensamento ligado o
-        # primeiro é o bloco de thinking, e `content[0].text` lê o lugar errado
-        # (ou None). Procurar o bloco de texto explicitamente.
-        bruto = next(
-            (b.text for b in (resposta.content or [])
-             if getattr(b, "type", None) == "text" and getattr(b, "text", None)),
-            None,
-        )
-        if not bruto:
-            logger.warning(
-                "anamnese_ia: resposta sem texto (stop_reason=%s). Sem hipótese para este caso.",
-                getattr(resposta, "stop_reason", "?"),
+        # Duas tentativas. A primeira falha de parse é intermitente e barata de
+        # refazer: medido no caso de dengue da bateria, o modelo devolvia JSON
+        # inutilizável em parte das execuções e a mesma chamada passava na
+        # seguinte. Sem a repetição, o registro fica sem hipótese por um
+        # sorteio — e o custo de repetir no modelo barato é R$ 0,001.
+        # Só repete quando o problema é o FORMATO. Erro de API (billing,
+        # timeout, 400) sobe para o except de fora e não vira duas cobranças.
+        obj = None
+        bruto = None
+        for _tentativa in (1, 2):
+            try:
+                resposta = _chamar(_modo)
+            except Exception as exc:
+                # Nem todo modelo aceita o mesmo valor: o Sonnet 5.5 recusa
+                # "disabled" com 400 e diz, na própria mensagem, para mandar
+                # "between_tools". Sem este fallback, trocar ANAMNESE_IA_MODELO
+                # de Haiku para Sonnet derruba a anamnese inteira em silêncio
+                # (fail-open: o registro fica só com o motor do Bayes).
+                if "between_tools" not in str(exc):
+                    raise
+                logger.info("anamnese_ia: %s exige thinking=between_tools — "
+                            "memorizando para não repetir a cada envio.", _modelo)
+                _MODO_THINKING[_modelo] = "between_tools"
+                _modo = "between_tools"
+                resposta = _chamar(_modo)
+
+            # Nunca assumir que o primeiro bloco é texto: com pensamento ligado
+            # o primeiro é o bloco de thinking, e `content[0].text` lê o lugar
+            # errado (ou None). Procurar o bloco de texto explicitamente.
+            bruto = next(
+                (b.text for b in (resposta.content or [])
+                 if getattr(b, "type", None) == "text" and getattr(b, "text", None)),
+                None,
             )
-            return None
+            if bruto:
+                obj = _extrair_json(bruto)
+                if isinstance(obj, dict):
+                    break
 
-        obj = _extrair_json(bruto)
+            # O motivo importa: resposta CORTADA (max_tokens) é problema de
+            # teto; JSON malformado com stop_reason=end_turn é problema de
+            # formato. A mensagem antiga não distinguia os dois.
+            logger.warning(
+                "anamnese_ia: tentativa %d sem JSON utilizável (modelo=%s, "
+                "stop_reason=%s, %d caracteres): %r",
+                _tentativa, _modelo, getattr(resposta, "stop_reason", "?"),
+                len(bruto or ""), (bruto or "")[:200],
+            )
+            obj = None
+
         if not isinstance(obj, dict):
-            logger.warning("anamnese_ia: resposta sem JSON utilizável: %r", bruto[:200])
+            logger.warning("anamnese_ia: %s não devolveu JSON utilizável em 2 "
+                           "tentativas — registro segue só com o motor.", _modelo)
             return None
 
         try:
@@ -417,7 +585,7 @@ def avaliar(dados: dict[str, Any], ranking: list[dict], conhecidas: set[str]) ->
             "confianca": max(0, min(confianca, 100)),
             "concorda": bool(obj.get("concorda_com_motor")),
             "raciocinio": str(obj.get("raciocinio") or "")[:1000],
-            "modelo": MODELO_RACIOCINIO,
+            "modelo": _modelo,
         }
     except Exception as exc:
         if _e_indisponibilidade_ia(exc):
@@ -466,7 +634,7 @@ def _refinar(registro_id):
         resultado = classificar(dados, setor="governo", estado=dados.get("estado") or "")
         ranking = (resultado.get("ranking") or [])[:5]
 
-        avaliacao = avaliar(dados, ranking, set(DOENCAS_BRASIL.keys()))
+        avaliacao = avaliar_com_escalada(dados, ranking, set(DOENCAS_BRASIL.keys()))
         if not avaliacao:
             return  # fail-open: grupo/classificacao do motor permanecem
 

@@ -278,6 +278,135 @@ DOENCAS_BRASIL: dict[str, dict] = {
         },
     },
 
+    # ── Sentinelas que o catálogo não alcançava ──────────────────────────────
+    # Estas três já entravam no sistema por todos os outros caminhos — série
+    # oficial do SINAN importada, prior vivo calculado, opção de notificação
+    # para o gestor, nome na DOENCAS_SENTINELA do anamnese_ia — e não existiam
+    # aqui. Resultado: o motor não podia rankeá-las e o LLM, preso à lista
+    # fechada, não podia nomeá-las. O portão de relevância clínica procurava
+    # por elas em todo envio e nunca as encontraria.
+    # Prior baixíssimo de propósito: são raras. É a evidência que as levanta.
+    "Cólera": {
+        "grupo": "Bacteriana entérica",
+        "vetor": "Vibrio cholerae (água e alimento contaminados)",
+        "cid10": "A00",
+        "descricao": "Diarreia aquosa profusa em água de arroz, vômitos e desidratação rápida; caracteristicamente SEM febre e SEM sangue nas fezes",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "diarreia":               1.00,
+            "fezes_agua_arroz":       0.95,  # o discriminador: aspecto típico
+            "vomito_nausea":          0.80,
+            "cansaco":                0.72,  # prostração por desidratação
+            "dor_abdominal":          0.22,  # cólera é tipicamente indolor
+            "calafrios":              0.20,
+            "febre":                 -0.45,  # a clássica cursa afebril
+            "fezes_com_sangue":      -0.70,  # cólera não faz disenteria
+            "febre_alta_prolongada": -0.60,
+            "tosse":                 -0.40,
+            "coriza":                -0.50,
+            "dor_garganta":          -0.45,
+            "exantema":              -0.50,
+            "ictericia":             -0.40,
+            "dor_articular":         -0.35,
+            "rigidez_nuca":          -0.50,
+            "perda_olfato_paladar":  -0.60,
+        },
+        "red_flags": ["diarreia", "vomito_nausea", "cansaco"],
+        "diferencial_vs": {
+            "Gastroenterite Viral": "cólera é aquosa em água de arroz, sem febre, com desidratação muito mais rápida",
+            "Febre Tifoide": "tifoide tem febre alta em platô e dor abdominal; cólera é afebril e indolor",
+        },
+    },
+    "Difteria": {
+        "grupo": "Bacteriana respiratória — URGÊNCIA",
+        "vetor": "Corynebacterium diphtheriae (gotículas respiratórias)",
+        "cid10": "A36.0",
+        "descricao": "Dor de garganta com placa branco-acinzentada aderente que sangra ao ser removida, febre baixa e edema cervical; risco de obstrução de via aérea e miocardite",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "dor_garganta":           1.00,
+            "placa_na_garganta":      0.95,  # pseudomembrana: o achado que define
+            "pescoco_inchado":        0.80,  # "pescoço de touro" — edema cervical
+            "cansaco":                0.75,  # toxemia desproporcional ao quadro local
+            "febre":                  0.55,
+            "falta_ar":               0.50,  # obstrução de via aérea
+            "dor_corpo":              0.35,
+            "coriza":                 0.28,
+            "tosse":                  0.22,
+            "_intensidade_febre_alta": -0.25,  # difteria costuma dar febre baixa
+            "diarreia":              -0.45,
+            "exantema":              -0.45,
+            "ictericia":             -0.50,
+            "dor_articular":         -0.35,
+            "perda_olfato_paladar":  -0.60,
+        },
+        "red_flags": ["falta_ar", "pescoco_inchado", "placa_na_garganta"],
+        "diferencial_vs": {
+            "Resfriado Viral": "resfriado não faz placa aderente nem edema cervical",
+            "Coqueluche": "coqueluche é tosse em acessos sem placa de garganta",
+        },
+    },
+    "Peste": {
+        "grupo": "Zoonose — URGÊNCIA",
+        "vetor": "Yersinia pestis (pulga de roedor silvestre)",
+        "cid10": "A20.0",
+        "descricao": "Febre alta de início abrupto com linfonodo muito doloroso (bubão), prostração intensa; forma pneumônica cursa com tosse e hemoptise e transmite de pessoa a pessoa",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "febre":                  1.00,
+            "linfonodo_aumentado":    0.95,  # bubão: o achado cardinal
+            "cansaco":                0.85,
+            "calafrios":              0.78,
+            "dor_cabeca":             0.70,
+            "dor_corpo":              0.68,
+            "_intensidade_febre_alta": 0.35,
+            "hemoptise":              0.45,  # forma pneumônica
+            "vomito_nausea":          0.38,
+            "falta_ar":               0.32,
+            "tosse":                  0.28,
+            "exantema_vesicular":    -0.50,
+            "coriza":                -0.50,
+            "ictericia":             -0.35,
+            "diarreia":              -0.30,
+            "dor_articular":         -0.25,
+            "perda_olfato_paladar":  -0.60,
+        },
+        "red_flags": ["febre", "linfonodo_aumentado", "cansaco"],
+        "diferencial_vs": {
+            "Mpox": "na Mpox a íngua vem com lesão vesicular; na peste vem com febre alta abrupta e prostração, sem vesícula",
+            "Gripe (Influenza)": "gripe não faz linfonodo muito doloroso localizado",
+        },
+    },
+    "Raiva Humana": {
+        "grupo": "Zoonose — URGÊNCIA",
+        "vetor": "Mordedura, arranhadura ou lambedura de mamífero (cão, gato, morcego)",
+        "cid10": "A82.9",
+        "descricao": "Encefalite aguda precedida de mordedura animal; pródromo inespecífico com febre e cefaleia evolui para agitação, hidrofobia e paralisia. Letalidade próxima de 100% após os sintomas — a janela útil é a profilaxia pós-exposição",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "febre":                  0.85,
+            "dor_cabeca":             0.80,
+            "cansaco":                0.72,
+            "dor_corpo":              0.55,
+            "vomito_nausea":          0.45,
+            "dor_garganta":           0.38,  # disfagia do quadro, não faringite
+            "falta_ar":               0.35,  # fase paralítica
+            "coriza":                -0.50,
+            "exantema":              -0.60,
+            "exantema_vesicular":    -0.55,
+            "ictericia":             -0.50,
+            "diarreia":              -0.40,
+            "tosse":                 -0.35,
+            "perda_olfato_paladar":  -0.50,
+            "ulcera_cutanea":        -0.30,
+        },
+        "red_flags": ["febre", "dor_cabeca"],
+        "diferencial_vs": {
+            "Meningite": "ambas dão febre e cefaleia; a raiva tem o antecedente de mordedura e não faz rigidez de nuca precoce",
+            "Gripe (Influenza)": "o pródromo é parecido; o que separa é a exposição a mamífero",
+        },
+    },
+
     # ── EXANTEMÁTICAS ────────────────────────────────────────────────────────
     "Sarampo": {
         "grupo": "Viral exantemática",
@@ -968,6 +1097,17 @@ _PRIOR_DEFAULT: dict[str, float] = {
     "Hanseníase":              0.03,  # Brasil é 2º país em casos; endêmica no Centro-Norte
     "Leishmaniose Visceral":   0.02,  # calazar — fatal sem tratamento; reservatório canino
     "Leishmaniose Tegumentar": 0.02,  # úlcera de Bauru — zonas florestais e periurbanas
+    # Sentinelas raras: prior quase nulo, por honestidade epidemiológica. Não
+    # há caso autóctone de cólera no Brasil desde meados dos anos 2000, a
+    # difteria só reaparece onde a cobertura vacinal caiu e a peste tem focos
+    # residuais no Nordeste. Entram para poderem ser NOMEADAS quando a clínica
+    # gritar, não para competirem com dengue no dia a dia.
+    "Cólera":                  0.002,
+    "Difteria":                0.002,
+    "Peste":                   0.001,
+    # Raiva humana: unidades de casos por ano no Brasil inteiro. O prior é
+    # quase zero e é a EXPOSIÇÃO que a levanta — sem mordedura não há raiva.
+    "Raiva Humana":            0.0005,
 }
 
 # UFs com priors específicos (apenas onde diferem significativamente do padrão)
@@ -1143,6 +1283,22 @@ def _fator_prior_vivo(doenca: str, uf: str) -> float:
 # presente. Sem ele, o score é zerado antes mesmo de chegar ao usuário.
 # Isso evita que febre simples gere suspeita de febre amarela.
 # ──────────────────────────────────────────────────────────────────────────────
+# Doenças de alta consequência: notificação compulsória e/ou alta letalidade.
+# Fonte única — o anamnese_ia importa daqui em vez de manter a própria cópia.
+# Duas listas separadas foi exatamente o erro que deixou Cólera, Difteria,
+# Peste e Raiva Humana citadas como sentinela e ausentes do catálogo.
+DOENCAS_SENTINELA: set[str] = {
+    "Mpox", "Sarampo", "Meningite", "Febre Amarela", "Febre Maculosa",
+    "Hantavirose", "Difteria", "Coqueluche", "Tuberculose", "Leptospirose",
+    "Malaria", "Raiva Humana", "Cólera", "Peste", "Febre Tifoide",
+    "Leishmaniose Visceral", "Hanseníase", "Doença de Chagas",
+}
+
+# Piso para uma sentinela não ser cortada do diferencial: 30% do líder.
+# Abaixo disso é cauda, e manter tudo transformaria o diferencial em lista
+# telefônica.
+_PISO_SENTINELA_NO_DIFERENCIAL = 0.30
+
 SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     # Arboviroses: são doenças febris por definição — sem febre reportada,
     # não classificar como arbovirose (evita "Síndrome Febril" quando não há febre).
@@ -1321,6 +1477,7 @@ CAMPOS_ANAMNESE = [
     "vacinado_febre_amarela", "tem_comorbidade",
     # Phase 2
     "exposicao_carrapato", "exposicao_triatomideo",
+    "mordedura_animal",
     # Desempate vesicular (Varicela × Mpox). Entram aqui, e não em
     # TODOS_SINTOMAS, porque TODOS_SINTOMAS faz bool() e achataria null em
     # False — e aqui null ("não foi perguntado") é diferente de "não".
@@ -1329,6 +1486,21 @@ CAMPOS_ANAMNESE = [
     # Varicela 0.864 ao ser reconstruído no worker da IA.
     "vesicula_dolorosa", "linfonodo_aumentado",
     "lesao_face_palmas", "vesiculas_estagios_variados",
+    # Desempate das demais portas — mesma razão: null ("não perguntado") não
+    # pode virar False. Sem estes nomes aqui, a reconstrução no worker da IA
+    # perde os discriminadores e o motor recai no prior, que foi exatamente o
+    # bug do registro 168884.
+    "exantema_craniocaudal", "exantema_pruriginoso",
+    "exantema_palmo_plantar", "exantema_apos_febre",
+    "tosse_mais_3_semanas", "tosse_paroxistica", "sudorese_noturna",
+    "urina_escura_fezes_claras", "dor_panturrilha",
+    "fezes_agua_arroz", "fezes_com_sangue", "febre_alta_prolongada",
+    "artralgia_simetrica", "artralgia_mais_2_semanas",
+    "dispneia_subita_pos_febre", "dispneia_piora_deitado",
+    "barriga_inchada",
+    "ulcera_indolor_bordas", "ulcera_mais_1_mes",
+    "febre_ciclica", "febre_bifasica",
+    "placa_na_garganta", "pescoco_inchado",
 ]
 
 
@@ -1697,7 +1869,234 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
         if doenca in ("Gastroenterite Viral", "Dengue", "Resfriado Viral"):
             return min(prior, 0.05)
 
-    return prior
+    # ── Desempate das demais portas ──────────────────────────────────────────
+    # Mesmo mecanismo das vesículas, estendido aos outros sintomas-porta. A
+    # razão de existir é sempre a mesma: "manchas", "tosse", "diarreia",
+    # "icterícia" são compartilhados por várias doenças, e sem discriminador
+    # quem decide é o prior geográfico — a comum vence a rara por construção,
+    # não por evidência.
+    #
+    # Diferença de forma em relação aos blocos acima: aqui NÃO se retorna no
+    # meio. Quem tem manchas e tosse ao mesmo tempo precisa que as duas portas
+    # pesem; um return no meio faria a primeira porta apagar a segunda. Então
+    # as portas abertas ajustam `p` em sequência e o retorno é único, no fim.
+    #
+    # Regra que vale para todas: `is True` e `is False`, nunca o valor cru.
+    # None é "não foi perguntado" e não pode contar para nenhum dos lados.
+    p = prior
+
+    def _sim(campo: str) -> bool:
+        return dados.get(campo) is True
+
+    def _nao(campo: str) -> bool:
+        return dados.get(campo) is False
+
+    # Porta: manchas na pele → Sarampo × Zika × Dengue × Febre Maculosa
+    if dados.get("exantema"):
+        if doenca == "Sarampo":
+            if _sim("exantema_craniocaudal"):
+                # progressão craniocaudal é o padrão clássico do sarampo
+                p = max(p, 0.65 if dados.get("conjuntivite") else 0.55)
+            elif _nao("exantema_craniocaudal"):
+                p = min(p, 0.12)
+        elif doenca == "Zika":
+            if _sim("exantema_pruriginoso"):
+                p = max(p, 0.55)
+            elif _nao("exantema_pruriginoso"):
+                p = min(p, 0.20)
+        elif doenca == "Febre Maculosa":
+            if _sim("exantema_palmo_plantar"):
+                # exantema em palmas e plantas é o achado que define a suspeita
+                p = max(p, 0.60)
+            elif _nao("exantema_palmo_plantar"):
+                p = min(p, 0.10)
+        elif doenca == "Dengue":
+            if _sim("exantema_apos_febre"):
+                # rash que surge na defervescência é característico
+                p = max(p, 0.60)
+            elif _nao("exantema_apos_febre") and (
+                _sim("exantema_craniocaudal") or _sim("exantema_palmo_plantar")
+            ):
+                p = min(p, 0.20)
+        elif doenca == "Chikungunya" and _sim("exantema_apos_febre"):
+            p = max(p, 0.35)
+
+    # Porta: tosse → Tuberculose × Coqueluche × agudas
+    if dados.get("tosse"):
+        if doenca == "Tuberculose":
+            if _sim("tosse_mais_3_semanas"):
+                # tosse > 3 semanas é o critério de sintomático respiratório
+                p = max(p, 0.55 if _sim("sudorese_noturna") else 0.40)
+            elif _nao("tosse_mais_3_semanas"):
+                p = min(p, 0.08)
+        elif doenca == "Coqueluche":
+            if _sim("tosse_paroxistica"):
+                p = max(p, 0.60)
+            elif _nao("tosse_paroxistica"):
+                p = min(p, 0.08)
+        elif doenca in ("Gripe (Influenza)", "Resfriado Viral", "COVID-19"):
+            if _sim("tosse_mais_3_semanas"):
+                # quadro agudo não dura três semanas
+                p = min(p, 0.20)
+
+    # Porta: icterícia → Hepatite × Leptospirose × Febre Amarela
+    if dados.get("ictericia"):
+        if doenca == "Hepatite A/B":
+            if _sim("urina_escura_fezes_claras"):
+                p = max(p, 0.60)
+            elif _nao("urina_escura_fezes_claras"):
+                p = min(p, 0.20)
+        elif doenca == "Leptospirose":
+            if _sim("dor_panturrilha"):
+                # mialgia de panturrilha com icterícia: síndrome de Weil
+                p = max(p, 0.65 if dados.get("exposicao_agua_enchente") else 0.55)
+            elif _nao("dor_panturrilha"):
+                p = min(p, 0.20)
+        elif doenca == "Febre Amarela":
+            if _sim("febre_bifasica"):
+                # período de intoxicação após a remissão
+                p = max(p, 0.50)
+            elif _nao("febre_bifasica"):
+                p = min(p, 0.15)
+
+    # Porta: diarreia → Cólera × disenteria × Febre Tifoide
+    if dados.get("diarreia"):
+        if doenca == "Cólera":
+            if _sim("fezes_agua_arroz"):
+                # aspecto em água de arroz sem febre e sem sangue: é o quadro
+                # da cólera, e o prior de 0,002 sozinho nunca a traria à tona
+                _tipica = dados.get("febre") is not True and not _sim("fezes_com_sangue")
+                p = max(p, 0.55 if _tipica else 0.30)
+            elif _nao("fezes_agua_arroz"):
+                p = min(p, 0.001)
+        elif doenca == "Esquistossomose":
+            if _sim("fezes_com_sangue"):
+                p = max(p, 0.45)
+        elif doenca == "Febre Tifoide":
+            if _sim("febre_alta_prolongada"):
+                p = max(p, 0.55)
+            elif _nao("febre_alta_prolongada"):
+                p = min(p, 0.10)
+        elif doenca == "Gastroenterite Viral":
+            # aquosa "água de arroz" ou febre arrastada tiram a gastroenterite
+            # do lugar de explicação mais simples
+            if _sim("fezes_agua_arroz") or _sim("febre_alta_prolongada"):
+                p = min(p, 0.30)
+        elif doenca in ("Dengue", "Chikungunya", "Zika"):
+            # arbovirose não faz febre contínua por mais de uma semana: a
+            # curva da dengue dura de 2 a 7 dias. Sem esta linha a dengue
+            # continuava em primeiro num quadro de febre tifoide, pelo prior.
+            if _sim("febre_alta_prolongada"):
+                p = min(p, 0.20)
+
+    # Porta: dor articular → Chikungunya × Dengue × Zika
+    if dados.get("dor_articular"):
+        _pro_chik = sum(1 for c in ("artralgia_simetrica", "artralgia_mais_2_semanas")
+                        if _sim(c))
+        _contra_chik = sum(1 for c in ("artralgia_simetrica", "artralgia_mais_2_semanas")
+                           if _nao(c))
+        if doenca == "Chikungunya":
+            if _pro_chik >= 2:
+                # poliartralgia simétrica e persistente: o padrão da doença
+                p = max(p, 0.70)
+            elif _pro_chik == 1:
+                p = max(p, 0.50)
+            elif _contra_chik >= 2:
+                p = min(p, 0.15)
+        elif doenca in ("Dengue", "Zika") and _pro_chik >= 2:
+            p = min(p, 0.25)
+
+    # Porta: falta de ar → Hantavirose × Bronquite
+    if dados.get("falta_ar"):
+        if doenca == "Hantavirose":
+            if _sim("dispneia_subita_pos_febre"):
+                # fase cardiopulmonar instala-se em horas, dias após o pródromo
+                p = max(p, 0.50 if dados.get("contato_roedores") else 0.35)
+            elif _nao("dispneia_subita_pos_febre"):
+                p = min(p, 0.05)
+        elif doenca == "Bronquite / DPOC Agudização":
+            if _sim("dispneia_piora_deitado"):
+                p = max(p, 0.45)
+
+    # Exposição a mamífero → Raiva Humana
+    # Mordedura é condição necessária: sem ela a raiva é impossível, e com ela
+    # continua sendo rara (a imensa maioria das mordeduras é de cão vacinado).
+    # Por isso sobe pouco — o valor desta pergunta não é ranquear raiva, é
+    # registrar a exposição, porque a profilaxia pós-exposição é
+    # tempo-dependente e vale mesmo quando o resto do quadro não aponta nada.
+    if doenca == "Raiva Humana":
+        if _sim("mordedura_animal"):
+            if dados.get("febre") and dados.get("dor_cabeca"):
+                p = max(p, 0.15)
+            elif dados.get("febre"):
+                p = max(p, 0.06)
+        elif _nao("mordedura_animal"):
+            p = min(p, 0.0001)
+
+    # Porta: dor de garganta → Difteria
+    if dados.get("dor_garganta"):
+        if doenca == "Difteria":
+            _pro_dift = sum(1 for c in ("placa_na_garganta", "pescoco_inchado") if _sim(c))
+            if _pro_dift >= 2:
+                # placa aderente com edema cervical: notificação imediata
+                p = max(p, 0.70)
+            elif _pro_dift == 1:
+                p = max(p, 0.45)
+            elif _nao("placa_na_garganta"):
+                p = min(p, 0.001)
+        elif doenca in ("Resfriado Viral", "Gripe (Influenza)") and _sim("placa_na_garganta"):
+            # placa aderente não é quadro de virose banal
+            p = min(p, 0.25)
+
+    # Porta: febre com íngua → Peste
+    if dados.get("febre") and not dados.get("exantema_vesicular"):
+        if doenca == "Peste":
+            if _sim("linfonodo_aumentado"):
+                # bubão febril. O contato com roedor é o que separa o foco
+                # natural de uma adenite banal.
+                p = max(p, 0.35 if dados.get("contato_roedores") else 0.10)
+            elif _nao("linfonodo_aumentado"):
+                p = min(p, 0.0005)
+
+    # Porta: emagrecimento → Leishmaniose Visceral × Tuberculose
+    if dados.get("perda_peso"):
+        if doenca == "Leishmaniose Visceral":
+            if _sim("barriga_inchada"):
+                # esplenomegalia é o achado que separa calazar de TB
+                p = max(p, 0.60)
+            elif _nao("barriga_inchada"):
+                p = min(p, 0.20)
+        elif doenca == "Tuberculose":
+            if _sim("sudorese_noturna"):
+                p = max(p, 0.50)
+            elif _nao("sudorese_noturna"):
+                p = min(p, 0.20)
+
+    # Porta: úlcera → Leishmaniose Tegumentar
+    if dados.get("ulcera_cutanea") and doenca == "Leishmaniose Tegumentar":
+        if _sim("ulcera_indolor_bordas"):
+            # úlcera indolor de bordas elevadas: a lesão clássica
+            p = max(p, 0.80 if _sim("ulcera_mais_1_mes") else 0.75)
+        elif _sim("ulcera_mais_1_mes"):
+            p = max(p, 0.70)
+        elif _nao("ulcera_indolor_bordas") and _nao("ulcera_mais_1_mes"):
+            # ferida dolorosa e recente é mais compatível com piodermite
+            p = min(p, 0.20)
+
+    # Porta: febre → Malária × Dengue × Febre Amarela
+    if dados.get("febre"):
+        if doenca == "Malaria":
+            if _sim("febre_ciclica"):
+                # acesso malárico: calafrio, febre, sudorese, em ciclos
+                p = max(p, 0.60 if dados.get("viagem_area_endemica") else 0.45)
+            elif _nao("febre_ciclica"):
+                p = min(p, 0.08)
+        elif doenca == "Dengue" and _sim("febre_bifasica"):
+            p = max(p, 0.55)
+        elif doenca == "Febre Amarela" and _sim("febre_bifasica"):
+            p = max(p, 0.40)
+
+    return p
 
 
 def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
@@ -1998,6 +2397,35 @@ def classificar(dados: dict[str, Any], setor: str = "governo", estado: str | Non
         for d, s in ranking_completo[:5]
         if s > 0
     ]
+
+    # ── A sentinela não pode ser cortada ────────────────────────────────────
+    # O corte em 5 é bom para legibilidade e péssimo para vigilância: medido,
+    # um quadro de febre amarela com icterícia, hemorragia e febre bifásica
+    # ficava em 6º e sumia por completo — do diferencial, do painel do gestor e
+    # do portão que decide chamar a IA. Doença que mata não pode depender de
+    # caber na lista.
+    # Entram no máximo 2 extras, e só acima de 30% do líder.
+    if top5:
+        _lider = top5[0]["score"]
+        _ja = {x["doenca"] for x in top5}
+        _extras = 0
+        for d, sc in ranking_completo[5:]:
+            if _extras >= 2:
+                break
+            if (d in DOENCAS_SENTINELA and d not in _ja and sc > 0
+                    and sc >= _PISO_SENTINELA_NO_DIFERENCIAL * _lider):
+                top5.append({
+                    "doenca": d,
+                    "score": round(sc, 3),
+                    "grupo": DOENCAS_BRASIL[d]["grupo"],
+                    "cid10": DOENCAS_BRASIL[d].get("cid10", ""),
+                    "confianca": _confianca(sc, score_total, sintomas_count),
+                    "descricao": DOENCAS_BRASIL[d]["descricao"],
+                    "diferencial_vs": DOENCAS_BRASIL[d].get("diferencial_vs", {}),
+                    # Marca para o painel: entrou por consequência, não por score.
+                    "incluida_por_vigilancia": True,
+                })
+                _extras += 1
 
     primario = top5[0] if top5 else None
     doenca_principal = primario["doenca"] if primario else "Inconclusivo"

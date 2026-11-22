@@ -139,6 +139,58 @@ class RegistroSintoma(models.Model):
     lesao_face_palmas          = models.BooleanField(null=True, blank=True)  # início no rosto / palmas e plantas → Mpox
     vesiculas_estagios_variados = models.BooleanField(null=True, blank=True)  # fases diferentes juntas → Varicela
 
+    # ── Desempate das demais portas (todas as doenças) ────────────────────────
+    # Mesmo princípio das vesículas, aplicado aos outros sintomas-porta: um
+    # sintoma genérico ("manchas", "tosse", "diarreia") não separa as doenças
+    # que o compartilham, e sem discriminador o prior geográfico decide — a
+    # comum sempre ganha da rara. Cada campo abaixo é um achado que a
+    # literatura liga a um lado do diagnóstico diferencial.
+    # TODOS nuláveis, pela mesma razão: null = não foi perguntado (porta
+    # fechada ou build antiga do app) ≠ False = a pessoa respondeu "não".
+
+    # Porta: exantema (manchas) → Sarampo, Zika, Dengue, Febre Maculosa
+    exantema_craniocaudal   = models.BooleanField(null=True, blank=True)  # começou no rosto e desceu → Sarampo
+    exantema_pruriginoso    = models.BooleanField(null=True, blank=True)  # coça muito → Zika
+    exantema_palmo_plantar  = models.BooleanField(null=True, blank=True)  # palmas e plantas → Febre Maculosa
+    exantema_apos_febre     = models.BooleanField(null=True, blank=True)  # surgiu quando a febre baixou → Dengue
+
+    # Porta: tosse → Tuberculose, Coqueluche
+    tosse_mais_3_semanas    = models.BooleanField(null=True, blank=True)  # tosse crônica → Tuberculose
+    tosse_paroxistica       = models.BooleanField(null=True, blank=True)  # acessos com guincho/vômito → Coqueluche
+    sudorese_noturna        = models.BooleanField(null=True, blank=True)  # suor que molha a roupa → TB (porta: tosse e perda de peso)
+
+    # Porta: icterícia → Hepatite, Leptospirose, Febre Amarela
+    urina_escura_fezes_claras = models.BooleanField(null=True, blank=True)  # colestase → Hepatite
+    dor_panturrilha           = models.BooleanField(null=True, blank=True)  # mialgia de panturrilha → Leptospirose
+
+    # Porta: diarreia → Cólera, Esquistossomose, Febre Tifoide
+    fezes_agua_arroz        = models.BooleanField(null=True, blank=True)  # aquosa, água de arroz → Cólera
+    fezes_com_sangue        = models.BooleanField(null=True, blank=True)  # sangue ou muco → disenteria / Esquistossomose
+    febre_alta_prolongada   = models.BooleanField(null=True, blank=True)  # febre contínua > 1 semana → Febre Tifoide
+
+    # Porta: dor articular → Chikungunya
+    artralgia_simetrica     = models.BooleanField(null=True, blank=True)  # dois lados ao mesmo tempo → Chikungunya
+    artralgia_mais_2_semanas = models.BooleanField(null=True, blank=True)  # persistente → Chikungunya crônica
+
+    # Porta: falta de ar → Hantavirose, Bronquite
+    dispneia_subita_pos_febre = models.BooleanField(null=True, blank=True)  # súbita, dias após a febre → Hantavirose
+    dispneia_piora_deitado    = models.BooleanField(null=True, blank=True)  # ortopneia → Bronquite / cardíaco
+
+    # Porta: perda de peso → Leishmaniose Visceral
+    barriga_inchada         = models.BooleanField(null=True, blank=True)  # esplenomegalia → Leishmaniose Visceral
+
+    # Porta: úlcera cutânea → Leishmaniose Tegumentar
+    ulcera_indolor_bordas   = models.BooleanField(null=True, blank=True)  # indolor, bordas elevadas → L. Tegumentar
+    ulcera_mais_1_mes       = models.BooleanField(null=True, blank=True)  # aberta há mais de um mês → L. Tegumentar
+
+    # Porta: febre → Malária, Dengue, Febre Amarela
+    febre_ciclica           = models.BooleanField(null=True, blank=True)  # ciclos calafrio-febre-suor → Malária
+    febre_bifasica          = models.BooleanField(null=True, blank=True)  # baixou e voltou → Dengue / Febre Amarela (porta: febre e icterícia)
+
+    # Porta: dor de garganta → Difteria
+    placa_na_garganta       = models.BooleanField(null=True, blank=True)  # pseudomembrana aderente → Difteria
+    pescoco_inchado         = models.BooleanField(null=True, blank=True)  # edema cervical ("pescoço de touro") → Difteria
+
     # Intensidade da febre (escala: None, baixa<38.5, moderada 38.5-39.5, alta>39.5)
     intensidade_febre = models.CharField(max_length=10, blank=True, default="",
         choices=[("", "Não informado"), ("baixa", "Baixa"), ("moderada", "Moderada"), ("alta", "Alta")])
@@ -165,6 +217,7 @@ class RegistroSintoma(models.Model):
     tem_imunossupressao     = models.BooleanField(null=True, blank=True)
     exposicao_carrapato     = models.BooleanField(null=True, blank=True)  # contato carrapato → febre maculosa
     exposicao_triatomideo   = models.BooleanField(null=True, blank=True)  # contato barbeiro → doença de chagas
+    mordedura_animal        = models.BooleanField(null=True, blank=True)  # mordida/arranhadura de animal → Raiva Humana; também indica profilaxia
 
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)

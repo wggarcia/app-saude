@@ -41,7 +41,7 @@ from api.views_materiais_comerciais import (
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial, api_login_modulo, verificar_codigo_email, reenviar_codigo_email
 from api.access_control import api_meus_modulos
 from api.views_enterprise import api_enterprise_command_center, api_enterprise_premium_suite, api_enterprise_seed_operational_demo, api_enterprise_reset_demo
-from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, dashboard_plano_saude, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_criar_credencial_ti, api_desativar_usuario_empresa, api_atribuir_modulos_usuario, login_operacao, console_operacional, api_dono_resumo, api_dono_financeiro_real, api_dono_saude, api_dono_app_funcionario, api_dono_operadores, api_dono_operador_acao, api_dono_atualizar_cliente, api_dono_criar_cliente, api_dono_cobrar_setup, api_dono_cortesia_plano, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_dono_excluir_cliente, api_dono_reset_trial, api_dono_forcar_logout, api_dono_auditoria, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, governo_plataforma_page, rede_gestao_page, plano_saude_gestao_page, gerencia_executiva_page, portal_rh_page
+from api.views_dashboard import api_confirmar_desfecho, api_calibracao_classificador, dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, dashboard_plano_saude, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_criar_credencial_ti, api_desativar_usuario_empresa, api_atribuir_modulos_usuario, login_operacao, console_operacional, api_dono_resumo, api_dono_financeiro_real, api_dono_saude, api_dono_app_funcionario, api_dono_operadores, api_dono_operador_acao, api_dono_atualizar_cliente, api_dono_criar_cliente, api_dono_cobrar_setup, api_dono_cortesia_plano, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_dono_excluir_cliente, api_dono_reset_trial, api_dono_forcar_logout, api_dono_auditoria, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, governo_plataforma_page, rede_gestao_page, plano_saude_gestao_page, gerencia_executiva_page, portal_rh_page
 from api.views_plano_saude import (
     api_ps_dashboard, api_ps_planos, api_ps_plano_detalhe,
     api_ps_beneficiarios, api_ps_beneficiario_detalhe,
@@ -2855,6 +2855,10 @@ urlpatterns = [
     path("regioes", casos_por_regiao),
     path("api/sintoma/", registrar_sintoma),
     path("api/mapa-risco", mapa_risco),
+    # Fase 4 — ciclo de aprendizado: entrada do desfecho confirmado e
+    # relatório de acurácia do classificador contra o que foi confirmado.
+    path("api/registro/desfecho", api_confirmar_desfecho),
+    path("api/classificador/calibracao", api_calibracao_classificador),
     path("api/bairros", views.bairros_por_cidade),
 
     # Financial OS
