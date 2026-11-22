@@ -100,9 +100,16 @@ class Command(BaseCommand):
                 " alguma coisa quebrou entre o app e a API."))
 
         # 3) A IA está respondendo
-        com_ia = qs.exclude(hipotese_ia__isnull=True).exclude(hipotese_ia="").count()
-        dispensada = qs.filter(hipotese_ia_dispensada=True).count()
-        elegiveis = total - dispensada
+        com_ia_qs = qs.exclude(hipotese_ia__isnull=True).exclude(hipotese_ia="")
+        com_ia = com_ia_qs.count()
+        # Dispensado E com hipótese ao mesmo tempo existe: o portão marcou o
+        # registro antes de o dono ligar ANAMNESE_IA_SEMPRE. Subtrair os dois
+        # dava "2 de 1 elegíveis (200%)" — relatório que mente não serve para
+        # decidir nada. Elegível é quem NÃO foi dispensado e segue sem hipótese,
+        # mais quem tem hipótese.
+        dispensada = qs.filter(hipotese_ia_dispensada=True).exclude(
+            pk__in=com_ia_qs.values("pk")).count()
+        elegiveis = max(total - dispensada, com_ia)
         discorda = qs.filter(hipotese_ia_concorda=False).exclude(
             hipotese_ia__isnull=True).exclude(hipotese_ia="").count()
         self.stdout.write("\n3) A IA ESTÁ RESPONDENDO?")
@@ -124,7 +131,16 @@ class Command(BaseCommand):
         for c in qs.values_list("classificacao", flat=True):
             if not c:
                 continue
-            nome = c.split("—")[-1].split("(")[0].strip() if "—" in c else c.split("(")[0].strip()
+            # "Gripe (Influenza) (52% confiança) — vs COVID-19: ..."
+            # O nome está ANTES do travessão; pegar o último pedaço trazia o
+            # texto da comparação para a tabela, como se fosse diagnóstico.
+            # E "URGÊNCIA: X — Doença (n%)" põe o nome depois do travessão.
+            nome = c.strip()
+            if nome.upper().startswith("URGÊNCIA"):
+                nome = nome.split("—", 1)[-1]
+            else:
+                nome = nome.split("—", 1)[0]
+            nome = nome.split("(")[0].strip() or "(sem nome)"
             classificacoes[nome] += 1
         self.stdout.write("\n4) O QUE O MOTOR ESTÁ DIZENDO")
         for nome, n in classificacoes.most_common(8):
