@@ -12,7 +12,7 @@ const _kCooldownHoras = 168; // 7 dias
 
 class PublicApiService {
   // Mantida em sincronia com pubspec.yaml na publicação.
-  static const String _versaoApp = '1.0.30+31';
+  static const String _versaoApp = '1.0.30+32';
   static const _timeout = Duration(seconds: 12);
 
   static Uri _uri(String path, [Map<String, dynamic>? query]) {

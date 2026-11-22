@@ -137,7 +137,7 @@ const _perguntas = [
     key: 'placa_na_garganta',
     pergunta: 'Tem placa branca ou acinzentada na garganta?',
     dica: 'Uma casca grudada na garganta ou nas amígdalas, difícil de soltar',
-    emoji: '🦷',
+    emoji: '🗣️',
     condicionaisDe: ['dor_garganta'],
   ),
   _PerguntaSintoma(
