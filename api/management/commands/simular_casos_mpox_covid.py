@@ -249,6 +249,7 @@ class Command(BaseCommand):
 
         resultados = []
         registros = []
+        datas = []  # data_registro pretendida de cada registro — ver abaixo
         for alvo in alvos:
             cidade = rnd.choices(municipios, weights=[pesos.get(m, 1) for m in municipios])[0]
             info = TERRITORIO[cidade]
@@ -293,6 +294,7 @@ class Command(BaseCommand):
             quando = quando.replace(hour=hora, minute=rnd.randrange(60),
                                     second=rnd.randrange(60))
 
+            datas.append(quando)
             registros.append(RegistroSintoma(
                 id_anonimo=uuid.uuid4(),
                 empresa=empresa,
@@ -337,7 +339,17 @@ class Command(BaseCommand):
             return
 
         with transaction.atomic(using="owner"):
-            RegistroSintoma.objects.using("owner").bulk_create(registros, batch_size=100)
+            criados = RegistroSintoma.objects.using("owner").bulk_create(
+                registros, batch_size=100)
+            # data_registro é auto_now_add: o valor passado no construtor é
+            # IGNORADO no insert, e todos os registros nascem com o mesmo
+            # instante. Foi exatamente assim que a carga antiga ficou com
+            # 2.000 casos na mesma hora — e eu repeti o erro antes de medir.
+            # QuerySet.update() não passa por auto_now_add, então a data
+            # pretendida é escrita aqui, depois.
+            for obj, quando in zip(criados, datas):
+                RegistroSintoma.objects.using("owner").filter(pk=obj.pk).update(
+                    data_registro=quando)
         self.stdout.write(self.style.SUCCESS(
             "\n%d registros gravados com fonte_referencia='%s'." % (len(registros), marca)))
         self.stdout.write("Para remover todos depois:")
