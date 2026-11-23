@@ -46,6 +46,11 @@ MARCA = "simulacao-mpox-covid"
 # Bairros por município, com coordenada aproximada do bairro.
 # Aproximada de propósito: é simulação, e a precisão de rua não acrescenta
 # nada ao mapa de bairro. O jitter abaixo espalha os casos dentro do bairro.
+# O geocoder de produção grava o estado POR EXTENSO ("Rio de Janeiro"), não a
+# sigla. Gravar "RJ" fazia o panorama agrupar separado e Niterói aparecer duas
+# vezes no mapa — uma com os casos simulados, outra com o caso real.
+UF_POR_EXTENSO = "Rio de Janeiro"
+
 TERRITORIO = {
     "Niterói": {
         "uf": "RJ",
@@ -300,7 +305,7 @@ class Command(BaseCommand):
                 empresa=empresa,
                 data_registro=quando,
                 latitude=lat, longitude=lon,
-                pais="Brasil", estado=info["uf"], cidade=cidade, bairro=bairro,
+                pais="Brasil", estado=UF_POR_EXTENSO, cidade=cidade, bairro=bairro,
                 grupo=grupo, classificacao=classificacao, diferencial=diferencial,
                 # Procedência explícita: este registro diz que é simulação.
                 fonte_referencia=marca,
