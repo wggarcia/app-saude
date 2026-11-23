@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import contextvars
 from datetime import timedelta
 import json
 import logging
@@ -18,6 +19,24 @@ from django.utils import timezone
 
 from .models import Empresa, ProjecaoDispersao, RegistroSintoma
 from .services.public_integrity import q_registro_sintoma_sintetico
+
+# ── Modo demonstração ────────────────────────────────────────────────────────
+# Por padrão o panorama NUNCA mostra registro sintético: o filtro de integridade
+# tira do mapa tudo que tenha "simulacao", "demo" ou "teste" na procedência. É
+# proteção deliberada — mapa de vigilância com caso inventado vira decisão de
+# saúde pública errada.
+#
+# Esta chave liga a exceção, e só para quem pediu explicitamente. É contextvar e
+# não variável de módulo porque o gunicorn roda com threads: uma global faria a
+# demonstração de uma pessoa vazar para o request de outra.
+_INCLUIR_SIMULACAO = contextvars.ContextVar("panorama_incluir_simulacao", default=False)
+
+
+def _excluir_sinteticos(queryset):
+    """Aplica o filtro de integridade, salvo em modo demonstração."""
+    if _INCLUIR_SIMULACAO.get():
+        return queryset
+    return queryset.exclude(q_registro_sintoma_sintetico())
 from .utils_cidades import carregar_base
 from .epidemiologia_ml import mapa_risco_oficial_por_estado, mapa_risco_oficial_por_doenca
 
@@ -864,8 +883,8 @@ def _diferenciais_por_grupo(group_fields, empresa_pub=None):
         .exclude(diferencial__isnull=True)
         .exclude(latitude__isnull=True)
         .exclude(longitude__isnull=True)
-        .exclude(q_registro_sintoma_sintetico())
     )
+    queryset = _excluir_sinteticos(queryset)
     if empresa_pub is not None:
         try:
             queryset = queryset.using("owner").filter(empresa=empresa_pub)
@@ -953,8 +972,8 @@ def _build_layer_queryset(group_fields, empresa_pub=None):
         .filter(data_registro__gte=window_start)
         .exclude(latitude__isnull=True)
         .exclude(longitude__isnull=True)
-        .exclude(q_registro_sintoma_sintetico())
     )
+    queryset = _excluir_sinteticos(queryset)
     if empresa_pub is not None:
         try:
             queryset = queryset.using("owner").filter(empresa=empresa_pub)
@@ -1536,7 +1555,30 @@ def _refresh_panorama_background(current_version):
     threading.Thread(target=_run, name="panorama-refresh", daemon=True).start()
 
 
-def build_panorama_payload():
+def build_panorama_payload(incluir_simulacao: bool = False):
+    """Monta o panorama. Com incluir_simulacao=True, inclui registro sintético.
+
+    O modo demonstração NÃO passa por cache nenhum — nem o local do worker, nem
+    o Redis. É de propósito: um payload com casos inventados gravado na mesma
+    chave do público apareceria para todo mundo até o TTL vencer, e ninguém
+    saberia por quê. Demonstração é rara e recalcular custa pouco; contaminar o
+    mapa público custaria caro.
+    """
+    if incluir_simulacao:
+        token = _INCLUIR_SIMULACAO.set(True)
+        try:
+            payload = _compute_and_cache_panorama(
+                _current_panorama_cache_version(), time(), gravar_cache=False)
+        finally:
+            _INCLUIR_SIMULACAO.reset(token)
+        # Rótulo explícito: quem consumir este payload precisa saber que ele
+        # contém caso fabricado, mesmo que a tela esqueça de avisar.
+        payload = dict(payload)
+        payload["simulacao_incluida"] = True
+        payload["aviso"] = ("Inclui casos simulados, não notificados. "
+                            "Não use para decisão de vigilância.")
+        return payload
+
     now = time()
     current_version = _current_panorama_cache_version()
 
@@ -1568,7 +1610,7 @@ def build_panorama_payload():
     return _compute_and_cache_panorama(current_version, now)
 
 
-def _compute_and_cache_panorama(current_version, now):
+def _compute_and_cache_panorama(current_version, now, gravar_cache: bool = True):
     redis_key = f"{_PANORAMA_CACHE_PAYLOAD_KEY}:{current_version}"
     # Todas as queries do panorama usam .using("owner") + .filter(empresa=_empresa_pub)
     # para não depender do RLS (que varia conforme o middleware do gestor logado).
@@ -1606,7 +1648,7 @@ def _compute_and_cache_panorama(current_version, now):
     # Só cacheia quando há dados reais — impede que um payload vazio (empresa não
     # encontrada no cold-start) fique travado no Redis por 5 min.
     total_registros = sum(a.get("raw_total_cases", 0) for a in layers.get("bairros", []))
-    if total_registros > 0:
+    if total_registros > 0 and gravar_cache:
         cache.set(redis_key, payload, _CACHE_TTL_SECONDS)
         try:
             cache.set(f"{_PANORAMA_STALE_KEY}:{current_version}",
@@ -1628,6 +1670,33 @@ def panorama_epidemiologico(request):
     # 8s (ver _CACHE_TTL_SECONDS), o Cloudflare continuava sendo o gargalo real.
     # Reduzido pra manter alguma proteção sem esconder mudanças por tanto tempo.
     response["Cache-Control"] = "public, s-maxage=5, max-age=0, stale-while-revalidate=5"
+    return response
+
+
+def panorama_demonstracao(request):
+    """Panorama COM os casos simulados — rota separada, para demonstração.
+
+    Por que uma rota própria e não um parâmetro na pública: a rota pública
+    (`api/epidemiologia`) responde com `Cache-Control: s-maxage=5`, e o
+    Cloudflare guarda essa resposta na borda. Um parâmetro ali faria a versão
+    com casos inventados ser servida a quem passasse pela mesma chave de cache
+    — mapa fabricado para o público, sem ninguém ter pedido.
+
+    Aqui: exige gestor autenticado, não passa por cache em lugar nenhum, e a
+    resposta vem rotulada.
+    """
+    from .services.auth_session import empresa_autenticada_from_request
+
+    empresa = empresa_autenticada_from_request(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if empresa.tipo_conta != Empresa.TIPO_GOVERNO:
+        return JsonResponse({"erro": "acesso restrito ao governo"}, status=403)
+
+    response = JsonResponse(build_panorama_payload(incluir_simulacao=True))
+    # no-store em todos os níveis: nem Cloudflare, nem navegador, nem proxy.
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+    response["Pragma"] = "no-cache"
     return response
 
 

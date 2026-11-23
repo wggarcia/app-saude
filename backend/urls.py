@@ -1439,7 +1439,7 @@ from api.views_plano_portal import (
     api_portal_token_gerar,
     plano_portal_beneficiario_page,
 )
-from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo, panorama_simulacao_nacional
+from api.epidemiologia import panorama_epidemiologico, panorama_demonstracao, exportar_briefing_governo, panorama_simulacao_nacional
 from api.views_epidemiologia_ml import api_epidemiologia_projecao_ml
 from api.views_dispersao import api_epidemiologia_dispersao
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
@@ -2826,6 +2826,9 @@ urlpatterns = [
     # 🔥 INSIGHTS
     path('api/insights-nacional', insights_nacional),
     path('api/epidemiologia', panorama_epidemiologico),
+    # Panorama com casos simulados — gestor autenticado, sem cache. Ver
+    # panorama_demonstracao: a rota pública não aceita este modo de propósito.
+    path('api/epidemiologia/demonstracao', panorama_demonstracao),
     path('api/epidemiologia/simulacao/<str:token>/', panorama_simulacao_nacional),
     path('api/epidemiologia/briefing', exportar_briefing_governo),
     path('api/epidemiologia/projecao-ml', api_epidemiologia_projecao_ml),
